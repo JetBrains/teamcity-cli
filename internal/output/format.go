@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 	"github.com/mattn/go-runewidth"
@@ -138,6 +139,16 @@ func StatusText(status, state string) string {
 	}
 }
 
+var shortTimeMagnitudes = []humanize.RelTimeMagnitude{
+	{D: time.Minute, Format: "now", DivBy: time.Second},
+	{D: 2 * time.Minute, Format: "1m ago", DivBy: 1},
+	{D: time.Hour, Format: "%dm ago", DivBy: time.Minute},
+	{D: 2 * time.Hour, Format: "1h ago", DivBy: 1},
+	{D: 24 * time.Hour, Format: "%dh ago", DivBy: time.Hour},
+	{D: 2 * 24 * time.Hour, Format: "1d ago", DivBy: 1},
+	{D: 7 * 24 * time.Hour, Format: "%dd ago", DivBy: 24 * time.Hour},
+}
+
 // RelativeTime formats a time as relative to now
 func RelativeTime(t time.Time) string {
 	if t.IsZero() {
@@ -145,38 +156,15 @@ func RelativeTime(t time.Time) string {
 	}
 
 	now := time.Now()
-	diff := now.Sub(t)
-
-	if diff < 0 {
+	if now.Sub(t) < 0 {
 		return "now"
 	}
 
-	if diff < time.Minute {
-		return "now"
-	}
-	if diff < time.Hour {
-		mins := int(diff.Minutes())
-		if mins == 1 {
-			return "1m ago"
-		}
-		return fmt.Sprintf("%dm ago", mins)
-	}
-	if diff < 24*time.Hour {
-		hours := int(diff.Hours())
-		if hours == 1 {
-			return "1h ago"
-		}
-		return fmt.Sprintf("%dh ago", hours)
-	}
-	if diff < 7*24*time.Hour {
-		days := int(diff.Hours() / 24)
-		if days == 1 {
-			return "1d ago"
-		}
-		return fmt.Sprintf("%dd ago", days)
+	if now.Sub(t) >= 7*24*time.Hour {
+		return t.Format("Jan 02")
 	}
 
-	return t.Format("Jan 02")
+	return humanize.CustomRelTime(t, now, "", "", shortTimeMagnitudes)
 }
 
 // FormatDuration formats a duration in human-readable form

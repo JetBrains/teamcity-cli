@@ -6,13 +6,12 @@ import (
 	"time"
 
 	"github.com/acarl005/stripansi"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 	"github.com/tiulpin/teamcity-cli/internal/api"
 	"github.com/tiulpin/teamcity-cli/internal/output"
 )
-
-var spinnerFrames = []string{"/", "-", "\\", "|"}
 
 type tickMsg time.Time
 type buildMsg *api.Build
@@ -20,30 +19,33 @@ type logMsg string
 type errMsg error
 
 type watchModel struct {
-	client       *api.Client
-	runID        string
-	interval     time.Duration
-	build        *api.Build
-	logLines     []string
-	rawLogLen    int
-	err          error
-	done         bool
-	width        int
-	height       int
-	spinnerIndex int
+	client    *api.Client
+	runID     string
+	interval  time.Duration
+	build     *api.Build
+	logLines  []string
+	rawLogLen int
+	err       error
+	done      bool
+	width     int
+	height    int
+	spinner   spinner.Model
 }
 
 func newWatchModel(client *api.Client, runID string, interval int) watchModel {
+	sp := spinner.New()
+	sp.Spinner = spinner.Line
 	return watchModel{
 		client:   client,
 		runID:    runID,
 		interval: time.Duration(interval) * time.Second,
 		logLines: []string{},
+		spinner:  sp,
 	}
 }
 
 func (m watchModel) Init() tea.Cmd {
-	return tea.Batch(m.fetchBuild, m.fetchLog, m.spinnerTick())
+	return tea.Batch(m.fetchBuild, m.fetchLog, m.spinner.Tick)
 }
 
 func (m watchModel) fetchBuild() tea.Msg {
@@ -66,12 +68,6 @@ func tickCmd(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 
-type spinnerMsg struct{}
-
-func (m watchModel) spinnerTick() tea.Cmd {
-	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg { return spinnerMsg{} })
-}
-
 func (m watchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -85,12 +81,13 @@ func (m watchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
-	case spinnerMsg:
-		m.spinnerIndex = (m.spinnerIndex + 1) % len(spinnerFrames)
+	case spinner.TickMsg:
 		if m.build != nil && m.build.State == "finished" {
 			return m, nil
 		}
-		return m, m.spinnerTick()
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 
 	case tickMsg:
 		return m, tea.Batch(m.fetchBuild, m.fetchLog)
@@ -194,11 +191,11 @@ func (m watchModel) View() string {
 	}
 	b.WriteString(m.renderLogs(logHeight))
 
-	spinner := ""
+	spinnerView := ""
 	if m.build == nil || m.build.State != "finished" {
-		spinner = " " + spinnerFrames[m.spinnerIndex]
+		spinnerView = " " + m.spinner.View()
 	}
-	b.WriteString(output.Faint("q quit" + spinner))
+	b.WriteString(output.Faint("q quit" + spinnerView))
 
 	return b.String()
 }
