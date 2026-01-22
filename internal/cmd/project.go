@@ -292,9 +292,7 @@ func runProjectTokenGet(projectID, token string) error {
 	}
 
 	// Strip credentialsJSON: prefix if present
-	if strings.HasPrefix(token, "credentialsJSON:") {
-		token = strings.TrimPrefix(token, "credentialsJSON:")
-	}
+	token = strings.TrimPrefix(token, "credentialsJSON:")
 
 	value, err := client.GetSecureValue(projectID, token)
 	if err != nil {

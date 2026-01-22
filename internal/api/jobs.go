@@ -47,7 +47,7 @@ func (c *Client) PauseBuildType(id string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return c.handleErrorResponse(resp)
@@ -64,7 +64,7 @@ func (c *Client) ResumeBuildType(id string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return c.handleErrorResponse(resp)

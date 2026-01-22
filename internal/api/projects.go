@@ -50,7 +50,7 @@ func (c *Client) CreateSecureToken(projectID, value string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return "", c.handleErrorResponse(resp)
@@ -73,7 +73,7 @@ func (c *Client) GetSecureValue(projectID, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return "", c.handleErrorResponse(resp)
