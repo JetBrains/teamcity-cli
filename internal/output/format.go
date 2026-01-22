@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/acarl005/stripansi"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 	"github.com/mattn/go-runewidth"
@@ -205,52 +206,31 @@ func FormatDuration(d time.Duration) string {
 
 // PrintTable prints a formatted table with proper Unicode/ANSI handling
 func PrintTable(headers []string, rows [][]string) {
-	colWidths := make([]int, len(headers))
-	for i, h := range headers {
-		colWidths[i] = displayWidth(h)
-	}
-	for _, row := range rows {
-		for i, cell := range row {
-			if i < len(colWidths) {
-				if w := displayWidth(cell); w > colWidths[i] {
-					colWidths[i] = w
-				}
+	noBorder := lipgloss.Border{}
+	headerStyle := lipgloss.NewStyle().Faint(true)
+	cellStyle := lipgloss.NewStyle()
+
+	t := table.New().
+		Headers(headers...).
+		Rows(rows...).
+		Border(noBorder).
+		BorderColumn(false).
+		BorderRow(false).
+		BorderHeader(false).
+		StyleFunc(func(row, col int) lipgloss.Style {
+			// Last column doesn't need right padding
+			padding := 2
+			if col == len(headers)-1 {
+				padding = 0
 			}
-		}
-	}
-
-	var headerParts []string
-	for i, h := range headers {
-		headerParts = append(headerParts, padToWidth(h, colWidths[i]))
-	}
-	fmt.Println(Faint(strings.Join(headerParts, "  ")))
-
-	for _, row := range rows {
-		var rowParts []string
-		for i, cell := range row {
-			if i < len(colWidths) {
-				rowParts = append(rowParts, padToWidth(cell, colWidths[i]))
-			} else {
-				rowParts = append(rowParts, cell)
+			if row == table.HeaderRow {
+				return headerStyle.PaddingRight(padding)
 			}
-		}
-		fmt.Println(strings.Join(rowParts, "  "))
-	}
-}
+			return cellStyle.PaddingRight(padding)
+		})
 
-// displayWidth calculates the visible width of a string (stripping ANSI codes)
-// Properly handles wide characters (CJK, emoji)
-func displayWidth(s string) int {
-	return runewidth.StringWidth(stripansi.Strip(s))
-}
-
-// padToWidth pads a string with ANSI codes to a specific display width
-func padToWidth(s string, width int) string {
-	currentWidth := displayWidth(s)
-	if currentWidth >= width {
-		return s
-	}
-	return s + strings.Repeat(" ", width-currentWidth)
+	output := strings.TrimSpace(t.Render())
+	fmt.Println(output)
 }
 
 // PrintJSON prints data as JSON
