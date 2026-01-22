@@ -53,6 +53,8 @@ type runListOptions struct {
 	user     string
 	project  string
 	limit    int
+	since    string
+	until    string
 	json     bool
 	plain    bool
 	noHeader bool
@@ -69,6 +71,9 @@ func newRunListCmd() *cobra.Command {
   tc run list --job Sandbox_Demo
   tc run list --status failure --limit 10
   tc run list --project Sandbox --branch main
+  tc run list --since 24h
+  tc run list --since 24h --until 12h
+  tc run list --since "2026-01-21"
   tc run list --plain | grep failure`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunList(opts)
@@ -81,6 +86,8 @@ func newRunListCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of runs")
+	cmd.Flags().StringVar(&opts.since, "since", "", "Filter builds finished after this time (e.g., 24h, 2026-01-21)")
+	cmd.Flags().StringVar(&opts.until, "until", "", "Filter builds finished before this time (e.g., 12h, 2026-01-22)")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
 	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
@@ -110,6 +117,20 @@ func runRunList(opts *runListOptions) error {
 		}
 	}
 
+	var sinceDate, untilDate string
+	if opts.since != "" {
+		sinceDate, err = api.ParseUserDate(opts.since)
+		if err != nil {
+			return fmt.Errorf("invalid --since date: %w", err)
+		}
+	}
+	if opts.until != "" {
+		untilDate, err = api.ParseUserDate(opts.until)
+		if err != nil {
+			return fmt.Errorf("invalid --until date: %w", err)
+		}
+	}
+
 	runs, err := client.GetBuilds(api.BuildsOptions{
 		BuildTypeID: opts.job,
 		Branch:      opts.branch,
@@ -117,6 +138,8 @@ func runRunList(opts *runListOptions) error {
 		User:        user,
 		Project:     opts.project,
 		Limit:       opts.limit,
+		SinceDate:   sinceDate,
+		UntilDate:   untilDate,
 	})
 	if err != nil {
 		return err

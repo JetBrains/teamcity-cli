@@ -19,6 +19,8 @@ type BuildsOptions struct {
 	Project     string
 	Number      string
 	Limit       int
+	SinceDate   string
+	UntilDate   string
 }
 
 // GetBuilds returns a list of builds
@@ -45,6 +47,12 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 	}
 	if opts.Number != "" {
 		locatorParts = append(locatorParts, fmt.Sprintf("number:%s", opts.Number))
+	}
+	if opts.SinceDate != "" {
+		locatorParts = append(locatorParts, fmt.Sprintf("sinceDate:%s", opts.SinceDate))
+	}
+	if opts.UntilDate != "" {
+		locatorParts = append(locatorParts, fmt.Sprintf("untilDate:%s", opts.UntilDate))
 	}
 	if opts.Limit > 0 {
 		locatorParts = append(locatorParts, fmt.Sprintf("count:%d", opts.Limit))
