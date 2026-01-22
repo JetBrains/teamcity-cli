@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tiulpin/teamcity-cli/internal/api"
 	"github.com/tiulpin/teamcity-cli/internal/config"
+	tcerrors "github.com/tiulpin/teamcity-cli/internal/errors"
 	"github.com/tiulpin/teamcity-cli/internal/output"
 )
 
@@ -785,7 +786,12 @@ func newRunLogCmd() *cobra.Command {
 		Long: `View the log output from a run.
 
 You can specify a run ID directly, or use --job to get the latest run's log.`,
-		Args: cobra.MaximumNArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 && cmd.Flags().Changed("job") {
+				return tcerrors.MutuallyExclusive("run-id", "job")
+			}
+			return cobra.MaximumNArgs(1)(cmd, args)
+		},
 		Example: `  tc run log 12345
   tc run log 12345 --failed
   tc run log --job Sandbox_Demo`,
@@ -859,7 +865,7 @@ func runRunLog(runID string, opts *runLogOptions) error {
 			Limit:       1,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to get runs for job: %w", err)
+			return err
 		}
 		if runs.Count == 0 {
 			return fmt.Errorf("no runs found for job %s", opts.job)
@@ -1275,7 +1281,12 @@ func newRunTestsCmd() *cobra.Command {
 		Long: `Show test results from a run.
 
 You can specify a run ID directly, or use --job to get the latest run's tests.`,
-		Args: cobra.MaximumNArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 && cmd.Flags().Changed("job") {
+				return tcerrors.MutuallyExclusive("run-id", "job")
+			}
+			return cobra.MaximumNArgs(1)(cmd, args)
+		},
 		Example: `  tc run tests 12345
   tc run tests 12345 --failed
   tc run tests --job Sandbox_Demo`,
@@ -1308,7 +1319,7 @@ func runRunTests(runID string, opts *runTestsOptions) error {
 			Limit:       1,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to get runs for job: %w", err)
+			return err
 		}
 		if runs.Count == 0 {
 			return fmt.Errorf("no runs found for job %s", opts.job)
