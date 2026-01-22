@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -95,12 +96,19 @@ func TestPermissionDenied(t *testing.T) {
 }
 
 func TestNetworkError(t *testing.T) {
-	err := NetworkError("https://tc.example.com")
+	err := NetworkError("https://tc.example.com", nil)
 	if !strings.Contains(err.Message, "Cannot connect") {
 		t.Errorf("NetworkError().Message should contain 'Cannot connect', got %q", err.Message)
 	}
 	if !strings.Contains(err.Message, "tc.example.com") {
 		t.Errorf("NetworkError().Message should contain server URL, got %q", err.Message)
+	}
+
+	// Test with cause
+	cause := fmt.Errorf("connection refused")
+	errWithCause := NetworkError("https://tc.example.com", cause)
+	if !strings.Contains(errWithCause.Message, "connection refused") {
+		t.Errorf("NetworkError().Message should contain cause, got %q", errWithCause.Message)
 	}
 }
 

@@ -65,9 +65,13 @@ func PermissionDenied(action string) *UserError {
 }
 
 // NetworkError returns an error for network issues
-func NetworkError(serverURL string) *UserError {
+func NetworkError(serverURL string, cause error) *UserError {
+	msg := fmt.Sprintf("Cannot connect to TeamCity server at %s", serverURL)
+	if cause != nil {
+		msg = fmt.Sprintf("%s: %v", msg, cause)
+	}
 	return &UserError{
-		Message:    fmt.Sprintf("Cannot connect to TeamCity server at %s", serverURL),
+		Message:    msg,
 		Suggestion: "Check your network connection and verify the server URL",
 	}
 }

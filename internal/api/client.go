@@ -160,7 +160,7 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 func (c *Client) get(path string, result interface{}) error {
 	resp, err := c.doRequest("GET", path, nil)
 	if err != nil {
-		return tcerrors.NetworkError(c.BaseURL)
+		return tcerrors.NetworkError(c.BaseURL, err)
 	}
 	defer resp.Body.Close()
 
@@ -255,7 +255,7 @@ func humanizeErrorMessage(msg string) string {
 func (c *Client) post(path string, body io.Reader, result interface{}) error {
 	resp, err := c.doRequest("POST", path, body)
 	if err != nil {
-		return tcerrors.NetworkError(c.BaseURL)
+		return tcerrors.NetworkError(c.BaseURL, err)
 	}
 	defer resp.Body.Close()
 
@@ -302,7 +302,7 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, tcerrors.NetworkError(c.BaseURL)
+		return nil, tcerrors.NetworkError(c.BaseURL, err)
 	}
 	defer resp.Body.Close()
 
