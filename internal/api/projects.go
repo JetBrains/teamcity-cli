@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 )
 
@@ -15,22 +14,11 @@ type ProjectsOptions struct {
 
 // GetProjects returns a list of projects
 func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
-	var locatorParts []string
+	locator := NewLocator().
+		Add("parentProject", opts.Parent).
+		AddIntDefault("count", opts.Limit, 30)
 
-	if opts.Parent != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("parentProject:%s", opts.Parent))
-	}
-	if opts.Limit > 0 {
-		locatorParts = append(locatorParts, fmt.Sprintf("count:%d", opts.Limit))
-	} else {
-		locatorParts = append(locatorParts, "count:30")
-	}
-
-	path := "/app/rest/projects"
-	if len(locatorParts) > 0 {
-		locator := strings.Join(locatorParts, ",")
-		path = fmt.Sprintf("%s?locator=%s", path, url.QueryEscape(locator))
-	}
+	path := fmt.Sprintf("/app/rest/projects?locator=%s", locator.Encode())
 
 	var result ProjectList
 	if err := c.get(path, &result); err != nil {

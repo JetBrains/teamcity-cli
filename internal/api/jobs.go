@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 )
 
@@ -14,22 +13,11 @@ type BuildTypesOptions struct {
 
 // GetBuildTypes returns a list of build configurations
 func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
-	var locatorParts []string
+	locator := NewLocator().
+		Add("project", opts.Project).
+		AddIntDefault("count", opts.Limit, 30)
 
-	if opts.Project != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("project:%s", opts.Project))
-	}
-	if opts.Limit > 0 {
-		locatorParts = append(locatorParts, fmt.Sprintf("count:%d", opts.Limit))
-	} else {
-		locatorParts = append(locatorParts, "count:30")
-	}
-
-	path := "/app/rest/buildTypes"
-	if len(locatorParts) > 0 {
-		locator := strings.Join(locatorParts, ",")
-		path = fmt.Sprintf("%s?locator=%s", path, url.QueryEscape(locator))
-	}
+	path := fmt.Sprintf("/app/rest/buildTypes?locator=%s", locator.Encode())
 
 	var result BuildTypeList
 	if err := c.get(path, &result); err != nil {
