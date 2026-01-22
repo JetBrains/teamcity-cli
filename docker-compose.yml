@@ -1,0 +1,45 @@
+# Local TeamCity setup for integration testing
+# Start: docker compose up -d
+# Stop: docker compose down
+# Clean: docker compose down -v (removes data)
+
+services:
+  teamcity-server:
+    image: jetbrains/teamcity-server:latest
+    container_name: teamcity-server
+    ports:
+      - "8111:8111"
+    volumes:
+      - teamcity-data:/data/teamcity_server/datadir
+      - teamcity-logs:/opt/teamcity/logs
+      - ./.teamcity/init-teamcity.sh:/init-teamcity.sh:ro
+    entrypoint: ["/bin/bash", "/init-teamcity.sh"]
+    environment:
+      # Accept license agreement
+      TEAMCITY_SERVER_OPTS: >-
+        -Dteamcity.installation.completed=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8111/app/rest/server"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+  teamcity-agent:
+    image: jetbrains/teamcity-agent:latest
+    container_name: teamcity-agent
+    depends_on:
+      teamcity-server:
+        condition: service_started
+    environment:
+      SERVER_URL: http://teamcity-server:8111
+      DOCKER_IN_DOCKER: start
+    privileged: true
+    volumes:
+      - teamcity-agent-conf:/data/teamcity_agent/conf
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  teamcity-data:
+  teamcity-logs:
+  teamcity-agent-conf:
