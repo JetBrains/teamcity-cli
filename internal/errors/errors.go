@@ -79,3 +79,11 @@ func RequiredFlag(flag string) *UserError {
 		Suggestion: "Provide the flag value or run without --no-input for interactive prompts",
 	}
 }
+
+// MutuallyExclusive returns an error when mutually exclusive options are both provided
+func MutuallyExclusive(arg, flag string) *UserError {
+	return &UserError{
+		Message:    fmt.Sprintf("cannot specify both %s argument and --%s flag", arg, flag),
+		Suggestion: fmt.Sprintf("Use either '%s' or '--%s', not both", arg, flag),
+	}
+}
