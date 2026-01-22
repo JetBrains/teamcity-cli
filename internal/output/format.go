@@ -266,7 +266,16 @@ func PrintJSON(data interface{}) error {
 // percentages defines how to divide the flexible space among columns.
 // Returns the calculated widths for each column.
 func ColumnWidths(margin, minFlex int, percentages ...int) []int {
-	termWidth := TerminalWidth()
+	return ColumnWidthsWithOverride(0, margin, minFlex, percentages...)
+}
+
+// ColumnWidthsWithOverride calculates column widths with an optional width override.
+// If widthOverride is > 0, it will be used instead of the terminal width.
+func ColumnWidthsWithOverride(widthOverride, margin, minFlex int, percentages ...int) []int {
+	termWidth := widthOverride
+	if termWidth <= 0 {
+		termWidth = TerminalWidth()
+	}
 	flexSpace := termWidth - margin
 	if flexSpace < minFlex {
 		flexSpace = minFlex
