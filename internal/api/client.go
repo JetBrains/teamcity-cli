@@ -180,7 +180,6 @@ func (c *Client) get(path string, result interface{}) error {
 func (c *Client) handleErrorResponse(resp *http.Response) error {
 	bodyBytes, _ := io.ReadAll(resp.Body)
 
-	// Try to parse TeamCity's structured error response
 	message := extractErrorMessage(bodyBytes)
 
 	switch resp.StatusCode {
@@ -201,7 +200,8 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 	}
 }
 
-// extractErrorMessage tries to extract a clean error message from TeamCity's API response
+// extractErrorMessage tries to extract a clean error message from TeamCity's API response.
+// Only the first error is used as it's typically the primary cause.
 func extractErrorMessage(body []byte) string {
 	var errResp APIErrorResponse
 	if err := json.Unmarshal(body, &errResp); err == nil && len(errResp.Errors) > 0 {
