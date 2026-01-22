@@ -21,9 +21,7 @@ object Test : BuildType({
     }
 
     triggers {
-        vcs {
-            branchFilter = "+:<default>"
-        }
+        vcs {}
     }
 
     features {

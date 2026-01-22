@@ -20,9 +20,7 @@ object Lint : BuildType({
     }
 
     triggers {
-        vcs {
-            branchFilter = "+:<default>"
-        }
+        vcs {}
     }
 
     features {
