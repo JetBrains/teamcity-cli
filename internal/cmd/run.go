@@ -141,6 +141,13 @@ func runRunList(opts *runListOptions) error {
 
 	widths := output.ColumnWidths(47, 30, 40, 35, 25)
 
+	maybeTruncate := func(s string, maxLen int) string {
+		if opts.plain {
+			return s
+		}
+		return output.Truncate(s, maxLen)
+	}
+
 	for _, r := range runs.Builds {
 		var status, runRef string
 		if opts.plain {
@@ -184,9 +191,9 @@ func runRunList(opts *runListOptions) error {
 		rows = append(rows, []string{
 			status,
 			runRef,
-			output.Truncate(r.BuildTypeID, widths[0]),
-			output.Truncate(branch, widths[1]),
-			output.Truncate(triggeredBy, widths[2]),
+			maybeTruncate(r.BuildTypeID, widths[0]),
+			maybeTruncate(branch, widths[1]),
+			maybeTruncate(triggeredBy, widths[2]),
 			duration,
 			age,
 		})
