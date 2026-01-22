@@ -538,7 +538,7 @@ func TestGetProjects(t *testing.T) {
 func TestGetProjectsWithParent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query().Get("locator")
-		if !contains(query, "parentProject:_Root") {
+		if !strings.Contains(query, "parentProject:_Root") {
 			t.Errorf("Expected locator to contain parentProject:_Root, got %s", query)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -696,10 +696,10 @@ func TestGetBuildsWithAllFilters(t *testing.T) {
 		// URL-decode the query to check filters
 		locator, _ := url.QueryUnescape(r.URL.Query().Get("locator"))
 		// Check that filters are applied (status is uppercase: SUCCESS)
-		if !contains(locator, "status:SUCCESS") {
+		if !strings.Contains(locator, "status:SUCCESS") {
 			t.Errorf("Expected status filter in locator: %s", locator)
 		}
-		if !contains(locator, "state:finished") {
+		if !strings.Contains(locator, "state:finished") {
 			t.Errorf("Expected state filter in locator: %s", locator)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -1014,19 +1014,6 @@ func TestParseTeamCityTimeEmpty(t *testing.T) {
 	if !result.IsZero() {
 		t.Errorf("Expected zero time for empty string, got %v", result)
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsAt(s, substr, 0))
-}
-
-func containsAt(s, substr string, start int) bool {
-	for i := start; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 func TestRawRequestGET(t *testing.T) {
