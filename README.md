@@ -146,6 +146,98 @@ tc queue list
 | **api**               |                                     |
 | `tc api`              | Make raw API requests               |
 
+## Configuration
+
+Configuration is stored in `~/.config/tc/config.yml`:
+
+```yaml
+default_server: https://teamcity.example.com
+servers:
+  https://teamcity.example.com:
+    token: <your-token>
+    user: username
+```
+
+### Multiple Servers
+
+You can authenticate with multiple TeamCity servers. Each server's credentials are stored separately.
+
+**Adding servers:**
+
+```bash
+# Log in to your first server
+tc auth login --server https://teamcity1.example.com
+
+# Log in to additional servers (becomes the new default)
+tc auth login --server https://teamcity2.example.com
+```
+
+**Switching between servers:**
+
+```bash
+# Option 1: Use environment variable (recommended for scripts)
+TEAMCITY_URL=https://teamcity1.example.com tc run list
+
+# Option 2: Export for your session
+export TEAMCITY_URL=https://teamcity1.example.com
+tc run list  # uses teamcity1
+tc auth status  # shows teamcity1
+
+# Option 3: Log in again to change the default
+tc auth login --server https://teamcity1.example.com
+```
+
+**Example multi-server config:**
+
+```yaml
+default_server: https://teamcity-prod.example.com
+servers:
+  https://teamcity-prod.example.com:
+    token: <token>
+    user: alice
+  https://teamcity-staging.example.com:
+    token: <token>
+    user: alice
+  https://teamcity-dev.example.com:
+    token: <token>
+    user: alice
+```
+
+**CI/CD usage:**
+
+Environment variables always take precedence over config file settings:
+
+```bash
+export TEAMCITY_URL="https://teamcity.example.com"
+export TEAMCITY_TOKEN="your-access-token"
+tc run start MyProject_Build  # uses env vars, ignores config file
+```
+
+## Shell Completion
+
+```bash
+# Bash
+tc completion bash > /etc/bash_completion.d/tc
+
+# Zsh
+tc completion zsh > "${fpath[1]}/_tc"
+
+# Fish
+tc completion fish > ~/.config/fish/completions/tc.fish
+
+# PowerShell
+tc completion powershell > tc.ps1
+```
+
+## Global Flags
+
+- `-h, --help` – Help for command
+- `-v, --version` – Version information
+- `--no-color` – Disable colored output
+- `-q, --quiet` – Suppress non-essential output
+- `--verbose` – Show detailed output including debug info
+- `--no-input` – Disable interactive prompts
+
 <!-- COMMANDS_START -->
 
 ## Authentication
@@ -357,11 +449,12 @@ Show test results from a run.
 ```bash
 tc run tests 12345
 tc run tests 12345 --failed
-tc run tests 12345 --json
+tc run tests --job Sandbox_Demo
 ```
 
 **Options:**
 - `--failed` – Show only failed tests
+- `-j, --job` – Get tests for latest run of this job
 - `--json` – Output as JSON
 - `-n, --limit` – Maximum number of tests to show
 
@@ -688,43 +781,6 @@ tc api /app/rest/server --silent
 - `--silent` – Suppress output on success
 
 <!-- COMMANDS_END -->
-
-## Configuration
-
-Configuration is stored in `~/.config/tc/config.yml`:
-
-```yaml
-default_server: teamcity.example.com
-servers:
-  teamcity.example.com:
-    token: <encrypted>
-    user: username
-```
-
-## Shell Completion
-
-```bash
-# Bash
-tc completion bash > /etc/bash_completion.d/tc
-
-# Zsh
-tc completion zsh > "${fpath[1]}/_tc"
-
-# Fish
-tc completion fish > ~/.config/fish/completions/tc.fish
-
-# PowerShell
-tc completion powershell > tc.ps1
-```
-
-## Global Flags
-
-- `-h, --help` – Help for command
-- `-v, --version` – Version information
-- `--no-color` – Disable colored output
-- `-q, --quiet` – Suppress non-essential output
-- `--verbose` – Show detailed output including debug info
-- `--no-input` – Disable interactive prompts
 
 ## License
 
