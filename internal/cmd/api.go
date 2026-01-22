@@ -76,6 +76,8 @@ This command is useful for:
 	cmd.Flags().BoolVar(&opts.silent, "silent", false, "Suppress output on success")
 	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Output raw response without formatting")
 
+	cmd.MarkFlagsMutuallyExclusive("input", "field")
+
 	return cmd
 }
 
