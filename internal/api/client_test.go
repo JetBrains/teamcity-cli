@@ -390,21 +390,55 @@ func TestHandleErrorResponse(t *testing.T) {
 	tests := []struct {
 		name       string
 		statusCode int
+		body       string
 		expectErr  string
 	}{
 		{
 			name:       "unauthorized",
 			statusCode: http.StatusUnauthorized,
+			body:       "error message",
 			expectErr:  "authentication failed",
 		},
 		{
 			name:       "forbidden",
 			statusCode: http.StatusForbidden,
+			body:       "error message",
 			expectErr:  "permission denied",
 		},
 		{
-			name:       "not found",
+			name:       "not found plain text",
 			statusCode: http.StatusNotFound,
+			body:       "error message",
+			expectErr:  "not found",
+		},
+		{
+			name:       "not found with TeamCity error format",
+			statusCode: http.StatusNotFound,
+			body:       `{"errors":[{"message":"No build found by locator '999'."}]}`,
+			expectErr:  "run '999' not found",
+		},
+		{
+			name:       "internal server error",
+			statusCode: http.StatusInternalServerError,
+			body:       "Internal Server Error",
+			expectErr:  "500",
+		},
+		{
+			name:       "bad gateway",
+			statusCode: http.StatusBadGateway,
+			body:       "",
+			expectErr:  "502",
+		},
+		{
+			name:       "service unavailable",
+			statusCode: http.StatusServiceUnavailable,
+			body:       "Server is down for maintenance",
+			expectErr:  "503",
+		},
+		{
+			name:       "empty body 404",
+			statusCode: http.StatusNotFound,
+			body:       "",
 			expectErr:  "not found",
 		},
 	}
@@ -413,7 +447,7 @@ func TestHandleErrorResponse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tc.statusCode)
-				w.Write([]byte("error message"))
+				w.Write([]byte(tc.body))
 			}))
 			defer server.Close()
 
@@ -423,6 +457,24 @@ func TestHandleErrorResponse(t *testing.T) {
 				t.Fatal("Expected error")
 			}
 		})
+	}
+}
+
+func TestHandleErrorResponseWithStructuredError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"errors":[{"message":"Invalid parameter value"}]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token")
+	_, err := client.GetBuild("invalid")
+	if err == nil {
+		t.Fatal("Expected error")
+	}
+	if !strings.Contains(err.Error(), "Invalid parameter value") {
+		t.Errorf("Expected error to contain structured message, got: %v", err)
 	}
 }
 
@@ -1259,6 +1311,42 @@ func TestHumanizeErrorMessage(t *testing.T) {
 			input:    "",
 			expected: "",
 		},
+		// Edge cases
+		{
+			name:     "locator with nested parentheses",
+			input:    "No build types found by locator 'project:(id:Test)'.",
+			expected: "job 'project:(id:Test)' not found",
+		},
+		{
+			name:     "build type with special chars in id",
+			input:    "No build types found by locator 'My_Project-Config'.",
+			expected: "job 'My_Project-Config' not found",
+		},
+		{
+			name:     "nothing found with complex locator",
+			input:    "Nothing is found by locator 'count:1,buildType:(id:My_Project_Build),branch:(default:any)'.",
+			expected: "no runs found for job 'My_Project_Build'",
+		},
+		{
+			name:     "nothing found without buildType",
+			input:    "Nothing is found by locator 'count:1,project:(id:Test)'.",
+			expected: "Nothing is found by locator 'count:1,project:(id:Test)'.",
+		},
+		{
+			name:     "message with unicode",
+			input:    "No project found by locator '日本語プロジェクト'.",
+			expected: "project '日本語プロジェクト' not found",
+		},
+		{
+			name:     "message without quotes",
+			input:    "Some error without locator pattern",
+			expected: "Some error without locator pattern",
+		},
+		{
+			name:     "incomplete buildType locator",
+			input:    "Nothing is found by locator 'buildType:(id:'.",
+			expected: "Nothing is found by locator 'buildType:(id:'.",
+		},
 	}
 
 	for _, tc := range tests {
@@ -1268,5 +1356,87 @@ func TestHumanizeErrorMessage(t *testing.T) {
 				t.Errorf("Expected %q, got %q", tc.expected, result)
 			}
 		})
+	}
+}
+
+func TestResolveBuildID(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expected    string
+		expectError bool
+	}{
+		{
+			name:     "plain numeric ID",
+			input:    "12345",
+			expected: "12345",
+		},
+		{
+			name:     "plain ID with letters",
+			input:    "abc123",
+			expected: "abc123",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	client := NewClient("https://example.com", "token")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// For non-# refs, ResolveBuildID should pass through without API call
+			if !strings.HasPrefix(tc.input, "#") {
+				result, err := client.ResolveBuildID(tc.input)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+				if result != tc.expected {
+					t.Errorf("Expected %q, got %q", tc.expected, result)
+				}
+			}
+		})
+	}
+}
+
+func TestResolveBuildIDWithHashPrefix(t *testing.T) {
+	// Test #number resolution requires API mock
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check that the request includes the number filter
+		if !strings.Contains(r.URL.RawQuery, "number") {
+			t.Error("Expected number filter in query")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(BuildList{
+			Count: 1,
+			Builds: []Build{
+				{ID: 99999, Number: "42"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token")
+	result, err := client.ResolveBuildID("#42")
+	if err != nil {
+		t.Fatalf("ResolveBuildID failed: %v", err)
+	}
+	if result != "99999" {
+		t.Errorf("Expected resolved ID 99999, got %s", result)
+	}
+}
+
+func TestResolveBuildIDNotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(BuildList{Count: 0, Builds: []Build{}})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token")
+	_, err := client.ResolveBuildID("#999999")
+	if err == nil {
+		t.Error("Expected error for non-existent build number")
 	}
 }

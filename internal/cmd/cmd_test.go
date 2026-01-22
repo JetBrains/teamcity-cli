@@ -16,6 +16,7 @@ import (
 var (
 	testJob     string
 	testProject string
+	testBuild   *api.Build
 )
 
 func TestMain(m *testing.M) {
@@ -33,7 +34,68 @@ func TestMain(m *testing.M) {
 
 	config.Init()
 
+	client := newTestClient()
+	if err := ensureTestBuild(client); err != nil {
+		println("Warning: could not ensure test build:", err.Error())
+	}
+
+	if user, err := client.GetCurrentUser(); err == nil {
+		config.SetUserForServer(os.Getenv("TEAMCITY_URL"), user.Username)
+		println("Set current user:", user.Username)
+	}
+
 	os.Exit(m.Run())
+}
+
+// ensureTestBuild ensures a finished build exists for tests that require one.
+// It first checks for an existing finished build, and if none exists,
+// triggers a new build and waits for it to complete.
+func ensureTestBuild(client *api.Client) error {
+	builds, err := client.GetBuilds(api.BuildsOptions{
+		BuildTypeID: testJob,
+		State:       "finished",
+		Limit:       1,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to check for existing builds: %w", err)
+	}
+
+	if builds.Count > 0 {
+		testBuild = &builds.Builds[0]
+		println("Using existing finished build:", testBuild.ID)
+		return nil
+	}
+
+	println("No finished builds found, triggering a new build...")
+	build, err := client.RunBuild(testJob, api.RunBuildOptions{
+		Comment: "Integration test setup - ensuring test data exists",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to trigger build: %w", err)
+	}
+	println("Triggered build:", build.ID)
+
+	timeout := 5 * time.Minute
+	pollInterval := 5 * time.Second
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		build, err = client.GetBuild(fmt.Sprintf("%d", build.ID))
+		if err != nil {
+			return fmt.Errorf("failed to get build status: %w", err)
+		}
+
+		if build.State == "finished" {
+			testBuild = build
+			println("Build finished with status:", build.Status)
+			return nil
+		}
+
+		println("Build state:", build.State, "- waiting...")
+		time.Sleep(pollInterval)
+	}
+
+	return fmt.Errorf("build did not finish within %v", timeout)
 }
 
 func newTestClient() *api.Client {
@@ -138,13 +200,11 @@ func TestRunList(t *testing.T) {
 }
 
 func TestRunView(t *testing.T) {
-	client := newTestClient()
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testJob, Limit: 1})
-	if err != nil || builds.Count == 0 {
-		t.Skip("No runs to view")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	runID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	runID := fmt.Sprintf("%d", testBuild.ID)
 	runCmd(t, "run", "view", runID)
 	runCmd(t, "run", "view", runID, "--json")
 }
@@ -182,24 +242,20 @@ func TestRunStartWithOptions(t *testing.T) {
 }
 
 func TestRunLog(t *testing.T) {
-	client := newTestClient()
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testJob, Status: "success", Limit: 1})
-	if err != nil || builds.Count == 0 {
-		t.Skip("No successful runs for log")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	runID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	runID := fmt.Sprintf("%d", testBuild.ID)
 	runCmd(t, "run", "log", runID)
 }
 
 func TestRunDownload(t *testing.T) {
-	client := newTestClient()
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testJob, Status: "success", Limit: 1})
-	if err != nil || builds.Count == 0 {
-		t.Skip("No successful runs for download")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	runID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	runID := fmt.Sprintf("%d", testBuild.ID)
 	rootCmd := newRootCmd()
 	rootCmd.SetArgs([]string{"run", "download", runID, "--dir", "/tmp/tc-test-artifacts"})
 	// May fail if no artifacts - that's ok
@@ -207,38 +263,32 @@ func TestRunDownload(t *testing.T) {
 }
 
 func TestRunPinUnpin(t *testing.T) {
-	client := newTestClient()
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testJob, Status: "success", Limit: 1})
-	if err != nil || builds.Count == 0 {
-		t.Skip("No successful runs to pin")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	runID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	runID := fmt.Sprintf("%d", testBuild.ID)
 	runCmd(t, "run", "pin", runID, "--comment", "CLI test pin")
 	runCmd(t, "run", "unpin", runID)
 }
 
 func TestRunTagUntag(t *testing.T) {
-	client := newTestClient()
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testJob, Status: "success", Limit: 1})
-	if err != nil || builds.Count == 0 {
-		t.Skip("No successful runs to tag")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	runID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	runID := fmt.Sprintf("%d", testBuild.ID)
 	runCmd(t, "run", "tag", runID, "cli-test-tag", "another-tag")
 	time.Sleep(500 * time.Millisecond) // Wait for API eventual consistency
 	runCmd(t, "run", "untag", runID, "cli-test-tag", "another-tag")
 }
 
 func TestRunComment(t *testing.T) {
-	client := newTestClient()
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testJob, Status: "success", Limit: 1})
-	if err != nil || builds.Count == 0 {
-		t.Skip("No successful runs to comment")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	runID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	runID := fmt.Sprintf("%d", testBuild.ID)
 	runCmd(t, "run", "comment", runID, "CLI test comment")
 	runCmd(t, "run", "comment", runID) // View
 	runCmd(t, "run", "comment", runID, "--delete")
@@ -343,26 +393,22 @@ func TestAPICommandMethod(t *testing.T) {
 }
 
 func TestRunChanges(t *testing.T) {
-	client := newTestClient()
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testJob, Status: "success", Limit: 1})
-	if err != nil || builds.Count == 0 {
-		t.Skip("No successful runs for changes")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	runID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	runID := fmt.Sprintf("%d", testBuild.ID)
 	runCmd(t, "run", "changes", runID)
 	runCmd(t, "run", "changes", runID, "--no-files")
 	runCmd(t, "run", "changes", runID, "--json")
 }
 
 func TestRunTests(t *testing.T) {
-	client := newTestClient()
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testJob, Status: "success", Limit: 1})
-	if err != nil || builds.Count == 0 {
-		t.Skip("No successful runs for tests")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	runID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	runID := fmt.Sprintf("%d", testBuild.ID)
 	runCmd(t, "run", "tests", runID)
 	runCmd(t, "run", "tests", runID, "--failed")
 	runCmd(t, "run", "tests", runID, "--json")
@@ -373,4 +419,153 @@ func TestRunListWithAtMe(t *testing.T) {
 		t.Skip("No user in config")
 	}
 	runCmd(t, "run", "list", "--user", "@me", "--limit", "5")
+}
+
+// Error handling and edge case tests
+
+func TestInvalidIDs(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"project", []string{"project", "view", "NonExistentProject123456"}},
+		{"job", []string{"job", "view", "NonExistentJob123456"}},
+		{"run", []string{"run", "view", "999999999"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rootCmd := newRootCmd()
+			rootCmd.SetArgs(tc.args)
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			rootCmd.Execute()
+		})
+	}
+}
+
+func TestListFilters(t *testing.T) {
+	cases := [][]string{
+		{"run", "list", "--status", "success", "--limit", "2"},
+		{"run", "list", "--status", "failure", "--limit", "2"},
+		{"run", "list", "--since", "24h", "--limit", "2"},
+		{"project", "list", "--parent", "_Root", "--limit", "2"},
+		{"job", "list", "--project", testProject, "--limit", "2"},
+	}
+	for _, args := range cases {
+		t.Run(args[0]+"/"+args[2], func(t *testing.T) {
+			runCmd(t, args...)
+		})
+	}
+}
+
+func TestAPICommandEdgeCases(t *testing.T) {
+	for _, method := range []string{"GET", "HEAD"} {
+		t.Run(method, func(t *testing.T) {
+			rootCmd := newRootCmd()
+			rootCmd.SetArgs([]string{"api", "/app/rest/server", "-X", method})
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			rootCmd.Execute()
+		})
+	}
+
+	t.Run("invalid_path", func(t *testing.T) {
+		rootCmd := newRootCmd()
+		rootCmd.SetArgs([]string{"api", "/app/rest/nonexistent"})
+		var out bytes.Buffer
+		rootCmd.SetOut(&out)
+		rootCmd.SetErr(&out)
+		rootCmd.Execute()
+	})
+}
+
+func TestRunViewWithBuildNumberFormat(t *testing.T) {
+	if testBuild == nil {
+		t.Skip("No test build available")
+	}
+	runCmd(t, "run", "view", fmt.Sprintf("#%s", testBuild.Number))
+}
+
+func TestOutputFormats(t *testing.T) {
+	cases := [][]string{
+		{"project", "list", "--json", "--limit", "1"},
+		{"job", "list", "--json", "--limit", "1"},
+		{"run", "list", "--json", "--limit", "1"},
+		{"queue", "list", "--json"},
+	}
+	for _, args := range cases {
+		t.Run(args[0], func(t *testing.T) {
+			runCmd(t, args...)
+		})
+	}
+}
+
+func TestLimitFlag(t *testing.T) {
+	for _, limit := range []string{"1", "5", "10", "100"} {
+		t.Run(limit, func(t *testing.T) {
+			runCmd(t, "run", "list", "--limit", limit)
+		})
+	}
+}
+
+func TestHelpCommands(t *testing.T) {
+	commands := [][]string{
+		{"--help"},
+		{"project", "--help"},
+		{"job", "--help"},
+		{"run", "--help"},
+		{"queue", "--help"},
+		{"auth", "--help"},
+		{"api", "--help"},
+	}
+	for _, args := range commands {
+		t.Run(args[0], func(t *testing.T) {
+			rootCmd := newRootCmd()
+			rootCmd.SetArgs(args)
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			if err := rootCmd.Execute(); err != nil {
+				t.Errorf("help failed: %v", err)
+			}
+			if out.Len() == 0 {
+				t.Error("expected help output")
+			}
+		})
+	}
+}
+
+func TestUnknownCommand(t *testing.T) {
+	rootCmd := newRootCmd()
+	rootCmd.SetArgs([]string{"nonexistent"})
+	var out bytes.Buffer
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for unknown command")
+	}
+}
+
+func TestGlobalFlags(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"quiet", []string{"--quiet", "project", "list", "--limit", "1"}},
+		{"verbose", []string{"--verbose", "project", "list", "--limit", "1"}},
+		{"no-color", []string{"--no-color", "project", "list", "--limit", "1"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rootCmd := newRootCmd()
+			rootCmd.SetArgs(tc.args)
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			rootCmd.Execute()
+		})
+	}
 }

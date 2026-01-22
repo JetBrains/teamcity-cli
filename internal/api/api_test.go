@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/tiulpin/teamcity-cli/internal/api"
@@ -13,6 +14,9 @@ var (
 	client      *api.Client
 	testConfig  string
 	testProject string
+
+	// testBuild holds a guaranteed finished build for tests that need one
+	testBuild *api.Build
 )
 
 func TestMain(m *testing.M) {
@@ -32,7 +36,67 @@ func TestMain(m *testing.M) {
 	}
 
 	client = api.NewClient(url, token)
+
+	// Ensure we have at least one finished build for tests
+	if err := ensureTestBuild(); err != nil {
+		println("Warning: could not ensure test build:", err.Error())
+	}
+
 	os.Exit(m.Run())
+}
+
+// ensureTestBuild ensures a finished build exists for tests that require one.
+// It first checks for an existing finished build, and if none exists,
+// triggers a new build and waits for it to complete.
+func ensureTestBuild() error {
+	// First, check if we already have a finished build
+	builds, err := client.GetBuilds(api.BuildsOptions{
+		BuildTypeID: testConfig,
+		State:       "finished",
+		Limit:       1,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to check for existing builds: %w", err)
+	}
+
+	if builds.Count > 0 {
+		testBuild = &builds.Builds[0]
+		println("Using existing finished build:", testBuild.ID)
+		return nil
+	}
+
+	// No finished build exists, trigger one and wait
+	println("No finished builds found, triggering a new build...")
+	build, err := client.RunBuild(testConfig, api.RunBuildOptions{
+		Comment: "Integration test setup - ensuring test data exists",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to trigger build: %w", err)
+	}
+	println("Triggered build:", build.ID)
+
+	// Wait for build to finish (with timeout)
+	timeout := 5 * time.Minute
+	pollInterval := 5 * time.Second
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		build, err = client.GetBuild(fmt.Sprintf("%d", build.ID))
+		if err != nil {
+			return fmt.Errorf("failed to get build status: %w", err)
+		}
+
+		if build.State == "finished" {
+			testBuild = build
+			println("Build finished with status:", build.Status)
+			return nil
+		}
+
+		println("Build state:", build.State, "- waiting...")
+		time.Sleep(pollInterval)
+	}
+
+	return fmt.Errorf("build did not finish within %v", timeout)
 }
 
 func TestGetCurrentUser(t *testing.T) {
@@ -136,22 +200,17 @@ func TestResolveBuildID(t *testing.T) {
 		t.Errorf("Expected plain ID to pass through, got %s", id)
 	}
 
-	// Test #number resolution
-	builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testConfig, Limit: 1})
-	if err != nil {
-		t.Fatalf("GetBuilds failed: %v", err)
-	}
-	if builds.Count == 0 {
-		t.Skip("No builds to test #number resolution")
+	// Test #number resolution using guaranteed test build
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	build := builds.Builds[0]
-	ref := fmt.Sprintf("#%s", build.Number)
+	ref := fmt.Sprintf("#%s", testBuild.Number)
 	resolvedID, err := client.ResolveBuildID(ref)
 	if err != nil {
 		t.Fatalf("ResolveBuildID #number failed: %v", err)
 	}
-	expectedID := fmt.Sprintf("%d", build.ID)
+	expectedID := fmt.Sprintf("%d", testBuild.ID)
 	if resolvedID != expectedID {
 		t.Errorf("Expected resolved ID %s, got %s", expectedID, resolvedID)
 	}
@@ -167,8 +226,8 @@ func TestResolveBuildID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetBuild with #number failed: %v", err)
 	}
-	if fetchedBuild.ID != build.ID {
-		t.Errorf("GetBuild #number returned wrong build: expected %d, got %d", build.ID, fetchedBuild.ID)
+	if fetchedBuild.ID != testBuild.ID {
+		t.Errorf("GetBuild #number returned wrong build: expected %d, got %d", testBuild.ID, fetchedBuild.ID)
 	}
 }
 
@@ -328,19 +387,11 @@ func TestGetServer(t *testing.T) {
 }
 
 func TestBuildLog(t *testing.T) {
-	builds, err := client.GetBuilds(api.BuildsOptions{
-		BuildTypeID: testConfig,
-		Status:      "success",
-		Limit:       1,
-	})
-	if err != nil {
-		t.Fatalf("GetBuilds failed: %v", err)
-	}
-	if builds.Count == 0 {
-		t.Skip("No successful builds to test logs")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	buildID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	buildID := fmt.Sprintf("%d", testBuild.ID)
 	log, err := client.GetBuildLog(buildID)
 	if err != nil {
 		t.Fatalf("GetBuildLog failed: %v", err)
@@ -351,19 +402,11 @@ func TestBuildLog(t *testing.T) {
 }
 
 func TestBuildPinUnpin(t *testing.T) {
-	builds, err := client.GetBuilds(api.BuildsOptions{
-		BuildTypeID: testConfig,
-		Status:      "success",
-		Limit:       1,
-	})
-	if err != nil {
-		t.Fatalf("GetBuilds failed: %v", err)
-	}
-	if builds.Count == 0 {
-		t.Skip("No successful builds to test pinning")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	buildID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	buildID := fmt.Sprintf("%d", testBuild.ID)
 
 	// Pin with comment
 	if err := client.PinBuild(buildID, "Test pin"); err != nil {
@@ -383,19 +426,11 @@ func TestBuildPinUnpin(t *testing.T) {
 }
 
 func TestBuildTags(t *testing.T) {
-	builds, err := client.GetBuilds(api.BuildsOptions{
-		BuildTypeID: testConfig,
-		Status:      "success",
-		Limit:       1,
-	})
-	if err != nil {
-		t.Fatalf("GetBuilds failed: %v", err)
-	}
-	if builds.Count == 0 {
-		t.Skip("No successful builds to test tagging")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	buildID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	buildID := fmt.Sprintf("%d", testBuild.ID)
 	testTags := []string{"test-tag-1", "test-tag-2"}
 
 	// Add tags
@@ -419,19 +454,11 @@ func TestBuildTags(t *testing.T) {
 }
 
 func TestBuildComment(t *testing.T) {
-	builds, err := client.GetBuilds(api.BuildsOptions{
-		BuildTypeID: testConfig,
-		Status:      "success",
-		Limit:       1,
-	})
-	if err != nil {
-		t.Fatalf("GetBuilds failed: %v", err)
-	}
-	if builds.Count == 0 {
-		t.Skip("No successful builds to test comments")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	buildID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	buildID := fmt.Sprintf("%d", testBuild.ID)
 
 	// Set comment
 	if err := client.SetBuildComment(buildID, "Test comment"); err != nil {
@@ -500,19 +527,11 @@ func TestRemoveFromQueue(t *testing.T) {
 }
 
 func TestGetArtifacts(t *testing.T) {
-	builds, err := client.GetBuilds(api.BuildsOptions{
-		BuildTypeID: testConfig,
-		Status:      "success",
-		Limit:       1,
-	})
-	if err != nil {
-		t.Fatalf("GetBuilds failed: %v", err)
-	}
-	if builds.Count == 0 {
-		t.Skip("No successful builds to test artifacts")
+	if testBuild == nil {
+		t.Skip("No test build available")
 	}
 
-	buildID := fmt.Sprintf("%d", builds.Builds[0].ID)
+	buildID := fmt.Sprintf("%d", testBuild.ID)
 	artifacts, err := client.GetArtifacts(buildID)
 	if err != nil {
 		t.Logf("GetArtifacts: %v (may be empty)", err)
@@ -528,5 +547,89 @@ func TestParseTeamCityTime(t *testing.T) {
 	}
 	if parsed.Year() != 2025 || parsed.Month() != 7 {
 		t.Errorf("Unexpected parsed time: %v", parsed)
+	}
+}
+
+func TestGetBuildChanges(t *testing.T) {
+	if testBuild == nil {
+		t.Skip("No test build available")
+	}
+
+	t.Run("by_id", func(t *testing.T) {
+		buildID := fmt.Sprintf("%d", testBuild.ID)
+		changes, err := client.GetBuildChanges(buildID)
+		if err != nil {
+			t.Fatalf("failed: %v", err)
+		}
+		t.Logf("Build %s has %d changes", buildID, changes.Count)
+	})
+
+	t.Run("by_number", func(t *testing.T) {
+		if testBuild.Number == "" {
+			t.Skip("no build number")
+		}
+		buildRef := fmt.Sprintf("#%s", testBuild.Number)
+		changes, err := client.GetBuildChanges(buildRef)
+		if err != nil {
+			t.Logf("with build number: %v", err)
+			return
+		}
+		t.Logf("Build %s has %d changes", buildRef, changes.Count)
+	})
+
+	t.Run("not_found", func(t *testing.T) {
+		_, err := client.GetBuildChanges("999999999")
+		if err == nil {
+			t.Error("expected error for non-existent build")
+		}
+	})
+}
+
+func TestGetBuildTests(t *testing.T) {
+	if testBuild == nil {
+		t.Skip("No test build available")
+	}
+
+	buildID := fmt.Sprintf("%d", testBuild.ID)
+
+	cases := []struct {
+		name       string
+		failedOnly bool
+		limit      int
+	}{
+		{"all", false, 10},
+		{"failed_only", true, 10},
+		{"no_limit", false, 0},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tests, err := client.GetBuildTests(buildID, tc.failedOnly, tc.limit)
+			if err != nil {
+				t.Logf("GetBuildTests: %v", err)
+				return
+			}
+			t.Logf("count=%d passed=%d failed=%d", tests.Count, tests.Passed, tests.Failed)
+		})
+	}
+}
+
+func TestSupportsFeature(t *testing.T) {
+	server, err := client.ServerVersion()
+	if err != nil {
+		t.Fatalf("failed to get server version: %v", err)
+	}
+	t.Logf("Server version: %s (major: %d)", server.Version, server.VersionMajor)
+
+	features := []string{"csrf_token", "pipelines", "unknown_feature"}
+	for _, f := range features {
+		t.Run(f, func(t *testing.T) {
+			supported := client.SupportsFeature(f)
+			t.Logf("%s: %v", f, supported)
+		})
+	}
+
+	if !client.SupportsFeature("unknown_feature") {
+		t.Error("unknown features should return true")
 	}
 }
