@@ -1,0 +1,16 @@
+# Binaries
+bin/
+tc/tc
+
+# Environment files
+.env
+.env.local
+.env.backup
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
