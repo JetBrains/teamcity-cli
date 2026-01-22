@@ -1187,3 +1187,99 @@ func TestRawRequestPUT(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 }
+
+func TestExtractErrorMessage(t *testing.T) {
+	tests := []struct {
+		name     string
+		body     string
+		expected string
+	}{
+		{
+			name:     "valid error response",
+			body:     `{"errors":[{"message":"No build types found by locator 'Test'."}]}`,
+			expected: "job 'Test' not found",
+		},
+		{
+			name:     "empty errors array",
+			body:     `{"errors":[]}`,
+			expected: "",
+		},
+		{
+			name:     "malformed JSON",
+			body:     `not json`,
+			expected: "",
+		},
+		{
+			name:     "empty body",
+			body:     ``,
+			expected: "",
+		},
+		{
+			name:     "missing errors field",
+			body:     `{"other":"field"}`,
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := extractErrorMessage([]byte(tc.body))
+			if result != tc.expected {
+				t.Errorf("Expected %q, got %q", tc.expected, result)
+			}
+		})
+	}
+}
+
+func TestHumanizeErrorMessage(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "build type not found with period",
+			input:    "No build types found by locator 'Sandbox_Demo'.",
+			expected: "job 'Sandbox_Demo' not found",
+		},
+		{
+			name:     "build type not found without period",
+			input:    "No build types found by locator 'Sandbox_Demo'",
+			expected: "job 'Sandbox_Demo' not found",
+		},
+		{
+			name:     "build not found",
+			input:    "No build found by locator '12345'.",
+			expected: "run '12345' not found",
+		},
+		{
+			name:     "project not found",
+			input:    "No project found by locator 'MyProject'.",
+			expected: "project 'MyProject' not found",
+		},
+		{
+			name:     "nothing found with buildType locator",
+			input:    "Nothing is found by locator 'count:1,buildType:(id:Sandbox_Demo)'.",
+			expected: "no runs found for job 'Sandbox_Demo'",
+		},
+		{
+			name:     "unrecognized message passes through",
+			input:    "Some other error message",
+			expected: "Some other error message",
+		},
+		{
+			name:     "empty message",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := humanizeErrorMessage(tc.input)
+			if result != tc.expected {
+				t.Errorf("Expected %q, got %q", tc.expected, result)
+			}
+		})
+	}
+}
