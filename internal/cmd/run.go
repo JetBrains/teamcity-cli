@@ -1263,27 +1263,35 @@ type runTestsOptions struct {
 	failed bool
 	json   bool
 	limit  int
+	job    string
 }
 
 func newRunTestsCmd() *cobra.Command {
 	opts := &runTestsOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "tests <run-id>",
+		Use:   "tests [run-id]",
 		Short: "Show test results for a run",
-		Long:  `Show test results from a run.`,
-		Args:  cobra.ExactArgs(1),
+		Long: `Show test results from a run.
+
+You can specify a run ID directly, or use --job to get the latest run's tests.`,
+		Args: cobra.MaximumNArgs(1),
 		Example: `  tc run tests 12345
   tc run tests 12345 --failed
-  tc run tests 12345 --json`,
+  tc run tests --job Sandbox_Demo`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRunTests(args[0], opts)
+			var runID string
+			if len(args) > 0 {
+				runID = args[0]
+			}
+			return runRunTests(runID, opts)
 		},
 	}
 
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show only failed tests")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 100, "Maximum number of tests to show")
+	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 0, "Maximum number of tests to show")
+	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Get tests for latest run of this job")
 
 	return cmd
 }
@@ -1292,6 +1300,27 @@ func runRunTests(runID string, opts *runTestsOptions) error {
 	client, err := getClient()
 	if err != nil {
 		return err
+	}
+
+	if opts.job != "" {
+		runs, err := client.GetBuilds(api.BuildsOptions{
+			BuildTypeID: opts.job,
+			Limit:       1,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get runs for job: %w", err)
+		}
+		if runs.Count == 0 {
+			return fmt.Errorf("no runs found for job %s", opts.job)
+		}
+		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
+	} else if runID == "" {
+		return fmt.Errorf("run ID required (or use --job to get latest run)")
+	}
+
+	build, err := client.GetBuild(runID)
+	if err != nil {
+		return fmt.Errorf("failed to get build: %w", err)
 	}
 
 	tests, err := client.GetBuildTests(runID, opts.failed, opts.limit)
@@ -1308,6 +1337,8 @@ func runRunTests(runID string, opts *runTestsOptions) error {
 		return nil
 	}
 
+	fmt.Printf("%s %s\n\n", output.Faint("View in browser:"), build.WebURL+"?buildTab=tests")
+
 	var parts []string
 	if tests.Passed > 0 {
 		parts = append(parts, output.Green(fmt.Sprintf("%d passed", tests.Passed)))
@@ -1318,19 +1349,16 @@ func runRunTests(runID string, opts *runTestsOptions) error {
 	if tests.Ignored > 0 {
 		parts = append(parts, output.Faint(fmt.Sprintf("%d ignored", tests.Ignored)))
 	}
-	fmt.Printf("TESTS: %s\n", strings.Join(parts, ", "))
+	fmt.Printf("TESTS: %s\n\n", strings.Join(parts, ", "))
 
-	var failedTests []api.TestOccurrence
 	for _, t := range tests.TestOccurrence {
-		if t.Status == "FAILURE" {
-			failedTests = append(failedTests, t)
-		}
-	}
-
-	if len(failedTests) > 0 {
-		fmt.Printf("\nFAILED:\n")
-		for _, t := range failedTests {
+		switch t.Status {
+		case "FAILURE":
 			fmt.Printf("%s %s\n", output.Red("✗"), t.Name)
+		case "SUCCESS":
+			fmt.Printf("%s %s\n", output.Green("✓"), t.Name)
+		default:
+			fmt.Printf("%s %s\n", output.Faint("○"), t.Name)
 		}
 	}
 
