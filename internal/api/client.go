@@ -179,7 +179,9 @@ func (c *Client) get(path string, result interface{}) error {
 
 func (c *Client) handleErrorResponse(resp *http.Response) error {
 	bodyBytes, _ := io.ReadAll(resp.Body)
-	bodyStr := string(bodyBytes)
+
+	// Try to parse TeamCity's structured error response
+	message := extractErrorMessage(bodyBytes)
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
@@ -187,10 +189,67 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 	case http.StatusForbidden:
 		return tcerrors.PermissionDenied("perform this action")
 	case http.StatusNotFound:
-		return tcerrors.New(fmt.Sprintf("Resource not found: %s", bodyStr))
+		if message != "" {
+			return tcerrors.WithSuggestion(message, "Use 'tc job list' or 'tc run list' to see available resources")
+		}
+		return tcerrors.WithSuggestion("Resource not found", "Check the ID and try again")
 	default:
-		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, bodyStr)
+		if message != "" {
+			return tcerrors.New(message)
+		}
+		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(bodyBytes))
 	}
+}
+
+// extractErrorMessage tries to extract a clean error message from TeamCity's API response
+func extractErrorMessage(body []byte) string {
+	var errResp APIErrorResponse
+	if err := json.Unmarshal(body, &errResp); err == nil && len(errResp.Errors) > 0 {
+		return humanizeErrorMessage(errResp.Errors[0].Message)
+	}
+	return ""
+}
+
+// humanizeErrorMessage converts TeamCity's technical error messages to user-friendly ones
+func humanizeErrorMessage(msg string) string {
+	// "No build types found by locator 'X'." -> "job 'X' not found"
+	if strings.HasPrefix(msg, "No build types found by locator '") {
+		id := strings.TrimPrefix(msg, "No build types found by locator '")
+		id = strings.TrimSuffix(id, "'.")
+		id = strings.TrimSuffix(id, "'")
+		return fmt.Sprintf("job '%s' not found", id)
+	}
+
+	// "No build found by locator 'X'." -> "run 'X' not found"
+	if strings.HasPrefix(msg, "No build found by locator '") {
+		id := strings.TrimPrefix(msg, "No build found by locator '")
+		id = strings.TrimSuffix(id, "'.")
+		id = strings.TrimSuffix(id, "'")
+		return fmt.Sprintf("run '%s' not found", id)
+	}
+
+	// "No project found by locator 'X'." -> "project 'X' not found"
+	if strings.HasPrefix(msg, "No project found by locator '") {
+		id := strings.TrimPrefix(msg, "No project found by locator '")
+		id = strings.TrimSuffix(id, "'.")
+		id = strings.TrimSuffix(id, "'")
+		return fmt.Sprintf("project '%s' not found", id)
+	}
+
+	// "Nothing is found by locator 'count:1,buildType:(id:X)'" -> "no runs found for job 'X'"
+	if strings.Contains(msg, "Nothing is found by locator") && strings.Contains(msg, "buildType:(id:") {
+		start := strings.Index(msg, "buildType:(id:")
+		if start != -1 {
+			start += len("buildType:(id:")
+			end := strings.Index(msg[start:], ")")
+			if end != -1 {
+				id := msg[start : start+end]
+				return fmt.Sprintf("no runs found for job '%s'", id)
+			}
+		}
+	}
+
+	return msg
 }
 
 func (c *Client) post(path string, body io.Reader, result interface{}) error {
