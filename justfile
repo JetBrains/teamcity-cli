@@ -25,7 +25,7 @@ unit:
 
 # Full test suite with local TeamCity
 test:
-    #!/usr/bin/env bash
+    #!/bin/sh
     set -e
     go run scripts/setup-local-teamcity.go
     . .env
@@ -33,7 +33,7 @@ test:
 
 # CI test suite (no tparse, includes cleanup)
 test-ci:
-    #!/usr/bin/env bash
+    #!/bin/sh
     set -e
     go run scripts/setup-local-teamcity.go
     . .env
