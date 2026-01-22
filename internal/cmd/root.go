@@ -64,6 +64,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&Verbose, "verbose", false, "Show detailed output including debug info")
 	rootCmd.PersistentFlags().BoolVar(&NoInput, "no-input", false, "Disable interactive prompts")
 
+	rootCmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
+
 	cobra.OnInitialize(initColorSettings)
 
 	rootCmd.AddCommand(newAuthCmd())

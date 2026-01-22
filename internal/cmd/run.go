@@ -86,6 +86,8 @@ func newRunListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 
+	cmd.MarkFlagsMutuallyExclusive("json", "plain")
+
 	return cmd
 }
 
