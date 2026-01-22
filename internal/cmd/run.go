@@ -869,7 +869,7 @@ func runRunLog(runID string, opts *runLogOptions) error {
 		if err != nil {
 			return err
 		}
-		if runs.Count == 0 {
+		if runs.Count == 0 || len(runs.Builds) == 0 {
 			return fmt.Errorf("no runs found for job %s", opts.job)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
@@ -1323,7 +1323,7 @@ func runRunTests(runID string, opts *runTestsOptions) error {
 		if err != nil {
 			return err
 		}
-		if runs.Count == 0 {
+		if runs.Count == 0 || len(runs.Builds) == 0 {
 			return fmt.Errorf("no runs found for job %s", opts.job)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
