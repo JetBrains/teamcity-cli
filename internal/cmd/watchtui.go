@@ -181,9 +181,7 @@ func (m watchModel) View() string {
 
 	var b strings.Builder
 	b.WriteString(m.renderHeader())
-	b.WriteString("\n")
-	b.WriteString(output.Faint(strings.Repeat("─", min(m.width, 80))))
-	b.WriteString("\n")
+	b.WriteString("\n\n")
 
 	logHeight := m.height - 3
 	if logHeight < 3 {
@@ -213,7 +211,7 @@ func (m watchModel) renderHeader() string {
 	icon := output.StatusIcon(m.build.Status, m.build.State)
 	status := output.StatusText(m.build.Status, m.build.State)
 
-	header := fmt.Sprintf("%s %s #%s · %s", icon, output.Bold(jobName), m.build.Number, status)
+	header := fmt.Sprintf("%s %s #%s %s · %s", icon, output.Bold(jobName), m.build.Number, output.Faint(m.build.WebURL), status)
 	if m.build.PercentageComplete > 0 && m.build.State != "finished" {
 		header += fmt.Sprintf(" (%d%%)", m.build.PercentageComplete)
 	}
