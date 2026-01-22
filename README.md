@@ -496,10 +496,12 @@ Watch a run in real-time until it completes.
 ```bash
 tc run watch 12345
 tc run watch 12345 --interval 10
+tc run watch 12345 --logs
 ```
 
 **Options:**
 - `-i, --interval` – Refresh interval in seconds
+- `--logs` – Stream build logs while watching
 
 ---
 
