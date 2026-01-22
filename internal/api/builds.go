@@ -43,7 +43,7 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 		locatorParts = append(locatorParts, fmt.Sprintf("user:%s", opts.User))
 	}
 	if opts.Project != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("project:%s", opts.Project))
+		locatorParts = append(locatorParts, fmt.Sprintf("affectedProject:%s", opts.Project))
 	}
 	if opts.Number != "" {
 		locatorParts = append(locatorParts, fmt.Sprintf("number:%s", opts.Number))
