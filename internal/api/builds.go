@@ -25,44 +25,20 @@ type BuildsOptions struct {
 
 // GetBuilds returns a list of builds
 func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
-	var locatorParts []string
+	locator := NewLocator().
+		Add("buildType", opts.BuildTypeID).
+		Add("branch", opts.Branch).
+		AddUpper("status", opts.Status).
+		Add("state", opts.State).
+		Add("user", opts.User).
+		Add("affectedProject", opts.Project).
+		Add("number", opts.Number).
+		Add("sinceDate", opts.SinceDate).
+		Add("untilDate", opts.UntilDate).
+		AddIntDefault("count", opts.Limit, 30)
 
-	if opts.BuildTypeID != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("buildType:%s", opts.BuildTypeID))
-	}
-	if opts.Branch != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("branch:%s", opts.Branch))
-	}
-	if opts.Status != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("status:%s", strings.ToUpper(opts.Status)))
-	}
-	if opts.State != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("state:%s", opts.State))
-	}
-	if opts.User != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("user:%s", opts.User))
-	}
-	if opts.Project != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("affectedProject:%s", opts.Project))
-	}
-	if opts.Number != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("number:%s", opts.Number))
-	}
-	if opts.SinceDate != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("sinceDate:%s", opts.SinceDate))
-	}
-	if opts.UntilDate != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("untilDate:%s", opts.UntilDate))
-	}
-	if opts.Limit > 0 {
-		locatorParts = append(locatorParts, fmt.Sprintf("count:%d", opts.Limit))
-	} else {
-		locatorParts = append(locatorParts, "count:30")
-	}
-
-	locator := strings.Join(locatorParts, ",")
 	fields := "count,build(id,number,status,state,branchName,buildTypeId,buildType(id,name,projectName),triggered(type,user(name,username)),startDate,finishDate,queuedDate,agent(name))"
-	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(fields))
+	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
 
 	var result BuildList
 	if err := c.get(path, &result); err != nil {
@@ -230,19 +206,13 @@ type QueueOptions struct {
 
 // GetBuildQueue returns the build queue
 func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
-	var locatorParts []string
-
-	if opts.BuildTypeID != "" {
-		locatorParts = append(locatorParts, fmt.Sprintf("buildType:%s", opts.BuildTypeID))
-	}
-	if opts.Limit > 0 {
-		locatorParts = append(locatorParts, fmt.Sprintf("count:%d", opts.Limit))
-	}
+	locator := NewLocator().
+		Add("buildType", opts.BuildTypeID).
+		AddInt("count", opts.Limit)
 
 	path := "/app/rest/buildQueue"
-	if len(locatorParts) > 0 {
-		locator := strings.Join(locatorParts, ",")
-		path = fmt.Sprintf("%s?locator=%s", path, url.QueryEscape(locator))
+	if !locator.IsEmpty() {
+		path = fmt.Sprintf("%s?locator=%s", path, locator.Encode())
 	}
 
 	var queue BuildQueue
