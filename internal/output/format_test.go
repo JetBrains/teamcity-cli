@@ -1,6 +1,7 @@
 package output
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -45,6 +46,55 @@ func TestTruncate(t *testing.T) {
 			maxLen:   5,
 			expected: "",
 		},
+		// Edge cases - runewidth.Truncate always appends "..." when truncating
+		{
+			name:     "maxLen 0",
+			input:    "hello",
+			maxLen:   0,
+			expected: "...", // runewidth.Truncate appends ellipsis even at 0
+		},
+		{
+			name:     "maxLen 1",
+			input:    "hello",
+			maxLen:   1,
+			expected: "...", // runewidth.Truncate appends ellipsis
+		},
+		{
+			name:     "maxLen 2",
+			input:    "hello",
+			maxLen:   2,
+			expected: "...", // runewidth.Truncate appends ellipsis
+		},
+		{
+			name:     "unicode characters",
+			input:    "日本語テスト",
+			maxLen:   8,
+			expected: "日本...",
+		},
+		{
+			name:     "emoji",
+			input:    "🚀🎉🔥test",
+			maxLen:   6,
+			expected: "🚀...",
+		},
+		{
+			name:     "single unicode char with truncate",
+			input:    "日",
+			maxLen:   5,
+			expected: "日",
+		},
+		{
+			name:     "string with newlines",
+			input:    "hello\nworld",
+			maxLen:   8,
+			expected: "hello\n...", // runewidth counts newline as width 0
+		},
+		{
+			name:     "negative maxLen",
+			input:    "hello",
+			maxLen:   -1,
+			expected: "...", // runewidth.Truncate appends ellipsis
+		},
 	}
 
 	for _, tc := range tests {
@@ -70,6 +120,14 @@ func TestStatusIcon(t *testing.T) {
 		{"OTHER", "", "○"},
 		{"", "running", "●"},
 		{"", "queued", "◦"},
+		// Case insensitivity tests
+		{"success", "", "✓"},
+		{"failure", "", "✗"},
+		{"Success", "", "✓"},
+		{"Failure", "", "✗"},
+		// Empty and edge cases
+		{"", "", "○"},
+		{" ", "", "○"},
 	}
 
 	for _, tc := range tests {
@@ -264,6 +322,42 @@ func TestFormatDuration(t *testing.T) {
 			duration: 2*time.Hour + 15*time.Minute,
 			expected: "2h 15m",
 		},
+		// Boundary tests
+		{
+			name:     "exactly 1 second",
+			duration: 1 * time.Second,
+			expected: "1s",
+		},
+		{
+			name:     "exactly 1 minute",
+			duration: 1 * time.Minute,
+			expected: "1m 0s",
+		},
+		{
+			name:     "exactly 1 hour",
+			duration: 1 * time.Hour,
+			expected: "1h 0m",
+		},
+		{
+			name:     "59 seconds",
+			duration: 59 * time.Second,
+			expected: "59s",
+		},
+		{
+			name:     "60 seconds equals 1 minute",
+			duration: 60 * time.Second,
+			expected: "1m 0s",
+		},
+		{
+			name:     "large duration over 24 hours",
+			duration: 25*time.Hour + 30*time.Minute,
+			expected: "25h 30m",
+		},
+		{
+			name:     "999 milliseconds",
+			duration: 999 * time.Millisecond,
+			expected: "< 1s",
+		},
 	}
 
 	for _, tc := range tests {
@@ -276,23 +370,30 @@ func TestFormatDuration(t *testing.T) {
 	}
 }
 
-func TestSuccessAndInfo(t *testing.T) {
-	// Test with Quiet = true (should not print)
+func TestOutputFunctions(t *testing.T) {
 	oldQuiet := Quiet
-	Quiet = true
-	Success("test %s", "message")
-	Info("test %s", "info")
-	Infof("test %s", "infof")
-	Warn("test %s", "warn")
-	Quiet = oldQuiet
-}
-
-func TestDebug(t *testing.T) {
-	// Test with Verbose = true
 	oldVerbose := Verbose
-	Verbose = true
-	Debug("test %s", "debug")
-	Verbose = oldVerbose
+	defer func() {
+		Quiet = oldQuiet
+		Verbose = oldVerbose
+	}()
+
+	for _, quiet := range []bool{true, false} {
+		t.Run(fmt.Sprintf("quiet=%v", quiet), func(t *testing.T) {
+			Quiet = quiet
+			Success("test %s", "message")
+			Info("test %s", "info")
+			Infof("test %s", "infof")
+			Warn("test %s", "warn")
+		})
+	}
+
+	for _, verbose := range []bool{true, false} {
+		t.Run(fmt.Sprintf("verbose=%v", verbose), func(t *testing.T) {
+			Verbose = verbose
+			Debug("test %s", "debug")
+		})
+	}
 }
 
 func TestColumnWidths(t *testing.T) {
@@ -303,66 +404,91 @@ func TestColumnWidths(t *testing.T) {
 		percentages []int
 		wantLen     int
 	}{
-		{"single column", 20, 50, []int{100}, 1},
-		{"two columns", 20, 50, []int{50, 50}, 2},
-		{"three columns", 30, 60, []int{40, 30, 30}, 3},
+		{"single", 20, 50, []int{100}, 1},
+		{"two", 20, 50, []int{50, 50}, 2},
+		{"three", 30, 60, []int{40, 30, 30}, 3},
+		{"large_margin", 10000, 50, []int{50, 50}, 2},
+		{"zero_pct", 0, 0, []int{0, 0, 0}, 3},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			result := ColumnWidths(tc.margin, tc.minFlex, tc.percentages...)
 			if len(result) != tc.wantLen {
-				t.Errorf("ColumnWidths() returned %d columns, want %d", len(result), tc.wantLen)
+				t.Errorf("got %d columns, want %d", len(result), tc.wantLen)
+			}
+			for _, w := range result {
+				if w < 0 {
+					t.Errorf("negative width: %d", w)
+				}
 			}
 		})
 	}
 }
 
-func TestTerminalWidth(t *testing.T) {
-	// TerminalWidth should return a positive value
+func TestTerminal(t *testing.T) {
 	w := TerminalWidth()
 	if w <= 0 {
 		t.Errorf("TerminalWidth() = %d, want positive", w)
 	}
-}
 
-func TestTerminalSize(t *testing.T) {
 	w, h := TerminalSize()
 	if w <= 0 || h <= 0 {
-		t.Errorf("TerminalSize() = (%d, %d), want positive values", w, h)
+		t.Errorf("TerminalSize() = (%d, %d), want positive", w, h)
 	}
-}
 
-func TestIsTerminal(t *testing.T) {
-	// Just ensure it doesn't panic
 	_ = IsTerminal()
 	_ = IsStdinTerminal()
 }
 
 func TestPrintJSON(t *testing.T) {
-	data := map[string]string{"key": "value"}
-	err := PrintJSON(data)
-	if err != nil {
-		t.Errorf("PrintJSON() error = %v", err)
+	cases := []interface{}{
+		map[string]string{"key": "value"},
+		map[string]string{},
+		[]string{"a", "b", "c"},
+		map[string]interface{}{"builds": []map[string]string{{"id": "1"}}},
+	}
+	for i, data := range cases {
+		t.Run(fmt.Sprintf("case%d", i), func(t *testing.T) {
+			if err := PrintJSON(data); err != nil {
+				t.Errorf("PrintJSON error: %v", err)
+			}
+		})
 	}
 }
 
 func TestPrintTable(t *testing.T) {
-	headers := []string{"ID", "Name", "Status"}
-	rows := [][]string{
-		{"1", "Build One", "Success"},
-		{"2", "Build Two", "Failed"},
+	cases := []struct {
+		headers []string
+		rows    [][]string
+	}{
+		{[]string{"ID", "Name"}, [][]string{{"1", "Test"}, {"2", "Test2"}}},
+		{[]string{}, [][]string{}},
+		{[]string{"Status"}, [][]string{{"OK"}, {"FAIL"}}},
+		{[]string{"Build", "Status"}, [][]string{{"🚀 Build", "✓"}}},
 	}
-	// Just ensure it doesn't panic
-	PrintTable(headers, rows)
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("case%d", i), func(t *testing.T) {
+			PrintTable(tc.headers, tc.rows)
+		})
+	}
 }
 
 func TestPrintPlainTable(t *testing.T) {
-	headers := []string{"ID", "Name"}
-	rows := [][]string{
-		{"1", "Test"},
-		{"2", "Test2"},
+	cases := []struct {
+		headers  []string
+		rows     [][]string
+		noHeader bool
+	}{
+		{[]string{"ID", "Name"}, [][]string{{"1", "Test"}}, false},
+		{[]string{"ID", "Name"}, [][]string{{"1", "Test"}}, true},
+		{[]string{}, [][]string{}, false},
+		{[]string{"A", "B"}, [][]string{{"1", "2", "3"}}, false},
+		{[]string{"Name", "Status"}, [][]string{{"日本語", "✓"}}, false},
 	}
-	PrintPlainTable(headers, rows, false)
-	PrintPlainTable(headers, rows, true) // no header
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("case%d", i), func(t *testing.T) {
+			PrintPlainTable(tc.headers, tc.rows, tc.noHeader)
+		})
+	}
 }

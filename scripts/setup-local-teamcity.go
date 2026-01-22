@@ -71,8 +71,17 @@ func main() {
 	if agentID := getConnectedAgent(token); agentID > 0 {
 		authorizeAgent(agentID, token)
 		fmt.Println("Agent authorized")
+		fmt.Println("Triggering initial build...")
+		if buildID := triggerBuild(apiToken); buildID > 0 {
+			fmt.Printf("Triggered build #%d, waiting for completion...\n", buildID)
+			if waitForBuild(buildID, apiToken) {
+				fmt.Println("Initial build completed")
+			} else {
+				fmt.Println("Build did not complete in time (tests will trigger their own)")
+			}
+		}
 	} else {
-		fmt.Println("No agent connected yet (tests may still work)")
+		fmt.Println("No agent connected yet (tests will trigger builds when agent is ready)")
 	}
 
 	fmt.Println("\nDone! Run 'just test' to test.")
@@ -168,6 +177,62 @@ func authorizeAgent(id int, token string) {
 	if resp != nil {
 		resp.Body.Close()
 	}
+}
+
+func triggerBuild(apiToken string) int {
+	req, _ := http.NewRequest("POST", baseURL+"/app/rest/buildQueue", strings.NewReader(
+		fmt.Sprintf(`{"buildType":{"id":"%s"},"comment":{"text":"Setup script - initial build"}}`, testBuildConfigID)))
+	req.Header.Set("Authorization", "Bearer "+apiToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to trigger build: %v\n", err)
+		return 0
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Fprintf(os.Stderr, "Failed to trigger build (status %d): %s\n", resp.StatusCode, body)
+		return 0
+	}
+
+	var result struct {
+		ID int `json:"id"`
+	}
+	json.NewDecoder(resp.Body).Decode(&result)
+	return result.ID
+}
+
+func waitForBuild(buildID int, apiToken string) bool {
+	deadline := time.Now().Add(3 * time.Minute)
+	for time.Now().Before(deadline) {
+		req, _ := http.NewRequest("GET", fmt.Sprintf("%s/app/rest/builds/id:%d", baseURL, buildID), nil)
+		req.Header.Set("Authorization", "Bearer "+apiToken)
+		req.Header.Set("Accept", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			time.Sleep(3 * time.Second)
+			continue
+		}
+
+		var result struct {
+			State  string `json:"state"`
+			Status string `json:"status"`
+		}
+		json.NewDecoder(resp.Body).Decode(&result)
+		resp.Body.Close()
+
+		if result.State == "finished" {
+			fmt.Printf("Build finished with status: %s\n", result.Status)
+			return true
+		}
+
+		fmt.Printf("Build state: %s...\n", result.State)
+		time.Sleep(5 * time.Second)
+	}
+	return false
 }
 
 func createAPIToken(superuserToken string) string {

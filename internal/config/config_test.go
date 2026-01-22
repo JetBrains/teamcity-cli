@@ -226,3 +226,44 @@ func TestInit(t *testing.T) {
 		t.Error("cfg should not be nil after Init")
 	}
 }
+
+func TestSetUserForServer(t *testing.T) {
+	t.Run("existing_server", func(t *testing.T) {
+		cfg = &Config{
+			DefaultServer: "https://tc.example.com",
+			Servers: map[string]ServerConfig{
+				"https://tc.example.com": {Token: "token", User: ""},
+			},
+		}
+		SetUserForServer("https://tc.example.com", "newuser")
+		if cfg.Servers["https://tc.example.com"].User != "newuser" {
+			t.Errorf("got %q, want newuser", cfg.Servers["https://tc.example.com"].User)
+		}
+	})
+
+	t.Run("new_server", func(t *testing.T) {
+		cfg = &Config{
+			DefaultServer: "https://tc.example.com",
+			Servers: map[string]ServerConfig{
+				"https://tc.example.com": {Token: "token", User: "user"},
+			},
+		}
+		SetUserForServer("https://other.example.com", "newuser")
+		if cfg.Servers["https://tc.example.com"].User != "user" {
+			t.Error("modified wrong server")
+		}
+		if cfg.Servers["https://other.example.com"].User != "newuser" {
+			t.Error("did not create new server entry")
+		}
+	})
+
+	t.Run("nil_config", func(t *testing.T) {
+		cfg = nil
+		SetUserForServer("https://tc.example.com", "user")
+	})
+
+	t.Run("nil_servers", func(t *testing.T) {
+		cfg = &Config{DefaultServer: "https://tc.example.com", Servers: nil}
+		SetUserForServer("https://tc.example.com", "user")
+	})
+}

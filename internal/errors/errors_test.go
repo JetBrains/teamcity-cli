@@ -128,3 +128,123 @@ func TestUserErrorImplementsError(t *testing.T) {
 		t.Error("UserError should implement error interface")
 	}
 }
+
+func TestMutuallyExclusive(t *testing.T) {
+	err := MutuallyExclusive("BUILD_ID", "latest")
+	if !strings.Contains(err.Message, "BUILD_ID") {
+		t.Errorf("MutuallyExclusive().Message should contain arg name, got %q", err.Message)
+	}
+	if !strings.Contains(err.Message, "latest") {
+		t.Errorf("MutuallyExclusive().Message should contain flag name, got %q", err.Message)
+	}
+	if !strings.Contains(err.Message, "cannot specify both") {
+		t.Errorf("MutuallyExclusive().Message should explain the conflict, got %q", err.Message)
+	}
+	if !strings.Contains(err.Suggestion, "BUILD_ID") && !strings.Contains(err.Suggestion, "latest") {
+		t.Errorf("MutuallyExclusive().Suggestion should mention alternatives, got %q", err.Suggestion)
+	}
+}
+
+func TestMutuallyExclusiveEmptyStrings(t *testing.T) {
+	// Edge case: empty strings should still produce valid error
+	err := MutuallyExclusive("", "")
+	if err.Message == "" {
+		t.Error("MutuallyExclusive with empty strings should still produce a message")
+	}
+}
+
+func TestNotFoundEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		resource string
+		id       string
+	}{
+		{"empty resource", "", "123"},
+		{"empty id", "build", ""},
+		{"both empty", "", ""},
+		{"special chars in id", "build", "#123"},
+		{"unicode in id", "build", "日本語"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := NotFound(tc.resource, tc.id)
+			if err == nil {
+				t.Fatal("NotFound should return an error")
+			}
+			// Should not panic and should produce valid error
+			_ = err.Error()
+		})
+	}
+}
+
+func TestNetworkErrorWithVariousCauses(t *testing.T) {
+	tests := []struct {
+		name      string
+		serverURL string
+		cause     error
+	}{
+		{"nil cause", "https://tc.example.com", nil},
+		{"with cause", "https://tc.example.com", fmt.Errorf("connection refused")},
+		{"empty URL", "", fmt.Errorf("invalid URL")},
+		{"URL with port", "http://localhost:8111", nil},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := NetworkError(tc.serverURL, tc.cause)
+			if err == nil {
+				t.Fatal("NetworkError should return an error")
+			}
+			errorStr := err.Error()
+			if tc.cause != nil && !strings.Contains(errorStr, tc.cause.Error()) {
+				t.Errorf("Error message should contain cause: %s", errorStr)
+			}
+		})
+	}
+}
+
+func TestRequiredFlagEdgeCases(t *testing.T) {
+	tests := []struct {
+		name string
+		flag string
+	}{
+		{"normal flag", "project"},
+		{"empty flag", ""},
+		{"flag with hyphen", "build-type"},
+		{"flag with special chars", "flag:name"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := RequiredFlag(tc.flag)
+			if err == nil {
+				t.Fatal("RequiredFlag should return an error")
+			}
+			_ = err.Error() // Should not panic
+		})
+	}
+}
+
+func TestPermissionDeniedEdgeCases(t *testing.T) {
+	tests := []struct {
+		name   string
+		action string
+	}{
+		{"normal action", "delete build"},
+		{"empty action", ""},
+		{"long action", "perform administrative operations on the server"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := PermissionDenied(tc.action)
+			if err == nil {
+				t.Fatal("PermissionDenied should return an error")
+			}
+			if tc.action != "" && !strings.Contains(err.Message, tc.action) {
+				t.Errorf("Message should contain action: %s", err.Message)
+			}
+		})
+	}
+}

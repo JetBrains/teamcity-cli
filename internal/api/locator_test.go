@@ -101,6 +101,95 @@ func TestLocator(t *testing.T) {
 			},
 			expected: "branch:(a,b)",
 		},
+		// Edge cases for special characters
+		{
+			name: "escape parentheses in value",
+			build: func() *Locator {
+				return NewLocator().
+					Add("branch", "feature(test)")
+			},
+			expected: "branch:(feature(test))",
+		},
+		{
+			name: "multiple special chars",
+			build: func() *Locator {
+				return NewLocator().
+					Add("branch", "a:b,c(d)")
+			},
+			expected: "branch:(a:b,c(d))",
+		},
+		{
+			name: "unicode characters",
+			build: func() *Locator {
+				return NewLocator().
+					Add("branch", "feature/日本語")
+			},
+			expected: "branch:feature/日本語",
+		},
+		{
+			name: "emoji in value",
+			build: func() *Locator {
+				return NewLocator().
+					Add("branch", "feature/🚀-release")
+			},
+			expected: "branch:feature/🚀-release",
+		},
+		{
+			name: "value with only special chars",
+			build: func() *Locator {
+				return NewLocator().
+					Add("branch", ":,:()")
+			},
+			expected: "branch:(:,:())",
+		},
+		{
+			name: "negative int value is skipped",
+			build: func() *Locator {
+				return NewLocator().
+					AddInt("count", -1)
+			},
+			expected: "", // AddInt skips values <= 0
+		},
+		{
+			name: "zero int value is skipped",
+			build: func() *Locator {
+				return NewLocator().
+					AddInt("count", 0)
+			},
+			expected: "", // AddInt skips values <= 0
+		},
+		{
+			name: "int default with negative value uses default",
+			build: func() *Locator {
+				return NewLocator().
+					AddIntDefault("count", -5, 30)
+			},
+			expected: "count:30", // AddIntDefault uses default when value <= 0
+		},
+		{
+			name: "int default with zero value uses default",
+			build: func() *Locator {
+				return NewLocator().
+					AddIntDefault("count", 0, 30)
+			},
+			expected: "count:30", // AddIntDefault uses default when value <= 0
+		},
+		{
+			name: "whitespace in value",
+			build: func() *Locator {
+				return NewLocator().
+					Add("name", "my project")
+			},
+			expected: "name:my project",
+		},
+		{
+			name: "value starting with special char",
+			build: func() *Locator {
+				return NewLocator().
+					Add("branch", ":main")
+			},
+			expected: "branch:(:main)",
+		},
 	}
 
 	for _, tc := range tests {

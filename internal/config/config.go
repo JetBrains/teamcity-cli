@@ -159,3 +159,20 @@ func ConfigPath() string {
 func IsConfigured() bool {
 	return GetServerURL() != "" && GetToken() != ""
 }
+
+// SetUserForServer sets the user for a server URL in memory (does not persist to disk).
+// This is useful for tests that need to set the user without modifying the config file.
+func SetUserForServer(serverURL, user string) {
+	if cfg == nil {
+		cfg = &Config{
+			Servers: make(map[string]ServerConfig),
+		}
+	}
+	if cfg.Servers == nil {
+		cfg.Servers = make(map[string]ServerConfig)
+	}
+
+	server := cfg.Servers[serverURL]
+	server.User = user
+	cfg.Servers[serverURL] = server
+}
