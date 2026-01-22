@@ -189,7 +189,7 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return c.handleErrorResponse(resp)
@@ -230,7 +230,7 @@ func (c *Client) RemoveFromQueue(id string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return c.handleErrorResponse(resp)
@@ -288,7 +288,7 @@ func (c *Client) DownloadArtifact(buildID, artifactPath string) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("failed to download artifact: status %d", resp.StatusCode)
@@ -309,7 +309,7 @@ func (c *Client) GetBuildLog(buildID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("failed to get build log: status %d", resp.StatusCode)
@@ -340,7 +340,7 @@ func (c *Client) PinBuild(buildID string, comment string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 204 && resp.StatusCode != 200 {
 		return c.handleErrorResponse(resp)
@@ -361,7 +361,7 @@ func (c *Client) UnpinBuild(buildID string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 204 && resp.StatusCode != 200 {
 		return c.handleErrorResponse(resp)
@@ -392,7 +392,7 @@ func (c *Client) AddBuildTags(buildID string, tags []string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
 		return c.handleErrorResponse(resp)
@@ -455,7 +455,7 @@ func (c *Client) RemoveBuildTag(buildID string, tag string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return c.handleErrorResponse(resp)
@@ -476,7 +476,7 @@ func (c *Client) SetBuildComment(buildID string, comment string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 204 && resp.StatusCode != 200 {
 		return c.handleErrorResponse(resp)
@@ -522,7 +522,7 @@ func (c *Client) DeleteBuildComment(buildID string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 204 && resp.StatusCode != 200 {
 		return c.handleErrorResponse(resp)
@@ -540,7 +540,7 @@ func (c *Client) SetQueuedBuildPosition(buildID string, position int) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return c.handleErrorResponse(resp)
@@ -563,7 +563,7 @@ func (c *Client) ApproveQueuedBuild(buildID string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return c.handleErrorResponse(resp)

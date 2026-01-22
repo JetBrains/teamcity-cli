@@ -170,7 +170,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 	output.Info("  URL: %s", build.WebURL)
 
 	if opts.web {
-		browser.OpenURL(build.WebURL)
+		_ = browser.OpenURL(build.WebURL)
 	}
 
 	if opts.watch {
@@ -408,7 +408,7 @@ func runRunRestart(runID string, opts *runRestartOptions) error {
 	fmt.Printf("  URL: %s\n", newBuild.WebURL)
 
 	if opts.web {
-		browser.OpenURL(newBuild.WebURL)
+		_ = browser.OpenURL(newBuild.WebURL)
 	}
 
 	if opts.watch {

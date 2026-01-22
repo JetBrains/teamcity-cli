@@ -335,7 +335,7 @@ func WithPager(fn func(w io.Writer)) {
 	lessPath, err := exec.LookPath("less")
 
 	if !IsTerminal() || err != nil || lineCount <= height-2 {
-		os.Stdout.Write(buf.Bytes())
+		_, _ = os.Stdout.Write(buf.Bytes())
 		return
 	}
 
@@ -344,6 +344,6 @@ func WithPager(fn func(w io.Writer)) {
 	pager.Stdout = os.Stdout
 	pager.Stderr = os.Stderr
 	if err := pager.Run(); err != nil {
-		os.Stdout.Write(buf.Bytes())
+		_, _ = os.Stdout.Write(buf.Bytes())
 	}
 }

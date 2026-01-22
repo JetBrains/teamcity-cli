@@ -244,12 +244,12 @@ func runRunLog(runID string, opts *runLogOptions) error {
 
 	output.WithPager(func(w io.Writer) {
 		if opts.raw {
-			fmt.Fprintln(w, log)
+			_, _ = fmt.Fprintln(w, log)
 		} else {
 			for _, line := range lines {
 				formatted := formatLogLine(line)
 				if formatted != "" {
-					fmt.Fprintln(w, formatted)
+					_, _ = fmt.Fprintln(w, formatted)
 				}
 			}
 		}

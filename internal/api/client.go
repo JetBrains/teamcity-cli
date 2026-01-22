@@ -162,7 +162,7 @@ func (c *Client) get(path string, result interface{}) error {
 	if err != nil {
 		return tcerrors.NetworkError(c.BaseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return c.handleErrorResponse(resp)
@@ -257,7 +257,7 @@ func (c *Client) post(path string, body io.Reader, result interface{}) error {
 	if err != nil {
 		return tcerrors.NetworkError(c.BaseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return c.handleErrorResponse(resp)
@@ -304,7 +304,7 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 	if err != nil {
 		return nil, tcerrors.NetworkError(c.BaseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
