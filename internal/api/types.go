@@ -248,3 +248,13 @@ type TestOccurrences struct {
 func ParseTeamCityTime(s string) (time.Time, error) {
 	return time.Parse("20060102T150405-0700", s)
 }
+
+// APIError represents an error from TeamCity's REST API
+type APIError struct {
+	Message string `json:"message"`
+}
+
+// APIErrorResponse represents TeamCity's error response format
+type APIErrorResponse struct {
+	Errors []APIError `json:"errors"`
+}
