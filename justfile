@@ -27,6 +27,15 @@ test:
     . .env
     TC_INSECURE_SKIP_WARN=1 go test -v -json ./... -timeout 0 -coverpkg=./... -coverprofile=coverage.out | tparse -all -follow
 
+# CI test suite (no tparse, includes cleanup)
+test-ci:
+    #!/usr/bin/env bash
+    set -e
+    go run scripts/setup-local-teamcity.go
+    . .env
+    TC_INSECURE_SKIP_WARN=1 go test -v -json ./... -timeout 0 -coverpkg=./... -coverprofile=coverage.out
+    docker compose down -v
+
 # Start local TeamCity and create .env
 local:
     go run scripts/setup-local-teamcity.go

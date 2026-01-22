@@ -14,3 +14,4 @@ tc/tc
 
 # OS
 .DS_Store
+.teamcity/target/
