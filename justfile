@@ -8,9 +8,13 @@
 #   just stop    - stop local TeamCity
 #   just clean   - stop, remove volumes, and clean artifacts
 #   just docs    - generate CLI documentation
+#   just lint    - run golangci-lint (excludes test files)
 
 build:
     go build -o bin/tc ./tc
+
+lint:
+    golangci-lint run --tests=false ./...
 
 install:
     go install ./tc
