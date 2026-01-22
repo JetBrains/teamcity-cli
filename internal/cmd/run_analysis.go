@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/cobra"
 	"github.com/tiulpin/teamcity-cli/internal/api"
 	tcerrors "github.com/tiulpin/teamcity-cli/internal/errors"
@@ -57,7 +58,7 @@ func runRunChanges(runID string, opts *runChangesOptions) error {
 		return nil
 	}
 
-	fmt.Printf("CHANGES (%d commit%s)\n\n", changes.Count, pluralize(changes.Count))
+	fmt.Printf("CHANGES (%d %s)\n\n", changes.Count, english.Plural(changes.Count, "commit", "commits"))
 
 	var firstSHA, lastSHA string
 	for i, c := range changes.Change {
@@ -116,13 +117,6 @@ func runRunChanges(runID string, opts *runChangesOptions) error {
 	}
 
 	return nil
-}
-
-func pluralize(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
 }
 
 type runTestsOptions struct {
