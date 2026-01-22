@@ -322,10 +322,11 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 		if build.PercentageComplete > 0 {
 			progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
 		}
-		fmt.Printf("\r%s %s #%s %s%s    ",
+		fmt.Printf("\r%s %s #%s %s · %s%s    ",
 			output.StatusIcon(build.Status, build.State),
 			output.Cyan(jobName),
 			build.Number,
+			output.Faint(build.WebURL),
 			status,
 			progress)
 
