@@ -455,7 +455,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 
 	if opts.watch {
 		fmt.Println()
-		return doRunWatch(fmt.Sprintf("%d", build.ID), &runWatchOptions{interval: 5})
+		return doRunWatch(fmt.Sprintf("%d", build.ID), &runWatchOptions{interval: 3, logs: true})
 	}
 
 	return nil
@@ -526,6 +526,7 @@ func runRunCancel(runID string, opts *runCancelOptions) error {
 
 type runWatchOptions struct {
 	interval int
+	logs     bool
 }
 
 func newRunWatchCmd() *cobra.Command {
@@ -537,13 +538,15 @@ func newRunWatchCmd() *cobra.Command {
 		Long:  `Watch a run in real-time until it completes.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  tc run watch 12345
-  tc run watch 12345 --interval 10`,
+  tc run watch 12345 --interval 10
+  tc run watch 12345 --logs`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doRunWatch(args[0], opts)
 		},
 	}
 
 	cmd.Flags().IntVarP(&opts.interval, "interval", "i", 5, "Refresh interval in seconds")
+	cmd.Flags().BoolVar(&opts.logs, "logs", false, "Stream build logs while watching")
 
 	return cmd
 }
@@ -554,6 +557,12 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 		return err
 	}
 
+	// Use TUI for logs mode
+	if opts.logs {
+		return runWatchTUI(client, runID, opts.interval)
+	}
+
+	// Simple mode without TUI
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -591,22 +600,25 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 		if build.State == "queued" {
 			status = output.Faint("Queued")
 		}
-
 		progress := ""
 		if build.PercentageComplete > 0 {
 			progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
 		}
-
-		fmt.Printf("\r%s %s #%s %s%s    ", output.StatusIcon(build.Status, build.State), output.Cyan(jobName), build.Number, status, progress)
+		fmt.Printf("\r%s %s #%s %s%s    ",
+			output.StatusIcon(build.Status, build.State),
+			output.Cyan(jobName),
+			build.Number,
+			status,
+			progress)
 
 		if build.State == "finished" {
 			fmt.Println()
 			fmt.Println()
 
 			if build.Status == "SUCCESS" {
-				fmt.Printf("%s Run succeeded!\n", output.Green("✓"))
+				fmt.Printf("%s %s #%s succeeded!\n", output.Green("✓"), output.Cyan(jobName), build.Number)
 			} else {
-				fmt.Printf("%s Run failed: %s\n", output.Red("✗"), build.StatusText)
+				fmt.Printf("%s %s #%s failed: %s\n", output.Red("✗"), output.Cyan(jobName), build.Number, build.StatusText)
 			}
 
 			fmt.Printf("\nView details: %s\n", build.WebURL)
@@ -683,7 +695,7 @@ func runRunRestart(runID string, opts *runRestartOptions) error {
 
 	if opts.watch {
 		fmt.Println()
-		return doRunWatch(fmt.Sprintf("%d", newBuild.ID), &runWatchOptions{interval: 5})
+		return doRunWatch(fmt.Sprintf("%d", newBuild.ID), &runWatchOptions{interval: 3, logs: true})
 	}
 
 	return nil
@@ -813,8 +825,6 @@ You can specify a run ID directly, or use --job to get the latest run's log.`,
 	return cmd
 }
 
-// formatLogLine formats a TeamCity log line for better readability
-// Input: [HH:MM:SS]X: message where X is i(info), e(error), w(warning), or space(normal)
 func formatLogLine(line string) string {
 	line = strings.TrimSuffix(line, "\r")
 	if strings.TrimSpace(line) == "" {
