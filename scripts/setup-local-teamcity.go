@@ -25,7 +25,6 @@ const (
 
 // main initializes and configures the TeamCity server, including setting up projects, build configurations, and API tokens.
 func main() {
-	// Start containers
 	fmt.Println("Starting TeamCity containers...")
 	run("docker", "compose", "up", "-d")
 
@@ -38,7 +37,7 @@ func main() {
 		}
 		resp.Body.Close()
 		return resp.StatusCode == 200 || resp.StatusCode == 401
-	}, 5*time.Minute)
+	}, 10*time.Minute)
 
 	token := getSuperuserToken()
 	fmt.Printf("Got superuser token: %s...\n", token[:8])

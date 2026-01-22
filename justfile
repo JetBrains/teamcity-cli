@@ -1,35 +1,42 @@
 # TeamCity CLI
 #
-# Testing:
-#   Remote server: Configure .env with your TEAMCITY_URL and TEAMCITY_TOKEN
-#   Local Docker:  Run `just local`, which creates .env with local config
-#
-# Tests always use .env - `just local` overwrites it with local Docker config
+#   just build   - build to bin/tc
+#   just install - go install
+#   just unit    - fast tests (no TeamCity required)
+#   just test    - full test suite with local TeamCity in Docker
+#   just local   - start local TeamCity and create .env
+#   just stop    - stop local TeamCity
+#   just clean   - stop, remove volumes, and clean artifacts
+#   just docs    - generate CLI documentation
 
 build:
     go build -o bin/tc ./tc
 
-install PREFIX="$HOME/go/bin":
-    go build -o {{PREFIX}}/tc ./tc
+install:
+    go install ./tc
 
+# Fast unit tests (no TeamCity required)
+unit:
+    TC_INSECURE_SKIP_WARN=1 go test -v ./internal/config ./internal/errors ./internal/output
+
+# Full test suite with local TeamCity
 test:
+    #!/usr/bin/env bash
+    set -e
+    go run scripts/setup-local-teamcity.go
+    . .env
     TC_INSECURE_SKIP_WARN=1 go test -v -json ./... -timeout 0 -coverpkg=./... -coverprofile=coverage.out | tparse -all -follow
 
-# Start local TeamCity in Docker and configure .env for testing
+# Start local TeamCity and create .env
 local:
     go run scripts/setup-local-teamcity.go
 
-local-stop:
+stop:
     docker compose down
 
-local-reset:
+clean:
     docker compose down -v
+    rm -rf bin/ .env coverage.out
 
 docs:
     go run scripts/generate-docs.go
-
-docs-check:
-    go run scripts/generate-docs.go --check
-
-clean:
-    rm -rf bin/
