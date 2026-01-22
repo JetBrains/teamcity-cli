@@ -1,4 +1,5 @@
 # tc – TeamCity CLI
+[![Lint](https://img.shields.io/teamcity/build/s/CLI_Lint?server=https%3A%2F%2Fcli.teamcity.com&label=Lint)](https://cli.teamcity.com/buildConfiguration/CLI_Lint) [![Test](https://img.shields.io/teamcity/build/s/CLI_Test?server=https%3A%2F%2Fcli.teamcity.com&label=Test)](https://cli.teamcity.com/buildConfiguration/CLI_Test)
 
 (unofficial) command-line interface for TeamCity that lets you manage builds, jobs, and projects without leaving your terminal.
 
