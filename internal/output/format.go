@@ -343,5 +343,7 @@ func WithPager(fn func(w io.Writer)) {
 	pager.Stdin = &buf
 	pager.Stdout = os.Stdout
 	pager.Stderr = os.Stderr
-	pager.Run()
+	if err := pager.Run(); err != nil {
+		os.Stdout.Write(buf.Bytes())
+	}
 }
