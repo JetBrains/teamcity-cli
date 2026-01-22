@@ -47,18 +47,16 @@ func newRunCmd() *cobra.Command {
 }
 
 type runListOptions struct {
-	job        string
-	branch     string
-	status     string
-	user       string
-	project    string
-	limit      int
-	json       bool
-	plain      bool
-	noHeader   bool
-	noTruncate bool
-	width      int
-	web        bool
+	job      string
+	branch   string
+	status   string
+	user     string
+	project  string
+	limit    int
+	json     bool
+	plain    bool
+	noHeader bool
+	web      bool
 }
 
 func newRunListCmd() *cobra.Command {
@@ -71,9 +69,7 @@ func newRunListCmd() *cobra.Command {
   tc run list --job Sandbox_Demo
   tc run list --status failure --limit 10
   tc run list --project Sandbox --branch main
-  tc run list --plain | grep failure
-  tc run list --plain --no-truncate
-  tc run list --plain --width 120`,
+  tc run list --plain | grep failure`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunList(opts)
 		},
@@ -88,8 +84,6 @@ func newRunListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
 	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
-	cmd.Flags().BoolVar(&opts.noTruncate, "no-truncate", false, "Do not truncate output (use with --plain)")
-	cmd.Flags().IntVar(&opts.width, "width", 0, "Set output width for column sizing (0 = auto)")
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 
 	cmd.MarkFlagsMutuallyExclusive("json", "plain")
@@ -145,11 +139,10 @@ func runRunList(opts *runListOptions) error {
 	}
 	var rows [][]string
 
-	widths := output.ColumnWidthsWithOverride(opts.width, 47, 30, 40, 35, 25)
+	widths := output.ColumnWidths(47, 30, 40, 35, 25)
 
-	// Helper function to conditionally truncate based on options
 	maybeTruncate := func(s string, maxLen int) string {
-		if opts.noTruncate {
+		if opts.plain {
 			return s
 		}
 		return output.Truncate(s, maxLen)

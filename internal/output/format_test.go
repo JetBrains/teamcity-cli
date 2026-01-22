@@ -415,66 +415,6 @@ func TestColumnWidths(t *testing.T) {
 	}
 }
 
-func TestColumnWidthsWithOverride(t *testing.T) {
-	tests := []struct {
-		name          string
-		widthOverride int
-		margin        int
-		minFlex       int
-		percentages   []int
-		wantWidths    []int
-	}{
-		{
-			name:          "with override 200, two 50% columns",
-			widthOverride: 200,
-			margin:        0,
-			minFlex:       10,
-			percentages:   []int{50, 50},
-			wantWidths:    []int{100, 100},
-		},
-		{
-			name:          "with override 100, margin 20",
-			widthOverride: 100,
-			margin:        20,
-			minFlex:       10,
-			percentages:   []int{50, 50},
-			wantWidths:    []int{40, 40},
-		},
-		{
-			name:          "zero override uses terminal width",
-			widthOverride: 0,
-			margin:        0,
-			minFlex:       10,
-			percentages:   []int{100},
-			wantWidths:    nil, // Can't predict exact value, just check it's positive
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := ColumnWidthsWithOverride(tc.widthOverride, tc.margin, tc.minFlex, tc.percentages...)
-			if len(result) != len(tc.percentages) {
-				t.Errorf("ColumnWidthsWithOverride() returned %d columns, want %d", len(result), len(tc.percentages))
-				return
-			}
-			if tc.wantWidths != nil {
-				for i, want := range tc.wantWidths {
-					if result[i] != want {
-						t.Errorf("ColumnWidthsWithOverride() column %d = %d, want %d", i, result[i], want)
-					}
-				}
-			} else {
-				// For zero override, just check values are positive
-				for i, w := range result {
-					if w <= 0 {
-						t.Errorf("ColumnWidthsWithOverride() column %d = %d, want positive", i, w)
-					}
-				}
-			}
-		})
-	}
-}
-
 func TestTerminalWidth(t *testing.T) {
 	// TerminalWidth should return a positive value
 	w := TerminalWidth()
