@@ -338,6 +338,9 @@ tc run list
 tc run list --job Sandbox_Demo
 tc run list --status failure --limit 10
 tc run list --project Sandbox --branch main
+tc run list --since 24h
+tc run list --since 24h --until 12h
+tc run list --since "2026-01-21"
 tc run list --plain | grep failure
 ```
 
@@ -349,7 +352,9 @@ tc run list --plain | grep failure
 - `--no-header` – Omit header row (use with --plain)
 - `--plain` – Output in plain text format for scripting
 - `-p, --project` – Filter by project ID
+- `--since` – Filter builds finished after this time (e.g., 24h, 2026-01-21)
 - `--status` – Filter by status (success, failure, running)
+- `--until` – Filter builds finished before this time (e.g., 12h, 2026-01-22)
 - `-u, --user` – Filter by user who triggered
 - `-w, --web` – Open in browser
 
@@ -496,10 +501,12 @@ Watch a run in real-time until it completes.
 ```bash
 tc run watch 12345
 tc run watch 12345 --interval 10
+tc run watch 12345 --logs
 ```
 
 **Options:**
 - `-i, --interval` – Refresh interval in seconds
+- `--logs` – Stream build logs while watching
 
 ---
 
