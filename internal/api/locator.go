@@ -16,9 +16,18 @@ func NewLocator() *Locator {
 
 func (l *Locator) Add(key, value string) *Locator {
 	if value != "" {
-		l.parts = append(l.parts, fmt.Sprintf("%s:%s", key, value))
+		l.parts = append(l.parts, fmt.Sprintf("%s:%s", key, escapeLocatorValue(value)))
 	}
 	return l
+}
+
+// escapeLocatorValue wraps values containing special characters in parentheses
+// TeamCity locator syntax uses : and , as delimiters
+func escapeLocatorValue(value string) string {
+	if strings.ContainsAny(value, ":,()") {
+		return "(" + value + ")"
+	}
+	return value
 }
 
 func (l *Locator) AddUpper(key, value string) *Locator {

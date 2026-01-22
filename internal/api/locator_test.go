@@ -85,6 +85,22 @@ func TestLocator(t *testing.T) {
 			},
 			expected: "status:SUCCESS",
 		},
+		{
+			name: "escape colon in value",
+			build: func() *Locator {
+				return NewLocator().
+					Add("branch", "feature:test")
+			},
+			expected: "branch:(feature:test)",
+		},
+		{
+			name: "escape comma in value",
+			build: func() *Locator {
+				return NewLocator().
+					Add("branch", "a,b")
+			},
+			expected: "branch:(a,b)",
+		},
 	}
 
 	for _, tc := range tests {
