@@ -26,6 +26,10 @@ type Client struct {
 	APIVersion string // Optional: pin to a specific API version (e.g., "2020.1")
 	HTTPClient *http.Client
 
+	// Basic auth credentials (used instead of Token if set)
+	basicUser string
+	basicPass string
+
 	// Cached server info
 	serverInfo     *Server
 	serverInfoOnce sync.Once
@@ -49,7 +53,7 @@ func WithTimeout(timeout time.Duration) ClientOption {
 	}
 }
 
-// NewClient creates a new TeamCity API client
+// NewClient creates a new TeamCity API client with Bearer token authentication
 func NewClient(baseURL, token string, opts ...ClientOption) *Client {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 
@@ -62,6 +66,32 @@ func NewClient(baseURL, token string, opts ...ClientOption) *Client {
 	c := &Client{
 		BaseURL: baseURL,
 		Token:   token,
+		HTTPClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
+}
+
+// NewClientWithBasicAuth creates a new TeamCity API client with Basic authentication.
+// Use empty username with superuser token, or username/password for regular users.
+func NewClientWithBasicAuth(baseURL, username, password string, opts ...ClientOption) *Client {
+	baseURL = strings.TrimSuffix(baseURL, "/")
+
+	if strings.HasPrefix(baseURL, "http://") && os.Getenv("TC_INSECURE_SKIP_WARN") == "" {
+		fmt.Fprintln(os.Stderr, "WARNING: Using insecure HTTP connection. Your credentials will be transmitted in plaintext.")
+		fmt.Fprintln(os.Stderr, "         Consider using HTTPS for secure communication.")
+	}
+
+	c := &Client{
+		BaseURL:   baseURL,
+		basicUser: username,
+		basicPass: password,
 		HTTPClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -143,7 +173,11 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.Token)
+	if c.basicPass != "" || c.basicUser != "" {
+		req.SetBasicAuth(c.basicUser, c.basicPass)
+	} else {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
 	req.Header.Set("Accept", accept)
 	if body != nil {
 		req.Header.Set("Content-Type", contentType)
@@ -311,8 +345,11 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Set default headers
-	req.Header.Set("Authorization", "Bearer "+c.Token)
+	if c.basicPass != "" || c.basicUser != "" {
+		req.SetBasicAuth(c.basicUser, c.basicPass)
+	} else {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
 	req.Header.Set("Accept", "application/json")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
