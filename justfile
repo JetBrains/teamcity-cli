@@ -1,14 +1,4 @@
 # TeamCity CLI
-#
-#   just build   - build to bin/tc
-#   just install - go install
-#   just unit    - fast tests (no TeamCity required)
-#   just test    - full test suite with local TeamCity in Docker
-#   just local   - start local TeamCity and create .env
-#   just stop    - stop local TeamCity
-#   just clean   - stop, remove volumes, and clean artifacts
-#   just docs    - generate CLI documentation
-#   just lint    - run golangci-lint (excludes test files)
 
 build:
     go build -o bin/tc ./tc
@@ -19,37 +9,17 @@ lint:
 install:
     go install ./tc
 
-# Fast unit tests (no TeamCity required)
 unit:
-    TC_INSECURE_SKIP_WARN=1 go test -v ./internal/config ./internal/errors ./internal/output
+    TC_INSECURE_SKIP_WARN=1 go test -v ./internal/config ./internal/errors ./internal/output ./internal/cmd
 
-# Full test suite with local TeamCity
 test:
-    #!/bin/sh
-    set -e
-    go run scripts/setup-local-teamcity.go
-    . .env
-    TC_INSECURE_SKIP_WARN=1 go test -v -json ./... -timeout 0 -coverpkg=./... -coverprofile=coverage.out | tparse -all -follow
-
-# CI test suite (no tparse, includes cleanup)
-test-ci:
-    #!/bin/sh
-    set -e
-    go run scripts/setup-local-teamcity.go
-    . .env
-    TC_INSECURE_SKIP_WARN=1 go test -v -json ./... -timeout 0 -coverpkg=./... -coverprofile=coverage.out
-    docker compose down -v
-
-# Start local TeamCity and create .env
-local:
-    go run scripts/setup-local-teamcity.go
-
-stop:
-    docker compose down
+    TC_INSECURE_SKIP_WARN=1 go test -v ./... -timeout 15m -coverprofile=coverage.out -coverpkg=./...
 
 clean:
-    docker compose down -v
     rm -rf bin/ .env coverage.out
 
 docs:
     go run scripts/generate-docs.go
+
+generate:
+      go generate ./...

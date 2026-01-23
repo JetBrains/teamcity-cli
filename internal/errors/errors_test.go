@@ -4,156 +4,132 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestUserErrorWithSuggestion(t *testing.T) {
-	err := &UserError{
-		Message:    "Test error",
-		Suggestion: "Try this fix",
-	}
+func TestUserError(T *testing.T) {
+	T.Parallel()
+	T.Run("with suggestion", func(t *testing.T) {
+		t.Parallel()
+		err := &UserError{
+			Message:    "Test error",
+			Suggestion: "Try this fix",
+		}
+		got := err.Error()
+		assert.Contains(t, got, "Test error")
+		assert.Contains(t, got, "Try this fix")
+	})
+	T.Run("without suggestion", func(t *testing.T) {
+		t.Parallel()
+		err := &UserError{Message: "Test error"}
+		assert.Equal(t, "Test error", err.Error())
+	})
+	T.Run("implements error interface", func(t *testing.T) {
+		t.Parallel()
 
-	result := err.Error()
-	if !strings.Contains(result, "Test error") {
-		t.Errorf("Error() should contain message, got %q", result)
-	}
-	if !strings.Contains(result, "Try this fix") {
-		t.Errorf("Error() should contain suggestion, got %q", result)
-	}
+		var err error = New("test")
+		assert.NotNil(t, err, "UserError should implement error interface")
+	})
 }
 
-func TestUserErrorWithoutSuggestion(t *testing.T) {
-	err := &UserError{
-		Message: "Test error",
-	}
-
-	result := err.Error()
-	if result != "Test error" {
-		t.Errorf("Error() = %q, want %q", result, "Test error")
-	}
-}
-
-func TestNew(t *testing.T) {
+func TestNew(T *testing.T) {
+	T.Parallel()
 	err := New("custom error")
-	if err.Message != "custom error" {
-		t.Errorf("New().Message = %q, want %q", err.Message, "custom error")
-	}
-	if err.Suggestion != "" {
-		t.Errorf("New().Suggestion should be empty, got %q", err.Suggestion)
-	}
+	assert.Equal(T, "custom error", err.Message)
+	assert.Empty(T, err.Suggestion)
 }
 
-func TestWithSuggestion(t *testing.T) {
+func TestWithSuggestion(T *testing.T) {
+	T.Parallel()
 	err := WithSuggestion("error msg", "suggestion text")
-	if err.Message != "error msg" {
-		t.Errorf("WithSuggestion().Message = %q, want %q", err.Message, "error msg")
-	}
-	if err.Suggestion != "suggestion text" {
-		t.Errorf("WithSuggestion().Suggestion = %q, want %q", err.Suggestion, "suggestion text")
-	}
+	assert.Equal(T, "error msg", err.Message)
+	assert.Equal(T, "suggestion text", err.Suggestion)
 }
 
-func TestNotAuthenticated(t *testing.T) {
+func TestNotAuthenticated(T *testing.T) {
+	T.Parallel()
 	err := NotAuthenticated()
-	if !strings.Contains(err.Message, "Not authenticated") {
-		t.Errorf("NotAuthenticated().Message should contain 'Not authenticated', got %q", err.Message)
-	}
-	if !strings.Contains(err.Suggestion, "tc auth login") {
-		t.Errorf("NotAuthenticated().Suggestion should mention login, got %q", err.Suggestion)
-	}
+	assert.Contains(T, err.Message, "Not authenticated")
+	assert.Contains(T, err.Suggestion, "tc auth login")
 }
 
-func TestNotFound(t *testing.T) {
+func TestNotFound(T *testing.T) {
+	T.Parallel()
 	err := NotFound("build", "123")
-	if !strings.Contains(err.Message, "build") {
-		t.Errorf("NotFound().Message should contain resource type, got %q", err.Message)
-	}
-	if !strings.Contains(err.Message, "123") {
-		t.Errorf("NotFound().Message should contain id, got %q", err.Message)
-	}
-	if !strings.Contains(err.Message, "not found") {
-		t.Errorf("NotFound().Message should contain 'not found', got %q", err.Message)
-	}
+	assert.Contains(T, err.Message, "build")
+	assert.Contains(T, err.Message, "123")
+	assert.Contains(T, err.Message, "not found")
 }
 
-func TestAuthenticationFailed(t *testing.T) {
+func TestAuthenticationFailed(T *testing.T) {
+	T.Parallel()
 	err := AuthenticationFailed()
-	if !strings.Contains(err.Message, "Authentication failed") {
-		t.Errorf("AuthenticationFailed().Message should contain 'Authentication failed', got %q", err.Message)
-	}
-	if !strings.Contains(err.Suggestion, "tc auth login") {
-		t.Errorf("AuthenticationFailed().Suggestion should mention login, got %q", err.Suggestion)
-	}
+	assert.Contains(T, err.Message, "Authentication failed")
+	assert.Contains(T, err.Suggestion, "tc auth login")
 }
 
-func TestPermissionDenied(t *testing.T) {
+func TestPermissionDenied(T *testing.T) {
+	T.Parallel()
 	err := PermissionDenied("delete build")
-	if !strings.Contains(err.Message, "Permission denied") {
-		t.Errorf("PermissionDenied().Message should contain 'Permission denied', got %q", err.Message)
-	}
-	if !strings.Contains(err.Message, "delete build") {
-		t.Errorf("PermissionDenied().Message should contain action, got %q", err.Message)
-	}
+	assert.Contains(T, err.Message, "Permission denied")
+	assert.Contains(T, err.Message, "delete build")
 }
 
-func TestNetworkError(t *testing.T) {
-	err := NetworkError("https://tc.example.com", nil)
-	if !strings.Contains(err.Message, "Cannot connect") {
-		t.Errorf("NetworkError().Message should contain 'Cannot connect', got %q", err.Message)
-	}
-	if !strings.Contains(err.Message, "tc.example.com") {
-		t.Errorf("NetworkError().Message should contain server URL, got %q", err.Message)
-	}
+func TestNetworkError(T *testing.T) {
+	T.Parallel()
 
-	// Test with cause
-	cause := fmt.Errorf("connection refused")
-	errWithCause := NetworkError("https://tc.example.com", cause)
-	if !strings.Contains(errWithCause.Message, "connection refused") {
-		t.Errorf("NetworkError().Message should contain cause, got %q", errWithCause.Message)
-	}
+	T.Run("without cause", func(t *testing.T) {
+		t.Parallel()
+
+		err := NetworkError("https://tc.example.com", nil)
+		assert.Contains(t, err.Message, "Cannot connect")
+		assert.Contains(t, err.Message, "tc.example.com")
+	})
+
+	T.Run("with cause", func(t *testing.T) {
+		t.Parallel()
+
+		cause := fmt.Errorf("connection refused")
+		err := NetworkError("https://tc.example.com", cause)
+		assert.Contains(t, err.Message, "connection refused")
+	})
 }
 
-func TestRequiredFlag(t *testing.T) {
+func TestRequiredFlag(T *testing.T) {
+	T.Parallel()
+
 	err := RequiredFlag("project")
-	if !strings.Contains(err.Message, "--project") {
-		t.Errorf("RequiredFlag().Message should contain flag name, got %q", err.Message)
-	}
-	if !strings.Contains(err.Message, "required") {
-		t.Errorf("RequiredFlag().Message should contain 'required', got %q", err.Message)
-	}
+	assert.Contains(T, err.Message, "--project")
+	assert.Contains(T, err.Message, "required")
 }
 
-func TestUserErrorImplementsError(t *testing.T) {
-	var err error = New("test")
-	if err == nil {
-		t.Error("UserError should implement error interface")
-	}
+func TestMutuallyExclusive(T *testing.T) {
+	T.Parallel()
+
+	T.Run("basic", func(t *testing.T) {
+		t.Parallel()
+
+		err := MutuallyExclusive("BUILD_ID", "latest")
+		assert.Contains(t, err.Message, "BUILD_ID")
+		assert.Contains(t, err.Message, "latest")
+		assert.Contains(t, err.Message, "cannot specify both")
+		assert.True(t, strings.Contains(err.Suggestion, "BUILD_ID") || strings.Contains(err.Suggestion, "latest"),
+			"Suggestion should contain alternatives")
+	})
+
+	T.Run("empty strings", func(t *testing.T) {
+		t.Parallel()
+
+		err := MutuallyExclusive("", "")
+		assert.NotEmpty(t, err.Message)
+	})
 }
 
-func TestMutuallyExclusive(t *testing.T) {
-	err := MutuallyExclusive("BUILD_ID", "latest")
-	if !strings.Contains(err.Message, "BUILD_ID") {
-		t.Errorf("MutuallyExclusive().Message should contain arg name, got %q", err.Message)
-	}
-	if !strings.Contains(err.Message, "latest") {
-		t.Errorf("MutuallyExclusive().Message should contain flag name, got %q", err.Message)
-	}
-	if !strings.Contains(err.Message, "cannot specify both") {
-		t.Errorf("MutuallyExclusive().Message should explain the conflict, got %q", err.Message)
-	}
-	if !strings.Contains(err.Suggestion, "BUILD_ID") && !strings.Contains(err.Suggestion, "latest") {
-		t.Errorf("MutuallyExclusive().Suggestion should mention alternatives, got %q", err.Suggestion)
-	}
-}
+func TestNotFoundEdgeCases(T *testing.T) {
+	T.Parallel()
 
-func TestMutuallyExclusiveEmptyStrings(t *testing.T) {
-	// Edge case: empty strings should still produce valid error
-	err := MutuallyExclusive("", "")
-	if err.Message == "" {
-		t.Error("MutuallyExclusive with empty strings should still produce a message")
-	}
-}
-
-func TestNotFoundEdgeCases(t *testing.T) {
 	tests := []struct {
 		name     string
 		resource string
@@ -167,18 +143,20 @@ func TestNotFoundEdgeCases(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := NotFound(tc.resource, tc.id)
-			if err == nil {
-				t.Fatal("NotFound should return an error")
-			}
+			require.NotNil(t, err)
 			// Should not panic and should produce valid error
 			_ = err.Error()
 		})
 	}
 }
 
-func TestNetworkErrorWithVariousCauses(t *testing.T) {
+func TestNetworkErrorEdgeCases(T *testing.T) {
+	T.Parallel()
+
 	tests := []struct {
 		name      string
 		serverURL string
@@ -191,20 +169,22 @@ func TestNetworkErrorWithVariousCauses(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := NetworkError(tc.serverURL, tc.cause)
-			if err == nil {
-				t.Fatal("NetworkError should return an error")
-			}
-			errorStr := err.Error()
-			if tc.cause != nil && !strings.Contains(errorStr, tc.cause.Error()) {
-				t.Errorf("Error message should contain cause: %s", errorStr)
+			require.NotNil(t, err)
+			got := err.Error()
+			if tc.cause != nil {
+				assert.Contains(t, got, tc.cause.Error())
 			}
 		})
 	}
 }
 
-func TestRequiredFlagEdgeCases(t *testing.T) {
+func TestRequiredFlagEdgeCases(T *testing.T) {
+	T.Parallel()
+
 	tests := []struct {
 		name string
 		flag string
@@ -216,17 +196,20 @@ func TestRequiredFlagEdgeCases(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := RequiredFlag(tc.flag)
-			if err == nil {
-				t.Fatal("RequiredFlag should return an error")
-			}
-			_ = err.Error() // Should not panic
+			require.NotNil(t, err)
+			// Should not panic
+			_ = err.Error()
 		})
 	}
 }
 
-func TestPermissionDeniedEdgeCases(t *testing.T) {
+func TestPermissionDeniedEdgeCases(T *testing.T) {
+	T.Parallel()
+
 	tests := []struct {
 		name   string
 		action string
@@ -237,13 +220,13 @@ func TestPermissionDeniedEdgeCases(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := PermissionDenied(tc.action)
-			if err == nil {
-				t.Fatal("PermissionDenied should return an error")
-			}
-			if tc.action != "" && !strings.Contains(err.Message, tc.action) {
-				t.Errorf("Message should contain action: %s", err.Message)
+			require.NotNil(t, err)
+			if tc.action != "" {
+				assert.Contains(t, err.Message, tc.action)
 			}
 		})
 	}

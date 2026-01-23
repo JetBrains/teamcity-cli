@@ -154,7 +154,7 @@ func runAPI(endpoint string, opts *apiOptions) error {
 	return outputAPIResponse(resp.Body, resp.StatusCode, resp.Headers, opts)
 }
 
-func runAPIPaginated(client *api.Client, endpoint string, headers map[string]string, opts *apiOptions) error {
+func runAPIPaginated(client api.ClientInterface, endpoint string, headers map[string]string, opts *apiOptions) error {
 	pages, err := fetchAllPages(client, endpoint, headers)
 	if err != nil {
 		return err
@@ -235,7 +235,7 @@ func outputAPIResponse(body []byte, statusCode int, respHeaders map[string][]str
 	return nil
 }
 
-func fetchAllPages(client *api.Client, endpoint string, headers map[string]string) ([][]byte, error) {
+func fetchAllPages(client api.ClientInterface, endpoint string, headers map[string]string) ([][]byte, error) {
 	var pages [][]byte
 	currentEndpoint := endpoint
 

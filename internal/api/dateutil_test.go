@@ -4,130 +4,131 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestParseUserDate(t *testing.T) {
+func TestParseUserDate(T *testing.T) {
+	T.Parallel()
+
 	now := time.Now().UTC()
 
 	tests := []struct {
-		name        string
-		input       string
-		wantErr     bool
-		validateFn  func(string) bool
-		description string
+		name       string
+		input      string
+		wantErr    bool
+		validateFn func(t *testing.T, result string) bool
 	}{
 		{
-			name:        "empty string",
-			input:       "",
-			wantErr:     false,
-			validateFn:  func(s string) bool { return s == "" },
-			description: "should return empty string for empty input",
+			name:    "empty string returns empty",
+			input:   "",
+			wantErr: false,
+			validateFn: func(t *testing.T, s string) bool {
+				t.Helper()
+				return s == ""
+			},
 		},
 		{
-			name:    "relative time - 24 hours",
+			name:    "relative time 24h",
 			input:   "24h",
 			wantErr: false,
-			validateFn: func(s string) bool {
+			validateFn: func(t *testing.T, s string) bool {
+				t.Helper()
 				parsed, err := ParseTeamCityTime(s)
 				if err != nil {
+					t.Logf("failed to parse result: %v", err)
 					return false
 				}
 				expected := now.Add(-24 * time.Hour)
 				diff := expected.Sub(parsed)
-				// Allow 1 minute tolerance
 				return diff < time.Minute && diff > -time.Minute
 			},
-			description: "should parse 24h as 24 hours ago",
 		},
 		{
-			name:    "relative time - 48 hours",
+			name:    "relative time 48h",
 			input:   "48h",
 			wantErr: false,
-			validateFn: func(s string) bool {
+			validateFn: func(t *testing.T, s string) bool {
+				t.Helper()
 				parsed, err := ParseTeamCityTime(s)
 				if err != nil {
+					t.Logf("failed to parse result: %v", err)
 					return false
 				}
 				expected := now.Add(-48 * time.Hour)
 				diff := expected.Sub(parsed)
 				return diff < time.Minute && diff > -time.Minute
 			},
-			description: "should parse 48h as 48 hours ago",
 		},
 		{
-			name:    "absolute date - date only",
+			name:    "absolute date only",
 			input:   "2026-01-21",
 			wantErr: false,
-			validateFn: func(s string) bool {
-				// dateparse should handle this - check it starts with the date
+			validateFn: func(t *testing.T, s string) bool {
+				t.Helper()
 				return strings.HasPrefix(s, "20260121")
 			},
-			description: "should parse 2026-01-21",
 		},
 		{
-			name:    "absolute date - date and time",
+			name:    "absolute date and time",
 			input:   "2026-01-21 15:04:05",
 			wantErr: false,
-			validateFn: func(s string) bool {
+			validateFn: func(t *testing.T, s string) bool {
+				t.Helper()
 				return strings.HasPrefix(s, "20260121T150405")
 			},
-			description: "should parse 2026-01-21 15:04:05 correctly",
 		},
 		{
-			name:    "absolute date - ISO8601",
+			name:    "ISO8601 format",
 			input:   "2026-01-21T15:04:05Z",
 			wantErr: false,
-			validateFn: func(s string) bool {
+			validateFn: func(t *testing.T, s string) bool {
+				t.Helper()
 				return strings.HasPrefix(s, "20260121T150405")
 			},
-			description: "should parse ISO8601 format correctly",
 		},
 		{
 			name:    "TeamCity format passthrough",
 			input:   "20260121T150405+0000",
 			wantErr: false,
-			validateFn: func(s string) bool {
+			validateFn: func(t *testing.T, s string) bool {
+				t.Helper()
 				return s == "20260121T150405+0000"
 			},
-			description: "should pass through TeamCity format unchanged",
 		},
 		{
-			name:        "invalid format",
-			input:       "notadate",
-			wantErr:     true,
-			description: "should return error for invalid format",
+			name:    "invalid format returns error",
+			input:   "notadate",
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		T.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := ParseUserDate(tt.input)
 
 			if tt.wantErr {
-				if err == nil {
-					t.Errorf("ParseUserDate() error = nil, wantErr = true")
-				}
+				assert.Error(t, err)
 				return
 			}
 
-			if err != nil {
-				t.Errorf("ParseUserDate() unexpected error = %v", err)
-				return
-			}
+			require.NoError(t, err)
 
-			if tt.validateFn != nil && !tt.validateFn(result) {
-				t.Errorf("ParseUserDate() = %v, validation failed: %s", result, tt.description)
+			if tt.validateFn != nil {
+				assert.True(t, tt.validateFn(t, result), "validation failed for input %q, got %q", tt.input, result)
 			}
 		})
 	}
 }
 
-func TestFormatTeamCityTime(t *testing.T) {
+func TestFormatTeamCityTime(T *testing.T) {
+	T.Parallel()
 	testTime := time.Date(2026, 1, 21, 15, 4, 5, 0, time.UTC)
-	result := FormatTeamCityTime(testTime)
+	got := FormatTeamCityTime(testTime)
+	want := "20260121T150405+0000"
 
-	expected := "20260121T150405+0000"
-	if result != expected {
-		t.Errorf("FormatTeamCityTime() = %v, want %v", result, expected)
-	}
+	assert.Equal(T, want, got)
 }

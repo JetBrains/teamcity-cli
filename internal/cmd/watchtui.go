@@ -19,7 +19,7 @@ type logMsg string
 type errMsg error
 
 type watchModel struct {
-	client    *api.Client
+	client    api.ClientInterface
 	runID     string
 	interval  time.Duration
 	build     *api.Build
@@ -32,7 +32,7 @@ type watchModel struct {
 	spinner   spinner.Model
 }
 
-func newWatchModel(client *api.Client, runID string, interval int) watchModel {
+func newWatchModel(client api.ClientInterface, runID string, interval int) watchModel {
 	sp := spinner.New()
 	sp.Spinner = spinner.Line
 	return watchModel{
@@ -255,7 +255,7 @@ func (m watchModel) renderLogs(height int) string {
 	return result.String()
 }
 
-func runWatchTUI(client *api.Client, runID string, interval int) error {
+func runWatchTUI(client api.ClientInterface, runID string, interval int) error {
 	m := newWatchModel(client, runID, interval)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 

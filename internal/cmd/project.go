@@ -314,8 +314,17 @@ func runProjectTokenGet(projectID, token string) error {
 	return nil
 }
 
-// getClient is a shared helper for all commands
-func getClient() (*api.Client, error) {
+// GetClientFunc is the function used to create API clients.
+// It can be overridden in tests to inject mock clients.
+var GetClientFunc = defaultGetClient
+
+// getClient returns an API client using the current GetClientFunc.
+func getClient() (api.ClientInterface, error) {
+	return GetClientFunc()
+}
+
+// defaultGetClient is the default implementation that creates a real API client.
+func defaultGetClient() (api.ClientInterface, error) {
 	serverURL := config.GetServerURL()
 	token := config.GetToken()
 

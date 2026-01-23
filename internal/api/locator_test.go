@@ -1,26 +1,31 @@
 package api
 
-import "testing"
+import (
+	"testing"
 
-func TestLocator(t *testing.T) {
+	"github.com/stretchr/testify/assert"
+)
+
+func TestLocator(T *testing.T) {
+	T.Parallel()
 	tests := []struct {
-		name     string
-		build    func() *Locator
-		expected string
+		name  string
+		build func() *Locator
+		want  string
 	}{
 		{
 			name: "empty locator",
 			build: func() *Locator {
 				return NewLocator()
 			},
-			expected: "",
+			want: "",
 		},
 		{
 			name: "single value",
 			build: func() *Locator {
 				return NewLocator().Add("project", "MyProject")
 			},
-			expected: "project:MyProject",
+			want: "project:MyProject",
 		},
 		{
 			name: "multiple values",
@@ -29,7 +34,7 @@ func TestLocator(t *testing.T) {
 					Add("project", "MyProject").
 					Add("branch", "main")
 			},
-			expected: "project:MyProject,branch:main",
+			want: "project:MyProject,branch:main",
 		},
 		{
 			name: "skip empty values",
@@ -39,7 +44,7 @@ func TestLocator(t *testing.T) {
 					Add("branch", "").
 					Add("status", "success")
 			},
-			expected: "project:MyProject,status:success",
+			want: "project:MyProject,status:success",
 		},
 		{
 			name: "int values",
@@ -48,7 +53,7 @@ func TestLocator(t *testing.T) {
 					Add("project", "MyProject").
 					AddInt("count", 10)
 			},
-			expected: "project:MyProject,count:10",
+			want: "project:MyProject,count:10",
 		},
 		{
 			name: "skip zero int values",
@@ -57,7 +62,7 @@ func TestLocator(t *testing.T) {
 					Add("project", "MyProject").
 					AddInt("count", 0)
 			},
-			expected: "project:MyProject",
+			want: "project:MyProject",
 		},
 		{
 			name: "int with default",
@@ -66,7 +71,7 @@ func TestLocator(t *testing.T) {
 					Add("project", "MyProject").
 					AddIntDefault("count", 0, 30)
 			},
-			expected: "project:MyProject,count:30",
+			want: "project:MyProject,count:30",
 		},
 		{
 			name: "int overrides default",
@@ -75,7 +80,7 @@ func TestLocator(t *testing.T) {
 					Add("project", "MyProject").
 					AddIntDefault("count", 50, 30)
 			},
-			expected: "project:MyProject,count:50",
+			want: "project:MyProject,count:50",
 		},
 		{
 			name: "uppercase value",
@@ -83,7 +88,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					AddUpper("status", "success")
 			},
-			expected: "status:SUCCESS",
+			want: "status:SUCCESS",
 		},
 		{
 			name: "escape colon in value",
@@ -91,7 +96,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("branch", "feature:test")
 			},
-			expected: "branch:(feature:test)",
+			want: "branch:(feature:test)",
 		},
 		{
 			name: "escape comma in value",
@@ -99,7 +104,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("branch", "a,b")
 			},
-			expected: "branch:(a,b)",
+			want: "branch:(a,b)",
 		},
 		// Edge cases for special characters
 		{
@@ -108,7 +113,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("branch", "feature(test)")
 			},
-			expected: "branch:(feature(test))",
+			want: "branch:(feature(test))",
 		},
 		{
 			name: "multiple special chars",
@@ -116,7 +121,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("branch", "a:b,c(d)")
 			},
-			expected: "branch:(a:b,c(d))",
+			want: "branch:(a:b,c(d))",
 		},
 		{
 			name: "unicode characters",
@@ -124,7 +129,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("branch", "feature/日本語")
 			},
-			expected: "branch:feature/日本語",
+			want: "branch:feature/日本語",
 		},
 		{
 			name: "emoji in value",
@@ -132,7 +137,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("branch", "feature/🚀-release")
 			},
-			expected: "branch:feature/🚀-release",
+			want: "branch:feature/🚀-release",
 		},
 		{
 			name: "value with only special chars",
@@ -140,7 +145,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("branch", ":,:()")
 			},
-			expected: "branch:(:,:())",
+			want: "branch:(:,:())",
 		},
 		{
 			name: "negative int value is skipped",
@@ -148,7 +153,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					AddInt("count", -1)
 			},
-			expected: "", // AddInt skips values <= 0
+			want: "", // AddInt skips values <= 0
 		},
 		{
 			name: "zero int value is skipped",
@@ -156,7 +161,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					AddInt("count", 0)
 			},
-			expected: "", // AddInt skips values <= 0
+			want: "", // AddInt skips values <= 0
 		},
 		{
 			name: "int default with negative value uses default",
@@ -164,7 +169,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					AddIntDefault("count", -5, 30)
 			},
-			expected: "count:30", // AddIntDefault uses default when value <= 0
+			want: "count:30", // AddIntDefault uses default when value <= 0
 		},
 		{
 			name: "int default with zero value uses default",
@@ -172,7 +177,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					AddIntDefault("count", 0, 30)
 			},
-			expected: "count:30", // AddIntDefault uses default when value <= 0
+			want: "count:30", // AddIntDefault uses default when value <= 0
 		},
 		{
 			name: "whitespace in value",
@@ -180,7 +185,7 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("name", "my project")
 			},
-			expected: "name:my project",
+			want: "name:my project",
 		},
 		{
 			name: "value starting with special char",
@@ -188,46 +193,61 @@ func TestLocator(t *testing.T) {
 				return NewLocator().
 					Add("branch", ":main")
 			},
-			expected: "branch:(:main)",
+			want: "branch:(:main)",
 		},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := tc.build().String()
-			if result != tc.expected {
-				t.Errorf("got %q, want %q", result, tc.expected)
-			}
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := tc.build().String()
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
 
-func TestLocatorEncode(t *testing.T) {
+func TestLocatorEncode(T *testing.T) {
+	T.Parallel()
 	locator := NewLocator().
 		Add("buildType", "Project_Build").
 		Add("branch", "feature/test")
 
-	encoded := locator.Encode()
-	expected := "buildType%3AProject_Build%2Cbranch%3Afeature%2Ftest"
+	got := locator.Encode()
+	want := "buildType%3AProject_Build%2Cbranch%3Afeature%2Ftest"
 
-	if encoded != expected {
-		t.Errorf("got %q, want %q", encoded, expected)
-	}
+	assert.Equal(T, want, got)
 }
 
-func TestLocatorIsEmpty(t *testing.T) {
-	empty := NewLocator()
-	if !empty.IsEmpty() {
-		t.Error("new locator should be empty")
+func TestLocatorIsEmpty(T *testing.T) {
+	T.Parallel()
+	tests := []struct {
+		name  string
+		build func() *Locator
+		want  bool
+	}{
+		{
+			name:  "new locator is empty",
+			build: func() *Locator { return NewLocator() },
+			want:  true,
+		},
+		{
+			name:  "locator with value is not empty",
+			build: func() *Locator { return NewLocator().Add("key", "value") },
+			want:  false,
+		},
+		{
+			name:  "locator with empty value is empty",
+			build: func() *Locator { return NewLocator().Add("key", "") },
+			want:  true,
+		},
 	}
 
-	notEmpty := NewLocator().Add("key", "value")
-	if notEmpty.IsEmpty() {
-		t.Error("locator with values should not be empty")
-	}
-
-	stillEmpty := NewLocator().Add("key", "")
-	if !stillEmpty.IsEmpty() {
-		t.Error("locator with only empty values should be empty")
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := tc.build().IsEmpty()
+			assert.Equal(t, tc.want, got)
+		})
 	}
 }

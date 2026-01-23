@@ -10,28 +10,34 @@ import (
 
 // paramAPI defines the interface for parameter operations
 type paramAPI struct {
-	list   func(client *api.Client, id string) (*api.ParameterList, error)
-	get    func(client *api.Client, id, name string) (*api.Parameter, error)
-	set    func(client *api.Client, id, name, value string, secure bool) error
-	delete func(client *api.Client, id, name string) error
+	list   func(client api.ClientInterface, id string) (*api.ParameterList, error)
+	get    func(client api.ClientInterface, id, name string) (*api.Parameter, error)
+	set    func(client api.ClientInterface, id, name, value string, secure bool) error
+	delete func(client api.ClientInterface, id, name string) error
 }
 
 var projectParamAPI = paramAPI{
-	list: func(c *api.Client, id string) (*api.ParameterList, error) { return c.GetProjectParameters(id) },
-	get:  func(c *api.Client, id, name string) (*api.Parameter, error) { return c.GetProjectParameter(id, name) },
-	set: func(c *api.Client, id, name, value string, secure bool) error {
+	list: func(c api.ClientInterface, id string) (*api.ParameterList, error) { return c.GetProjectParameters(id) },
+	get: func(c api.ClientInterface, id, name string) (*api.Parameter, error) {
+		return c.GetProjectParameter(id, name)
+	},
+	set: func(c api.ClientInterface, id, name, value string, secure bool) error {
 		return c.SetProjectParameter(id, name, value, secure)
 	},
-	delete: func(c *api.Client, id, name string) error { return c.DeleteProjectParameter(id, name) },
+	delete: func(c api.ClientInterface, id, name string) error { return c.DeleteProjectParameter(id, name) },
 }
 
 var jobParamAPI = paramAPI{
-	list: func(c *api.Client, id string) (*api.ParameterList, error) { return c.GetBuildTypeParameters(id) },
-	get:  func(c *api.Client, id, name string) (*api.Parameter, error) { return c.GetBuildTypeParameter(id, name) },
-	set: func(c *api.Client, id, name, value string, secure bool) error {
+	list: func(c api.ClientInterface, id string) (*api.ParameterList, error) {
+		return c.GetBuildTypeParameters(id)
+	},
+	get: func(c api.ClientInterface, id, name string) (*api.Parameter, error) {
+		return c.GetBuildTypeParameter(id, name)
+	},
+	set: func(c api.ClientInterface, id, name, value string, secure bool) error {
 		return c.SetBuildTypeParameter(id, name, value, secure)
 	},
-	delete: func(c *api.Client, id, name string) error { return c.DeleteBuildTypeParameter(id, name) },
+	delete: func(c api.ClientInterface, id, name string) error { return c.DeleteBuildTypeParameter(id, name) },
 }
 
 // newParamCmd creates a param subcommand for a resource (project or job)

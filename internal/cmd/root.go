@@ -99,3 +99,27 @@ type RootCommand = cobra.Command
 func GetRootCmd() *RootCommand {
 	return rootCmd
 }
+
+// NewRootCmd creates a fresh root command instance for testing.
+// This ensures tests don't share flag state from previous test runs.
+func NewRootCmd() *RootCommand {
+	cmd := &cobra.Command{
+		Use:     "tc",
+		Short:   "TeamCity CLI",
+		Version: Version,
+	}
+
+	cmd.PersistentFlags().BoolVar(&NoColor, "no-color", false, "Disable colored output")
+	cmd.PersistentFlags().BoolVarP(&Quiet, "quiet", "q", false, "Suppress non-essential output")
+	cmd.PersistentFlags().BoolVar(&Verbose, "verbose", false, "Show detailed output including debug info")
+	cmd.PersistentFlags().BoolVar(&NoInput, "no-input", false, "Disable interactive prompts")
+
+	cmd.AddCommand(newAuthCmd())
+	cmd.AddCommand(newProjectCmd())
+	cmd.AddCommand(newJobCmd())
+	cmd.AddCommand(newRunCmd())
+	cmd.AddCommand(newQueueCmd())
+	cmd.AddCommand(newAPICmd())
+
+	return cmd
+}
