@@ -6,15 +6,14 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
-	"strings"
 	"time"
+
+	"github.com/tiulpin/teamcity-cli/internal/api"
 )
 
 const (
@@ -23,12 +22,12 @@ const (
 	testBuildConfigID = "Sandbox_Demo"
 )
 
-// main initializes and configures the TeamCity server, including setting up projects, build configurations, and API tokens.
 func main() {
+	os.Setenv("TC_INSECURE_SKIP_WARN", "1")
+
 	fmt.Println("Starting TeamCity containers...")
 	run("docker", "compose", "up", "-d")
 
-	// Wait for server
 	fmt.Println("Waiting for server...")
 	waitFor(func() bool {
 		resp, err := http.Get(baseURL + "/app/rest/server")
@@ -39,49 +38,126 @@ func main() {
 		return resp.StatusCode == 200 || resp.StatusCode == 401
 	}, 10*time.Minute)
 
-	token := getSuperuserToken()
-	fmt.Printf("Got superuser token: %s...\n", token[:8])
+	// Get superuser token from docker logs and create client with Basic Auth
+	superuserToken := getSuperuserToken()
+	fmt.Printf("Got superuser token: %s...\n", superuserToken[:8])
 
-	if !exists("/app/rest/projects/id:"+testProjectID, token) {
+	superClient := api.NewClientWithBasicAuth(baseURL, "", superuserToken)
+
+	// Create a test project if it doesn't exist
+	if !superClient.ProjectExists(testProjectID) {
 		fmt.Println("Creating test project...")
-		post("/app/rest/projects", token, `{"id":"Sandbox","name":"Sandbox"}`)
+		_, err := superClient.CreateProject(api.CreateProjectRequest{
+			ID:   testProjectID,
+			Name: "Sandbox",
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create project: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	if !exists("/app/rest/buildTypes/id:"+testBuildConfigID, token) {
+	// Create test build config if it doesn't exist
+	if !superClient.BuildTypeExists(testBuildConfigID) {
 		fmt.Println("Creating test build config...")
-		post("/app/rest/projects/id:Sandbox/buildTypes", token, `{"id":"Sandbox_Demo","name":"Demo"}`)
-		post("/app/rest/buildTypes/id:Sandbox_Demo/steps", token, `{
-			"name":"Test","type":"simpleRunner",
-			"properties":{"property":[
-				{"name":"script.content","value":"echo Hello"},
-				{"name":"use.custom.script","value":"true"}
-			]}
-		}`)
+		_, err := superClient.CreateBuildType(testProjectID, api.CreateBuildTypeRequest{
+			ID:   testBuildConfigID,
+			Name: "Demo",
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create build config: %v\n", err)
+			os.Exit(1)
+		}
+
+		err = superClient.CreateBuildStep(testBuildConfigID, api.BuildStep{
+			Name: "Test",
+			Type: "simpleRunner",
+			Properties: api.PropertyList{
+				Property: []api.Property{
+					{Name: "script.content", Value: "echo Hello\nmkdir -p output\necho 'test content' > output/result.txt\necho '{\"status\":\"ok\"}' > output/report.json"},
+					{Name: "use.custom.script", Value: "true"},
+				},
+			},
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create build step: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Set artifact rules
+		err = superClient.SetBuildTypeSetting(testBuildConfigID, "artifactRules", "output/** => artifacts")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to set artifact rules: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	fmt.Println("Creating API token...")
-	apiToken := createAPIToken(token)
+	// Create admin user if it doesn't exist
+	fmt.Println("Setting up admin user...")
+	if !superClient.UserExists("admin") {
+		_, err := superClient.CreateUser(api.CreateUserRequest{
+			Username: "admin",
+			Password: "admin123",
+			Roles: api.RoleList{
+				Role: []api.Role{{RoleID: "SYSTEM_ADMIN", Scope: "g"}},
+			},
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create admin user: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
+	// Create API token using admin credentials
+	fmt.Println("Creating API token...")
+	adminClient := api.NewClientWithBasicAuth(baseURL, "admin", "admin123")
+
+	// Delete existing token if any (ignore errors)
+	_ = adminClient.DeleteAPIToken("tc-cli-test")
+
+	token, err := adminClient.CreateAPIToken("tc-cli-test")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create API token: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Write .env file
 	env := fmt.Sprintf("TEAMCITY_URL=%s\nTEAMCITY_TOKEN=%s\nTEAMCITY_TEST_CONFIG=%s\nTEAMCITY_TEST_PROJECT=%s\n",
-		baseURL, apiToken, testBuildConfigID, testProjectID)
-	os.WriteFile(".env", []byte(env), 0644)
+		baseURL, token.Value, testBuildConfigID, testProjectID)
+	if err := os.WriteFile(".env", []byte(env), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write .env: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Println("Wrote .env")
 
-	fmt.Println("Checking for build agent...")
-	if agentID := getConnectedAgent(token); agentID > 0 {
-		authorizeAgent(agentID, token)
-		fmt.Println("Agent authorized")
+	// Now use bearer token client for remaining operations
+	client := api.NewClient(baseURL, token.Value)
+
+	fmt.Println("Waiting for build agent...")
+	agentID := waitForAgent(client, 3*time.Minute)
+	if agentID > 0 {
+		if err := client.AuthorizeAgent(agentID, true); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to authorize agent: %v\n", err)
+		} else {
+			fmt.Println("Agent authorized")
+		}
+
 		fmt.Println("Triggering initial build...")
-		if buildID := triggerBuild(apiToken); buildID > 0 {
-			fmt.Printf("Triggered build #%d, waiting for completion...\n", buildID)
-			if waitForBuild(buildID, apiToken) {
+		build, err := client.RunBuild(testBuildConfigID, api.RunBuildOptions{
+			Comment: "Setup script - initial build",
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to trigger build: %v\n", err)
+		} else {
+			fmt.Printf("Triggered build #%d, waiting for completion...\n", build.ID)
+			if waitForBuild(client, build.ID) {
 				fmt.Println("Initial build completed")
 			} else {
 				fmt.Println("Build did not complete in time (tests will trigger their own)")
 			}
 		}
 	} else {
-		fmt.Println("No agent connected yet (tests will trigger builds when agent is ready)")
+		fmt.Println("WARNING: No agent connected after timeout (tests may skip)")
 	}
 
 	fmt.Println("\nDone! Run 'just test' to test.")
@@ -120,150 +196,35 @@ func getSuperuserToken() string {
 	return matches[len(matches)-1][1]
 }
 
-func exists(path, token string) bool {
-	req, _ := http.NewRequest("GET", baseURL+path, nil)
-	req.SetBasicAuth("", token)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return false
-	}
-	resp.Body.Close()
-	return resp.StatusCode == 200
-}
-
-func post(path, token, body string) {
-	req, _ := http.NewRequest("POST", baseURL+path, strings.NewReader(body))
-	req.SetBasicAuth("", token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "POST %s failed: %v\n", path, err)
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Fprintf(os.Stderr, "POST %s returned %d: %s\n", path, resp.StatusCode, body)
-	}
-}
-
-func getConnectedAgent(token string) int {
-	req, _ := http.NewRequest("GET", baseURL+"/app/rest/agents?locator=authorized:any", nil)
-	req.SetBasicAuth("", token)
-	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return 0
-	}
-	defer resp.Body.Close()
-	var result struct {
-		Agent []struct {
-			ID int `json:"id"`
-		} `json:"agent"`
-	}
-	json.NewDecoder(resp.Body).Decode(&result)
-	if len(result.Agent) > 0 {
-		return result.Agent[0].ID
+func waitForAgent(client *api.Client, timeout time.Duration) int {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		if err == nil && len(agents.Agents) > 0 {
+			return agents.Agents[0].ID
+		}
+		fmt.Println("Waiting for agent to connect...")
+		time.Sleep(5 * time.Second)
 	}
 	return 0
 }
 
-func authorizeAgent(id int, token string) {
-	req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/app/rest/agents/id:%d/authorized", baseURL, id), strings.NewReader("true"))
-	req.SetBasicAuth("", token)
-	req.Header.Set("Content-Type", "text/plain")
-	resp, _ := http.DefaultClient.Do(req)
-	if resp != nil {
-		resp.Body.Close()
-	}
-}
-
-func triggerBuild(apiToken string) int {
-	req, _ := http.NewRequest("POST", baseURL+"/app/rest/buildQueue", strings.NewReader(
-		fmt.Sprintf(`{"buildType":{"id":"%s"},"comment":{"text":"Setup script - initial build"}}`, testBuildConfigID)))
-	req.Header.Set("Authorization", "Bearer "+apiToken)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to trigger build: %v\n", err)
-		return 0
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Fprintf(os.Stderr, "Failed to trigger build (status %d): %s\n", resp.StatusCode, body)
-		return 0
-	}
-
-	var result struct {
-		ID int `json:"id"`
-	}
-	json.NewDecoder(resp.Body).Decode(&result)
-	return result.ID
-}
-
-func waitForBuild(buildID int, apiToken string) bool {
+func waitForBuild(client *api.Client, buildID int) bool {
 	deadline := time.Now().Add(3 * time.Minute)
 	for time.Now().Before(deadline) {
-		req, _ := http.NewRequest("GET", fmt.Sprintf("%s/app/rest/builds/id:%d", baseURL, buildID), nil)
-		req.Header.Set("Authorization", "Bearer "+apiToken)
-		req.Header.Set("Accept", "application/json")
-		resp, err := http.DefaultClient.Do(req)
+		build, err := client.GetBuild(fmt.Sprintf("%d", buildID))
 		if err != nil {
 			time.Sleep(3 * time.Second)
 			continue
 		}
 
-		var result struct {
-			State  string `json:"state"`
-			Status string `json:"status"`
-		}
-		json.NewDecoder(resp.Body).Decode(&result)
-		resp.Body.Close()
-
-		if result.State == "finished" {
-			fmt.Printf("Build finished with status: %s\n", result.Status)
+		if build.State == "finished" {
+			fmt.Printf("Build finished with status: %s\n", build.Status)
 			return true
 		}
 
-		fmt.Printf("Build state: %s...\n", result.State)
+		fmt.Printf("Build state: %s...\n", build.State)
 		time.Sleep(5 * time.Second)
 	}
 	return false
-}
-
-func createAPIToken(superuserToken string) string {
-	if !exists("/app/rest/users/username:admin", superuserToken) {
-		post("/app/rest/users", superuserToken, `{"username":"admin","password":"admin123","roles":{"role":[{"roleId":"SYSTEM_ADMIN","scope":"g"}]}}`)
-	}
-
-	req, _ := http.NewRequest("DELETE", baseURL+"/app/rest/users/current/tokens/tc-cli-test", nil)
-	req.SetBasicAuth("admin", "admin123")
-	if resp, _ := http.DefaultClient.Do(req); resp != nil {
-		resp.Body.Close()
-	}
-
-	req, _ = http.NewRequest("POST", baseURL+"/app/rest/users/current/tokens/tc-cli-test", nil)
-	req.SetBasicAuth("admin", "admin123")
-	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create API token: %v\n", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	var result struct {
-		Value string `json:"value"`
-	}
-	json.Unmarshal(body, &result)
-	if result.Value == "" {
-		fmt.Fprintf(os.Stderr, "Failed to get API token (status %d): %s\n", resp.StatusCode, body)
-		os.Exit(1)
-	}
-	return result.Value
 }
