@@ -13,7 +13,7 @@ private object Docker {
 fun BuildSteps.goLint() {
     script {
         id = "goLint"
-        scriptContent = "golangci-lint run --tests=false ./..."
+        scriptContent = "go fmt ./... && golangci-lint run --tests=false ./..."
         dockerImage = Docker.GOLANGCI_LINT_IMAGE
         dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
     }
