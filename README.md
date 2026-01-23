@@ -814,23 +814,11 @@ tc api /app/rest/server
 # List projects
 tc api /app/rest/projects
 
-# Get a specific build
-tc api /app/rest/builds/id:12345
-
 # Create a resource with POST
-tc api /app/rest/buildQueue --method POST --field 'buildType=id:MyProject_Build'
+tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
 
-# Use custom headers
-tc api /app/rest/builds -H "Accept: application/xml"
-
-# Read request body from stdin
-echo '{"buildType":{"id":"MyBuild"}}' | tc api /app/rest/buildQueue -X POST --input -
-
-# Include response headers in output
-tc api /app/rest/server --include
-
-# Silent mode (only show errors)
-tc api /app/rest/server --silent
+# Fetch all pages and combine into array
+tc api /app/rest/builds --paginate --slurp
 ```
 
 **Options:**
@@ -839,8 +827,10 @@ tc api /app/rest/server --silent
 - `-i, --include` – Include response headers in output
 - `--input` – Read request body from file (use - for stdin)
 - `-X, --method` – HTTP method to use
+- `--paginate` – Make additional requests to fetch all pages
 - `--raw` – Output raw response without formatting
 - `--silent` – Suppress output on success
+- `--slurp` – Combine paginated results into a JSON array (requires --paginate)
 
 <!-- COMMANDS_END -->
 
