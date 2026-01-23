@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 )
 
@@ -10,6 +11,7 @@ import (
 type ProjectsOptions struct {
 	Parent string
 	Limit  int
+	Fields []string
 }
 
 // GetProjects returns a list of projects
@@ -18,7 +20,12 @@ func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
 		Add("parentProject", opts.Parent).
 		AddIntDefault("count", opts.Limit, 30)
 
-	path := fmt.Sprintf("/app/rest/projects?locator=%s", locator.Encode())
+	fields := opts.Fields
+	if len(fields) == 0 {
+		fields = ProjectFields.Default
+	}
+	fieldsParam := fmt.Sprintf("count,project(%s)", ToAPIFields(fields))
+	path := fmt.Sprintf("/app/rest/projects?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
 	var result ProjectList
 	if err := c.get(path, &result); err != nil {

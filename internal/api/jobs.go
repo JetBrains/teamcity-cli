@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -9,6 +10,7 @@ import (
 type BuildTypesOptions struct {
 	Project string
 	Limit   int
+	Fields  []string
 }
 
 // GetBuildTypes returns a list of build configurations
@@ -17,7 +19,12 @@ func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 		Add("project", opts.Project).
 		AddIntDefault("count", opts.Limit, 30)
 
-	path := fmt.Sprintf("/app/rest/buildTypes?locator=%s", locator.Encode())
+	fields := opts.Fields
+	if len(fields) == 0 {
+		fields = BuildTypeFields.Default
+	}
+	fieldsParam := fmt.Sprintf("count,buildType(%s)", ToAPIFields(fields))
+	path := fmt.Sprintf("/app/rest/buildTypes?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
 	var result BuildTypeList
 	if err := c.get(path, &result); err != nil {
