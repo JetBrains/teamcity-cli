@@ -315,7 +315,11 @@ func (c *Client) doNoContent(method, path string, body io.Reader, contentType st
 	if contentType == "" {
 		resp, err = c.doRequest(method, path, body)
 	} else {
-		resp, err = c.doRequestWithContentType(method, path, body, contentType)
+		accept := "application/json"
+		if contentType == "text/plain" {
+			accept = "text/plain"
+		}
+		resp, err = c.doRequestFull(method, path, body, contentType, accept)
 	}
 	if err != nil {
 		return err
