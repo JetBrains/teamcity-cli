@@ -387,3 +387,499 @@ func TestAPICommandFromStdin(t *testing.T) {
 		t.Fatalf("Command failed: %v", err)
 	}
 }
+
+func TestAPICommandPaginate(t *testing.T) {
+	pageNum := 0
+	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+		pageNum++
+		w.Header().Set("Content-Type", "application/json")
+
+		switch pageNum {
+		case 1:
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"count":    2,
+				"nextHref": "/app/rest/builds?start=2",
+				"build":    []map[string]int{{"id": 1}, {"id": 2}},
+			})
+		case 2:
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"count": 1,
+				"build": []map[string]int{{"id": 3}},
+			})
+		}
+	})
+	defer cleanup()
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "--paginate"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("Command failed: %v", err)
+	}
+
+	if pageNum != 2 {
+		t.Errorf("Expected 2 requests, got %d", pageNum)
+	}
+}
+
+func TestAPICommandPaginateNoNextHref(t *testing.T) {
+	requestCount := 0
+	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"count": 2,
+			"build": []map[string]int{{"id": 1}, {"id": 2}},
+		})
+	})
+	defer cleanup()
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "--paginate"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("Command failed: %v", err)
+	}
+
+	if requestCount != 1 {
+		t.Errorf("Expected 1 request (no pagination needed), got %d", requestCount)
+	}
+}
+
+func TestAPICommandSlurp(t *testing.T) {
+	pageNum := 0
+	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+		pageNum++
+		w.Header().Set("Content-Type", "application/json")
+
+		switch pageNum {
+		case 1:
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"count":    2,
+				"nextHref": "/app/rest/builds?start=2",
+				"build":    []map[string]int{{"id": 1}, {"id": 2}},
+			})
+		case 2:
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"count": 1,
+				"build": []map[string]int{{"id": 3}},
+			})
+		}
+	})
+	defer cleanup()
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "--paginate", "--slurp"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("Command failed: %v", err)
+	}
+
+	// Note: output goes to stdout, not the buffer, but we verify the server was hit correctly
+	if pageNum != 2 {
+		t.Errorf("Expected 2 requests, got %d", pageNum)
+	}
+}
+
+func TestAPICommandSlurpRequiresPaginate(t *testing.T) {
+	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	defer cleanup()
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "--slurp"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("Expected error when using --slurp without --paginate")
+	}
+}
+
+func TestAPICommandPaginateOnlyGET(t *testing.T) {
+	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	defer cleanup()
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "-X", "POST", "--paginate"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("Expected error when using --paginate with POST")
+	}
+	if !strings.Contains(err.Error(), "only be used with GET") {
+		t.Errorf("Expected error about GET only, got: %v", err)
+	}
+}
+
+func TestAPICommandPaginateNonJSON(t *testing.T) {
+	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.Write([]byte("<builds><build id='1'/></builds>"))
+	})
+	defer cleanup()
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "--paginate"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("Expected error when using --paginate with non-JSON response")
+	}
+	if !strings.Contains(err.Error(), "--paginate requires JSON response") {
+		t.Errorf("Expected error about JSON requirement, got: %v", err)
+	}
+}
+
+// Unit tests for pagination functions
+func TestExtractNextHref(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "has nextHref",
+			data: `{"count":100,"nextHref":"/app/rest/builds?start=100","build":[]}`,
+			want: "/app/rest/builds?start=100",
+		},
+		{
+			name: "no nextHref",
+			data: `{"count":50,"build":[]}`,
+			want: "",
+		},
+		{
+			name: "empty nextHref",
+			data: `{"count":50,"nextHref":"","build":[]}`,
+			want: "",
+		},
+		{
+			name:    "invalid json",
+			data:    `not json`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := extractNextHref([]byte(tt.data))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("extractNextHref() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("extractNextHref() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDetectArrayKey(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "builds response",
+			data: `{"count":2,"build":[{"id":1},{"id":2}]}`,
+			want: "build",
+		},
+		{
+			name: "buildTypes response",
+			data: `{"count":2,"buildType":[{"id":"bt1"},{"id":"bt2"}]}`,
+			want: "buildType",
+		},
+		{
+			name: "projects response",
+			data: `{"count":2,"project":[{"id":"p1"},{"id":"p2"}]}`,
+			want: "project",
+		},
+		{
+			name: "agents response",
+			data: `{"count":1,"agent":[{"id":1}]}`,
+			want: "agent",
+		},
+		{
+			name: "no array key (single object)",
+			data: `{"id":1,"name":"test"}`,
+			want: "",
+		},
+		{
+			name: "empty array",
+			data: `{"count":0,"build":[]}`,
+			want: "build",
+		},
+		{
+			name:    "invalid json",
+			data:    `not json`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := detectArrayKey([]byte(tt.data))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("detectArrayKey() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("detectArrayKey() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractArrayItems(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    string
+		key     string
+		wantLen int
+		wantErr bool
+	}{
+		{
+			name:    "extract builds",
+			data:    `{"count":2,"build":[{"id":1},{"id":2}]}`,
+			key:     "build",
+			wantLen: 2,
+		},
+		{
+			name:    "key not found",
+			data:    `{"count":0,"build":[]}`,
+			key:     "project",
+			wantLen: 0,
+		},
+		{
+			name:    "empty array",
+			data:    `{"count":0,"build":[]}`,
+			key:     "build",
+			wantLen: 0,
+		},
+		{
+			name:    "invalid json",
+			data:    `not json`,
+			key:     "build",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := extractArrayItems([]byte(tt.data), tt.key)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("extractArrayItems() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if len(got) != tt.wantLen {
+				t.Errorf("extractArrayItems() len = %d, want %d", len(got), tt.wantLen)
+			}
+		})
+	}
+}
+
+func TestMergePages(t *testing.T) {
+	tests := []struct {
+		name     string
+		pages    []string
+		arrayKey string
+		want     string
+		wantErr  bool
+	}{
+		{
+			name: "merge two pages",
+			pages: []string{
+				`{"count":2,"build":[{"id":1},{"id":2}]}`,
+				`{"count":2,"build":[{"id":3},{"id":4}]}`,
+			},
+			arrayKey: "build",
+			want:     `[{"id":1},{"id":2},{"id":3},{"id":4}]`,
+		},
+		{
+			name: "single page",
+			pages: []string{
+				`{"count":2,"build":[{"id":1},{"id":2}]}`,
+			},
+			arrayKey: "build",
+			want:     `[{"id":1},{"id":2}]`,
+		},
+		{
+			name: "empty pages",
+			pages: []string{
+				`{"count":0,"build":[]}`,
+				`{"count":0,"build":[]}`,
+			},
+			arrayKey: "build",
+			want:     `[]`,
+		},
+		{
+			name: "mixed sizes",
+			pages: []string{
+				`{"count":3,"build":[{"id":1},{"id":2},{"id":3}]}`,
+				`{"count":1,"build":[{"id":4}]}`,
+			},
+			arrayKey: "build",
+			want:     `[{"id":1},{"id":2},{"id":3},{"id":4}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var pages [][]byte
+			for _, p := range tt.pages {
+				pages = append(pages, []byte(p))
+			}
+
+			got, err := mergePages(pages, tt.arrayKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("mergePages() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// Compare as JSON to ignore whitespace differences
+			var gotJSON, wantJSON interface{}
+			json.Unmarshal(got, &gotJSON)
+			json.Unmarshal([]byte(tt.want), &wantJSON)
+
+			gotBytes, _ := json.Marshal(gotJSON)
+			wantBytes, _ := json.Marshal(wantJSON)
+
+			if string(gotBytes) != string(wantBytes) {
+				t.Errorf("mergePages() = %s, want %s", string(got), tt.want)
+			}
+		})
+	}
+}
+
+func TestFetchAllPages(t *testing.T) {
+	pageNum := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pageNum++
+		w.Header().Set("Content-Type", "application/json")
+
+		switch pageNum {
+		case 1:
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"count":    2,
+				"nextHref": "/app/rest/builds?start=2",
+				"build":    []map[string]int{{"id": 1}, {"id": 2}},
+			})
+		case 2:
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"count":    2,
+				"nextHref": "/app/rest/builds?start=4",
+				"build":    []map[string]int{{"id": 3}, {"id": 4}},
+			})
+		case 3:
+			// Last page, no nextHref
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"count": 1,
+				"build": []map[string]int{{"id": 5}},
+			})
+		}
+	}))
+	defer server.Close()
+
+	// Set up config
+	originalURL := os.Getenv("TEAMCITY_URL")
+	originalToken := os.Getenv("TEAMCITY_TOKEN")
+	os.Setenv("TEAMCITY_URL", server.URL)
+	os.Setenv("TEAMCITY_TOKEN", "test-token")
+	config.Init()
+	defer func() {
+		os.Setenv("TEAMCITY_URL", originalURL)
+		os.Setenv("TEAMCITY_TOKEN", originalToken)
+		config.Init()
+	}()
+
+	client, err := getClient()
+	if err != nil {
+		t.Fatalf("Failed to get client: %v", err)
+	}
+
+	pages, err := fetchAllPages(client, "/app/rest/builds", nil)
+	if err != nil {
+		t.Fatalf("fetchAllPages() error = %v", err)
+	}
+
+	if len(pages) != 3 {
+		t.Errorf("fetchAllPages() returned %d pages, want 3", len(pages))
+	}
+
+	// Verify we can extract items from all pages
+	arrayKey, _ := detectArrayKey(pages[0])
+	merged, err := mergePages(pages, arrayKey)
+	if err != nil {
+		t.Fatalf("mergePages() error = %v", err)
+	}
+
+	var items []map[string]int
+	json.Unmarshal(merged, &items)
+	if len(items) != 5 {
+		t.Errorf("merged result has %d items, want 5", len(items))
+	}
+}
+
+func TestFetchAllPagesSinglePage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Single page, no nextHref
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"count": 2,
+			"build": []map[string]int{{"id": 1}, {"id": 2}},
+		})
+	}))
+	defer server.Close()
+
+	// Set up config
+	originalURL := os.Getenv("TEAMCITY_URL")
+	originalToken := os.Getenv("TEAMCITY_TOKEN")
+	os.Setenv("TEAMCITY_URL", server.URL)
+	os.Setenv("TEAMCITY_TOKEN", "test-token")
+	config.Init()
+	defer func() {
+		os.Setenv("TEAMCITY_URL", originalURL)
+		os.Setenv("TEAMCITY_TOKEN", originalToken)
+		config.Init()
+	}()
+
+	client, err := getClient()
+	if err != nil {
+		t.Fatalf("Failed to get client: %v", err)
+	}
+
+	pages, err := fetchAllPages(client, "/app/rest/builds", nil)
+	if err != nil {
+		t.Fatalf("fetchAllPages() error = %v", err)
+	}
+
+	if len(pages) != 1 {
+		t.Errorf("fetchAllPages() returned %d pages, want 1", len(pages))
+	}
+}
