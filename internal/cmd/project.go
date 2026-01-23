@@ -31,9 +31,9 @@ func newProjectCmd() *cobra.Command {
 }
 
 type projectListOptions struct {
-	parent string
-	limit  int
-	json   bool
+	parent     string
+	limit      int
+	jsonFields string
 }
 
 func newProjectListCmd() *cobra.Command {
@@ -44,20 +44,30 @@ func newProjectListCmd() *cobra.Command {
 		Short: "List projects",
 		Long:  `List all TeamCity projects.`,
 		Example: `  tc project list
-  tc project list --parent AiPlatform`,
+  tc project list --parent AiPlatform
+  tc project list --json
+  tc project list --json=id,name,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runProjectList(opts)
+			return runProjectList(cmd, opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.parent, "parent", "p", "", "Filter by parent project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 100, "Maximum number of projects")
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+	AddJSONFieldsFlag(cmd, &opts.jsonFields)
 
 	return cmd
 }
 
-func runProjectList(opts *projectListOptions) error {
+func runProjectList(cmd *cobra.Command, opts *projectListOptions) error {
+	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.ProjectFields)
+	if err != nil {
+		return err
+	}
+	if showHelp {
+		return nil
+	}
+
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -66,12 +76,13 @@ func runProjectList(opts *projectListOptions) error {
 	projects, err := client.GetProjects(api.ProjectsOptions{
 		Parent: opts.parent,
 		Limit:  opts.limit,
+		Fields: jsonResult.Fields,
 	})
 	if err != nil {
 		return err
 	}
 
-	if opts.json {
+	if jsonResult.Enabled {
 		return output.PrintJSON(projects)
 	}
 

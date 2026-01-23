@@ -26,9 +26,9 @@ func newJobCmd() *cobra.Command {
 }
 
 type jobListOptions struct {
-	project string
-	limit   int
-	json    bool
+	project    string
+	limit      int
+	jsonFields string
 }
 
 func newJobListCmd() *cobra.Command {
@@ -39,20 +39,29 @@ func newJobListCmd() *cobra.Command {
 		Short: "List jobs",
 		Example: `  tc job list
   tc job list --project Sandbox
-  tc job list --limit 50`,
+  tc job list --json
+  tc job list --json=id,name,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runJobList(opts)
+			return runJobList(cmd, opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of jobs")
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+	AddJSONFieldsFlag(cmd, &opts.jsonFields)
 
 	return cmd
 }
 
-func runJobList(opts *jobListOptions) error {
+func runJobList(cmd *cobra.Command, opts *jobListOptions) error {
+	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.BuildTypeFields)
+	if err != nil {
+		return err
+	}
+	if showHelp {
+		return nil
+	}
+
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -61,12 +70,13 @@ func runJobList(opts *jobListOptions) error {
 	jobs, err := client.GetBuildTypes(api.BuildTypesOptions{
 		Project: opts.project,
 		Limit:   opts.limit,
+		Fields:  jsonResult.Fields,
 	})
 	if err != nil {
 		return err
 	}
 
-	if opts.json {
+	if jsonResult.Enabled {
 		return output.PrintJSON(jobs)
 	}
 

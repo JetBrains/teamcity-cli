@@ -19,6 +19,7 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
     * [Multiple Servers](#multiple-servers)
   * [Shell Completion](#shell-completion)
   * [Global Flags](#global-flags)
+  * [JSON Output](#json-output)
   * [Authentication](#authentication)
     * [auth login](#auth-login)
     * [auth logout](#auth-logout)
@@ -242,6 +243,52 @@ tc completion powershell > tc.ps1
 - `--verbose` – Show detailed output including debug info
 - `--no-input` – Disable interactive prompts
 
+## JSON Output
+
+Commands that list resources (`run list`, `job list`, `project list`, `queue list`) support a `--json` flag with field selection:
+
+```bash
+# Default fields (default selection covering most use cases)
+tc run list --json
+
+# List available fields for a command
+tc run list --json=
+
+# Select specific fields
+tc run list --json=id,status,webUrl
+
+# Use dot notation for nested fields
+tc run list --json=id,status,buildType.name,triggered.user.username
+```
+
+**Field notation:**
+
+Use dot notation to access nested fields. For example, `buildType.name` retrieves the build configuration name, and `triggered.user.username` gets the username of who triggered the build.
+
+**Available fields by command:**
+
+| Command        | Example fields                                                                                                                                                                                        |
+|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `run list`     | `id`, `number`, `status`, `state`, `branchName`, `buildTypeId`, `buildType.name`, `buildType.projectName`, `triggered.type`, `triggered.user.name`, `agent.name`, `startDate`, `finishDate`, `webUrl` |
+| `job list`     | `id`, `name`, `projectName`, `projectId`, `paused`, `href`, `webUrl`                                                                                                                                  |
+| `project list` | `id`, `name`, `description`, `parentProjectId`, `href`, `webUrl`                                                                                                                                      |
+| `queue list`   | `id`, `buildTypeId`, `state`, `branchName`, `queuedDate`, `buildType.name`, `triggered.user.name`, `webUrl`                                                                                           |
+
+Run `tc <command> --json=` to see all available fields for that command.
+
+**Scripting examples:**
+
+```bash
+# Get build IDs that failed
+tc run list --status failure --json=id | jq -r '.[].id'
+
+# Export runs to CSV
+tc run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branchName] | @csv'
+
+# Get web URLs for queued builds
+tc queue list --json=webUrl | jq -r '.[].webUrl'
+```
+
 <!-- COMMANDS_START -->
 
 ## Authentication
@@ -343,15 +390,15 @@ tc run list --job Sandbox_Demo
 tc run list --status failure --limit 10
 tc run list --project Sandbox --branch main
 tc run list --since 24h
-tc run list --since 24h --until 12h
-tc run list --since "2026-01-21"
+tc run list --json
+tc run list --json=id,status,webUrl
 tc run list --plain | grep failure
 ```
 
 **Options:**
 - `-b, --branch` – Filter by branch name
 - `-j, --job` – Filter by job ID
-- `--json` – Output as JSON
+- `--json` – Output JSON with fields (use --json= to list, --json=f1,f2 for specific)
 - `-n, --limit` – Maximum number of runs
 - `--no-header` – Omit header row (use with --plain)
 - `--plain` – Output in plain text format for scripting
@@ -523,11 +570,12 @@ List jobs
 ```bash
 tc job list
 tc job list --project Sandbox
-tc job list --limit 50
+tc job list --json
+tc job list --json=id,name,webUrl
 ```
 
 **Options:**
-- `--json` – Output as JSON
+- `--json` – Output JSON with fields (use --json= to list, --json=f1,f2 for specific)
 - `-n, --limit` – Maximum number of jobs
 - `-p, --project` – Filter by project ID
 
@@ -612,10 +660,12 @@ List all TeamCity projects.
 ```bash
 tc project list
 tc project list --parent AiPlatform
+tc project list --json
+tc project list --json=id,name,webUrl
 ```
 
 **Options:**
-- `--json` – Output as JSON
+- `--json` – Output JSON with fields (use --json= to list, --json=f1,f2 for specific)
 - `-n, --limit` – Maximum number of projects
 - `-p, --parent` – Filter by parent project ID
 
@@ -722,12 +772,13 @@ List all runs in the TeamCity queue.
 ```bash
 tc queue list
 tc queue list --job Sandbox_Demo
-tc queue list --limit 10
+tc queue list --json
+tc queue list --json=id,state,webUrl
 ```
 
 **Options:**
 - `-j, --job` – Filter by job ID
-- `--json` – Output as JSON
+- `--json` – Output JSON with fields (use --json= to list, --json=f1,f2 for specific)
 - `-n, --limit` – Maximum number of queued runs
 
 ### queue remove
