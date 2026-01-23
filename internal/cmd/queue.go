@@ -25,9 +25,9 @@ func newQueueCmd() *cobra.Command {
 }
 
 type queueListOptions struct {
-	job   string
-	limit int
-	json  bool
+	job        string
+	limit      int
+	jsonFields string
 }
 
 func newQueueListCmd() *cobra.Command {
@@ -39,20 +39,29 @@ func newQueueListCmd() *cobra.Command {
 		Long:  `List all runs in the TeamCity queue.`,
 		Example: `  tc queue list
   tc queue list --job Sandbox_Demo
-  tc queue list --limit 10`,
+  tc queue list --json
+  tc queue list --json=id,state,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runQueueList(opts)
+			return runQueueList(cmd, opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of queued runs")
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+	AddJSONFieldsFlag(cmd, &opts.jsonFields)
 
 	return cmd
 }
 
-func runQueueList(opts *queueListOptions) error {
+func runQueueList(cmd *cobra.Command, opts *queueListOptions) error {
+	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.QueuedBuildFields)
+	if err != nil {
+		return err
+	}
+	if showHelp {
+		return nil
+	}
+
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -61,12 +70,13 @@ func runQueueList(opts *queueListOptions) error {
 	queue, err := client.GetBuildQueue(api.QueueOptions{
 		BuildTypeID: opts.job,
 		Limit:       opts.limit,
+		Fields:      jsonResult.Fields,
 	})
 	if err != nil {
 		return err
 	}
 
-	if opts.json {
+	if jsonResult.Enabled {
 		return output.PrintJSON(queue)
 	}
 

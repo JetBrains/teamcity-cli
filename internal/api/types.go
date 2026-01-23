@@ -204,11 +204,11 @@ type Server struct {
 }
 
 type Change struct {
-	ID       int    `json:"id"`
-	Version  string `json:"version"` // commit SHA
-	Username string `json:"username"`
-	Date     string `json:"date"`
-	Comment  string `json:"comment"`
+	ID       int    `json:"id,omitempty"`
+	Version  string `json:"version,omitempty"` // commit SHA
+	Username string `json:"username,omitempty"`
+	Date     string `json:"date,omitempty"`
+	Comment  string `json:"comment,omitempty"`
 	WebURL   string `json:"webUrl,omitempty"`
 	Files    *Files `json:"files,omitempty"`
 }

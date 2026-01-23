@@ -12,18 +12,18 @@ import (
 )
 
 type runListOptions struct {
-	job      string
-	branch   string
-	status   string
-	user     string
-	project  string
-	limit    int
-	since    string
-	until    string
-	json     bool
-	plain    bool
-	noHeader bool
-	web      bool
+	job        string
+	branch     string
+	status     string
+	user       string
+	project    string
+	limit      int
+	since      string
+	until      string
+	jsonFields string
+	plain      bool
+	noHeader   bool
+	web        bool
 }
 
 func newRunListCmd() *cobra.Command {
@@ -37,11 +37,11 @@ func newRunListCmd() *cobra.Command {
   tc run list --status failure --limit 10
   tc run list --project Sandbox --branch main
   tc run list --since 24h
-  tc run list --since 24h --until 12h
-  tc run list --since "2026-01-21"
+  tc run list --json
+  tc run list --json=id,status,webUrl
   tc run list --plain | grep failure`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRunList(opts)
+			return runRunList(cmd, opts)
 		},
 	}
 
@@ -53,7 +53,7 @@ func newRunListCmd() *cobra.Command {
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of runs")
 	cmd.Flags().StringVar(&opts.since, "since", "", "Filter builds finished after this time (e.g., 24h, 2026-01-21)")
 	cmd.Flags().StringVar(&opts.until, "until", "", "Filter builds finished before this time (e.g., 12h, 2026-01-22)")
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+	AddJSONFieldsFlag(cmd, &opts.jsonFields)
 	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
 	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
@@ -63,7 +63,15 @@ func newRunListCmd() *cobra.Command {
 	return cmd
 }
 
-func runRunList(opts *runListOptions) error {
+func runRunList(cmd *cobra.Command, opts *runListOptions) error {
+	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.BuildFields)
+	if err != nil {
+		return err
+	}
+	if showHelp {
+		return nil
+	}
+
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -105,12 +113,13 @@ func runRunList(opts *runListOptions) error {
 		Limit:       opts.limit,
 		SinceDate:   sinceDate,
 		UntilDate:   untilDate,
+		Fields:      jsonResult.Fields,
 	})
 	if err != nil {
 		return err
 	}
 
-	if opts.json {
+	if jsonResult.Enabled {
 		return output.PrintJSON(runs)
 	}
 
