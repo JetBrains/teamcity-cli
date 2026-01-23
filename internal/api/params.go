@@ -64,33 +64,12 @@ func (c *Client) setParameter(basePath, name, value string, secure bool) error {
 		return fmt.Errorf("failed to marshal parameter: %w", err)
 	}
 
-	resp, err := c.doRequest("PUT", path, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("PUT", path, bytes.NewReader(body), "")
 }
 
 func (c *Client) deleteParameter(basePath, name string) error {
 	path := fmt.Sprintf("%s/parameters/%s", basePath, name)
-
-	resp, err := c.doRequest("DELETE", path, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("DELETE", path, nil, "")
 }
 
 // GetProjectParameters returns parameters for a project

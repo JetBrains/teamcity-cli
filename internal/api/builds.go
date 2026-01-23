@@ -190,17 +190,7 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	resp, err := c.doRequest("POST", path, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("POST", path, bytes.NewReader(bodyBytes), "")
 }
 
 // QueueOptions represents options for listing queued builds
@@ -239,18 +229,7 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 // RemoveFromQueue removes a build from the queue
 func (c *Client) RemoveFromQueue(id string) error {
 	path := fmt.Sprintf("/app/rest/buildQueue/id:%s", id)
-
-	resp, err := c.doRequest("DELETE", path, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("DELETE", path, nil, "")
 }
 
 // Artifact represents a build artifact
@@ -350,17 +329,7 @@ func (c *Client) PinBuild(buildID string, comment string) error {
 		body = "Pinned via tc CLI"
 	}
 
-	resp, err := c.doRequestWithContentType("PUT", path, strings.NewReader(body), "text/plain")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 204 && resp.StatusCode != 200 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("PUT", path, strings.NewReader(body), "text/plain")
 }
 
 // UnpinBuild removes the pin from a build (accepts ID or #number)
@@ -370,18 +339,7 @@ func (c *Client) UnpinBuild(buildID string) error {
 		return err
 	}
 	path := fmt.Sprintf("/app/rest/builds/id:%s/pin", id)
-
-	resp, err := c.doRequest("DELETE", path, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 204 && resp.StatusCode != 200 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("DELETE", path, nil, "")
 }
 
 // AddBuildTags adds tags to a build (accepts ID or #number)
@@ -465,17 +423,7 @@ func (c *Client) RemoveBuildTag(buildID string, tag string) error {
 		return fmt.Errorf("failed to marshal tags: %w", err)
 	}
 
-	resp, err := c.doRequest("PUT", path, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("PUT", path, bytes.NewReader(body), "")
 }
 
 // SetBuildComment sets or updates the comment on a build (accepts ID or #number)
@@ -485,18 +433,7 @@ func (c *Client) SetBuildComment(buildID string, comment string) error {
 		return err
 	}
 	path := fmt.Sprintf("/app/rest/builds/id:%s/comment", id)
-
-	resp, err := c.doRequestWithContentType("PUT", path, strings.NewReader(comment), "text/plain")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 204 && resp.StatusCode != 200 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("PUT", path, strings.NewReader(comment), "text/plain")
 }
 
 // buildWithComment is used to fetch just the comment from a build
@@ -531,36 +468,13 @@ func (c *Client) DeleteBuildComment(buildID string) error {
 		return err
 	}
 	path := fmt.Sprintf("/app/rest/builds/id:%s/comment", id)
-
-	resp, err := c.doRequest("DELETE", path, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 204 && resp.StatusCode != 200 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("DELETE", path, nil, "")
 }
 
 // SetQueuedBuildPosition moves a queued build to a specific position in the queue
 func (c *Client) SetQueuedBuildPosition(buildID string, position int) error {
 	path := fmt.Sprintf("/app/rest/buildQueue/order/%s", buildID)
-
-	body := fmt.Sprintf("%d", position)
-	resp, err := c.doRequestWithContentType("PUT", path, strings.NewReader(body), "text/plain")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("PUT", path, strings.NewReader(fmt.Sprintf("%d", position)), "text/plain")
 }
 
 // MoveQueuedBuildToTop moves a queued build to the top of the queue
@@ -571,19 +485,7 @@ func (c *Client) MoveQueuedBuildToTop(buildID string) error {
 // ApproveQueuedBuild approves a queued build that requires approval
 func (c *Client) ApproveQueuedBuild(buildID string) error {
 	path := fmt.Sprintf("/app/rest/buildQueue/id:%s/approval/status", buildID)
-
-	body := `"approved"`
-	resp, err := c.doRequestWithContentType("PUT", path, strings.NewReader(body), "application/json")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return c.handleErrorResponse(resp)
-	}
-
-	return nil
+	return c.doNoContent("PUT", path, strings.NewReader(`"approved"`), "application/json")
 }
 
 // GetQueuedBuildApprovalInfo returns approval information for a queued build

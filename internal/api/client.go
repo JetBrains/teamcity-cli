@@ -272,6 +272,29 @@ func (c *Client) post(path string, body io.Reader, result interface{}) error {
 	return nil
 }
 
+// doNoContent performs a request expecting 200/204 with no response body.
+// Use for mutations (PUT/DELETE/POST) that don't return data.
+func (c *Client) doNoContent(method, path string, body io.Reader, contentType string) error {
+	var resp *http.Response
+	var err error
+
+	if contentType == "" {
+		resp, err = c.doRequest(method, path, body)
+	} else {
+		resp, err = c.doRequestWithContentType(method, path, body, contentType)
+	}
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return c.handleErrorResponse(resp)
+	}
+
+	return nil
+}
+
 // RawResponse represents the response from a raw API request
 type RawResponse struct {
 	StatusCode int
