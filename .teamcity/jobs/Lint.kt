@@ -20,7 +20,12 @@ object Lint : BuildType({
     }
 
     triggers {
-        vcs {}
+        vcs {
+            branchFilter = """
+                +:<default>
+                +:pull/*
+            """.trimIndent()
+        }
     }
 
     features {
