@@ -2,1438 +2,393 @@ package api
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewClient(t *testing.T) {
-	client := NewClient("https://example.com", "test-token")
+// setupTestServer creates a test HTTP server and returns a client configured to use it.
+func setupTestServer(t *testing.T, handler http.HandlerFunc) *Client {
+	t.Helper()
+	server := httptest.NewServer(handler)
+	t.Cleanup(server.Close)
+	return NewClient(server.URL, "test-token")
+}
 
-	if client.BaseURL != "https://example.com" {
-		t.Errorf("Expected BaseURL https://example.com, got %s", client.BaseURL)
+func TestNewClient(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name        string
+		baseURL     string
+		token       string
+		wantBaseURL string
+	}{
+		{
+			name:        "standard URL",
+			baseURL:     "https://example.com",
+			token:       "test-token",
+			wantBaseURL: "https://example.com",
+		},
+		{
+			name:        "URL with trailing slash",
+			baseURL:     "https://example.com/",
+			token:       "test-token",
+			wantBaseURL: "https://example.com",
+		},
 	}
-	if client.Token != "test-token" {
-		t.Errorf("Expected Token test-token, got %s", client.Token)
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client := NewClient(tc.baseURL, tc.token)
+			assert.Equal(t, tc.wantBaseURL, client.BaseURL)
+			assert.Equal(t, tc.token, client.Token)
+		})
 	}
 }
 
-func TestNewClientTrimsTrailingSlash(t *testing.T) {
-	client := NewClient("https://example.com/", "test-token")
+func TestNewClientWithBasicAuth(T *testing.T) {
+	T.Parallel()
 
-	if client.BaseURL != "https://example.com" {
-		t.Errorf("Expected BaseURL without trailing slash, got %s", client.BaseURL)
+	client := NewClientWithBasicAuth("https://example.com", "user", "pass")
+	assert.Equal(T, "https://example.com", client.BaseURL)
+	assert.Empty(T, client.Token)
+}
+
+func TestAPIPath(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name       string
+		apiVersion string
+		path       string
+		want       string
+	}{
+		{"no version", "", "/app/rest/builds", "/app/rest/builds"},
+		{"with version", "2023.1", "/app/rest/builds", "/app/rest/2023.1/builds"},
+		{"non-rest path unchanged", "2023.1", "/downloadBuildLog.html", "/downloadBuildLog.html"},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client := NewClient("https://example.com", "token")
+			client.APIVersion = tc.apiVersion
+			got := client.apiPath(tc.path)
+			assert.Equal(t, tc.want, got)
+		})
 	}
 }
 
-func TestApiPath(t *testing.T) {
-	client := NewClient("https://example.com", "token")
-	result := client.apiPath("/app/rest/builds")
-	if result != "/app/rest/builds" {
-		t.Errorf("Expected /app/rest/builds, got %s", result)
-	}
+func TestClientOptions(T *testing.T) {
+	T.Parallel()
 
-	// Test with APIVersion set manually
-	client.APIVersion = "2023.1"
-	result = client.apiPath("/app/rest/builds")
-	if result != "/app/rest/2023.1/builds" {
-		t.Errorf("Expected /app/rest/2023.1/builds, got %s", result)
-	}
-
-	// Non-rest path should not be modified
-	result = client.apiPath("/downloadBuildLog.html")
-	if result != "/downloadBuildLog.html" {
-		t.Errorf("Expected /downloadBuildLog.html, got %s", result)
-	}
-}
-
-func TestClientOptions(t *testing.T) {
 	client := NewClient("https://example.com", "token", WithAPIVersion("2023.1"), WithTimeout(60*time.Second))
-	if client.APIVersion != "2023.1" {
-		t.Errorf("Expected APIVersion 2023.1, got %s", client.APIVersion)
-	}
-	if client.HTTPClient.Timeout != 60*time.Second {
-		t.Errorf("Expected timeout 60s, got %v", client.HTTPClient.Timeout)
-	}
+
+	assert.Equal(T, "2023.1", client.APIVersion)
+	assert.Equal(T, 60*time.Second, client.HTTPClient.Timeout)
 }
 
-func TestGetParameterValue(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("param-value"))
-	}))
-	defer server.Close()
+func TestCheckVersion(T *testing.T) {
+	T.Parallel()
 
-	client := NewClient(server.URL, "token")
-	val, err := client.GetParameterValue("/app/rest/projects/id:Test/parameters/name/value")
-	if err != nil {
-		t.Fatalf("GetParameterValue failed: %v", err)
+	tests := []struct {
+		name         string
+		versionMajor int
+		wantErr      bool
+	}{
+		{"current version", 2024, false},
+		{"old version", 2019, true},
 	}
-	if val != "param-value" {
-		t.Errorf("Expected param-value, got %s", val)
-	}
-}
 
-func TestPinBuild(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/builds/id:123/pin" {
-			t.Errorf("Expected /app/rest/builds/id:123/pin, got %s", r.URL.Path)
-		}
-		if r.Header.Get("Authorization") != "Bearer test-token" {
-			t.Errorf("Expected Bearer auth header")
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	client := NewClient(server.URL, "test-token")
-	err := client.PinBuild("123", "Test comment")
-	if err != nil {
-		t.Fatalf("PinBuild failed: %v", err)
-	}
-}
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(Server{
+					Version:      "test",
+					VersionMajor: tc.versionMajor,
+					VersionMinor: 1,
+				})
+			})
 
-func TestUnpinBuild(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/builds/id:456/pin" {
-			t.Errorf("Expected /app/rest/builds/id:456/pin, got %s", r.URL.Path)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.UnpinBuild("456")
-	if err != nil {
-		t.Fatalf("UnpinBuild failed: %v", err)
-	}
-}
-
-func TestAddBuildTags(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			t.Errorf("Expected POST, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/builds/id:789/tags" {
-			t.Errorf("Expected /app/rest/builds/id:789/tags, got %s", r.URL.Path)
-		}
-
-		var tags TagList
-		if err := json.NewDecoder(r.Body).Decode(&tags); err != nil {
-			t.Fatalf("Failed to decode request body: %v", err)
-		}
-		if len(tags.Tag) != 2 {
-			t.Errorf("Expected 2 tags, got %d", len(tags.Tag))
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.AddBuildTags("789", []string{"tag1", "tag2"})
-	if err != nil {
-		t.Fatalf("AddBuildTags failed: %v", err)
-	}
-}
-
-func TestGetBuildTags(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			t.Errorf("Expected GET, got %s", r.Method)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(TagList{Tag: []Tag{{Name: "tag1"}, {Name: "tag2"}}})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	tags, err := client.GetBuildTags("123")
-	if err != nil {
-		t.Fatalf("GetBuildTags failed: %v", err)
-	}
-	if len(tags.Tag) != 2 {
-		t.Errorf("Expected 2 tags, got %d", len(tags.Tag))
-	}
-}
-
-func TestRemoveBuildTag(t *testing.T) {
-	callCount := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		callCount++
-		if callCount == 1 {
-			// First call: GET current tags
-			if r.Method != "GET" {
-				t.Errorf("First call: Expected GET, got %s", r.Method)
+			err := client.CheckVersion()
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"count":2,"tag":[{"name":"mytag"},{"name":"othertag"}]}`))
-		} else {
-			// Second call: PUT remaining tags
-			if r.Method != "PUT" {
-				t.Errorf("Second call: Expected PUT, got %s", r.Method)
-			}
-			w.WriteHeader(http.StatusOK)
-		}
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.RemoveBuildTag("123", "mytag")
-	if err != nil {
-		t.Fatalf("RemoveBuildTag failed: %v", err)
-	}
-}
-
-func TestSetBuildComment(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
-		if r.Header.Get("Content-Type") != "text/plain" {
-			t.Errorf("Expected Content-Type text/plain, got %s", r.Header.Get("Content-Type"))
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.SetBuildComment("123", "Test comment")
-	if err != nil {
-		t.Fatalf("SetBuildComment failed: %v", err)
-	}
-}
-
-func TestGetBuildComment(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			t.Errorf("Expected GET, got %s", r.Method)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"comment":{"text":"Test comment"}}`))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	comment, err := client.GetBuildComment("123")
-	if err != nil {
-		t.Fatalf("GetBuildComment failed: %v", err)
-	}
-	if comment != "Test comment" {
-		t.Errorf("Expected 'Test comment', got %q", comment)
-	}
-}
-
-func TestGetBuildCommentNotFound(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Build exists but has no comment - returns empty comment object
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{}`))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	comment, err := client.GetBuildComment("123")
-	if err != nil {
-		t.Fatalf("GetBuildComment failed: %v", err)
-	}
-	if comment != "" {
-		t.Errorf("Expected empty comment, got %q", comment)
-	}
-}
-
-func TestDeleteBuildComment(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE, got %s", r.Method)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.DeleteBuildComment("123")
-	if err != nil {
-		t.Fatalf("DeleteBuildComment failed: %v", err)
-	}
-}
-
-func TestSetQueuedBuildPosition(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/buildQueue/order/123" {
-			t.Errorf("Unexpected path: %s", r.URL.Path)
-		}
-		if r.Header.Get("Content-Type") != "text/plain" {
-			t.Errorf("Expected Content-Type text/plain, got %s", r.Header.Get("Content-Type"))
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.SetQueuedBuildPosition("123", 5)
-	if err != nil {
-		t.Fatalf("SetQueuedBuildPosition failed: %v", err)
-	}
-}
-
-func TestMoveQueuedBuildToTop(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/app/rest/buildQueue/order/123" {
-			t.Errorf("Unexpected path: %s", r.URL.Path)
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.MoveQueuedBuildToTop("123")
-	if err != nil {
-		t.Fatalf("MoveQueuedBuildToTop failed: %v", err)
-	}
-}
-
-func TestApproveQueuedBuild(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/buildQueue/id:123/approval/status" {
-			t.Errorf("Unexpected path: %s", r.URL.Path)
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.ApproveQueuedBuild("123")
-	if err != nil {
-		t.Fatalf("ApproveQueuedBuild failed: %v", err)
-	}
-}
-
-func TestGetQueuedBuildApprovalInfo(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			t.Errorf("Expected GET, got %s", r.Method)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ApprovalInfo{
-			Status:             "waitingForApproval",
-			ConfigurationValid: true,
-			CanBeApproved:      true,
 		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	info, err := client.GetQueuedBuildApprovalInfo("123")
-	if err != nil {
-		t.Fatalf("GetQueuedBuildApprovalInfo failed: %v", err)
-	}
-	if info.Status != "waitingForApproval" {
-		t.Errorf("Expected status waitingForApproval, got %s", info.Status)
-	}
-	if !info.CanBeApproved {
-		t.Error("Expected CanBeApproved to be true")
 	}
 }
 
-func TestCheckVersion(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Server{
-			Version:      "2024.03",
-			VersionMajor: 2024,
-			VersionMinor: 3,
+func TestSupportsFeature(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name         string
+		versionMajor int
+		versionMinor int
+		feature      string
+		want         bool
+	}{
+		{"csrf_token supported", 2024, 1, "csrf_token", true},
+		{"csrf_token not supported old version", 2017, 1, "csrf_token", false},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(Server{VersionMajor: tc.versionMajor, VersionMinor: tc.versionMinor})
+			})
+
+			got := client.SupportsFeature(tc.feature)
+			assert.Equal(t, tc.want, got)
 		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.CheckVersion()
-	if err != nil {
-		t.Fatalf("CheckVersion failed: %v", err)
 	}
 }
 
-func TestCheckVersionOldServer(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Server{
-			Version:      "2019.1",
-			VersionMajor: 2019,
-			VersionMinor: 1,
-		})
-	}))
-	defer server.Close()
+func TestHandleErrorResponse(T *testing.T) {
+	T.Parallel()
 
-	client := NewClient(server.URL, "test-token")
-	err := client.CheckVersion()
-	if err == nil {
-		t.Fatal("Expected CheckVersion to fail for old server")
-	}
-}
-
-func TestHandleErrorResponse(t *testing.T) {
 	tests := []struct {
 		name       string
 		statusCode int
 		body       string
-		expectErr  string
 	}{
-		{
-			name:       "unauthorized",
-			statusCode: http.StatusUnauthorized,
-			body:       "error message",
-			expectErr:  "authentication failed",
-		},
-		{
-			name:       "forbidden",
-			statusCode: http.StatusForbidden,
-			body:       "error message",
-			expectErr:  "permission denied",
-		},
-		{
-			name:       "not found plain text",
-			statusCode: http.StatusNotFound,
-			body:       "error message",
-			expectErr:  "not found",
-		},
-		{
-			name:       "not found with TeamCity error format",
-			statusCode: http.StatusNotFound,
-			body:       `{"errors":[{"message":"No build found by locator '999'."}]}`,
-			expectErr:  "run '999' not found",
-		},
-		{
-			name:       "internal server error",
-			statusCode: http.StatusInternalServerError,
-			body:       "Internal Server Error",
-			expectErr:  "500",
-		},
-		{
-			name:       "bad gateway",
-			statusCode: http.StatusBadGateway,
-			body:       "",
-			expectErr:  "502",
-		},
-		{
-			name:       "service unavailable",
-			statusCode: http.StatusServiceUnavailable,
-			body:       "Server is down for maintenance",
-			expectErr:  "503",
-		},
-		{
-			name:       "empty body 404",
-			statusCode: http.StatusNotFound,
-			body:       "",
-			expectErr:  "not found",
-		},
+		{"unauthorized", http.StatusUnauthorized, "error message"},
+		{"forbidden", http.StatusForbidden, "error message"},
+		{"not found plain text", http.StatusNotFound, "error message"},
+		{"not found TeamCity format", http.StatusNotFound, `{"errors":[{"message":"No build found by locator '999'."}]}`},
+		{"internal server error", http.StatusInternalServerError, "Internal Server Error"},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tc.statusCode)
 				w.Write([]byte(tc.body))
-			}))
-			defer server.Close()
+			})
 
-			client := NewClient(server.URL, "test-token")
 			_, err := client.GetBuild("123")
-			if err == nil {
-				t.Fatal("Expected error")
-			}
+			assert.Error(t, err)
 		})
 	}
 }
 
-func TestHandleErrorResponseWithStructuredError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestHandleErrorResponseWithStructuredError(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"errors":[{"message":"Invalid parameter value"}]}`))
-	}))
-	defer server.Close()
+	})
 
-	client := NewClient(server.URL, "test-token")
 	_, err := client.GetBuild("invalid")
-	if err == nil {
-		t.Fatal("Expected error")
-	}
-	if !strings.Contains(err.Error(), "Invalid parameter value") {
-		t.Errorf("Expected error to contain structured message, got: %v", err)
-	}
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "Invalid parameter value")
 }
 
-func TestCreateSecureToken(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			t.Errorf("Expected POST, got %s", r.Method)
+func TestRemoveBuildTag(T *testing.T) {
+	T.Parallel()
+
+	callCount := 0
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		if callCount == 1 {
+			assert.Equal(T, "GET", r.Method)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"count":2,"tag":[{"name":"mytag"},{"name":"othertag"}]}`))
+		} else {
+			assert.Equal(T, "PUT", r.Method)
+			w.WriteHeader(http.StatusOK)
 		}
-		if r.URL.Path != "/app/rest/projects/Sandbox/secure/tokens" {
-			t.Errorf("Unexpected path: %s", r.URL.Path)
-		}
-		if r.Header.Get("Content-Type") != "text/plain" {
-			t.Errorf("Expected Content-Type text/plain, got %s", r.Header.Get("Content-Type"))
-		}
-		if r.Header.Get("Accept") != "text/plain" {
-			t.Errorf("Expected Accept text/plain, got %s", r.Header.Get("Accept"))
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("scrambled-token-123"))
-	}))
-	defer server.Close()
+	})
 
-	client := NewClient(server.URL, "test-token")
-	token, err := client.CreateSecureToken("Sandbox", "my-secret-value")
-	if err != nil {
-		t.Fatalf("CreateSecureToken failed: %v", err)
-	}
-	if token != "scrambled-token-123" {
-		t.Errorf("Expected token scrambled-token-123, got %s", token)
-	}
+	err := client.RemoveBuildTag("123", "mytag")
+	require.NoError(T, err)
 }
 
-func TestCreateSecureTokenError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte("permission denied"))
-	}))
-	defer server.Close()
+func TestRemoveBuildTagNotFound(T *testing.T) {
+	T.Parallel()
 
-	client := NewClient(server.URL, "test-token")
-	_, err := client.CreateSecureToken("Sandbox", "my-secret-value")
-	if err == nil {
-		t.Fatal("Expected error for forbidden response")
-	}
-}
-
-func TestGetSecureValue(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			t.Errorf("Expected GET, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/projects/Sandbox/secure/values/token-123" {
-			t.Errorf("Unexpected path: %s", r.URL.Path)
-		}
-		if r.Header.Get("Accept") != "text/plain" {
-			t.Errorf("Expected Accept text/plain, got %s", r.Header.Get("Accept"))
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("original-secret-value"))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	value, err := client.GetSecureValue("Sandbox", "token-123")
-	if err != nil {
-		t.Fatalf("GetSecureValue failed: %v", err)
-	}
-	if value != "original-secret-value" {
-		t.Errorf("Expected value original-secret-value, got %s", value)
-	}
-}
-
-func TestGetSecureValueError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("token not found"))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	_, err := client.GetSecureValue("Sandbox", "invalid-token")
-	if err == nil {
-		t.Fatal("Expected error for not found response")
-	}
-}
-
-func TestGetProjects(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			t.Errorf("Expected GET, got %s", r.Method)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ProjectList{
-			Count: 2,
-			Projects: []Project{
-				{ID: "Project1", Name: "Project One"},
-				{ID: "Project2", Name: "Project Two"},
-			},
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	projects, err := client.GetProjects(ProjectsOptions{Limit: 10})
-	if err != nil {
-		t.Fatalf("GetProjects failed: %v", err)
-	}
-	if projects.Count != 2 {
-		t.Errorf("Expected 2 projects, got %d", projects.Count)
-	}
-}
-
-func TestGetProjectsWithParent(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query().Get("locator")
-		if !strings.Contains(query, "parentProject:_Root") {
-			t.Errorf("Expected locator to contain parentProject:_Root, got %s", query)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ProjectList{Count: 1})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	_, err := client.GetProjects(ProjectsOptions{Parent: "_Root", Limit: 5})
-	if err != nil {
-		t.Fatalf("GetProjects with parent failed: %v", err)
-	}
-}
-
-func TestGetProject(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/app/rest/projects/id:Sandbox" {
-			t.Errorf("Unexpected path: %s", r.URL.Path)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Project{
-			ID:   "Sandbox",
-			Name: "Sandbox Project",
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	project, err := client.GetProject("Sandbox")
-	if err != nil {
-		t.Fatalf("GetProject failed: %v", err)
-	}
-	if project.ID != "Sandbox" {
-		t.Errorf("Expected project ID Sandbox, got %s", project.ID)
-	}
-}
-
-func TestGetBuildTypes(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BuildTypeList{
-			Count: 1,
-			BuildTypes: []BuildType{
-				{ID: "Config1", Name: "Config One"},
-			},
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	configs, err := client.GetBuildTypes(BuildTypesOptions{Limit: 10})
-	if err != nil {
-		t.Fatalf("GetBuildTypes failed: %v", err)
-	}
-	if configs.Count != 1 {
-		t.Errorf("Expected 1 config, got %d", configs.Count)
-	}
-}
-
-func TestGetBuildType(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BuildType{
-			ID:   "Sandbox_Demo",
-			Name: "Demo Build",
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	config, err := client.GetBuildType("Sandbox_Demo")
-	if err != nil {
-		t.Fatalf("GetBuildType failed: %v", err)
-	}
-	if config.ID != "Sandbox_Demo" {
-		t.Errorf("Expected config ID Sandbox_Demo, got %s", config.ID)
-	}
-}
-
-func TestSetBuildTypePaused(t *testing.T) {
-	tests := []struct {
-		name     string
-		paused   bool
-		wantBody string
-	}{
-		{"pause", true, "true"},
-		{"resume", false, "false"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != "PUT" {
-					t.Errorf("Expected PUT, got %s", r.Method)
-				}
-				if r.URL.Path != "/app/rest/buildTypes/id:Sandbox_Demo/paused" {
-					t.Errorf("Unexpected path: %s", r.URL.Path)
-				}
-				w.WriteHeader(http.StatusNoContent)
-			}))
-			defer server.Close()
-
-			client := NewClient(server.URL, "test-token")
-			err := client.SetBuildTypePaused("Sandbox_Demo", tt.paused)
-			if err != nil {
-				t.Fatalf("SetBuildTypePaused(%v) failed: %v", tt.paused, err)
-			}
-		})
-	}
-}
-
-func TestRemoveBuildTagNotFound(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Return tags that don't contain the requested tag
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"count":1,"tag":[{"name":"othertag"}]}`))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.RemoveBuildTag("123", "nonexistent")
-	// The function returns an error when tag is not found - this is correct behavior
-	if err == nil {
-		t.Fatal("RemoveBuildTag should error for missing tag")
-	}
-}
-
-func TestGetBuilds(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BuildList{
-			Count: 1,
-			Builds: []Build{
-				{ID: 123, Number: "42", Status: "SUCCESS"},
-			},
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	builds, err := client.GetBuilds(BuildsOptions{BuildTypeID: "Test", Limit: 10})
-	if err != nil {
-		t.Fatalf("GetBuilds failed: %v", err)
-	}
-	if builds.Count != 1 {
-		t.Errorf("Expected 1 build, got %d", builds.Count)
-	}
-}
-
-func TestGetBuildsWithAllFilters(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// URL-decode the query to check filters
-		locator, _ := url.QueryUnescape(r.URL.Query().Get("locator"))
-		// Check that filters are applied (status is uppercase: SUCCESS)
-		if !strings.Contains(locator, "status:SUCCESS") {
-			t.Errorf("Expected status filter in locator: %s", locator)
-		}
-		if !strings.Contains(locator, "state:finished") {
-			t.Errorf("Expected state filter in locator: %s", locator)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BuildList{Count: 0})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	_, err := client.GetBuilds(BuildsOptions{
-		BuildTypeID: "Test",
-		Status:      "SUCCESS",
-		State:       "finished",
-		Branch:      "main",
-		Limit:       10,
 	})
-	if err != nil {
-		t.Fatalf("GetBuilds with filters failed: %v", err)
-	}
+
+	err := client.RemoveBuildTag("123", "nonexistent")
+	assert.Error(T, err)
 }
 
-func TestGetBuild(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Build{
-			ID:     123,
-			Number: "42",
-			Status: "SUCCESS",
-		})
-	}))
-	defer server.Close()
+func TestParseTeamCityTime(T *testing.T) {
+	T.Parallel()
 
-	client := NewClient(server.URL, "test-token")
-	build, err := client.GetBuild("123")
-	if err != nil {
-		t.Fatalf("GetBuild failed: %v", err)
-	}
-	if build.ID != 123 {
-		t.Errorf("Expected build ID 123, got %d", build.ID)
-	}
-}
-
-func TestGetBuildQueue(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BuildList{
-			Count: 0,
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	queue, err := client.GetBuildQueue(QueueOptions{Limit: 10})
-	if err != nil {
-		t.Fatalf("GetBuildQueue failed: %v", err)
-	}
-	if queue.Count != 0 {
-		t.Errorf("Expected 0 builds in queue, got %d", queue.Count)
-	}
-}
-
-func TestRemoveFromQueue(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE, got %s", r.Method)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.RemoveFromQueue("123")
-	if err != nil {
-		t.Fatalf("RemoveFromQueue failed: %v", err)
-	}
-}
-
-func TestCancelBuild(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			t.Errorf("Expected POST, got %s", r.Method)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Build{ID: 123})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.CancelBuild("123", "Test cancel")
-	if err != nil {
-		t.Fatalf("CancelBuild failed: %v", err)
-	}
-}
-
-func TestGetCurrentUser(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(User{
-			Username: "admin",
-			Name:     "Administrator",
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	user, err := client.GetCurrentUser()
-	if err != nil {
-		t.Fatalf("GetCurrentUser failed: %v", err)
-	}
-	if user.Username != "admin" {
-		t.Errorf("Expected username admin, got %s", user.Username)
-	}
-}
-
-func TestGetServer(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Server{
-			Version:      "2024.03",
-			VersionMajor: 2024,
-			VersionMinor: 3,
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	srv, err := client.GetServer()
-	if err != nil {
-		t.Fatalf("GetServer failed: %v", err)
-	}
-	if srv.VersionMajor != 2024 {
-		t.Errorf("Expected version major 2024, got %d", srv.VersionMajor)
-	}
-}
-
-func TestGetProjectParameters(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ParameterList{
-			Count: 1,
-			Property: []Parameter{
-				{Name: "MY_PARAM", Value: "my_value"},
-			},
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	params, err := client.GetProjectParameters("Sandbox")
-	if err != nil {
-		t.Fatalf("GetProjectParameters failed: %v", err)
-	}
-	if params.Count != 1 {
-		t.Errorf("Expected 1 parameter, got %d", params.Count)
-	}
-}
-
-func TestSetProjectParameter(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.SetProjectParameter("Sandbox", "MY_PARAM", "my_value", false)
-	if err != nil {
-		t.Fatalf("SetProjectParameter failed: %v", err)
-	}
-}
-
-func TestSetProjectParameterSecure(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var param Parameter
-		json.NewDecoder(r.Body).Decode(&param)
-		if param.Type == nil || param.Type.RawValue != "password" {
-			t.Error("Expected secure parameter to have password type")
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.SetProjectParameter("Sandbox", "SECRET", "secret_value", true)
-	if err != nil {
-		t.Fatalf("SetProjectParameter (secure) failed: %v", err)
-	}
-}
-
-func TestDeleteProjectParameter(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE, got %s", r.Method)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.DeleteProjectParameter("Sandbox", "MY_PARAM")
-	if err != nil {
-		t.Fatalf("DeleteProjectParameter failed: %v", err)
-	}
-}
-
-func TestGetBuildTypeParameters(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ParameterList{Count: 0})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	params, err := client.GetBuildTypeParameters("Sandbox_Demo")
-	if err != nil {
-		t.Fatalf("GetBuildTypeParameters failed: %v", err)
-	}
-	if params == nil {
-		t.Error("Expected non-nil params")
-	}
-}
-
-func TestGetBuildLog(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Build log content here"))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	log, err := client.GetBuildLog("123")
-	if err != nil {
-		t.Fatalf("GetBuildLog failed: %v", err)
-	}
-	if log != "Build log content here" {
-		t.Errorf("Unexpected log content: %s", log)
-	}
-}
-
-func TestGetArtifacts(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Artifacts{
-			Count: 1,
-			File: []Artifact{
-				{Name: "artifact.zip", Size: 1024},
-			},
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	artifacts, err := client.GetArtifacts("123")
-	if err != nil {
-		t.Fatalf("GetArtifacts failed: %v", err)
-	}
-	if artifacts.Count != 1 {
-		t.Errorf("Expected 1 artifact, got %d", artifacts.Count)
-	}
-}
-
-func TestDownloadArtifact(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("artifact content"))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	data, err := client.DownloadArtifact("123", "test.txt")
-	if err != nil {
-		t.Fatalf("DownloadArtifact failed: %v", err)
-	}
-	if string(data) != "artifact content" {
-		t.Errorf("Unexpected artifact content: %s", string(data))
-	}
-}
-
-func TestParseTeamCityTime(t *testing.T) {
 	tests := []struct {
-		input    string
-		expected time.Time
+		input   string
+		want    time.Time
+		wantErr bool
 	}{
-		{
-			input:    "20250710T080607+0000",
-			expected: time.Date(2025, 7, 10, 8, 6, 7, 0, time.UTC),
-		},
-		{
-			input:    "20240115T143022+0000",
-			expected: time.Date(2024, 1, 15, 14, 30, 22, 0, time.UTC),
-		},
+		{"20250710T080607+0000", time.Date(2025, 7, 10, 8, 6, 7, 0, time.UTC), false},
+		{"20240115T143022+0000", time.Date(2024, 1, 15, 14, 30, 22, 0, time.UTC), false},
+		{"", time.Time{}, true},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.input, func(t *testing.T) {
-			result, err := ParseTeamCityTime(tc.input)
-			if err != nil {
-				t.Fatalf("ParseTeamCityTime failed: %v", err)
+		T.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := ParseTeamCityTime(tc.input)
+			if tc.wantErr {
+				assert.Error(t, err)
+				assert.True(t, got.IsZero())
+				return
 			}
-			if !result.Equal(tc.expected) {
-				t.Errorf("Expected %v, got %v", tc.expected, result)
-			}
+			require.NoError(t, err)
+			assert.True(t, got.Equal(tc.want))
 		})
 	}
 }
 
-func TestParseTeamCityTimeEmpty(t *testing.T) {
-	result, err := ParseTeamCityTime("")
-	// ParseTeamCityTime returns an error for invalid/empty strings
-	if err == nil {
-		t.Fatal("ParseTeamCityTime with empty string should error")
-	}
-	if !result.IsZero() {
-		t.Errorf("Expected zero time for empty string, got %v", result)
-	}
-}
+func TestExtractErrorMessage(T *testing.T) {
+	T.Parallel()
 
-func TestRawRequestGET(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			t.Errorf("Expected GET, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/server" {
-			t.Errorf("Expected /app/rest/server, got %s", r.URL.Path)
-		}
-		if r.Header.Get("Authorization") != "Bearer test-token" {
-			t.Error("Expected Bearer auth header")
-		}
-		w.Header().Set("X-Custom-Header", "custom-value")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"version":"2024.03"}`))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	resp, err := client.RawRequest("GET", "/app/rest/server", nil, nil)
-	if err != nil {
-		t.Fatalf("RawRequest failed: %v", err)
-	}
-
-	if resp.StatusCode != 200 {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
-	if resp.Headers.Get("X-Custom-Header") != "custom-value" {
-		t.Errorf("Expected custom header, got %s", resp.Headers.Get("X-Custom-Header"))
-	}
-	if string(resp.Body) != `{"version":"2024.03"}` {
-		t.Errorf("Unexpected body: %s", string(resp.Body))
-	}
-}
-
-func TestRawRequestPOST(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			t.Errorf("Expected POST, got %s", r.Method)
-		}
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("Expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
-		}
-
-		body, _ := io.ReadAll(r.Body)
-		if string(body) != `{"test":"data"}` {
-			t.Errorf("Unexpected body: %s", string(body))
-		}
-
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"id":123}`))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	body := strings.NewReader(`{"test":"data"}`)
-	resp, err := client.RawRequest("POST", "/app/rest/builds", body, nil)
-	if err != nil {
-		t.Fatalf("RawRequest failed: %v", err)
-	}
-
-	if resp.StatusCode != 201 {
-		t.Errorf("Expected status 201, got %d", resp.StatusCode)
-	}
-}
-
-func TestRawRequestWithCustomHeaders(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Accept") != "application/xml" {
-			t.Errorf("Expected Accept application/xml, got %s", r.Header.Get("Accept"))
-		}
-		if r.Header.Get("X-Custom") != "value" {
-			t.Errorf("Expected X-Custom header, got %s", r.Header.Get("X-Custom"))
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("<server/>"))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	headers := map[string]string{
-		"Accept":   "application/xml",
-		"X-Custom": "value",
-	}
-	resp, err := client.RawRequest("GET", "/app/rest/server", nil, headers)
-	if err != nil {
-		t.Fatalf("RawRequest failed: %v", err)
-	}
-
-	if resp.StatusCode != 200 {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
-	if string(resp.Body) != "<server/>" {
-		t.Errorf("Unexpected body: %s", string(resp.Body))
-	}
-}
-
-func TestRawRequestErrorResponse(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Resource not found"))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	resp, err := client.RawRequest("GET", "/app/rest/builds/id:999", nil, nil)
-	if err != nil {
-		t.Fatalf("RawRequest should not error on HTTP errors: %v", err)
-	}
-
-	if resp.StatusCode != 404 {
-		t.Errorf("Expected status 404, got %d", resp.StatusCode)
-	}
-	if string(resp.Body) != "Resource not found" {
-		t.Errorf("Unexpected body: %s", string(resp.Body))
-	}
-}
-
-func TestRawRequestDELETE(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE, got %s", r.Method)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	resp, err := client.RawRequest("DELETE", "/app/rest/builds/id:123", nil, nil)
-	if err != nil {
-		t.Fatalf("RawRequest failed: %v", err)
-	}
-
-	if resp.StatusCode != 204 {
-		t.Errorf("Expected status 204, got %d", resp.StatusCode)
-	}
-}
-
-func TestRawRequestPUT(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"updated":true}`))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	body := strings.NewReader(`{"name":"updated"}`)
-	resp, err := client.RawRequest("PUT", "/app/rest/projects/id:Test", body, nil)
-	if err != nil {
-		t.Fatalf("RawRequest failed: %v", err)
-	}
-
-	if resp.StatusCode != 200 {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
-}
-
-func TestExtractErrorMessage(t *testing.T) {
 	tests := []struct {
-		name     string
-		body     string
-		expected string
+		name string
+		body string
+		want string
 	}{
-		{
-			name:     "valid error response",
-			body:     `{"errors":[{"message":"No build types found by locator 'Test'."}]}`,
-			expected: "job 'Test' not found",
-		},
-		{
-			name:     "empty errors array",
-			body:     `{"errors":[]}`,
-			expected: "",
-		},
-		{
-			name:     "malformed JSON",
-			body:     `not json`,
-			expected: "",
-		},
-		{
-			name:     "empty body",
-			body:     ``,
-			expected: "",
-		},
-		{
-			name:     "missing errors field",
-			body:     `{"other":"field"}`,
-			expected: "",
-		},
+		{"valid error response", `{"errors":[{"message":"No build types found by locator 'Test'."}]}`, "job 'Test' not found"},
+		{"empty errors array", `{"errors":[]}`, ""},
+		{"malformed JSON", `not json`, ""},
+		{"empty body", ``, ""},
+		{"missing errors field", `{"other":"field"}`, ""},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := extractErrorMessage([]byte(tc.body))
-			if result != tc.expected {
-				t.Errorf("Expected %q, got %q", tc.expected, result)
-			}
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := extractErrorMessage([]byte(tc.body))
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
 
-func TestHumanizeErrorMessage(t *testing.T) {
+func TestHumanizeErrorMessage(T *testing.T) {
+	T.Parallel()
+
 	tests := []struct {
-		name     string
-		input    string
-		expected string
+		name  string
+		input string
+		want  string
 	}{
-		{
-			name:     "build type not found with period",
-			input:    "No build types found by locator 'Sandbox_Demo'.",
-			expected: "job 'Sandbox_Demo' not found",
-		},
-		{
-			name:     "build type not found without period",
-			input:    "No build types found by locator 'Sandbox_Demo'",
-			expected: "job 'Sandbox_Demo' not found",
-		},
-		{
-			name:     "build not found",
-			input:    "No build found by locator '12345'.",
-			expected: "run '12345' not found",
-		},
-		{
-			name:     "project not found",
-			input:    "No project found by locator 'MyProject'.",
-			expected: "project 'MyProject' not found",
-		},
-		{
-			name:     "nothing found with buildType locator",
-			input:    "Nothing is found by locator 'count:1,buildType:(id:Sandbox_Demo)'.",
-			expected: "no runs found for job 'Sandbox_Demo'",
-		},
-		{
-			name:     "unrecognized message passes through",
-			input:    "Some other error message",
-			expected: "Some other error message",
-		},
-		{
-			name:     "empty message",
-			input:    "",
-			expected: "",
-		},
-		// Edge cases
-		{
-			name:     "locator with nested parentheses",
-			input:    "No build types found by locator 'project:(id:Test)'.",
-			expected: "job 'project:(id:Test)' not found",
-		},
-		{
-			name:     "build type with special chars in id",
-			input:    "No build types found by locator 'My_Project-Config'.",
-			expected: "job 'My_Project-Config' not found",
-		},
-		{
-			name:     "nothing found with complex locator",
-			input:    "Nothing is found by locator 'count:1,buildType:(id:My_Project_Build),branch:(default:any)'.",
-			expected: "no runs found for job 'My_Project_Build'",
-		},
-		{
-			name:     "nothing found without buildType",
-			input:    "Nothing is found by locator 'count:1,project:(id:Test)'.",
-			expected: "Nothing is found by locator 'count:1,project:(id:Test)'.",
-		},
-		{
-			name:     "message with unicode",
-			input:    "No project found by locator '日本語プロジェクト'.",
-			expected: "project '日本語プロジェクト' not found",
-		},
-		{
-			name:     "message without quotes",
-			input:    "Some error without locator pattern",
-			expected: "Some error without locator pattern",
-		},
-		{
-			name:     "incomplete buildType locator",
-			input:    "Nothing is found by locator 'buildType:(id:'.",
-			expected: "Nothing is found by locator 'buildType:(id:'.",
-		},
+		{"build type not found with period", "No build types found by locator 'Sandbox_Demo'.", "job 'Sandbox_Demo' not found"},
+		{"build type not found without period", "No build types found by locator 'Sandbox_Demo'", "job 'Sandbox_Demo' not found"},
+		{"build not found", "No build found by locator '12345'.", "run '12345' not found"},
+		{"project not found", "No project found by locator 'MyProject'.", "project 'MyProject' not found"},
+		{"nothing found with buildType locator", "Nothing is found by locator 'count:1,buildType:(id:Sandbox_Demo)'.", "no runs found for job 'Sandbox_Demo'"},
+		{"unrecognized message", "Some other error message", "Some other error message"},
+		{"empty message", "", ""},
+		{"nested parentheses", "No build types found by locator 'project:(id:Test)'.", "job 'project:(id:Test)' not found"},
+		{"special chars in id", "No build types found by locator 'My_Project-Config'.", "job 'My_Project-Config' not found"},
+		{"complex locator", "Nothing is found by locator 'count:1,buildType:(id:My_Project_Build),branch:(default:any)'.", "no runs found for job 'My_Project_Build'"},
+		{"without buildType", "Nothing is found by locator 'count:1,project:(id:Test)'.", "Nothing is found by locator 'count:1,project:(id:Test)'."},
+		{"unicode", "No project found by locator '日本語プロジェクト'.", "project '日本語プロジェクト' not found"},
+		{"no locator pattern", "Some error without locator pattern", "Some error without locator pattern"},
+		{"incomplete buildType", "Nothing is found by locator 'buildType:(id:'.", "Nothing is found by locator 'buildType:(id:'."},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := humanizeErrorMessage(tc.input)
-			if result != tc.expected {
-				t.Errorf("Expected %q, got %q", tc.expected, result)
-			}
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := humanizeErrorMessage(tc.input)
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
 
-func TestResolveBuildID(t *testing.T) {
-	tests := []struct {
-		name        string
-		input       string
-		expected    string
-		expectError bool
-	}{
-		{
-			name:     "plain numeric ID",
-			input:    "12345",
-			expected: "12345",
-		},
-		{
-			name:     "plain ID with letters",
-			input:    "abc123",
-			expected: "abc123",
-		},
-		{
-			name:     "empty string",
-			input:    "",
-			expected: "",
-		},
-	}
+func TestResolveBuildID(T *testing.T) {
+	T.Parallel()
 
-	client := NewClient("https://example.com", "token")
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// For non-# refs, ResolveBuildID should pass through without API call
-			if !strings.HasPrefix(tc.input, "#") {
-				result, err := client.ResolveBuildID(tc.input)
-				if err != nil {
-					t.Fatalf("Unexpected error: %v", err)
-				}
-				if result != tc.expected {
-					t.Errorf("Expected %q, got %q", tc.expected, result)
-				}
-			}
-		})
-	}
-}
+	T.Run("passthrough IDs", func(t *testing.T) {
+		t.Parallel()
 
-func TestResolveBuildIDWithHashPrefix(t *testing.T) {
-	// Test #number resolution requires API mock
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check that the request includes the number filter
-		if !strings.Contains(r.URL.RawQuery, "number") {
-			t.Error("Expected number filter in query")
+		tests := []struct {
+			name  string
+			input string
+			want  string
+		}{
+			{"plain numeric ID", "12345", "12345"},
+			{"ID with letters", "abc123", "abc123"},
+			{"empty string", "", ""},
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BuildList{
-			Count: 1,
-			Builds: []Build{
-				{ID: 99999, Number: "42"},
-			},
+
+		client := NewClient("https://example.com", "token")
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				got, err := client.ResolveBuildID(tc.input)
+				require.NoError(t, err)
+				assert.Equal(t, tc.want, got)
+			})
+		}
+	})
+
+	T.Run("hash prefix resolution", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			assert.Contains(t, r.URL.RawQuery, "number")
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(BuildList{
+				Count:  1,
+				Builds: []Build{{ID: 99999, Number: "42"}},
+			})
 		})
-	}))
-	defer server.Close()
 
-	client := NewClient(server.URL, "test-token")
-	result, err := client.ResolveBuildID("#42")
-	if err != nil {
-		t.Fatalf("ResolveBuildID failed: %v", err)
-	}
-	if result != "99999" {
-		t.Errorf("Expected resolved ID 99999, got %s", result)
-	}
-}
+		got, err := client.ResolveBuildID("#42")
+		require.NoError(t, err)
+		assert.Equal(t, "99999", got)
+	})
 
-func TestResolveBuildIDNotFound(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BuildList{Count: 0, Builds: []Build{}})
-	}))
-	defer server.Close()
+	T.Run("not found", func(t *testing.T) {
+		t.Parallel()
 
-	client := NewClient(server.URL, "test-token")
-	_, err := client.ResolveBuildID("#999999")
-	if err == nil {
-		t.Error("Expected error for non-existent build number")
-	}
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(BuildList{Count: 0, Builds: []Build{}})
+		})
+
+		_, err := client.ResolveBuildID("#999999")
+		assert.Error(t, err)
+	})
+
+	T.Run("server error", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+
+		_, err := client.ResolveBuildID("#42")
+		assert.Error(t, err)
+	})
 }

@@ -3,13 +3,17 @@ package api
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestToAPIFields(t *testing.T) {
+func TestToAPIFields(T *testing.T) {
+	T.Parallel()
 	tests := []struct {
-		name     string
-		input    []string
-		expected string
+		name  string
+		input []string
+		want  string
 	}{
 		{"empty", []string{}, ""},
 		{"single", []string{"id"}, "id"},
@@ -22,66 +26,68 @@ func TestToAPIFields(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := ToAPIFields(tc.input); got != tc.expected {
-				t.Errorf("ToAPIFields(%v) = %q, want %q", tc.input, got, tc.expected)
-			}
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := ToAPIFields(tc.input)
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
 
-func TestToAPIFieldsEncoded(t *testing.T) {
+func TestToAPIFieldsEncoded(T *testing.T) {
+	T.Parallel()
 	got := ToAPIFieldsEncoded([]string{"id", "buildType.name"})
 	want := "id%2CbuildType%28name%29"
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
+
+	assert.Equal(T, want, got)
 }
 
-func TestFieldSpec_ParseFields(t *testing.T) {
+func TestFieldSpec_ParseFields(T *testing.T) {
+	T.Parallel()
 	spec := FieldSpec{Available: []string{"id", "name", "status"}, Default: []string{"id", "name"}}
 
 	tests := []struct {
+		name    string
 		input   string
 		want    []string
 		wantErr bool
 	}{
-		{"", []string{"id", "name"}, false},
-		{"   ", []string{"id", "name"}, false},
-		{"status", []string{"status"}, false},
-		{"id,status", []string{"id", "status"}, false},
-		{" id , status ", []string{"id", "status"}, false},
-		{"invalid", nil, true},
-		{"id,invalid", nil, true},
+		{"empty returns default", "", []string{"id", "name"}, false},
+		{"whitespace returns default", "   ", []string{"id", "name"}, false},
+		{"single field", "status", []string{"status"}, false},
+		{"multiple fields", "id,status", []string{"id", "status"}, false},
+		{"fields with whitespace", " id , status ", []string{"id", "status"}, false},
+		{"invalid field", "invalid", nil, true},
+		{"valid and invalid mixed", "id,invalid", nil, true},
 	}
 
 	for _, tc := range tests {
-		got, err := spec.ParseFields(tc.input)
-		if tc.wantErr {
-			if err == nil {
-				t.Errorf("ParseFields(%q) expected error", tc.input)
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := spec.ParseFields(tc.input)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
 			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("ParseFields(%q) unexpected error: %v", tc.input, err)
-			continue
-		}
-		if len(got) != len(tc.want) {
-			t.Errorf("ParseFields(%q) = %v, want %v", tc.input, got, tc.want)
-		}
+			require.NoError(t, err)
+			assert.Equal(t, len(tc.want), len(got))
+		})
 	}
 }
 
-func TestFieldSpec_Help(t *testing.T) {
+func TestFieldSpec_Help(T *testing.T) {
+	T.Parallel()
 	spec := FieldSpec{Available: []string{"id", "name", "status"}, Default: []string{"id", "name"}}
-	help := spec.Help()
-	if !strings.Contains(help, "id, name, status") || !strings.Contains(help, "Default") {
-		t.Errorf("Help() = %q, missing expected content", help)
-	}
+	got := spec.Help()
+
+	assert.True(T, strings.Contains(got, "id, name, status"), "Help() should contain available fields")
+	assert.True(T, strings.Contains(got, "Default"), "Help() should contain 'Default' section")
 }
 
-func TestPredefinedFieldSpecs(t *testing.T) {
+func TestPredefinedFieldSpecs(T *testing.T) {
+	T.Parallel()
 	specs := map[string]FieldSpec{
 		"BuildFields":       BuildFields,
 		"BuildTypeFields":   BuildTypeFields,
@@ -91,21 +97,20 @@ func TestPredefinedFieldSpecs(t *testing.T) {
 	}
 
 	for name, spec := range specs {
-		if len(spec.Available) == 0 || len(spec.Default) == 0 {
-			t.Errorf("%s: empty fields", name)
-		}
-		// Verify defaults are subset of available
-		for _, d := range spec.Default {
-			found := false
+		T.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.NotEmpty(t, spec.Available, "%s.Available should not be empty", name)
+			assert.NotEmpty(t, spec.Default, "%s.Default should not be empty", name)
+
+			availableSet := make(map[string]bool)
 			for _, a := range spec.Available {
-				if a == d {
-					found = true
-					break
-				}
+				availableSet[a] = true
 			}
-			if !found {
-				t.Errorf("%s: default %q not in available", name, d)
+
+			for _, d := range spec.Default {
+				assert.True(t, availableSet[d], "%s: default field %q not in Available", name, d)
 			}
-		}
+		})
 	}
 }

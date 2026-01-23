@@ -1,143 +1,147 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestGetServerURLFromEnv(t *testing.T) {
-	// Save original env
-	origURL := os.Getenv(EnvServerURL)
-	defer os.Setenv(EnvServerURL, origURL)
+// Note: Tests in this file cannot use t.Parallel() because they modify
+// package-level state (cfg, configPath) and environment variables.
 
-	testURL := "https://teamcity.example.com"
-	os.Setenv(EnvServerURL, testURL)
-
-	result := GetServerURL()
-	if result != testURL {
-		t.Errorf("GetServerURL() = %q, want %q", result, testURL)
-	}
+// saveCfgState saves the current cfg state and returns a cleanup function.
+func saveCfgState(t *testing.T) {
+	t.Helper()
+	oldCfg := cfg
+	oldPath := configPath
+	t.Cleanup(func() {
+		cfg = oldCfg
+		configPath = oldPath
+	})
 }
 
-func TestGetTokenFromEnv(t *testing.T) {
-	// Save original env
-	origToken := os.Getenv(EnvToken)
-	defer os.Setenv(EnvToken, origToken)
+func TestGetServerURLFromEnv(T *testing.T) {
+	want := "https://teamcity.example.com"
+	T.Setenv(EnvServerURL, want)
 
-	testToken := "test-token-123"
-	os.Setenv(EnvToken, testToken)
-
-	result := GetToken()
-	if result != testToken {
-		t.Errorf("GetToken() = %q, want %q", result, testToken)
-	}
+	got := GetServerURL()
+	assert.Equal(T, want, got)
 }
 
-func TestGet(t *testing.T) {
-	// Reset cfg to ensure fresh state
+func TestGetTokenFromEnv(T *testing.T) {
+	want := "test-token-123"
+	T.Setenv(EnvToken, want)
+
+	got := GetToken()
+	assert.Equal(T, want, got)
+}
+
+func TestGet(T *testing.T) {
+	saveCfgState(T)
 	cfg = nil
 
-	result := Get()
-	if result == nil {
-		t.Error("Get() returned nil")
-	}
-	if result.Servers == nil {
-		t.Error("Get().Servers is nil")
-	}
+	got := Get()
+	require.NotNil(T, got)
+	assert.NotNil(T, got.Servers)
 }
 
-func TestIsConfigured(t *testing.T) {
-	// Save original env
-	origURL := os.Getenv(EnvServerURL)
-	origToken := os.Getenv(EnvToken)
-	defer func() {
-		os.Setenv(EnvServerURL, origURL)
-		os.Setenv(EnvToken, origToken)
-	}()
+func TestIsConfigured(T *testing.T) {
+	saveCfgState(T)
 
-	// Test when configured
-	os.Setenv(EnvServerURL, "https://teamcity.example.com")
-	os.Setenv(EnvToken, "test-token")
-	if !IsConfigured() {
-		t.Error("IsConfigured() = false when both URL and token set")
-	}
-
-	// Test when not configured
-	os.Setenv(EnvServerURL, "")
-	os.Setenv(EnvToken, "")
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
-	if IsConfigured() {
-		t.Error("IsConfigured() = true when URL and token empty")
-	}
-}
-
-func TestGetCurrentUser(t *testing.T) {
-	// Save and clear env
-	origURL := os.Getenv(EnvServerURL)
-	defer os.Setenv(EnvServerURL, origURL)
-	os.Setenv(EnvServerURL, "")
-
-	// Set up config with a server
-	cfg = &Config{
-		DefaultServer: "https://tc.example.com",
-		Servers: map[string]ServerConfig{
-			"https://tc.example.com": {
-				Token: "token",
-				User:  "testuser",
-			},
+	tests := []struct {
+		name      string
+		serverURL string
+		token     string
+		cfg       *Config
+		want      bool
+	}{
+		{
+			name:      "configured via env vars",
+			serverURL: "https://teamcity.example.com",
+			token:     "test-token",
+			cfg:       nil,
+			want:      true,
+		},
+		{
+			name:      "not configured - empty env and config",
+			serverURL: "",
+			token:     "",
+			cfg:       &Config{Servers: make(map[string]ServerConfig)},
+			want:      false,
 		},
 	}
 
-	result := GetCurrentUser()
-	if result != "testuser" {
-		t.Errorf("GetCurrentUser() = %q, want %q", result, "testuser")
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Setenv(EnvServerURL, tc.serverURL)
+			t.Setenv(EnvToken, tc.token)
+			cfg = tc.cfg
+
+			got := IsConfigured()
+			assert.Equal(t, tc.want, got)
+		})
 	}
 }
 
-func TestGetCurrentUserEmpty(t *testing.T) {
-	// Save and clear env
-	origURL := os.Getenv(EnvServerURL)
-	defer os.Setenv(EnvServerURL, origURL)
-	os.Setenv(EnvServerURL, "")
+func TestGetCurrentUser(T *testing.T) {
+	saveCfgState(T)
 
-	// Empty config
-	cfg = &Config{
-		DefaultServer: "",
-		Servers:       make(map[string]ServerConfig),
+	tests := []struct {
+		name string
+		cfg  *Config
+		want string
+	}{
+		{
+			name: "returns user from config",
+			cfg: &Config{
+				DefaultServer: "https://tc.example.com",
+				Servers: map[string]ServerConfig{
+					"https://tc.example.com": {
+						Token: "token",
+						User:  "testuser",
+					},
+				},
+			},
+			want: "testuser",
+		},
+		{
+			name: "returns empty when no default server",
+			cfg: &Config{
+				DefaultServer: "",
+				Servers:       make(map[string]ServerConfig),
+			},
+			want: "",
+		},
 	}
 
-	result := GetCurrentUser()
-	if result != "" {
-		t.Errorf("GetCurrentUser() = %q, want empty string", result)
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Setenv(EnvServerURL, "")
+			cfg = tc.cfg
+
+			got := GetCurrentUser()
+			assert.Equal(t, tc.want, got)
+		})
 	}
 }
 
-func TestConfigPath(t *testing.T) {
-	// After init, configPath should be set
-	// We don't want to actually call Init in unit tests as it writes to filesystem
-	// So we just verify ConfigPath returns whatever configPath is set to
-	configPath = "/test/path/config.yml"
-	result := ConfigPath()
-	if result != "/test/path/config.yml" {
-		t.Errorf("ConfigPath() = %q, want %q", result, "/test/path/config.yml")
-	}
+func TestConfigPath(T *testing.T) {
+	saveCfgState(T)
+
+	want := "/test/path/config.yml"
+	configPath = want
+
+	got := ConfigPath()
+	assert.Equal(T, want, got)
 }
 
-func TestGetTokenFromConfig(t *testing.T) {
-	// Save and clear env
-	origURL := os.Getenv(EnvServerURL)
-	origToken := os.Getenv(EnvToken)
-	defer func() {
-		os.Setenv(EnvServerURL, origURL)
-		os.Setenv(EnvToken, origToken)
-	}()
+func TestGetTokenFromConfig(T *testing.T) {
+	saveCfgState(T)
+	T.Setenv(EnvServerURL, "")
+	T.Setenv(EnvToken, "")
 
-	// Clear env vars
-	os.Setenv(EnvServerURL, "")
-	os.Setenv(EnvToken, "")
-
-	// Set up config with a server
 	cfg = &Config{
 		DefaultServer: "https://tc.example.com",
 		Servers: map[string]ServerConfig{
@@ -148,87 +152,60 @@ func TestGetTokenFromConfig(t *testing.T) {
 		},
 	}
 
-	result := GetToken()
-	if result != "config-token" {
-		t.Errorf("GetToken() = %q, want %q", result, "config-token")
-	}
+	want := "config-token"
+	got := GetToken()
+	assert.Equal(T, want, got)
 }
 
-func TestSetAndRemoveServer(t *testing.T) {
-	// Use temp dir for config
-	tmpDir := t.TempDir()
-	oldPath := configPath
+func TestSetAndRemoveServer(T *testing.T) {
+	saveCfgState(T)
+	tmpDir := T.TempDir()
 	configPath = tmpDir + "/config.yml"
-	defer func() { configPath = oldPath }()
-
-	// Initialize fresh config
 	cfg = &Config{Servers: make(map[string]ServerConfig)}
 
-	// Test SetServer
+	// Test SetServer - first server becomes default
 	err := SetServer("https://tc1.example.com", "token1", "user1")
-	if err != nil {
-		t.Fatalf("SetServer() error = %v", err)
-	}
-	if cfg.DefaultServer != "https://tc1.example.com" {
-		t.Errorf("DefaultServer = %q, want %q", cfg.DefaultServer, "https://tc1.example.com")
-	}
-	if cfg.Servers["https://tc1.example.com"].Token != "token1" {
-		t.Error("Server token not set correctly")
-	}
+	require.NoError(T, err)
+	assert.Equal(T, "https://tc1.example.com", cfg.DefaultServer)
+	assert.Equal(T, "token1", cfg.Servers["https://tc1.example.com"].Token)
 
 	// Add second server
 	err = SetServer("https://tc2.example.com", "token2", "user2")
-	if err != nil {
-		t.Fatalf("SetServer() for second server error = %v", err)
-	}
+	require.NoError(T, err)
 
 	// Test RemoveServer (non-default)
 	err = RemoveServer("https://tc1.example.com")
-	if err != nil {
-		t.Fatalf("RemoveServer() error = %v", err)
-	}
-	if _, ok := cfg.Servers["https://tc1.example.com"]; ok {
-		t.Error("Server should have been removed")
-	}
+	require.NoError(T, err)
+	_, ok := cfg.Servers["https://tc1.example.com"]
+	assert.False(T, ok, "server should have been removed")
 
-	// Test RemoveServer (default - should pick another)
+	// Test RemoveServer (last remaining server)
 	err = RemoveServer("https://tc2.example.com")
-	if err != nil {
-		t.Fatalf("RemoveServer() error = %v", err)
-	}
-	if len(cfg.Servers) != 0 {
-		t.Error("All servers should be removed")
-	}
+	require.NoError(T, err)
+	assert.Equal(T, 0, len(cfg.Servers))
 }
 
-func TestInit(t *testing.T) {
-	// Override HOME to use temp dir
-	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
+func TestInit(T *testing.T) {
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	T.Setenv("HOME", tmpDir)
+	T.Setenv("USERPROFILE", tmpDir) // Required for Windows
 
-	// Reset package state
 	cfg = nil
 	configPath = ""
 
 	err := Init()
-	if err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
+	require.NoError(T, err)
 
-	expectedPath := filepath.Join(tmpDir, ".config", "tc", "config.yml")
-	if configPath != expectedPath {
-		t.Errorf("configPath = %q, want %q", configPath, expectedPath)
-	}
-
-	if cfg == nil {
-		t.Error("cfg should not be nil after Init")
-	}
+	want := filepath.Join(tmpDir, ".config", "tc", "config.yml")
+	assert.Equal(T, want, configPath)
+	require.NotNil(T, cfg)
 }
 
-func TestSetUserForServer(t *testing.T) {
-	t.Run("existing_server", func(t *testing.T) {
+func TestSetUserForServer(T *testing.T) {
+	saveCfgState(T)
+
+	T.Run("existing server", func(t *testing.T) {
 		cfg = &Config{
 			DefaultServer: "https://tc.example.com",
 			Servers: map[string]ServerConfig{
@@ -236,12 +213,12 @@ func TestSetUserForServer(t *testing.T) {
 			},
 		}
 		SetUserForServer("https://tc.example.com", "newuser")
-		if cfg.Servers["https://tc.example.com"].User != "newuser" {
-			t.Errorf("got %q, want newuser", cfg.Servers["https://tc.example.com"].User)
-		}
+
+		got := cfg.Servers["https://tc.example.com"].User
+		assert.Equal(t, "newuser", got)
 	})
 
-	t.Run("new_server", func(t *testing.T) {
+	T.Run("new server entry", func(t *testing.T) {
 		cfg = &Config{
 			DefaultServer: "https://tc.example.com",
 			Servers: map[string]ServerConfig{
@@ -249,21 +226,22 @@ func TestSetUserForServer(t *testing.T) {
 			},
 		}
 		SetUserForServer("https://other.example.com", "newuser")
-		if cfg.Servers["https://tc.example.com"].User != "user" {
-			t.Error("modified wrong server")
-		}
-		if cfg.Servers["https://other.example.com"].User != "newuser" {
-			t.Error("did not create new server entry")
-		}
+
+		// Original server should be unchanged
+		assert.Equal(t, "user", cfg.Servers["https://tc.example.com"].User)
+		// New server should be created
+		assert.Equal(t, "newuser", cfg.Servers["https://other.example.com"].User)
 	})
 
-	t.Run("nil_config", func(t *testing.T) {
+	T.Run("nil config is no-op", func(t *testing.T) {
 		cfg = nil
+		// Should not panic
 		SetUserForServer("https://tc.example.com", "user")
 	})
 
-	t.Run("nil_servers", func(t *testing.T) {
+	T.Run("nil servers map is no-op", func(t *testing.T) {
 		cfg = &Config{DefaultServer: "https://tc.example.com", Servers: nil}
+		// Should not panic
 		SetUserForServer("https://tc.example.com", "user")
 	})
 }

@@ -7,14 +7,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tiulpin/teamcity-cli/internal/config"
 )
 
-// createTestRootCmd creates a fresh root command with the api subcommand for testing
+// Note: API command tests cannot use t.Parallel() because they modify
+// environment variables and shared config state.
+
+// createTestRootCmd creates a fresh root command with the api subcommand for testing.
 func createTestRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use: "tc",
@@ -27,10 +31,11 @@ func createTestRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func setupMockServerForAPI(handler http.HandlerFunc) (*httptest.Server, func()) {
+// setupMockServerForAPI creates a test server and configures the environment.
+func setupMockServerForAPI(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+	t.Helper()
 	server := httptest.NewServer(handler)
 
-	// Save and override config
 	originalURL := os.Getenv("TEAMCITY_URL")
 	originalToken := os.Getenv("TEAMCITY_TOKEN")
 
@@ -38,33 +43,32 @@ func setupMockServerForAPI(handler http.HandlerFunc) (*httptest.Server, func()) 
 	os.Setenv("TEAMCITY_TOKEN", "test-token")
 	config.Init()
 
-	cleanup := func() {
+	t.Cleanup(func() {
 		server.Close()
 		os.Setenv("TEAMCITY_URL", originalURL)
 		os.Setenv("TEAMCITY_TOKEN", originalToken)
 		config.Init()
-	}
+	})
 
-	return server, cleanup
+	return server
 }
 
-func TestAPICommandBasicGET(t *testing.T) {
+func TestAPICommandBasicGET(T *testing.T) {
 	requestReceived := false
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		requestReceived = true
-		if r.Method != "GET" {
-			t.Errorf("Expected GET, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/server" {
-			t.Errorf("Expected /app/rest/server, got %s", r.URL.Path)
-		}
-		if r.Header.Get("Authorization") != "Bearer test-token" {
-			t.Error("Expected Bearer auth header")
-		}
+		assert.Equal(T, "GET", r.Method, "Method")
+		assert.Equal(T, "/app/rest/server", r.URL.Path, "URL.Path")
+		assert.Equal(T, "Bearer test-token", r.Header.Get("Authorization"), "Authorization header")
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"version": "2024.03"})
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"version":      " (build 197398)",
+			"versionMajor": 2025,
+			"versionMinor": 7,
+			"buildNumber":  "197398",
+			"webUrl":       "http://mock.teamcity.test",
+		})
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -73,34 +77,22 @@ func TestAPICommandBasicGET(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
-
-	if !requestReceived {
-		t.Error("Expected request to be sent to server")
-	}
+	require.NoError(T, err)
+	assert.True(T, requestReceived, "expected request to be sent to server")
 }
 
-func TestAPICommandPOSTWithFields(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			t.Errorf("Expected POST, got %s", r.Method)
-		}
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("Expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
-		}
+func TestAPICommandPOSTWithFields(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "POST", r.Method, "Method")
+		assert.Equal(T, "application/json", r.Header.Get("Content-Type"), "Content-Type")
 
 		var body map[string]interface{}
 		json.NewDecoder(r.Body).Decode(&body)
-		if body["buildType"] != "MyBuild" {
-			t.Errorf("Expected buildType MyBuild, got %v", body["buildType"])
-		}
+		assert.Equal(T, "MyBuild", body["buildType"], "body[buildType]")
 
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(map[string]int{"id": 123})
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -109,22 +101,15 @@ func TestAPICommandPOSTWithFields(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 }
 
-func TestAPICommandWithCustomHeaders(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Accept") != "application/xml" {
-			t.Errorf("Expected Accept application/xml, got %s", r.Header.Get("Accept"))
-		}
-		if r.Header.Get("X-Custom") != "custom-value" {
-			t.Errorf("Expected X-Custom header, got %s", r.Header.Get("X-Custom"))
-		}
+func TestAPICommandWithCustomHeaders(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "application/xml", r.Header.Get("Accept"), "Accept header")
+		assert.Equal(T, "custom-value", r.Header.Get("X-Custom"), "X-Custom header")
 		w.Write([]byte("<server/>"))
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -133,20 +118,17 @@ func TestAPICommandWithCustomHeaders(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 }
 
-func TestAPICommandIncludeHeaders(t *testing.T) {
+func TestAPICommandIncludeHeaders(T *testing.T) {
 	requestReceived := false
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		requestReceived = true
 		w.Header().Set("X-Response-Header", "test-value")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("{}"))
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -155,22 +137,16 @@ func TestAPICommandIncludeHeaders(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
-
-	if !requestReceived {
-		t.Error("Expected request to be sent to server")
-	}
+	require.NoError(T, err)
+	assert.True(T, requestReceived, "expected request to be sent to server")
 	// Note: output includes headers is printed to stdout, not captured in buffer
 }
 
-func TestAPICommandSilentMode(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandSilentMode(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -179,21 +155,16 @@ func TestAPICommandSilentMode(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 
 	// Silent mode should produce no output on success
-	if out.String() != "" {
-		t.Errorf("Expected no output in silent mode, got: %s", out.String())
-	}
+	assert.Empty(T, out.String(), "output in silent mode")
 }
 
-func TestAPICommandRawOutput(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandRawOutput(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"compact":true}`))
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -202,23 +173,17 @@ func TestAPICommandRawOutput(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 
 	// Raw mode should not pretty-print (no indentation)
-	output := out.String()
-	if strings.Contains(output, "  \"compact\"") {
-		t.Errorf("Expected compact output in raw mode, got: %s", output)
-	}
+	assert.NotContains(T, out.String(), "  \"compact\"", "output in raw mode should be compact")
 }
 
-func TestAPICommandErrorResponse(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandErrorResponse(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Resource not found"))
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -227,23 +192,15 @@ func TestAPICommandErrorResponse(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err == nil {
-		t.Fatal("Expected error for 404 response")
-	}
-
-	if !strings.Contains(err.Error(), "404") {
-		t.Errorf("Expected error to mention 404, got: %v", err)
-	}
+	require.Error(T, err, "expected error for 404 response")
+	assert.Contains(T, err.Error(), "404")
 }
 
-func TestAPICommandDELETE(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE, got %s", r.Method)
-		}
+func TestAPICommandDELETE(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "DELETE", r.Method, "Method")
 		w.WriteHeader(http.StatusNoContent)
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -252,20 +209,15 @@ func TestAPICommandDELETE(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 }
 
-func TestAPICommandPUT(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
+func TestAPICommandPUT(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "PUT", r.Method, "Method")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"updated":true}`))
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -274,16 +226,13 @@ func TestAPICommandPUT(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 }
 
-func TestAPICommandInvalidHeaderFormat(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandInvalidHeaderFormat(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -292,19 +241,14 @@ func TestAPICommandInvalidHeaderFormat(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err == nil {
-		t.Fatal("Expected error for invalid header format")
-	}
-	if !strings.Contains(err.Error(), "invalid header format") {
-		t.Errorf("Expected 'invalid header format' error, got: %v", err)
-	}
+	require.Error(T, err, "expected error for invalid header format")
+	assert.Contains(T, err.Error(), "invalid header format")
 }
 
-func TestAPICommandInvalidFieldFormat(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandInvalidFieldFormat(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -313,33 +257,22 @@ func TestAPICommandInvalidFieldFormat(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err == nil {
-		t.Fatal("Expected error for invalid field format")
-	}
-	if !strings.Contains(err.Error(), "invalid field format") {
-		t.Errorf("Expected 'invalid field format' error, got: %v", err)
-	}
+	require.Error(T, err, "expected error for invalid field format")
+	assert.Contains(T, err.Error(), "invalid field format")
 }
 
-func TestAPICommandWithJSONField(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandWithJSONField(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]interface{}
 		json.NewDecoder(r.Body).Decode(&body)
 
 		// Check that nested JSON was parsed correctly
 		buildType, ok := body["buildType"].(map[string]interface{})
-		if !ok {
-			t.Errorf("Expected buildType to be object, got %T", body["buildType"])
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if buildType["id"] != "MyBuild" {
-			t.Errorf("Expected buildType.id MyBuild, got %v", buildType["id"])
-		}
+		require.True(T, ok, "body[buildType] should be a map")
+		assert.Equal(T, "MyBuild", buildType["id"], "buildType[id]")
 
 		w.WriteHeader(http.StatusCreated)
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -348,23 +281,19 @@ func TestAPICommandWithJSONField(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 }
 
-func TestAPICommandFromStdin(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandFromStdin(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		if string(body) != `{"test":"stdin"}` {
-			t.Errorf("Unexpected body: %s", string(body))
-		}
+		assert.Equal(T, `{"test":"stdin"}`, string(body), "request body")
 		w.WriteHeader(http.StatusCreated)
 	})
-	defer cleanup()
 
 	// Save original stdin
 	oldStdin := os.Stdin
+	T.Cleanup(func() { os.Stdin = oldStdin })
 
 	// Create a pipe for stdin
 	r, w, _ := os.Pipe()
@@ -379,18 +308,12 @@ func TestAPICommandFromStdin(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-
-	// Restore stdin
-	os.Stdin = oldStdin
-
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 }
 
-func TestAPICommandPaginate(t *testing.T) {
+func TestAPICommandPaginate(T *testing.T) {
 	pageNum := 0
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		pageNum++
 		w.Header().Set("Content-Type", "application/json")
 
@@ -408,7 +331,6 @@ func TestAPICommandPaginate(t *testing.T) {
 			})
 		}
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -417,18 +339,13 @@ func TestAPICommandPaginate(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
-
-	if pageNum != 2 {
-		t.Errorf("Expected 2 requests, got %d", pageNum)
-	}
+	require.NoError(T, err)
+	assert.Equal(T, 2, pageNum, "request count")
 }
 
-func TestAPICommandPaginateNoNextHref(t *testing.T) {
+func TestAPICommandPaginateNoNextHref(T *testing.T) {
 	requestCount := 0
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -436,7 +353,6 @@ func TestAPICommandPaginateNoNextHref(t *testing.T) {
 			"build": []map[string]int{{"id": 1}, {"id": 2}},
 		})
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -445,18 +361,13 @@ func TestAPICommandPaginateNoNextHref(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
-
-	if requestCount != 1 {
-		t.Errorf("Expected 1 request (no pagination needed), got %d", requestCount)
-	}
+	require.NoError(T, err)
+	assert.Equal(T, 1, requestCount, "request count (no pagination needed)")
 }
 
-func TestAPICommandSlurp(t *testing.T) {
+func TestAPICommandSlurp(T *testing.T) {
 	pageNum := 0
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		pageNum++
 		w.Header().Set("Content-Type", "application/json")
 
@@ -474,7 +385,6 @@ func TestAPICommandSlurp(t *testing.T) {
 			})
 		}
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -483,21 +393,16 @@ func TestAPICommandSlurp(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
+	require.NoError(T, err)
 
 	// Note: output goes to stdout, not the buffer, but we verify the server was hit correctly
-	if pageNum != 2 {
-		t.Errorf("Expected 2 requests, got %d", pageNum)
-	}
+	assert.Equal(T, 2, pageNum, "request count")
 }
 
-func TestAPICommandSlurpRequiresPaginate(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandSlurpRequiresPaginate(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -506,16 +411,13 @@ func TestAPICommandSlurpRequiresPaginate(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err == nil {
-		t.Fatal("Expected error when using --slurp without --paginate")
-	}
+	require.Error(T, err, "expected error when using --slurp without --paginate")
 }
 
-func TestAPICommandPaginateOnlyGET(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandPaginateOnlyGET(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -524,20 +426,15 @@ func TestAPICommandPaginateOnlyGET(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err == nil {
-		t.Fatal("Expected error when using --paginate with POST")
-	}
-	if !strings.Contains(err.Error(), "only be used with GET") {
-		t.Errorf("Expected error about GET only, got: %v", err)
-	}
+	require.Error(T, err, "expected error when using --paginate with POST")
+	assert.Contains(T, err.Error(), "only be used with GET")
 }
 
-func TestAPICommandPaginateNonJSON(t *testing.T) {
-	_, cleanup := setupMockServerForAPI(func(w http.ResponseWriter, r *http.Request) {
+func TestAPICommandPaginateNonJSON(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
 		w.Write([]byte("<builds><build id='1'/></builds>"))
 	})
-	defer cleanup()
 
 	var out bytes.Buffer
 	rootCmd := createTestRootCmd()
@@ -546,16 +443,14 @@ func TestAPICommandPaginateNonJSON(t *testing.T) {
 	rootCmd.SetErr(&out)
 
 	err := rootCmd.Execute()
-	if err == nil {
-		t.Fatal("Expected error when using --paginate with non-JSON response")
-	}
-	if !strings.Contains(err.Error(), "--paginate requires JSON response") {
-		t.Errorf("Expected error about JSON requirement, got: %v", err)
-	}
+	require.Error(T, err, "expected error for non-JSON response with --paginate")
+	assert.Contains(T, err.Error(), "--paginate requires JSON response")
 }
 
-// Unit tests for pagination functions
-func TestExtractNextHref(t *testing.T) {
+// Unit tests for pagination functions - these can run in parallel
+func TestExtractNextHref(T *testing.T) {
+	T.Parallel()
+
 	tests := []struct {
 		name    string
 		data    string
@@ -584,21 +479,24 @@ func TestExtractNextHref(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := extractNextHref([]byte(tt.data))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("extractNextHref() error = %v, wantErr %v", err, tt.wantErr)
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := extractNextHref([]byte(tc.data))
+			if tc.wantErr {
+				assert.Error(t, err)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("extractNextHref() = %q, want %q", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
 
-func TestDetectArrayKey(t *testing.T) {
+func TestDetectArrayKey(T *testing.T) {
+	T.Parallel()
+
 	tests := []struct {
 		name    string
 		data    string
@@ -642,21 +540,24 @@ func TestDetectArrayKey(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := detectArrayKey([]byte(tt.data))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("detectArrayKey() error = %v, wantErr %v", err, tt.wantErr)
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := detectArrayKey([]byte(tc.data))
+			if tc.wantErr {
+				assert.Error(t, err)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("detectArrayKey() = %q, want %q", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
 
-func TestExtractArrayItems(t *testing.T) {
+func TestExtractArrayItems(T *testing.T) {
+	T.Parallel()
+
 	tests := []struct {
 		name    string
 		data    string
@@ -690,21 +591,24 @@ func TestExtractArrayItems(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := extractArrayItems([]byte(tt.data), tt.key)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("extractArrayItems() error = %v, wantErr %v", err, tt.wantErr)
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := extractArrayItems([]byte(tc.data), tc.key)
+			if tc.wantErr {
+				assert.Error(t, err)
 				return
 			}
-			if len(got) != tt.wantLen {
-				t.Errorf("extractArrayItems() len = %d, want %d", len(got), tt.wantLen)
-			}
+			require.NoError(t, err)
+			assert.Len(t, got, tc.wantLen)
 		})
 	}
 }
 
-func TestMergePages(t *testing.T) {
+func TestMergePages(T *testing.T) {
+	T.Parallel()
+
 	tests := []struct {
 		name     string
 		pages    []string
@@ -749,35 +653,33 @@ func TestMergePages(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			var pages [][]byte
-			for _, p := range tt.pages {
+			for _, p := range tc.pages {
 				pages = append(pages, []byte(p))
 			}
 
-			got, err := mergePages(pages, tt.arrayKey)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("mergePages() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := mergePages(pages, tc.arrayKey)
+			if tc.wantErr {
+				assert.Error(t, err)
 				return
 			}
+			require.NoError(t, err)
 
 			// Compare as JSON to ignore whitespace differences
 			var gotJSON, wantJSON interface{}
 			json.Unmarshal(got, &gotJSON)
-			json.Unmarshal([]byte(tt.want), &wantJSON)
+			json.Unmarshal([]byte(tc.want), &wantJSON)
 
-			gotBytes, _ := json.Marshal(gotJSON)
-			wantBytes, _ := json.Marshal(wantJSON)
-
-			if string(gotBytes) != string(wantBytes) {
-				t.Errorf("mergePages() = %s, want %s", string(got), tt.want)
-			}
+			assert.Equal(t, wantJSON, gotJSON)
 		})
 	}
 }
 
-func TestFetchAllPages(t *testing.T) {
+func TestFetchAllPages(T *testing.T) {
 	pageNum := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		pageNum++
@@ -819,34 +721,23 @@ func TestFetchAllPages(t *testing.T) {
 	}()
 
 	client, err := getClient()
-	if err != nil {
-		t.Fatalf("Failed to get client: %v", err)
-	}
+	require.NoError(T, err, "Failed to get client")
 
 	pages, err := fetchAllPages(client, "/app/rest/builds", nil)
-	if err != nil {
-		t.Fatalf("fetchAllPages() error = %v", err)
-	}
-
-	if len(pages) != 3 {
-		t.Errorf("fetchAllPages() returned %d pages, want 3", len(pages))
-	}
+	require.NoError(T, err)
+	assert.Len(T, pages, 3, "fetchAllPages() page count")
 
 	// Verify we can extract items from all pages
 	arrayKey, _ := detectArrayKey(pages[0])
 	merged, err := mergePages(pages, arrayKey)
-	if err != nil {
-		t.Fatalf("mergePages() error = %v", err)
-	}
+	require.NoError(T, err)
 
 	var items []map[string]int
 	json.Unmarshal(merged, &items)
-	if len(items) != 5 {
-		t.Errorf("merged result has %d items, want 5", len(items))
-	}
+	assert.Len(T, items, 5, "merged result item count")
 }
 
-func TestFetchAllPagesSinglePage(t *testing.T) {
+func TestFetchAllPagesSinglePage(T *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// Single page, no nextHref
@@ -870,16 +761,9 @@ func TestFetchAllPagesSinglePage(t *testing.T) {
 	}()
 
 	client, err := getClient()
-	if err != nil {
-		t.Fatalf("Failed to get client: %v", err)
-	}
+	require.NoError(T, err, "Failed to get client")
 
 	pages, err := fetchAllPages(client, "/app/rest/builds", nil)
-	if err != nil {
-		t.Fatalf("fetchAllPages() error = %v", err)
-	}
-
-	if len(pages) != 1 {
-		t.Errorf("fetchAllPages() returned %d pages, want 1", len(pages))
-	}
+	require.NoError(T, err)
+	assert.Len(T, pages, 1, "fetchAllPages() page count")
 }

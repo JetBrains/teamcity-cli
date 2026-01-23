@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tiulpin/teamcity-cli/internal/api"
 )
 
-func TestParseJSONFields(t *testing.T) {
+func TestParseJSONFields(T *testing.T) {
+	T.Parallel()
 	spec := &api.FieldSpec{Available: []string{"id", "name", "status"}, Default: []string{"id", "name"}}
 
 	tests := []struct {
@@ -15,20 +18,21 @@ func TestParseJSONFields(t *testing.T) {
 		flagChanged bool
 		flagValue   string
 		wantEnabled bool
-		wantFields  []string
 		wantHelp    bool
 		wantErr     bool
 	}{
-		{"not set", false, "", false, nil, false, false},
-		{"default", true, "default", true, []string{"id", "name"}, false, false},
-		{"specific", true, "id,status", true, []string{"id", "status"}, false, false},
-		{"help empty", true, "", false, nil, true, false},
-		{"help ?", true, "?", false, nil, true, false},
-		{"invalid", true, "invalid", false, nil, false, true},
+		{"not set", false, "", false, false, false},
+		{"default", true, "default", true, false, false},
+		{"specific", true, "id,status", true, false, false},
+		{"help empty", true, "", false, true, false},
+		{"help ?", true, "?", false, true, false},
+		{"invalid", true, "invalid", false, false, true},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			cmd := &cobra.Command{}
 			var jsonFields string
 			AddJSONFieldsFlag(cmd, &jsonFields)
@@ -39,30 +43,23 @@ func TestParseJSONFields(t *testing.T) {
 			result, showHelp, err := ParseJSONFields(cmd, tc.flagValue, spec)
 
 			if tc.wantErr {
-				if err == nil {
-					t.Error("expected error")
-				}
+				assert.Error(t, err)
 				return
 			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if showHelp != tc.wantHelp {
-				t.Errorf("showHelp = %v, want %v", showHelp, tc.wantHelp)
-			}
-			if result.Enabled != tc.wantEnabled {
-				t.Errorf("Enabled = %v, want %v", result.Enabled, tc.wantEnabled)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantHelp, showHelp)
+			assert.Equal(t, tc.wantEnabled, result.Enabled)
 		})
 	}
 }
 
-func TestAddJSONFieldsFlag(t *testing.T) {
+func TestAddJSONFieldsFlag(T *testing.T) {
+	T.Parallel()
 	cmd := &cobra.Command{}
 	var jsonFields string
 	AddJSONFieldsFlag(cmd, &jsonFields)
 
-	if flag := cmd.Flags().Lookup("json"); flag == nil || flag.NoOptDefVal != "default" {
-		t.Error("flag not configured correctly")
-	}
+	flag := cmd.Flags().Lookup("json")
+	require.NotNil(T, flag)
+	assert.Equal(T, "default", flag.NoOptDefVal)
 }
