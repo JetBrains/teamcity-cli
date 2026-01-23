@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -45,6 +47,34 @@ func (c *Client) GetProject(id string) (*Project, error) {
 	}
 
 	return &project, nil
+}
+
+// CreateProjectRequest represents a request to create a project
+type CreateProjectRequest struct {
+	ID              string `json:"id,omitempty"`
+	Name            string `json:"name"`
+	ParentProjectID string `json:"parentProject,omitempty"`
+}
+
+// CreateProject creates a new project
+func (c *Client) CreateProject(req CreateProjectRequest) (*Project, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	var project Project
+	if err := c.post("/app/rest/projects", bytes.NewReader(body), &project); err != nil {
+		return nil, err
+	}
+
+	return &project, nil
+}
+
+// ProjectExists checks if a project exists
+func (c *Client) ProjectExists(id string) bool {
+	_, err := c.GetProject(id)
+	return err == nil
 }
 
 // CreateSecureToken creates a new secure token for the given value in a project.
