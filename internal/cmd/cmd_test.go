@@ -415,9 +415,13 @@ func TestRunTests(t *testing.T) {
 }
 
 func TestRunListWithAtMe(t *testing.T) {
-	if config.GetCurrentUser() == "" {
-		t.Skip("No user in config")
+	client := newTestClient()
+	user, err := client.GetCurrentUser()
+	if err != nil {
+		t.Skip("Could not get current user")
 	}
+	config.SetUserForServer(os.Getenv("TEAMCITY_URL"), user.Username)
+
 	runCmd(t, "run", "list", "--user", "@me", "--limit", "5")
 }
 
