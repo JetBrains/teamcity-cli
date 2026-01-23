@@ -670,38 +670,35 @@ func TestGetBuildType(t *testing.T) {
 	}
 }
 
-func TestPauseBuildType(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
-		if r.URL.Path != "/app/rest/buildTypes/id:Sandbox_Demo/paused" {
-			t.Errorf("Unexpected path: %s", r.URL.Path)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token")
-	err := client.PauseBuildType("Sandbox_Demo")
-	if err != nil {
-		t.Fatalf("PauseBuildType failed: %v", err)
+func TestSetBuildTypePaused(t *testing.T) {
+	tests := []struct {
+		name     string
+		paused   bool
+		wantBody string
+	}{
+		{"pause", true, "true"},
+		{"resume", false, "false"},
 	}
-}
 
-func TestResumeBuildType(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			t.Errorf("Expected PUT, got %s", r.Method)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != "PUT" {
+					t.Errorf("Expected PUT, got %s", r.Method)
+				}
+				if r.URL.Path != "/app/rest/buildTypes/id:Sandbox_Demo/paused" {
+					t.Errorf("Unexpected path: %s", r.URL.Path)
+				}
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			defer server.Close()
 
-	client := NewClient(server.URL, "test-token")
-	err := client.ResumeBuildType("Sandbox_Demo")
-	if err != nil {
-		t.Fatalf("ResumeBuildType failed: %v", err)
+			client := NewClient(server.URL, "test-token")
+			err := client.SetBuildTypePaused("Sandbox_Demo", tt.paused)
+			if err != nil {
+				t.Fatalf("SetBuildTypePaused(%v) failed: %v", tt.paused, err)
+			}
+		})
 	}
 }
 

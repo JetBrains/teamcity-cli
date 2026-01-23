@@ -188,7 +188,7 @@ func runJobPause(jobID string) error {
 		return err
 	}
 
-	if err := client.PauseBuildType(jobID); err != nil {
+	if err := client.SetBuildTypePaused(jobID, true); err != nil {
 		return fmt.Errorf("failed to pause job: %w", err)
 	}
 
@@ -217,7 +217,7 @@ func runJobResume(jobID string) error {
 		return err
 	}
 
-	if err := client.ResumeBuildType(jobID); err != nil {
+	if err := client.SetBuildTypePaused(jobID, false); err != nil {
 		return fmt.Errorf("failed to resume job: %w", err)
 	}
 
