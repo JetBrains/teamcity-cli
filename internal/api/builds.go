@@ -21,6 +21,7 @@ type BuildsOptions struct {
 	Limit       int
 	SinceDate   string
 	UntilDate   string
+	Fields      []string
 }
 
 // GetBuilds returns a list of builds
@@ -37,7 +38,11 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 		Add("untilDate", opts.UntilDate).
 		AddIntDefault("count", opts.Limit, 30)
 
-	fields := "count,build(id,number,status,state,branchName,buildTypeId,buildType(id,name,projectName),triggered(type,user(name,username)),startDate,finishDate,queuedDate,agent(name))"
+	buildFields := opts.Fields
+	if len(buildFields) == 0 {
+		buildFields = BuildFields.Default
+	}
+	fields := fmt.Sprintf("count,build(%s)", ToAPIFields(buildFields))
 	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
 
 	var result BuildList
@@ -202,6 +207,7 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 type QueueOptions struct {
 	BuildTypeID string
 	Limit       int
+	Fields      []string
 }
 
 // GetBuildQueue returns the build queue
@@ -210,9 +216,17 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 		Add("buildType", opts.BuildTypeID).
 		AddInt("count", opts.Limit)
 
+	fields := opts.Fields
+	if len(fields) == 0 {
+		fields = QueuedBuildFields.Default
+	}
+	fieldsParam := fmt.Sprintf("count,build(%s)", ToAPIFields(fields))
+
 	path := "/app/rest/buildQueue"
 	if !locator.IsEmpty() {
-		path = fmt.Sprintf("%s?locator=%s", path, locator.Encode())
+		path = fmt.Sprintf("%s?locator=%s&fields=%s", path, locator.Encode(), url.QueryEscape(fieldsParam))
+	} else {
+		path = fmt.Sprintf("%s?fields=%s", path, url.QueryEscape(fieldsParam))
 	}
 
 	var queue BuildQueue

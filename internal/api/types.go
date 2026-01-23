@@ -4,21 +4,21 @@ import "time"
 
 // User represents a TeamCity user
 type User struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Name     string `json:"name"`
+	ID       int    `json:"id,omitempty"`
+	Username string `json:"username,omitempty"`
+	Name     string `json:"name,omitempty"`
 	Email    string `json:"email,omitempty"`
-	Href     string `json:"href"`
+	Href     string `json:"href,omitempty"`
 }
 
 // Project represents a TeamCity project
 type Project struct {
 	ID              string `json:"id"`
-	Name            string `json:"name"`
+	Name            string `json:"name,omitempty"`
 	Description     string `json:"description,omitempty"`
 	ParentProjectID string `json:"parentProjectId,omitempty"`
-	Href            string `json:"href"`
-	WebURL          string `json:"webUrl"`
+	Href            string `json:"href,omitempty"`
+	WebURL          string `json:"webUrl,omitempty"`
 }
 
 // ProjectList represents a list of projects
@@ -30,11 +30,11 @@ type ProjectList struct {
 // BuildType represents a build configuration
 type BuildType struct {
 	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	ProjectName string  `json:"projectName"`
-	ProjectID   string  `json:"projectId"`
-	Href        string  `json:"href"`
-	WebURL      string  `json:"webUrl"`
+	Name        string  `json:"name,omitempty"`
+	ProjectName string  `json:"projectName,omitempty"`
+	ProjectID   string  `json:"projectId,omitempty"`
+	Href        string  `json:"href,omitempty"`
+	WebURL      string  `json:"webUrl,omitempty"`
 	Paused      bool    `json:"paused,omitempty"`
 	Project     Project `json:"project,omitempty"`
 }
@@ -47,23 +47,23 @@ type BuildTypeList struct {
 
 // Build represents a TeamCity build
 type Build struct {
-	ID                int        `json:"id"`
-	BuildTypeID       string     `json:"buildTypeId"`
-	Number            string     `json:"number"`
-	Status            string     `json:"status"`
-	State             string     `json:"state"`
-	BranchName        string     `json:"branchName,omitempty"`
-	DefaultBranch     bool       `json:"defaultBranch,omitempty"`
-	Href              string     `json:"href"`
-	WebURL            string     `json:"webUrl"`
-	StatusText        string     `json:"statusText,omitempty"`
-	QueuedDate        string     `json:"queuedDate,omitempty"`
-	StartDate         string     `json:"startDate,omitempty"`
-	FinishDate        string     `json:"finishDate,omitempty"`
-	BuildType         *BuildType `json:"buildType,omitempty"`
-	Triggered         *Triggered `json:"triggered,omitempty"`
-	Agent             *Agent     `json:"agent,omitempty"`
-	PercentageComplete int       `json:"percentageComplete,omitempty"`
+	ID                 int        `json:"id"`
+	BuildTypeID        string     `json:"buildTypeId,omitempty"`
+	Number             string     `json:"number,omitempty"`
+	Status             string     `json:"status,omitempty"`
+	State              string     `json:"state,omitempty"`
+	BranchName         string     `json:"branchName,omitempty"`
+	DefaultBranch      bool       `json:"defaultBranch,omitempty"`
+	Href               string     `json:"href,omitempty"`
+	WebURL             string     `json:"webUrl,omitempty"`
+	StatusText         string     `json:"statusText,omitempty"`
+	QueuedDate         string     `json:"queuedDate,omitempty"`
+	StartDate          string     `json:"startDate,omitempty"`
+	FinishDate         string     `json:"finishDate,omitempty"`
+	BuildType          *BuildType `json:"buildType,omitempty"`
+	Triggered          *Triggered `json:"triggered,omitempty"`
+	Agent              *Agent     `json:"agent,omitempty"`
+	PercentageComplete int        `json:"percentageComplete,omitempty"`
 }
 
 // BuildList represents a list of builds
@@ -76,21 +76,21 @@ type BuildList struct {
 
 // Triggered represents who/what triggered a build
 type Triggered struct {
-	Type string `json:"type"`
-	Date string `json:"date"`
+	Type string `json:"type,omitempty"`
+	Date string `json:"date,omitempty"`
 	User *User  `json:"user,omitempty"`
 }
 
 // Agent represents a build agent
 type Agent struct {
-	ID         int    `json:"id"`
-	Name       string `json:"name"`
+	ID         int    `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
 	TypeID     int    `json:"typeId,omitempty"`
 	Connected  bool   `json:"connected,omitempty"`
 	Enabled    bool   `json:"enabled,omitempty"`
 	Authorized bool   `json:"authorized,omitempty"`
-	Href       string `json:"href"`
-	WebURL     string `json:"webUrl"`
+	Href       string `json:"href,omitempty"`
+	WebURL     string `json:"webUrl,omitempty"`
 	Pool       *Pool  `json:"pool,omitempty"`
 	Build      *Build `json:"build,omitempty"`
 }
@@ -105,19 +105,19 @@ type AgentList struct {
 
 // Pool represents an agent pool
 type Pool struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-	Href string `json:"href"`
+	ID   int    `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+	Href string `json:"href,omitempty"`
 }
 
 // QueuedBuild represents a build in the queue
 type QueuedBuild struct {
 	ID          int        `json:"id"`
-	BuildTypeID string     `json:"buildTypeId"`
-	State       string     `json:"state"`
+	BuildTypeID string     `json:"buildTypeId,omitempty"`
+	State       string     `json:"state,omitempty"`
 	BranchName  string     `json:"branchName,omitempty"`
-	Href        string     `json:"href"`
-	WebURL      string     `json:"webUrl"`
+	Href        string     `json:"href,omitempty"`
+	WebURL      string     `json:"webUrl,omitempty"`
 	BuildType   *BuildType `json:"buildType,omitempty"`
 	Triggered   *Triggered `json:"triggered,omitempty"`
 	QueuedDate  string     `json:"queuedDate,omitempty"`
@@ -204,13 +204,13 @@ type Server struct {
 }
 
 type Change struct {
-	ID       int     `json:"id"`
-	Version  string  `json:"version"` // commit SHA
-	Username string  `json:"username"`
-	Date     string  `json:"date"`
-	Comment  string  `json:"comment"`
-	WebURL   string  `json:"webUrl,omitempty"`
-	Files    *Files  `json:"files,omitempty"`
+	ID       int    `json:"id"`
+	Version  string `json:"version"` // commit SHA
+	Username string `json:"username"`
+	Date     string `json:"date"`
+	Comment  string `json:"comment"`
+	WebURL   string `json:"webUrl,omitempty"`
+	Files    *Files `json:"files,omitempty"`
 }
 
 type ChangeList struct {
