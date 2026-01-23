@@ -1,6 +1,10 @@
+//go:build integration
+
 // Integration tests for the TeamCity API client.
 // Uses a real TeamCity server: either from TEAMCITY_URL/TEAMCITY_TOKEN env vars,
 // or spins up a server via testcontainers (requires Docker).
+//
+// Run with: go test -tags=integration ./internal/api/...
 package api_test
 
 import (
