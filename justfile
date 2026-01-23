@@ -14,7 +14,7 @@ build:
     go build -o bin/tc ./tc
 
 lint:
-    golangci-lint run --tests=false ./...
+    go fmt ./... && golangci-lint run --tests=false ./...
 
 install:
     go install ./tc
