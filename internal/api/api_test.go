@@ -275,12 +275,12 @@ func TestGetBuildQueue(t *testing.T) {
 }
 
 func TestBuildConfigPauseResume(t *testing.T) {
-	if err := client.PauseBuildType(testConfig); err != nil {
-		t.Fatalf("PauseBuildType failed: %v", err)
+	if err := client.SetBuildTypePaused(testConfig, true); err != nil {
+		t.Fatalf("SetBuildTypePaused(true) failed: %v", err)
 	}
 
-	if err := client.ResumeBuildType(testConfig); err != nil {
-		t.Fatalf("ResumeBuildType failed: %v", err)
+	if err := client.SetBuildTypePaused(testConfig, false); err != nil {
+		t.Fatalf("SetBuildTypePaused(false) failed: %v", err)
 	}
 }
 
