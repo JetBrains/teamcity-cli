@@ -92,6 +92,12 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
+// subcommandRequired is a RunE function for parent commands that require a subcommand.
+// It returns an error when no valid subcommand is provided.
+func subcommandRequired(cmd *cobra.Command, args []string) error {
+	return fmt.Errorf("requires a subcommand\n\nRun '%s --help' for available commands", cmd.CommandPath())
+}
+
 // RootCommand is an alias for cobra.Command for external access
 type RootCommand = cobra.Command
 

@@ -332,3 +332,50 @@ func TestGlobalFlags(T *testing.T) {
 	runCmd(T, "--verbose", "project", "list", "--limit", "1")
 	runCmd(T, "--no-color", "project", "list", "--limit", "1")
 }
+
+func TestUnknownSubcommand(T *testing.T) {
+	T.Parallel()
+
+	commands := [][]string{
+		{"run", "invalid"},
+		{"project", "invalid"},
+		{"queue", "invalid"},
+		{"job", "invalid"},
+		{"auth", "invalid"},
+	}
+
+	for _, args := range commands {
+		T.Run(args[0], func(t *testing.T) {
+			t.Parallel()
+
+			rootCmd := newRootCmd()
+			rootCmd.SetArgs(args)
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			err := rootCmd.Execute()
+			assert.Error(t, err, "expected error for unknown subcommand %v", args)
+		})
+	}
+}
+
+func TestParentCommandWithoutSubcommand(T *testing.T) {
+	T.Parallel()
+
+	commands := []string{"run", "project", "queue", "job", "auth"}
+
+	for _, cmd := range commands {
+		T.Run(cmd, func(t *testing.T) {
+			t.Parallel()
+
+			rootCmd := newRootCmd()
+			rootCmd.SetArgs([]string{cmd})
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			err := rootCmd.Execute()
+			assert.Error(t, err, "expected error for %s without subcommand", cmd)
+			assert.Contains(t, out.String(), "requires a subcommand")
+		})
+	}
+}

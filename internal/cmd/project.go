@@ -20,6 +20,8 @@ func newProjectCmd() *cobra.Command {
 		Use:   "project",
 		Short: "Manage projects",
 		Long:  `List and view TeamCity projects.`,
+		Args:  cobra.NoArgs,
+		RunE:  subcommandRequired,
 	}
 
 	cmd.AddCommand(newProjectListCmd())
@@ -186,6 +188,8 @@ in TeamCity's credentials storage. The scrambled token can be safely committed
 to version control and used in configuration files as credentialsJSON:<token>.
 
 See: https://www.jetbrains.com/help/teamcity/storing-project-settings-in-version-control.html#Managing+Tokens`,
+		Args: cobra.NoArgs,
+		RunE: subcommandRequired,
 	}
 
 	cmd.AddCommand(newProjectTokenPutCmd())

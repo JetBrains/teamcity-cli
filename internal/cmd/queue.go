@@ -14,6 +14,8 @@ func newQueueCmd() *cobra.Command {
 		Use:   "queue",
 		Short: "Manage build queue",
 		Long:  `List and manage the TeamCity build queue.`,
+		Args:  cobra.NoArgs,
+		RunE:  subcommandRequired,
 	}
 
 	cmd.AddCommand(newQueueListCmd())
