@@ -4,11 +4,11 @@ import (
 	"io"
 	"testing"
 
-	"github.com/tiulpin/teamcity-cli/internal/api"
-	"github.com/tiulpin/teamcity-cli/internal/api/mocks"
-	"github.com/tiulpin/teamcity-cli/internal/cmd"
-	"github.com/tiulpin/teamcity-cli/internal/config"
-	tcerrors "github.com/tiulpin/teamcity-cli/internal/errors"
+	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/internal/api/mocks"
+	"github.com/JetBrains/teamcity-cli/internal/cmd"
+	"github.com/JetBrains/teamcity-cli/internal/config"
+	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 )
 
 // mockClient is a reusable mock client with sensible defaults for testing

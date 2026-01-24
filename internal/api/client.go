@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	tcerrors "github.com/tiulpin/teamcity-cli/internal/errors"
+	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 )
 
 // Minimum supported TeamCity version

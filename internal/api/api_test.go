@@ -12,9 +12,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/internal/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tiulpin/teamcity-cli/internal/api"
 )
 
 var (

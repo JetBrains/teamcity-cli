@@ -4,7 +4,7 @@
 package mocks
 
 import (
-	"github.com/tiulpin/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/internal/api"
 	"io"
 	"sync"
 )

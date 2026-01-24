@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/acarl005/stripansi"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
-	"github.com/tiulpin/teamcity-cli/internal/api"
-	"github.com/tiulpin/teamcity-cli/internal/output"
 )
 
 type tickMsg time.Time

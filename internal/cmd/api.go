@@ -9,9 +9,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
-	"github.com/tiulpin/teamcity-cli/internal/api"
-	"github.com/tiulpin/teamcity-cli/internal/output"
 )
 
 const maxPaginationPages = 100

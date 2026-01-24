@@ -9,10 +9,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tiulpin/teamcity-cli/internal/config"
 )
 
 // Note: API command tests cannot use t.Parallel() because they modify

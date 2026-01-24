@@ -13,9 +13,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/tiulpin/teamcity-cli/internal/cmd"
 )
 
 // Command group ordering and display names

@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
-	"github.com/tiulpin/teamcity-cli/internal/api"
-	"github.com/tiulpin/teamcity-cli/internal/output"
 )
 
 func newQueueCmd() *cobra.Command {

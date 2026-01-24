@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tiulpin/teamcity-cli/internal/cmd"
-	"github.com/tiulpin/teamcity-cli/internal/config"
+	"github.com/JetBrains/teamcity-cli/internal/cmd"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 )
 
 func main() {

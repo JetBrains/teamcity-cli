@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/JetBrains/teamcity-cli/internal/api"
 	"github.com/spf13/cobra"
-	"github.com/tiulpin/teamcity-cli/internal/api"
 )
 
 // AddJSONFieldsFlag adds a --json flag that accepts optional field specification

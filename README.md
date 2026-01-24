@@ -81,13 +81,13 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
 ## Installation
 
 ```bash
-go install github.com/tiulpin/teamcity-cli/tc@latest
+go install github.com/JetBrains/teamcity-cli/tc@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/tiulpin/teamcity-cli.git
+git clone https://github.com/JetBrains/teamcity-cli.git
 cd teamcity-cli
 go build -o tc ./tc
 ```

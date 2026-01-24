@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/JetBrains/teamcity-cli/internal/api"
+	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
-	"github.com/tiulpin/teamcity-cli/internal/api"
-	tcerrors "github.com/tiulpin/teamcity-cli/internal/errors"
-	"github.com/tiulpin/teamcity-cli/internal/output"
 )
 
 type runDownloadOptions struct {

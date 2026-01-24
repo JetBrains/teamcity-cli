@@ -1,4 +1,4 @@
-module github.com/tiulpin/teamcity-cli
+module github.com/JetBrains/teamcity-cli
 
 go 1.25
 

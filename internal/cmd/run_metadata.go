@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
-	"github.com/tiulpin/teamcity-cli/internal/output"
 )
 
 type runPinOptions struct {

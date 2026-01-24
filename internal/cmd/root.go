@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
-	"github.com/tiulpin/teamcity-cli/internal/output"
 )
 
 var (
@@ -27,8 +27,8 @@ var rootCmd = &cobra.Command{
 tc provides a complete experience for managing
 TeamCity runs, jobs, projects and more from the command line.
 
-Documentation: https://github.com/tiulpin/teamcity-cli
-Report issues:  https://github.com/tiulpin/teamcity-cli/issues`,
+Documentation: https://github.com/JetBrains/teamcity-cli
+Report issues:  https://github.com/JetBrains/teamcity-cli/issues`,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
 		logo := `
@@ -40,7 +40,7 @@ Report issues:  https://github.com/tiulpin/teamcity-cli/issues`,
    ╚═╝    ╚═════╝`
 		fmt.Println(output.Cyan(logo))
 		fmt.Println()
-		fmt.Println("TeamCity CLI - " + output.Faint("https://github.com/tiulpin/teamcity-cli"))
+		fmt.Println("TeamCity CLI - " + output.Faint("https://github.com/JetBrains/teamcity-cli"))
 		fmt.Println()
 		fmt.Println("Usage: tc <command> [flags]")
 		fmt.Println()

@@ -12,11 +12,11 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/JetBrains/teamcity-cli/internal/api"
 	"github.com/joho/godotenv"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/tiulpin/teamcity-cli/internal/api"
 )
 
 const (

@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
-	"github.com/tiulpin/teamcity-cli/internal/api"
-	"github.com/tiulpin/teamcity-cli/internal/output"
 )
 
 func newJobCmd() *cobra.Command {

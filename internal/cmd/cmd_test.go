@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/internal/cmd"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tiulpin/teamcity-cli/internal/cmd"
-	"github.com/tiulpin/teamcity-cli/internal/config"
 )
 
 const (
