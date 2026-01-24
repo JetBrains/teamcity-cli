@@ -44,12 +44,14 @@ abstract class TestBuild(
     }
 }
 
+// Unit tests only (integration tests require -tags=integration and Docker)
 object TestWindows : TestBuild(
     os = "Windows",
     agentName = "Windows",
     scriptContent = "go test -v ./... -timeout 15m -coverpkg=./... -coverprofile=coverage.out"
 )
 
+// Integration tests require Docker
 object TestLinux : TestBuild(
     os = "Linux",
     agentName = "Ubuntu",
@@ -59,7 +61,7 @@ object TestLinux : TestBuild(
         sudo apt install -y golang-go
         export GOPROXY=https://proxy.golang.org,direct
         export GOROOT=/usr/lib/go-1.25
-        /usr/lib/go-1.25/bin/go test -v ./... -timeout 15m -coverpkg=./... -coverprofile=coverage.out
+        /usr/lib/go-1.25/bin/go test -tags=integration -v ./... -timeout 15m -coverpkg=./... -coverprofile=coverage.out
     """.trimIndent()
 )
 
