@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pkg/browser"
@@ -87,6 +88,22 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 		user = config.GetCurrentUser()
 		if user == "" {
 			return fmt.Errorf("@me requires login (username not found in config)")
+		}
+	}
+
+	// Validate status if provided
+	if opts.status != "" {
+		validStatuses := []string{"success", "failure", "running", "error", "unknown"}
+		status := strings.ToLower(opts.status)
+		valid := false
+		for _, v := range validStatuses {
+			if status == v {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("invalid status %q, must be one of: success, failure, running", opts.status)
 		}
 	}
 
