@@ -75,7 +75,7 @@ func TestProjectToken(T *testing.T) {
 	setupMockClient(T)
 
 	rootCmd := newRootCmd()
-	rootCmd.SetArgs([]string{"project", "token", "create", testProject, "test-secret-value"})
+	rootCmd.SetArgs([]string{"project", "token", "put", testProject, "test-secret-value"})
 	var out bytes.Buffer
 	rootCmd.SetOut(&out)
 	rootCmd.SetErr(&out)
