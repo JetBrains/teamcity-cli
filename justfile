@@ -13,7 +13,7 @@ unit:
     TC_INSECURE_SKIP_WARN=1 go test -v ./internal/config ./internal/errors ./internal/output ./internal/cmd
 
 test:
-    TC_INSECURE_SKIP_WARN=1 go test -v ./... -timeout 15m -coverprofile=coverage.out -coverpkg=./...
+    TC_INSECURE_SKIP_WARN=1 go test -v ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
 
 clean:
     rm -rf bin/ .env coverage.out
@@ -22,4 +22,4 @@ docs:
     go run scripts/generate-docs.go
 
 generate:
-      go generate ./...
+    go generate ./...
