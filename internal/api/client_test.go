@@ -305,13 +305,13 @@ func TestHumanizeErrorMessage(T *testing.T) {
 		{"nothing found with buildType locator", "Nothing is found by locator 'count:1,buildType:(id:Sandbox_Demo)'.", "no runs found for job 'Sandbox_Demo'"},
 		{"unrecognized message", "Some other error message", "Some other error message"},
 		{"empty message", "", ""},
-		{"nested parentheses", "No build types found by locator 'project:(id:Test)'.", "job 'project:(id:Test)' not found"},
+		{"nested parentheses", "No build types found by locator 'project:(id:Test)'.", "job 'Test' not found"}, // Now extracts ID
 		{"special chars in id", "No build types found by locator 'My_Project-Config'.", "job 'My_Project-Config' not found"},
 		{"complex locator", "Nothing is found by locator 'count:1,buildType:(id:My_Project_Build),branch:(default:any)'.", "no runs found for job 'My_Project_Build'"},
-		{"without buildType", "Nothing is found by locator 'count:1,project:(id:Test)'.", "Nothing is found by locator 'count:1,project:(id:Test)'."},
+		{"without buildType", "Nothing is found by locator 'count:1,project:(id:Test)'.", "resource 'Test' not found"}, // Now extracts ID
 		{"unicode", "No project found by locator '日本語プロジェクト'.", "project '日本語プロジェクト' not found"},
 		{"no locator pattern", "Some error without locator pattern", "Some error without locator pattern"},
-		{"incomplete buildType", "Nothing is found by locator 'buildType:(id:'.", "Nothing is found by locator 'buildType:(id:'."},
+		{"incomplete buildType", "Nothing is found by locator 'buildType:(id:'.", "resource '' not found"}, // Empty ID
 	}
 
 	for _, tc := range tests {
