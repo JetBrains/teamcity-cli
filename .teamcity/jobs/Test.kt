@@ -11,7 +11,7 @@ import jetbrains.buildServer.configs.kotlin.triggers.vcs
 abstract class TestBuild(
     private val os: String,
     private val agentName: String,
-    private val setupScript: String? = null
+    private val scriptContent: String
 ) : BuildType() {
     init {
         id("Test_$os")
@@ -19,7 +19,6 @@ abstract class TestBuild(
 
         params {
             param("env.TC_INSECURE_SKIP_WARN", "1")
-            param("env.GOPROXY", "https://proxy.golang.org,direct")
         }
 
         requirements {
@@ -31,15 +30,8 @@ abstract class TestBuild(
         }
 
         steps {
-            this@TestBuild.setupScript?.let {
-                script {
-                    id = "setup"
-                    scriptContent = it
-                }
-            }
             script {
-                id = "goTest"
-                scriptContent = "go test -v ./... -timeout 15m -coverpkg=./... -coverprofile=coverage.out"
+                this.scriptContent = this@TestBuild.scriptContent
             }
         }
 
@@ -54,16 +46,20 @@ abstract class TestBuild(
 
 object TestWindows : TestBuild(
     os = "Windows",
-    agentName = "Windows"
+    agentName = "Windows",
+    scriptContent = "go test -v ./... -timeout 15m -coverpkg=./... -coverprofile=coverage.out"
 )
 
 object TestLinux : TestBuild(
     os = "Linux",
     agentName = "Ubuntu",
-    setupScript = """
+    scriptContent = """
         sudo add-apt-repository ppa:longsleep/golang-backports
         sudo apt update
         sudo apt install -y golang-go
+        export GOPROXY=https://proxy.golang.org,direct
+        export GOROOT=/usr/lib/go-1.25
+        /usr/lib/go-1.25/bin/go test -v ./... -timeout 15m -coverpkg=./... -coverprofile=coverage.out
     """.trimIndent()
 )
 
