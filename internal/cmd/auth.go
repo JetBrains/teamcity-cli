@@ -18,6 +18,8 @@ func newAuthCmd() *cobra.Command {
 		Use:   "auth",
 		Short: "Authenticate with TeamCity",
 		Long:  `Manage authentication state for TeamCity servers.`,
+		Args:  cobra.NoArgs,
+		RunE:  subcommandRequired,
 	}
 
 	cmd.AddCommand(newAuthLoginCmd())

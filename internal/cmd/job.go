@@ -14,6 +14,8 @@ func newJobCmd() *cobra.Command {
 		Use:   "job",
 		Short: "Manage jobs (build configurations)",
 		Long:  `List and manage TeamCity jobs (build configurations).`,
+		Args:  cobra.NoArgs,
+		RunE:  subcommandRequired,
 	}
 
 	cmd.AddCommand(newJobListCmd())

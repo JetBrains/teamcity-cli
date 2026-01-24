@@ -46,6 +46,8 @@ func newParamCmd(resource string, api paramAPI) *cobra.Command {
 		Use:   "param",
 		Short: fmt.Sprintf("Manage %s parameters", resource),
 		Long:  fmt.Sprintf("List, get, set, and delete %s parameters.", resource),
+		Args:  cobra.NoArgs,
+		RunE:  subcommandRequired,
 	}
 
 	cmd.AddCommand(newParamListCmd(resource, api))

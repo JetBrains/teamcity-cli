@@ -9,6 +9,8 @@ func newRunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Manage runs (builds)",
 		Long:  `List, view, start, and manage TeamCity runs (builds).`,
+		Args:  cobra.NoArgs,
+		RunE:  subcommandRequired,
 	}
 
 	cmd.AddCommand(newRunListCmd())
