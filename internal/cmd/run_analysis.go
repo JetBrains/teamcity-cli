@@ -58,7 +58,7 @@ func runRunChanges(runID string, opts *runChangesOptions) error {
 		return nil
 	}
 
-	fmt.Printf("CHANGES (%d %s)\n\n", changes.Count, english.Plural(changes.Count, "commit", "commits"))
+	fmt.Printf("CHANGES (%d %s)\n\n", changes.Count, english.PluralWord(changes.Count, "commit", "commits"))
 
 	var firstSHA, lastSHA string
 	for i, c := range changes.Change {
