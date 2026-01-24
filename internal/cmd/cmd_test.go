@@ -379,3 +379,33 @@ func TestParentCommandWithoutSubcommand(T *testing.T) {
 		})
 	}
 }
+
+func TestInvalidStatusFilter(T *testing.T) {
+	setupMockClient(T)
+
+	rootCmd := newRootCmd()
+	rootCmd.SetArgs([]string{"run", "list", "--status", "invalid"})
+	var out bytes.Buffer
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+	err := rootCmd.Execute()
+	assert.Error(T, err, "expected error for invalid status")
+	assert.Contains(T, err.Error(), "invalid status")
+}
+
+func TestValidStatusFilter(T *testing.T) {
+	setupMockClient(T)
+
+	validStatuses := []string{"success", "failure", "running"}
+	for _, status := range validStatuses {
+		T.Run(status, func(t *testing.T) {
+			rootCmd := newRootCmd()
+			rootCmd.SetArgs([]string{"run", "list", "--status", status, "--limit", "1"})
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			err := rootCmd.Execute()
+			require.NoError(t, err, "expected no error for valid status %s", status)
+		})
+	}
+}
