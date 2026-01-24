@@ -257,25 +257,19 @@ func extractErrorMessage(body []byte) string {
 func humanizeErrorMessage(msg string) string {
 	// "No build types found by locator 'X'." -> "job 'X' not found"
 	if strings.HasPrefix(msg, "No build types found by locator '") {
-		id := strings.TrimPrefix(msg, "No build types found by locator '")
-		id = strings.TrimSuffix(id, "'.")
-		id = strings.TrimSuffix(id, "'")
+		id := extractIDFromLocator(msg, "No build types found by locator '")
 		return fmt.Sprintf("job '%s' not found", id)
 	}
 
 	// "No build found by locator 'X'." -> "run 'X' not found"
 	if strings.HasPrefix(msg, "No build found by locator '") {
-		id := strings.TrimPrefix(msg, "No build found by locator '")
-		id = strings.TrimSuffix(id, "'.")
-		id = strings.TrimSuffix(id, "'")
+		id := extractIDFromLocator(msg, "No build found by locator '")
 		return fmt.Sprintf("run '%s' not found", id)
 	}
 
 	// "No project found by locator 'X'." -> "project 'X' not found"
 	if strings.HasPrefix(msg, "No project found by locator '") {
-		id := strings.TrimPrefix(msg, "No project found by locator '")
-		id = strings.TrimSuffix(id, "'.")
-		id = strings.TrimSuffix(id, "'")
+		id := extractIDFromLocator(msg, "No project found by locator '")
 		return fmt.Sprintf("project '%s' not found", id)
 	}
 
@@ -292,7 +286,50 @@ func humanizeErrorMessage(msg string) string {
 		}
 	}
 
+	// Generic "Nothing is found by locator" errors
+	if strings.Contains(msg, "Nothing is found by locator") {
+		if start := strings.Index(msg, "id:"); start != -1 {
+			start += 3
+			end := strings.IndexAny(msg[start:], "',)")
+			if end != -1 {
+				id := msg[start : start+end]
+				return fmt.Sprintf("resource '%s' not found", id)
+			}
+		}
+	}
+
+	// Content-Type error typically means the build was not found in queue
+	if strings.Contains(msg, "Content-Type") && strings.Contains(msg, "header") {
+		return "build not found in queue"
+	}
+
 	return msg
+}
+
+// extractIDFromLocator extracts the ID from an error message containing a locator.
+// For "No X found by locator 'count:1,id:foo'...", returns "foo".
+// For simple locators like "id:foo", also returns "foo".
+func extractIDFromLocator(msg, prefix string) string {
+	locator := strings.TrimPrefix(msg, prefix)
+	// Find the closing quote of the locator
+	endQuote := strings.Index(locator, "'")
+	if endQuote != -1 {
+		locator = locator[:endQuote]
+	}
+
+	// Try to find "id:" in the locator and extract its value
+	if idStart := strings.Index(locator, "id:"); idStart != -1 {
+		idValue := locator[idStart+3:]
+		// The ID ends at comma, closing paren, or end of string
+		endIdx := strings.IndexAny(idValue, ",)")
+		if endIdx != -1 {
+			return idValue[:endIdx]
+		}
+		return idValue
+	}
+
+	// Fallback: return the whole locator if no "id:" found
+	return locator
 }
 
 func (c *Client) post(path string, body io.Reader, result interface{}) error {
