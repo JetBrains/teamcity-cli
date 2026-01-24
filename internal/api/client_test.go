@@ -392,3 +392,63 @@ func TestResolveBuildID(T *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestCleanupBuildTriggered(T *testing.T) {
+	T.Parallel()
+
+	T.Run("nil triggered", func(t *testing.T) {
+		t.Parallel()
+
+		build := Build{}
+		cleanupBuildTriggered(&build)
+		assert.Nil(t, build.Triggered)
+	})
+
+	T.Run("nil user", func(t *testing.T) {
+		t.Parallel()
+
+		build := Build{Triggered: &Triggered{Type: "vcs"}}
+		cleanupBuildTriggered(&build)
+		assert.Nil(t, build.Triggered.User)
+	})
+
+	T.Run("empty user struct removed", func(t *testing.T) {
+		t.Parallel()
+
+		build := Build{
+			Triggered: &Triggered{
+				Type: "user",
+				User: &User{}, // Empty user
+			},
+		}
+		cleanupBuildTriggered(&build)
+		assert.Nil(t, build.Triggered.User, "empty user should be nil")
+	})
+
+	T.Run("valid user preserved", func(t *testing.T) {
+		t.Parallel()
+
+		build := Build{
+			Triggered: &Triggered{
+				Type: "user",
+				User: &User{ID: 1, Username: "admin", Name: "Admin"},
+			},
+		}
+		cleanupBuildTriggered(&build)
+		assert.NotNil(t, build.Triggered.User, "valid user should be preserved")
+		assert.Equal(t, "admin", build.Triggered.User.Username)
+	})
+
+	T.Run("user with only username preserved", func(t *testing.T) {
+		t.Parallel()
+
+		build := Build{
+			Triggered: &Triggered{
+				Type: "user",
+				User: &User{Username: "testuser"},
+			},
+		}
+		cleanupBuildTriggered(&build)
+		assert.NotNil(t, build.Triggered.User, "user with username should be preserved")
+	})
+}

@@ -64,6 +64,8 @@ type Build struct {
 	Triggered          *Triggered `json:"triggered,omitempty"`
 	Agent              *Agent     `json:"agent,omitempty"`
 	PercentageComplete int        `json:"percentageComplete,omitempty"`
+	Pinned             bool       `json:"pinned,omitempty"`
+	Tags               *TagList   `json:"tags,omitempty"`
 }
 
 // BuildList represents a list of builds

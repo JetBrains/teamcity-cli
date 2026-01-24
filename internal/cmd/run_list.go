@@ -293,6 +293,18 @@ func runRunView(runID string, opts *runViewOptions) error {
 		fmt.Printf("\nAgent: %s\n", output.Faint(build.Agent.Name))
 	}
 
+	if build.Pinned {
+		fmt.Printf("\n%s\n", output.Yellow("📌 Pinned"))
+	}
+
+	if build.Tags != nil && len(build.Tags.Tag) > 0 {
+		var tagNames []string
+		for _, t := range build.Tags.Tag {
+			tagNames = append(tagNames, t.Name)
+		}
+		fmt.Printf("\nTags: %s\n", strings.Join(tagNames, ", "))
+	}
+
 	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(build.WebURL))
 
 	return nil

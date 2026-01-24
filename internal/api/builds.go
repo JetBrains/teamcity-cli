@@ -50,7 +50,21 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 		return nil, err
 	}
 
+	for i := range result.Builds {
+		cleanupBuildTriggered(&result.Builds[i])
+	}
+
 	return &result, nil
+}
+
+// cleanupBuildTriggered removes empty User objects from build trigger info
+func cleanupBuildTriggered(b *Build) {
+	if b.Triggered != nil && b.Triggered.User != nil {
+		u := b.Triggered.User
+		if u.ID == 0 && u.Username == "" && u.Name == "" && u.Email == "" {
+			b.Triggered.User = nil
+		}
+	}
 }
 
 // ResolveBuildID resolves a build reference to an ID.
