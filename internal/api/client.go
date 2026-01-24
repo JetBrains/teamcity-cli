@@ -234,13 +234,22 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 	}
 }
 
-// extractErrorMessage tries to extract a clean error message from TeamCity's API response.
-// Only the first error is used as it's typically the primary cause.
+// extractErrorMessage extracts a clean error message from TeamCity's API response.
 func extractErrorMessage(body []byte) string {
+	// Try JSON format first
 	var errResp APIErrorResponse
-	if err := json.Unmarshal(body, &errResp); err == nil && len(errResp.Errors) > 0 {
-		return humanizeErrorMessage(errResp.Errors[0].Message)
+	if err := json.Unmarshal(body, &errResp); err == nil {
+		if len(errResp.Errors) > 0 {
+			return humanizeErrorMessage(errResp.Errors[0].Message)
+		}
+		return ""
 	}
+
+	text := strings.TrimSpace(string(body))
+	if len(text) > 0 && len(text) < 200 && !strings.HasPrefix(text, "<") {
+		return humanizeErrorMessage(text)
+	}
+
 	return ""
 }
 

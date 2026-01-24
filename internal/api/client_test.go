@@ -275,9 +275,9 @@ func TestExtractErrorMessage(T *testing.T) {
 	}{
 		{"valid error response", `{"errors":[{"message":"No build types found by locator 'Test'."}]}`, "job 'Test' not found"},
 		{"empty errors array", `{"errors":[]}`, ""},
-		{"malformed JSON", `not json`, ""},
+		{"malformed JSON", `not json`, "not json"}, // Now handled as plain text
 		{"empty body", ``, ""},
-		{"missing errors field", `{"other":"field"}`, ""},
+		{"missing errors field", `{"other":"field"}`, ""}, // Valid JSON with no errors field
 	}
 
 	for _, tc := range tests {
