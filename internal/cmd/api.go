@@ -207,9 +207,16 @@ func outputAPIResponse(body []byte, statusCode int, respHeaders map[string][]str
 		fmt.Println()
 	}
 
+	isError := statusCode < 200 || statusCode >= 300
+	isHTML := len(body) > 0 && (strings.HasPrefix(strings.TrimSpace(string(body)), "<!") ||
+		strings.HasPrefix(strings.TrimSpace(string(body)), "<html"))
+
 	if len(body) > 0 {
 		if opts.raw {
 			fmt.Print(string(body))
+		} else if isHTML && isError {
+			// Don't dump HTML error pages, show clean error
+			output.Warn("Server returned HTML error page (status %d)", statusCode)
 		} else {
 			var jsonData interface{}
 			if err := json.Unmarshal(body, &jsonData); err == nil {
@@ -225,7 +232,7 @@ func outputAPIResponse(body []byte, statusCode int, respHeaders map[string][]str
 		}
 	}
 
-	if statusCode < 200 || statusCode >= 300 {
+	if isError {
 		if !opts.include && len(body) == 0 {
 			output.Warn("Request failed with status %d", statusCode)
 		}
