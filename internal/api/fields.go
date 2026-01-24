@@ -80,6 +80,7 @@ var BuildFields = FieldSpec{
 	Available: []string{
 		"id", "number", "status", "state", "href", "webUrl", "branchName", "defaultBranch",
 		"buildTypeId", "statusText", "queuedDate", "startDate", "finishDate", "percentageComplete",
+		"pinned", "tags.tag.name",
 		"buildType.id", "buildType.name", "buildType.projectName", "buildType.projectId", "buildType.href", "buildType.webUrl",
 		"triggered.type", "triggered.date", "triggered.user.name", "triggered.user.username",
 		"agent.id", "agent.name", "agent.href", "agent.webUrl",
