@@ -1,0 +1,36 @@
+jobs:
+  test_windows:
+    name: Test Windows
+    runs-on: Windows-Medium-Internal
+    steps:
+      - type: script
+        script-content: >-
+          go test -v ./... -timeout 15m -coverpkg=./...
+          -coverprofile=coverage.out
+  test_linux:
+    name: Test Linux
+    runs-on: Ubuntu-22.04-Medium-Internal
+    steps:
+      - type: script
+        script-content: >-
+          sudo add-apt-repository ppa:longsleep/golang-backports
+
+          sudo apt update
+
+          sudo apt install -y golang-go
+
+          export GOPROXY=https://proxy.golang.org,direct
+
+          export GOROOT=/usr/lib/go-1.25 
+
+          /usr/lib/go-1.25/bin/go test -v ./... -tags=integration -timeout 15m
+          -coverpkg=./... -coverprofile=coverage.out
+  Lint:
+    name: Lint
+    steps:
+      - type: script
+        docker-image: golangci/golangci-lint:latest
+        name: Lint
+        script-content: go fmt ./... && golangci-lint run --tests=false ./...
+parameters:
+  env.TC_INSECURE_SKIP_WARN: '1'
