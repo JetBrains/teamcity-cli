@@ -46,7 +46,7 @@ func newProjectListCmd() *cobra.Command {
 		Short: "List projects",
 		Long:  `List all TeamCity projects.`,
 		Example: `  tc project list
-  tc project list --parent AiPlatform
+  tc project list --parent Falcon
   tc project list --json
   tc project list --json=id,name,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -128,8 +128,8 @@ func newProjectViewCmd() *cobra.Command {
 		Short: "View project details",
 		Long:  `View details of a TeamCity project.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc project view Sandbox
-  tc project view Sandbox --web`,
+		Example: `  tc project view Falcon
+  tc project view Falcon --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runProjectView(args[0], opts)
 		},
@@ -216,13 +216,13 @@ and is not committed to version control.
 
 Requires EDIT_PROJECT permission (Project Administrator role).`,
 		Example: `  # Store a secret interactively (prompts for value)
-  tc project token put Sandbox
+  tc project token put Falcon
 
   # Store a secret from a value
-  tc project token put Sandbox "my-secret-password"
+  tc project token put Falcon "my-secret-password"
 
   # Store a secret from stdin (useful for piping)
-  echo -n "my-secret" | tc project token put Sandbox --stdin
+  echo -n "my-secret" | tc project token put Falcon --stdin
 
   # Use the token in versioned settings
   # password: credentialsJSON:<returned-token>`,
@@ -289,8 +289,8 @@ func newProjectTokenGetCmd() *cobra.Command {
 
 This operation requires CHANGE_SERVER_SETTINGS permission,
 which is only available to System Administrators.`,
-		Example: `  tc project token get Sandbox "credentialsJSON:abc123..."
-  tc project token get Sandbox "abc123..."`,
+		Example: `  tc project token get Falcon "credentialsJSON:abc123..."
+  tc project token get Falcon "abc123..."`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runProjectTokenGet(args[0], args[1])

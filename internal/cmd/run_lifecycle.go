@@ -45,12 +45,12 @@ func newRunStartCmd() *cobra.Command {
 		Use:   "start <job-id>",
 		Short: "Start a new run",
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run start Sandbox_Demo
-  tc run start Sandbox_Demo --branch feature/test
-  tc run start Sandbox_Demo -P version=1.0 -S build.number=123 -E CI=true
-  tc run start Sandbox_Demo --comment "Release build" --tag release --tag v1.0
-  tc run start Sandbox_Demo --clean --rebuild-deps --top
-  tc run start Sandbox_Demo --dry-run`,
+		Example: `  tc run start Falcon_Build
+  tc run start Falcon_Build --branch feature/test
+  tc run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
+  tc run start Falcon_Build --comment "Release build" --tag release --tag v1.0
+  tc run start Falcon_Build --clean --rebuild-deps --top
+  tc run start Falcon_Build --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunStart(args[0], opts)
 		},

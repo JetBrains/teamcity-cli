@@ -143,7 +143,7 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 		},
 		Example: `  tc run tests 12345
   tc run tests 12345 --failed
-  tc run tests --job Sandbox_Demo`,
+  tc run tests --job Falcon_Build`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var runID string
 			if len(args) > 0 {

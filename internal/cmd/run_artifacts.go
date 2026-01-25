@@ -121,7 +121,7 @@ You can specify a run ID directly, or use --job to get the latest run's log.`,
 		},
 		Example: `  tc run log 12345
   tc run log 12345 --failed
-  tc run log --job Sandbox_Demo`,
+  tc run log --job Falcon_Build`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var runID string
 			if len(args) > 0 {

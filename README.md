@@ -386,9 +386,9 @@ List recent runs
 
 ```bash
 tc run list
-tc run list --job Sandbox_Demo
+tc run list --job Falcon_Build
 tc run list --status failure --limit 10
-tc run list --project Sandbox --branch main
+tc run list --project Falcon --branch main
 tc run list --since 24h
 tc run list --json
 tc run list --json=id,status,webUrl
@@ -416,7 +416,7 @@ View the log output from a run.
 ```bash
 tc run log 12345
 tc run log 12345 --failed
-tc run log --job Sandbox_Demo
+tc run log --job Falcon_Build
 ```
 
 **Options:**
@@ -463,12 +463,12 @@ tc run restart 12345 --watch
 Start a new run
 
 ```bash
-tc run start Sandbox_Demo
-tc run start Sandbox_Demo --branch feature/test
-tc run start Sandbox_Demo -P version=1.0 -S build.number=123 -E CI=true
-tc run start Sandbox_Demo --comment "Release build" --tag release --tag v1.0
-tc run start Sandbox_Demo --clean --rebuild-deps --top
-tc run start Sandbox_Demo --dry-run
+tc run start Falcon_Build
+tc run start Falcon_Build --branch feature/test
+tc run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
+tc run start Falcon_Build --comment "Release build" --tag release --tag v1.0
+tc run start Falcon_Build --clean --rebuild-deps --top
+tc run start Falcon_Build --dry-run
 ```
 
 **Options:**
@@ -505,7 +505,7 @@ Show test results from a run.
 ```bash
 tc run tests 12345
 tc run tests 12345 --failed
-tc run tests --job Sandbox_Demo
+tc run tests --job Falcon_Build
 ```
 
 **Options:**
@@ -569,7 +569,7 @@ List jobs
 
 ```bash
 tc job list
-tc job list --project Sandbox
+tc job list --project Falcon
 tc job list --json
 tc job list --json=id,name,webUrl
 ```
@@ -625,7 +625,7 @@ tc job param set MyID SECRET_KEY "****" --secure
 Pause a job to prevent new runs from being triggered.
 
 ```bash
-tc job pause Sandbox_Demo
+tc job pause Falcon_Build
 ```
 
 ### job resume
@@ -633,7 +633,7 @@ tc job pause Sandbox_Demo
 Resume a paused job (build configuration) to allow new runs (builds).
 
 ```bash
-tc job resume Sandbox_Demo
+tc job resume Falcon_Build
 ```
 
 ### job view
@@ -641,8 +641,8 @@ tc job resume Sandbox_Demo
 View job details
 
 ```bash
-tc job view Sandbox_Demo
-tc job view Sandbox_Demo --web
+tc job view Falcon_Build
+tc job view Falcon_Build --web
 ```
 
 **Options:**
@@ -659,7 +659,7 @@ List all TeamCity projects.
 
 ```bash
 tc project list
-tc project list --parent AiPlatform
+tc project list --parent Falcon
 tc project list --json
 tc project list --json=id,name,webUrl
 ```
@@ -715,8 +715,8 @@ tc project param set MyID SECRET_KEY "****" --secure
 Retrieve the original value for a secure token.
 
 ```bash
-tc project token get Sandbox "credentialsJSON:abc123..."
-tc project token get Sandbox "abc123..."
+tc project token get Falcon "credentialsJSON:abc123..."
+tc project token get Falcon "abc123..."
 ```
 
 ### project token put
@@ -725,13 +725,13 @@ Store a sensitive value and get a secure token reference.
 
 ```bash
 # Store a secret interactively (prompts for value)
-tc project token put Sandbox
+tc project token put Falcon
 
 # Store a secret from a value
-tc project token put Sandbox "my-secret-password"
+tc project token put Falcon "my-secret-password"
 
 # Store a secret from stdin (useful for piping)
-echo -n "my-secret" | tc project token put Sandbox --stdin
+echo -n "my-secret" | tc project token put Falcon --stdin
 
 # Use the token in versioned settings
 # password: credentialsJSON:<returned-token>
@@ -745,8 +745,8 @@ echo -n "my-secret" | tc project token put Sandbox --stdin
 View details of a TeamCity project.
 
 ```bash
-tc project view Sandbox
-tc project view Sandbox --web
+tc project view Falcon
+tc project view Falcon --web
 ```
 
 **Options:**
@@ -771,7 +771,7 @@ List all runs in the TeamCity queue.
 
 ```bash
 tc queue list
-tc queue list --job Sandbox_Demo
+tc queue list --job Falcon_Build
 tc queue list --json
 tc queue list --json=id,state,webUrl
 ```

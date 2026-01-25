@@ -40,7 +40,7 @@ func newQueueListCmd() *cobra.Command {
 		Short: "List queued runs",
 		Long:  `List all runs in the TeamCity queue.`,
 		Example: `  tc queue list
-  tc queue list --job Sandbox_Demo
+  tc queue list --job Falcon_Build
   tc queue list --json
   tc queue list --json=id,state,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -40,7 +40,7 @@ func newJobListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List jobs",
 		Example: `  tc job list
-  tc job list --project Sandbox
+  tc job list --project Falcon
   tc job list --json
   tc job list --json=id,name,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -122,8 +122,8 @@ func newJobViewCmd() *cobra.Command {
 		Use:   "view <job-id>",
 		Short: "View job details",
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc job view Sandbox_Demo
-  tc job view Sandbox_Demo --web`,
+		Example: `  tc job view Falcon_Build
+  tc job view Falcon_Build --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runJobView(args[0], opts)
 		},
@@ -175,7 +175,7 @@ func newJobPauseCmd() *cobra.Command {
 		Short:   "Pause a job",
 		Long:    `Pause a job to prevent new runs from being triggered.`,
 		Args:    cobra.ExactArgs(1),
-		Example: `  tc job pause Sandbox_Demo`,
+		Example: `  tc job pause Falcon_Build`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runJobPause(args[0])
 		},
@@ -204,7 +204,7 @@ func newJobResumeCmd() *cobra.Command {
 		Short:   "Resume a paused job (build configuration)",
 		Long:    `Resume a paused job (build configuration) to allow new runs (builds).`,
 		Args:    cobra.ExactArgs(1),
-		Example: `  tc job resume Sandbox_Demo`,
+		Example: `  tc job resume Falcon_Build`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runJobResume(args[0])
 		},

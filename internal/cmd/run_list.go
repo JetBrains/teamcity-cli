@@ -34,9 +34,9 @@ func newRunListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List recent runs",
 		Example: `  tc run list
-  tc run list --job Sandbox_Demo
+  tc run list --job Falcon_Build
   tc run list --status failure --limit 10
-  tc run list --project Sandbox --branch main
+  tc run list --project Falcon --branch main
   tc run list --since 24h
   tc run list --json
   tc run list --json=id,status,webUrl
