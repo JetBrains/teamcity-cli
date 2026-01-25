@@ -2,10 +2,8 @@ package api
 
 import "io"
 
-//go:generate moq -rm -pkg mocks -skip-ensure -out mocks/client_mock.go . ClientInterface
-
 // ClientInterface defines the TeamCity API client interface.
-// This interface enables mock generation for testing commands without HTTP servers.
+// Cmd package uses this interface for dependency injection in tests.
 type ClientInterface interface {
 	// Server
 	GetServer() (*Server, error)
