@@ -9,12 +9,12 @@ import jetbrains.buildServer.configs.kotlin.buildFeatures.pullRequests
 private const val GITHUB_API_URL = "https://api.github.com"
 
 fun BuildFeatures.gitHubIntegration() {
-    commitStatusPublisher {
-        publisher = github {
-            githubUrl = GITHUB_API_URL
-            authType = vcsRoot()
-        }
-    }
+//    commitStatusPublisher {
+//        publisher = github {
+//            githubUrl = GITHUB_API_URL
+//            authType = vcsRoot()
+//        }
+//    }
     pullRequests {
         vcsRootExtId = "${DslContext.settingsRoot.id}"
         provider = github {
