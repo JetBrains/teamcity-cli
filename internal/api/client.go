@@ -192,7 +192,13 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 }
 
 func (c *Client) get(path string, result interface{}) error {
-	resp, err := c.doRequest("GET", path, nil)
+	return c.getWithRetry(path, result, ReadRetry)
+}
+
+func (c *Client) getWithRetry(path string, result interface{}, retry RetryConfig) error {
+	resp, err := withRetry(retry, func() (*http.Response, error) {
+		return c.doRequest("GET", path, nil)
+	})
 	if err != nil {
 		return tcerrors.NetworkError(c.BaseURL, err)
 	}
@@ -332,8 +338,16 @@ func extractIDFromLocator(msg, prefix string) string {
 	return locator
 }
 
+// post performs a POST request without retry (non-idempotent by default).
 func (c *Client) post(path string, body io.Reader, result interface{}) error {
-	resp, err := c.doRequest("POST", path, body)
+	return c.postWithRetry(path, body, result, NoRetry)
+}
+
+// postWithRetry performs a POST request with configurable retry.
+func (c *Client) postWithRetry(path string, body io.Reader, result interface{}, retry RetryConfig) error {
+	resp, err := withRetry(retry, func() (*http.Response, error) {
+		return c.doRequest("POST", path, body)
+	})
 	if err != nil {
 		return tcerrors.NetworkError(c.BaseURL, err)
 	}
