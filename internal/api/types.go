@@ -175,9 +175,9 @@ type Tag struct {
 
 // ApprovalInfo represents approval information for a queued build
 type ApprovalInfo struct {
-	Status             string `json:"status"`
-	ConfigurationValid bool   `json:"configurationValid"`
-	CanBeApproved      bool   `json:"canBeApproved"`
+	Status                     string `json:"status"`
+	ConfigurationValid         bool   `json:"configurationValid"`
+	CanBeApprovedByCurrentUser bool   `json:"canBeApprovedByCurrentUser"`
 }
 
 // BuildTypeRef is a reference to a build type
