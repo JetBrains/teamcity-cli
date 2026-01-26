@@ -275,8 +275,10 @@ func runProjectTokenPut(projectID, value string, opts *projectTokenPutOptions) e
 
 	fmt.Println(token)
 
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, output.Faint("Use in versioned settings as: credentialsJSON:"+token))
+	if strings.HasPrefix(token, "credentialsJSON:") {
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, output.Faint("Use in versioned settings as: "+token))
+	}
 
 	return nil
 }
