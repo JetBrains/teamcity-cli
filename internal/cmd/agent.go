@@ -136,14 +136,7 @@ func formatAgentStatus(a api.Agent) string {
 	return output.Green("Connected")
 }
 
-type agentViewOptions struct {
-	json bool
-	web  bool
-}
-
 func newAgentViewCmd() *cobra.Command {
-	opts := &agentViewOptions{}
-
 	opts := &viewOptions{}
 	cmd := &cobra.Command{
 		Use:   "view <agent-id>",
