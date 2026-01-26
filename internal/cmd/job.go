@@ -160,60 +160,39 @@ func runJobView(jobID string, opts *viewOptions) error {
 	return nil
 }
 
-func newJobPauseCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "pause <job-id>",
-		Short:   "Pause a job",
-		Long:    `Pause a job to prevent new runs from being triggered.`,
+type jobStateAction struct {
+	use    string
+	short  string
+	long   string
+	verb   string
+	paused bool
+}
+
+var jobStateActions = map[string]jobStateAction{
+	"pause":  {"pause", "Pause a job", "Pause a job to prevent new runs from being triggered.", "Paused", true},
+	"resume": {"resume", "Resume a paused job", "Resume a paused job to allow new runs.", "Resumed", false},
+}
+
+func newJobStateCmd(a jobStateAction) *cobra.Command {
+	return &cobra.Command{
+		Use:     fmt.Sprintf("%s <job-id>", a.use),
+		Short:   a.short,
+		Long:    a.long,
 		Args:    cobra.ExactArgs(1),
-		Example: `  tc job pause Falcon_Build`,
+		Example: fmt.Sprintf("  tc job %s Falcon_Build", a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runJobPause(args[0])
+			client, err := getClient()
+			if err != nil {
+				return err
+			}
+			if err := client.SetBuildTypePaused(args[0], a.paused); err != nil {
+				return fmt.Errorf("failed to %s job: %w", a.use, err)
+			}
+			output.Success("%s job %s", a.verb, args[0])
+			return nil
 		},
 	}
-
-	return cmd
 }
 
-func runJobPause(jobID string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if err := client.SetBuildTypePaused(jobID, true); err != nil {
-		return fmt.Errorf("failed to pause job: %w", err)
-	}
-
-	output.Success("Paused job %s", jobID)
-	return nil
-}
-
-func newJobResumeCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "resume <job-id>",
-		Short:   "Resume a paused job (build configuration)",
-		Long:    `Resume a paused job (build configuration) to allow new runs (builds).`,
-		Args:    cobra.ExactArgs(1),
-		Example: `  tc job resume Falcon_Build`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runJobResume(args[0])
-		},
-	}
-
-	return cmd
-}
-
-func runJobResume(jobID string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if err := client.SetBuildTypePaused(jobID, false); err != nil {
-		return fmt.Errorf("failed to resume job: %w", err)
-	}
-
-	output.Success("Resumed job %s", jobID)
-	return nil
-}
+func newJobPauseCmd() *cobra.Command  { return newJobStateCmd(jobStateActions["pause"]) }
+func newJobResumeCmd() *cobra.Command { return newJobStateCmd(jobStateActions["resume"]) }

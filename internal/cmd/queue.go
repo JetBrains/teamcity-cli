@@ -165,60 +165,45 @@ func runQueueRemove(runID string, opts *queueRemoveOptions) error {
 	return nil
 }
 
-func newQueueTopCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "top <run-id>",
-		Short:   "Move a run to the top of the queue",
-		Long:    `Move a queued run to the top of the queue, giving it highest priority.`,
+type queueAction struct {
+	use     string
+	short   string
+	long    string
+	verb    string
+	execute func(api.ClientInterface, string) error
+}
+
+var queueActions = map[string]queueAction{
+	"top": {"top", "Move a run to the top of the queue",
+		"Move a queued run to the top of the queue, giving it highest priority.",
+		"Moved run %s to top of queue",
+		func(c api.ClientInterface, id string) error { return c.MoveQueuedBuildToTop(id) }},
+	"approve": {"approve", "Approve a queued run",
+		"Approve a queued run that requires manual approval before it can run.",
+		"Approved run %s",
+		func(c api.ClientInterface, id string) error { return c.ApproveQueuedBuild(id) }},
+}
+
+func newQueueActionCmd(a queueAction) *cobra.Command {
+	return &cobra.Command{
+		Use:     fmt.Sprintf("%s <run-id>", a.use),
+		Short:   a.short,
+		Long:    a.long,
 		Args:    cobra.ExactArgs(1),
-		Example: `  tc queue top 12345`,
+		Example: fmt.Sprintf("  tc queue %s 12345", a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runQueueTop(args[0])
+			client, err := getClient()
+			if err != nil {
+				return err
+			}
+			if err := a.execute(client, args[0]); err != nil {
+				return fmt.Errorf("failed to %s run: %w", a.use, err)
+			}
+			output.Success(a.verb, args[0])
+			return nil
 		},
 	}
-
-	return cmd
 }
 
-func runQueueTop(runID string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if err := client.MoveQueuedBuildToTop(runID); err != nil {
-		return fmt.Errorf("failed to move run to top of queue: %w", err)
-	}
-
-	output.Success("Moved run %s to top of queue", runID)
-	return nil
-}
-
-func newQueueApproveCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "approve <run-id>",
-		Short:   "Approve a queued run",
-		Long:    `Approve a queued run that requires manual approval before it can run.`,
-		Args:    cobra.ExactArgs(1),
-		Example: `  tc queue approve 12345`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runQueueApprove(args[0])
-		},
-	}
-
-	return cmd
-}
-
-func runQueueApprove(runID string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if err := client.ApproveQueuedBuild(runID); err != nil {
-		return fmt.Errorf("failed to approve run: %w", err)
-	}
-
-	output.Success("Approved run %s", runID)
-	return nil
-}
+func newQueueTopCmd() *cobra.Command     { return newQueueActionCmd(queueActions["top"]) }
+func newQueueApproveCmd() *cobra.Command { return newQueueActionCmd(queueActions["approve"]) }
