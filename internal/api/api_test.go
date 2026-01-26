@@ -538,3 +538,61 @@ func TestSupportsFeature(T *testing.T) {
 
 	assert.True(T, client.SupportsFeature("unknown_feature"))
 }
+
+func TestUploadDiffChanges(T *testing.T) {
+	T.Parallel()
+
+	patch := []byte(`--- a/test.txt
++++ b/test.txt
+@@ -1 +1 @@
+-hello
++hello world
+`)
+
+	changeID, err := client.UploadDiffChanges(patch, "Integration test patch")
+	require.NoError(T, err)
+	assert.NotEmpty(T, changeID)
+	T.Logf("Uploaded change ID: %s", changeID)
+}
+
+func TestPersonalBuildWithLocalChanges(T *testing.T) {
+	patch := []byte(`--- a/test.txt
++++ b/test.txt
+@@ -1 +1 @@
+-hello
++hello from personal build test
+`)
+
+	changeID, err := client.UploadDiffChanges(patch, "Personal build test")
+	require.NoError(T, err)
+	require.NotEmpty(T, changeID)
+	T.Logf("Uploaded change ID: %s", changeID)
+
+	build, err := client.RunBuild(testConfig, api.RunBuildOptions{
+		Personal:         true,
+		PersonalChangeID: changeID,
+		Comment:          "Personal build with local changes",
+	})
+	require.NoError(T, err)
+	T.Logf("Started personal build #%d", build.ID)
+
+	fetched, err := client.GetBuild(fmt.Sprintf("%d", build.ID))
+	require.NoError(T, err)
+	assert.True(T, fetched.Personal, "build should be marked as personal")
+	T.Logf("Build personal=%v", fetched.Personal)
+
+	if fetched.LastChanges != nil && len(fetched.LastChanges.Change) > 0 {
+		T.Logf("Build has %d changes", len(fetched.LastChanges.Change))
+		for _, c := range fetched.LastChanges.Change {
+			T.Logf("  Change ID=%d", c.ID)
+		}
+		assert.Equal(T, changeID, fmt.Sprintf("%d", fetched.LastChanges.Change[0].ID), "change ID should match")
+	}
+
+	if fetched.State == "queued" || fetched.State == "running" {
+		err = client.CancelBuild(fmt.Sprintf("%d", build.ID), "Integration test cleanup")
+		if err != nil {
+			T.Logf("CancelBuild warning (may have finished): %v", err)
+		}
+	}
+}

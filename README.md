@@ -545,6 +545,8 @@ tc run start Falcon_Build --branch feature/test
 tc run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
 tc run start Falcon_Build --comment "Release build" --tag release --tag v1.0
 tc run start Falcon_Build --clean --rebuild-deps --top
+tc run start Falcon_Build --local-changes # personal build with uncommitted Git changes
+tc run start Falcon_Build --local-changes changes.patch  # from file
 tc run start Falcon_Build --dry-run
 ```
 
@@ -556,6 +558,7 @@ tc run start Falcon_Build --dry-run
 - `-n, --dry-run` – Show what would be triggered without running
 - `-E, --env` – Environment variables (key=value)
 - `--json` – Output as JSON (for scripting)
+- `-l, --local-changes` – Include local changes (git, -, or path; default: git)
 - `-P, --param` – Build parameters (key=value)
 - `--personal` – Run as personal build
 - `--rebuild-deps` – Rebuild all dependencies
