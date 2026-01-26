@@ -1,8 +1,6 @@
 //go:build ignore
-// +build ignore
 
 // Script to generate CLI documentation in README.md from cobra commands.
-// Extracts command structure, flags, and examples from the actual code.
 package main
 
 import (
@@ -16,17 +14,18 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
-// Command group ordering and display names
-var groupOrder = []string{"auth", "run", "job", "project", "queue", "api"}
-var groupNames = map[string]string{
-	"auth":    "Authentication",
-	"run":     "Runs",
-	"job":     "Jobs",
-	"project": "Projects",
-	"queue":   "Queue",
-	"api":     "API",
+// Preferred ordering (unlisted commands added alphabetically at end).
+var preferredOrder = []string{"auth", "run", "job", "project", "queue", "agent", "pool", "api"}
+
+// Custom display names for commands that need special treatment.
+var displayNames = map[string]string{
+	"api":  "API",
+	"auth": "Authentication",
+	"pool": "Agent Pools",
 }
 
 func main() {
@@ -61,158 +60,118 @@ func main() {
 
 func replaceBetweenMarkers(content, generated string) string {
 	re := regexp.MustCompile(`(?s)<!-- COMMANDS_START -->.*<!-- COMMANDS_END -->`)
-	replacement := "<!-- COMMANDS_START -->\n\n" + generated + "<!-- COMMANDS_END -->"
-	return re.ReplaceAllString(content, replacement)
+	return re.ReplaceAllString(content, "<!-- COMMANDS_START -->\n\n"+generated+"<!-- COMMANDS_END -->")
 }
 
 func generateDocs(buf *bytes.Buffer, rootCmd *cobra.Command) {
-	cmdMap := make(map[string]*cobra.Command)
+	// Collect commands
+	cmds := make(map[string]*cobra.Command)
 	for _, c := range rootCmd.Commands() {
 		if c.Name() != "help" && c.Name() != "completion" {
-			cmdMap[c.Name()] = c
+			cmds[c.Name()] = c
 		}
 	}
 
-	// Generate docs in the specified order
-	for i, groupName := range groupOrder {
-		c, exists := cmdMap[groupName]
-		if !exists {
-			continue
+	// Order: preferred first, then remaining alphabetically
+	seen := make(map[string]bool)
+	var names []string
+	for _, name := range preferredOrder {
+		if _, ok := cmds[name]; ok {
+			names = append(names, name)
+			seen[name] = true
 		}
+	}
+	var rest []string
+	for name := range cmds {
+		if !seen[name] {
+			rest = append(rest, name)
+		}
+	}
+	sort.Strings(rest)
+	names = append(names, rest...)
 
-		displayName := groupNames[groupName]
-		buf.WriteString(fmt.Sprintf("## %s\n\n", displayName))
-
-		generateGroupDocs(buf, c)
-
-		// Add separator between groups, but not after the last one
-		if i < len(groupOrder)-1 {
+	for i, name := range names {
+		buf.WriteString(fmt.Sprintf("## %s\n\n", displayName(name)))
+		generateGroupDocs(buf, cmds[name])
+		if i < len(names)-1 {
 			buf.WriteString("---\n\n")
 		}
 	}
 }
 
-func generateGroupDocs(buf *bytes.Buffer, cmd *cobra.Command) {
-	subCmds := getSortedCommands(cmd)
+func displayName(name string) string {
+	if dn, ok := displayNames[name]; ok {
+		return dn
+	}
+	return cases.Title(language.English).String(name) + "s"
+}
 
+func generateGroupDocs(buf *bytes.Buffer, c *cobra.Command) {
+	subCmds := sortedCommands(c)
 	if len(subCmds) == 0 {
-		generateLeafCommandDocs(buf, cmd)
+		writeCommandDoc(buf, "", c)
 		return
 	}
 
 	for _, sub := range subCmds {
-		subSubCmds := getSortedCommands(sub)
-		if len(subSubCmds) > 0 {
-			for _, subSub := range subSubCmds {
-				generateSubcommandDocs(buf, cmd.Name(), sub.Name()+" "+subSub.Name(), subSub)
+		subSubs := sortedCommands(sub)
+		if len(subSubs) > 0 {
+			for _, subSub := range subSubs {
+				writeCommandDoc(buf, c.Name()+" "+sub.Name(), subSub)
 			}
 		} else {
-			generateSubcommandDocs(buf, cmd.Name(), sub.Name(), sub)
+			writeCommandDoc(buf, c.Name(), sub)
 		}
 	}
 }
 
-func generateLeafCommandDocs(buf *bytes.Buffer, cmd *cobra.Command) {
-	if cmd.Long != "" {
-		parts := strings.SplitN(cmd.Long, "\n\n", 2)
-		buf.WriteString(fmt.Sprintf("%s\n\n", parts[0]))
-	} else if cmd.Short != "" {
-		buf.WriteString(fmt.Sprintf("%s\n\n", cmd.Short))
+func writeCommandDoc(buf *bytes.Buffer, prefix string, c *cobra.Command) {
+	if prefix != "" {
+		buf.WriteString(fmt.Sprintf("### %s %s\n\n", prefix, c.Name()))
 	}
 
-	if cmd.Example != "" {
-		buf.WriteString("```bash\n")
-		buf.WriteString(cleanupExample(cmd.Example))
-		buf.WriteString("\n```\n\n")
+	if c.Long != "" {
+		buf.WriteString(c.Long + "\n\n")
+	} else if c.Short != "" {
+		buf.WriteString(c.Short + "\n\n")
 	}
 
-	writeOptions(buf, cmd)
-}
-
-func generateSubcommandDocs(buf *bytes.Buffer, parentName, subName string, cmd *cobra.Command) {
-	buf.WriteString(fmt.Sprintf("### %s %s\n\n", parentName, subName))
-
-	if cmd.Long != "" {
-		parts := strings.SplitN(cmd.Long, "\n\n", 2)
-		buf.WriteString(fmt.Sprintf("%s\n\n", parts[0]))
-	} else if cmd.Short != "" {
-		buf.WriteString(fmt.Sprintf("%s\n\n", cmd.Short))
+	if c.Example != "" {
+		buf.WriteString("```bash\n" + cleanExample(c.Example) + "\n```\n\n")
 	}
 
-	if parentName == "auth" && strings.HasPrefix(subName, "login") {
-		buf.WriteString("This will:\n")
-		buf.WriteString("1. Prompt for your TeamCity server URL\n")
-		buf.WriteString("2. Open your browser to generate an access token\n")
-		buf.WriteString("3. Validate and store the token securely\n\n")
-	}
-
-	if cmd.Example != "" {
-		buf.WriteString("```bash\n")
-		buf.WriteString(cleanupExample(cmd.Example))
-		buf.WriteString("\n```\n\n")
-	}
-
-	writeOptions(buf, cmd)
-
-	if parentName == "auth" && strings.HasPrefix(subName, "login") {
-		buf.WriteString("**Environment variables** (for CI/CD):\n\n")
-		buf.WriteString("```bash\n")
-		buf.WriteString("export TEAMCITY_URL=\"https://teamcity.example.com\"\n")
-		buf.WriteString("export TEAMCITY_TOKEN=\"your-access-token\"\n")
-		buf.WriteString("```\n\n")
-	}
-
-	if parentName == "run" && subName == "log" {
-		buf.WriteString("**Log viewer features:**\n")
-		buf.WriteString("- **Mouse/Touchpad scrolling** – Scroll naturally with your trackpad\n")
-		buf.WriteString("- **Search** – Press `/` to search forward, `?` to search backward\n")
-		buf.WriteString("- **Navigation** – `n`/`N` for next/previous match, `g`/`G` for top/bottom\n")
-		buf.WriteString("- **Filter** – `&pattern` to show only matching lines\n")
-		buf.WriteString("- **Quit** – Press `q` to exit\n\n")
-		buf.WriteString("Use `--raw` to bypass the pager.\n\n")
-	}
-}
-
-func writeOptions(buf *bytes.Buffer, cmd *cobra.Command) {
-	flags := getFlags(cmd)
-	if len(flags) == 0 {
-		return
-	}
-
-	buf.WriteString("**Options:**\n")
-	for _, f := range flags {
-		if f.Shorthand != "" {
-			buf.WriteString(fmt.Sprintf("- `-%s, --%s` – %s\n", f.Shorthand, f.Name, f.Usage))
-		} else {
-			buf.WriteString(fmt.Sprintf("- `--%s` – %s\n", f.Name, f.Usage))
+	if flags := getFlags(c); len(flags) > 0 {
+		buf.WriteString("**Options:**\n")
+		for _, f := range flags {
+			if f.Shorthand != "" {
+				buf.WriteString(fmt.Sprintf("- `-%s, --%s` – %s\n", f.Shorthand, f.Name, f.Usage))
+			} else {
+				buf.WriteString(fmt.Sprintf("- `--%s` – %s\n", f.Name, f.Usage))
+			}
 		}
+		buf.WriteString("\n")
 	}
-	buf.WriteString("\n")
 }
 
-func getSortedCommands(cmd *cobra.Command) []*cobra.Command {
-	cmds := cmd.Commands()
-	sort.Slice(cmds, func(i, j int) bool {
-		return cmds[i].Name() < cmds[j].Name()
-	})
+func sortedCommands(c *cobra.Command) []*cobra.Command {
+	cmds := c.Commands()
+	sort.Slice(cmds, func(i, j int) bool { return cmds[i].Name() < cmds[j].Name() })
 	return cmds
 }
 
-func getFlags(cmd *cobra.Command) []*pflag.Flag {
-	var flags []*pflag.Flag
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+func getFlags(c *cobra.Command) (flags []*pflag.Flag) {
+	c.Flags().VisitAll(func(f *pflag.Flag) {
 		if f.Name != "help" {
 			flags = append(flags, f)
 		}
 	})
-	return flags
+	return
 }
 
-func cleanupExample(s string) string {
-	lines := strings.Split(strings.TrimSpace(s), "\n")
-	var result []string
-	for _, line := range lines {
-		result = append(result, strings.TrimPrefix(line, "  "))
+func cleanExample(s string) string {
+	var lines []string
+	for _, line := range strings.Split(strings.TrimSpace(s), "\n") {
+		lines = append(lines, strings.TrimPrefix(line, "  "))
 	}
-	return strings.Join(result, "\n")
+	return strings.Join(lines, "\n")
 }

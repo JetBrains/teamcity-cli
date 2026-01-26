@@ -112,7 +112,10 @@ func newRunLogCmd() *cobra.Command {
 		Short: "View run log",
 		Long: `View the log output from a run.
 
-You can specify a run ID directly, or use --job to get the latest run's log.`,
+You can specify a run ID directly, or use --job to get the latest run's log.
+
+Pager: / search, n/N next/prev, g/G top/bottom, q quit.
+Use --raw to bypass the pager.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.Flags().Changed("job") {
 				return tcerrors.MutuallyExclusive("run-id", "job")

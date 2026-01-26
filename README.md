@@ -12,9 +12,13 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
 
 
 <!-- TOC -->
-* [tc – TeamCity CLI](#tc--teamcity-cli)
+* [TeamCity CLI](#teamcity-cli)
   * [Why tc?](#why-tc)
   * [Installation](#installation)
+    * [macOS & Linux](#macos--linux)
+    * [Windows](#windows)
+    * [Go](#go)
+    * [Build from source](#build-from-source)
   * [Quick Start](#quick-start)
   * [Commands](#commands)
   * [Configuration](#configuration)
@@ -60,11 +64,25 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
     * [project token get](#project-token-get)
     * [project token put](#project-token-put)
     * [project view](#project-view)
-  * [Queue](#queue)
+  * [Queues](#queues)
     * [queue approve](#queue-approve)
     * [queue list](#queue-list)
     * [queue remove](#queue-remove)
     * [queue top](#queue-top)
+  * [Agents](#agents)
+    * [agent authorize](#agent-authorize)
+    * [agent deauthorize](#agent-deauthorize)
+    * [agent disable](#agent-disable)
+    * [agent enable](#agent-enable)
+    * [agent jobs](#agent-jobs)
+    * [agent list](#agent-list)
+    * [agent move](#agent-move)
+    * [agent view](#agent-view)
+  * [Agent Pools](#agent-pools)
+    * [pool link](#pool-link)
+    * [pool list](#pool-list)
+    * [pool unlink](#pool-unlink)
+    * [pool view](#pool-view)
   * [API](#api)
   * [License](#license)
 <!-- TOC -->
@@ -348,16 +366,13 @@ This will:
 2. Open your browser to generate an access token
 3. Validate and store the token securely
 
+For CI/CD, use environment variables instead:
+  export TEAMCITY_URL="https://teamcity.example.com"
+  export TEAMCITY_TOKEN="your-access-token"
+
 **Options:**
 - `-s, --server` – TeamCity server URL
 - `-t, --token` – Access token
-
-**Environment variables** (for CI/CD):
-
-```bash
-export TEAMCITY_URL="https://teamcity.example.com"
-export TEAMCITY_TOKEN="your-access-token"
-```
 
 ### auth logout
 
@@ -402,6 +417,10 @@ tc run changes 12345 --json
 ### run comment
 
 Set, view, or delete a comment on a run.
+
+Without a comment argument, displays the current comment.
+With a comment argument, sets the comment.
+Use --delete to remove the comment.
 
 ```bash
 tc run comment 12345
@@ -459,6 +478,11 @@ tc run list --plain | grep failure
 
 View the log output from a run.
 
+You can specify a run ID directly, or use --job to get the latest run's log.
+
+Pager: / search, n/N next/prev, g/G top/bottom, q quit.
+Use --raw to bypass the pager.
+
 ```bash
 tc run log 12345
 tc run log 12345 --failed
@@ -469,15 +493,6 @@ tc run log --job Falcon_Build
 - `--failed` – Show only failed step logs
 - `-j, --job` – Get log for latest run of this job
 - `--raw` – Show raw log without formatting
-
-**Log viewer features:**
-- **Mouse/Touchpad scrolling** – Scroll naturally with your trackpad
-- **Search** – Press `/` to search forward, `?` to search backward
-- **Navigation** – `n`/`N` for next/previous match, `g`/`G` for top/bottom
-- **Filter** – `&pattern` to show only matching lines
-- **Quit** – Press `q` to exit
-
-Use `--raw` to bypass the pager.
 
 ### run pin
 
@@ -547,6 +562,8 @@ tc run tag 12345 release v1.0 production
 ### run tests
 
 Show test results from a run.
+
+You can specify a run ID directly, or use --job to get the latest run's tests.
 
 ```bash
 tc run tests 12345
@@ -676,7 +693,7 @@ tc job pause Falcon_Build
 
 ### job resume
 
-Resume a paused job (build configuration) to allow new runs (builds).
+Resume a paused job to allow new runs.
 
 ```bash
 tc job resume Falcon_Build
@@ -760,6 +777,9 @@ tc project param set MyID SECRET_KEY "****" --secure
 
 Retrieve the original value for a secure token.
 
+This operation requires CHANGE_SERVER_SETTINGS permission,
+which is only available to System Administrators.
+
 ```bash
 tc project token get Falcon "credentialsJSON:abc123..."
 tc project token get Falcon "abc123..."
@@ -768,6 +788,12 @@ tc project token get Falcon "abc123..."
 ### project token put
 
 Store a sensitive value and get a secure token reference.
+
+The returned token can be used in versioned settings configuration files
+as credentialsJSON:<token>. The actual value is stored securely in TeamCity
+and is not committed to version control.
+
+Requires EDIT_PROJECT permission (Project Administrator role).
 
 ```bash
 # Store a secret interactively (prompts for value)
@@ -801,7 +827,7 @@ tc project view Falcon --web
 
 ---
 
-## Queue
+## Queues
 
 ### queue approve
 
@@ -849,9 +875,158 @@ tc queue top 12345
 
 ---
 
+## Agents
+
+### agent authorize
+
+Authorize an agent to allow it to connect and run builds.
+
+```bash
+tc agent authorize 1
+```
+
+### agent deauthorize
+
+Deauthorize an agent to revoke its permission to connect.
+
+```bash
+tc agent deauthorize 1
+```
+
+### agent disable
+
+Disable an agent to prevent it from running builds.
+
+```bash
+tc agent disable 1
+```
+
+### agent enable
+
+Enable an agent to allow it to run builds.
+
+```bash
+tc agent enable 1
+```
+
+### agent jobs
+
+List build configurations (jobs) that are compatible or incompatible with an agent.
+
+```bash
+tc agent jobs 1
+tc agent jobs 1 --incompatible
+tc agent jobs 1 --json
+```
+
+**Options:**
+- `--incompatible` – Show incompatible jobs with reasons
+- `--json` – Output as JSON
+
+### agent list
+
+List build agents
+
+```bash
+tc agent list
+tc agent list --pool Default
+tc agent list --connected
+tc agent list --json
+tc agent list --json=id,name,connected,enabled
+```
+
+**Options:**
+- `--authorized` – Show only authorized agents
+- `--connected` – Show only connected agents
+- `--enabled` – Show only enabled agents
+- `--json` – Output JSON with fields (use --json= to list, --json=f1,f2 for specific)
+- `-n, --limit` – Maximum number of agents
+- `-p, --pool` – Filter by agent pool
+
+### agent move
+
+Move an agent to a different agent pool.
+
+```bash
+tc agent move 1 0
+tc agent move 1 2
+```
+
+### agent view
+
+View agent details
+
+```bash
+tc agent view 1
+tc agent view 1 --web
+tc agent view 1 --json
+```
+
+**Options:**
+- `--json` – Output as JSON
+- `-w, --web` – Open in browser
+
+---
+
+## Agent Pools
+
+### pool link
+
+Link a project to an agent pool, allowing the project's builds to run on agents in that pool.
+
+```bash
+tc pool link 1 MyProject
+```
+
+### pool list
+
+List agent pools
+
+```bash
+tc pool list
+tc pool list --json
+tc pool list --json=id,name,maxAgents
+```
+
+**Options:**
+- `--json` – Output JSON with fields (use --json= to list, --json=f1,f2 for specific)
+
+### pool unlink
+
+Unlink a project from an agent pool, removing the project's access to agents in that pool.
+
+```bash
+tc pool unlink 1 MyProject
+```
+
+### pool view
+
+View pool details
+
+```bash
+tc pool view 0
+tc pool view 1 --web
+tc pool view 1 --json
+```
+
+**Options:**
+- `--json` – Output as JSON
+- `-w, --web` – Open in browser
+
+---
+
 ## API
 
 Make an authenticated HTTP request to the TeamCity REST API.
+
+The endpoint argument should be the path portion of the URL,
+starting with /app/rest/. The base URL and authentication
+are handled automatically.
+
+This command is useful for:
+- Accessing API features not yet supported by the CLI
+- Scripting and automation
+- Debugging and exploration
 
 ```bash
 # Get server info
