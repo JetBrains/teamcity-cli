@@ -116,8 +116,7 @@ type jobViewOptions struct {
 }
 
 func newJobViewCmd() *cobra.Command {
-	opts := &jobViewOptions{}
-
+	opts := &viewOptions{}
 	cmd := &cobra.Command{
 		Use:   "view <job-id>",
 		Short: "View job details",
@@ -132,10 +131,11 @@ func newJobViewCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 
+	addViewFlags(cmd, opts)
 	return cmd
 }
 
-func runJobView(jobID string, opts *jobViewOptions) error {
+func runJobView(jobID string, opts *viewOptions) error {
 	client, err := getClient()
 	if err != nil {
 		return err
