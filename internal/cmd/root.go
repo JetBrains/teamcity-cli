@@ -31,14 +31,7 @@ Documentation: https://github.com/JetBrains/teamcity-cli
 Report issues:  https://github.com/JetBrains/teamcity-cli/issues`,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
-		logo := `
-████████╗ ██████╗
-╚══██╔══╝██╔════╝
-   ██║   ██║
-   ██║   ██║
-   ██║   ╚██████╗
-   ╚═╝    ╚═════╝`
-		fmt.Println(output.Cyan(logo))
+		output.PrintLogo()
 		fmt.Println()
 		fmt.Println("TeamCity CLI - " + output.Faint("https://github.com/JetBrains/teamcity-cli"))
 		fmt.Println()
