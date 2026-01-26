@@ -1,0 +1,251 @@
+version: 2
+project_name: tc
+
+builds:
+  - binary: tc
+    main: ./tc
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X github.com/JetBrains/teamcity-cli/internal/cmd.Version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    hooks:
+      post:
+        - cmd: |
+            sh -c '
+            if [ "{{ .IsSnapshot }}" = "false" ] && [ "{{ .Os }}" = "$(go env GOOS)" ] && [ "{{ .Arch }}" = "$(go env GOARCH)" ]; then
+              ver=$(chmod +x "{{ .Path }}"; "{{ .Path }}" --version)
+              expected="tc version {{ .Version }}"
+              if [ "$ver" != "$expected" ]; then
+                echo "Version mismatch: expected \"$expected\" but got \"$ver\""
+                exit 1
+              fi
+              echo "Version check passed: $ver"
+            fi'
+          output: true
+
+archives:
+  - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{- if eq .Arch "amd64" }}x86_64{{- else }}{{ .Arch }}{{ end }}'
+    format_overrides:
+      - goos: windows
+        formats: ['zip']
+    files:
+      - LICENSE
+      - README.md
+
+nfpms:
+  - package_name: tc
+    vendor: JetBrains s.r.o.
+    homepage: https://github.com/JetBrains/teamcity-cli
+    maintainer: JetBrains <teamcity-support@jetbrains.com>
+    description: A command-line interface for TeamCity CI/CD server
+    license: Apache-2.0
+    formats:
+      - apk
+      - deb
+      - rpm
+      - archlinux
+    bindir: /usr/bin
+    contents:
+      - src: LICENSE
+        dst: /usr/share/licenses/tc/LICENSE
+      - src: README.md
+        dst: /usr/share/doc/tc/README.md
+
+homebrew_casks:
+  - name: tc
+    binaries:
+      - tc
+    repository:
+      owner: JetBrains
+      name: homebrew-utils
+    commit_author:
+      name: teamcity-bot
+      email: teamcity-support@jetbrains.com
+    commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
+    directory: Casks
+    homepage: https://github.com/JetBrains/teamcity-cli
+    description: A command-line interface for TeamCity CI/CD server
+
+scoops:
+  - repository:
+      owner: JetBrains
+      name: scoop-utils
+    commit_author:
+      name: teamcity-bot
+      email: teamcity-support@jetbrains.com
+    commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
+    homepage: https://github.com/JetBrains/teamcity-cli
+    description: A command-line interface for TeamCity CI/CD server
+    license: Apache-2.0
+
+chocolateys:
+  - name: tc
+    title: TeamCity CLI
+    authors: JetBrains
+    owners: JetBrains
+    summary: A command-line interface for TeamCity CI/CD server
+    description: |
+      {{ .ProjectName }} is a command-line interface for interacting with TeamCity CI/CD server.
+
+      Features:
+      - Manage builds, jobs, and projects from terminal
+      - Stream build logs in real-time
+      - JSON output for scripting
+      - Multi-server support
+    project_url: https://github.com/JetBrains/teamcity-cli
+    icon_url: https://resources.jetbrains.com/storage/products/company/brand/logos/TeamCity_icon.png
+    copyright: JetBrains s.r.o.
+    license_url: https://github.com/JetBrains/teamcity-cli/blob/main/LICENSE
+    require_license_acceptance: false
+    project_source_url: https://github.com/JetBrains/teamcity-cli
+    docs_url: https://jb.gg/tc/docs
+    bug_tracker_url: https://jb.gg/tc/issues
+    tags: teamcity ci cd cli jetbrains devops build automation
+    release_notes: https://github.com/JetBrains/teamcity-cli/releases/tag/v{{ .Version }}
+    api_key: '{{ .Env.CHOCOLATEY_API_KEY }}'
+    source_repo: https://push.chocolatey.org/
+
+winget:
+  - name: tc
+    publisher: JetBrains
+    publisher_url: https://www.jetbrains.com/
+    publisher_support_url: https://jb.gg/tc/issues
+    short_description: A command-line interface for TeamCity CI/CD server
+    description: |
+      tc is a command-line interface for interacting with TeamCity CI/CD server.
+      Manage builds, jobs, and projects without leaving your terminal.
+    license: Apache-2.0
+    license_url: https://github.com/JetBrains/teamcity-cli/blob/main/LICENSE
+    copyright: JetBrains s.r.o.
+    homepage: https://github.com/JetBrains/teamcity-cli
+    tags:
+      - teamcity
+      - ci
+      - cd
+      - cli
+      - devops
+      - jetbrains
+    release_notes_url: https://github.com/JetBrains/teamcity-cli/releases/tag/v{{ .Version }}
+    repository:
+      owner: microsoft
+      name: winget-pkgs
+      branch: master
+      pull_request:
+        enabled: true
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: '{{ incpatch .Version }}-snapshot'
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: JetBrains
+    name: teamcity-cli
+  draft: false
+  prerelease: auto
+  mode: replace
+  footer: |
+    ## Installation
+
+    ### macOS & Linux
+
+    **Homebrew (recommended):**
+    ```bash
+    brew install jetbrains/utils/tc
+    ```
+
+    **Install script:**
+    ```bash
+    curl -fsSL https://jb.gg/tc/install | bash
+    ```
+
+    **Debian/Ubuntu:**
+    ```bash
+    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/tc_{{ .Version }}_linux_amd64.deb
+    sudo dpkg -i tc_{{ .Version }}_linux_amd64.deb
+    ```
+
+    **RHEL/Fedora:**
+    ```bash
+    sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/tc_{{ .Version }}_linux_amd64.rpm
+    ```
+
+    **Arch Linux:**
+    ```bash
+    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/tc_{{ .Version }}_linux_amd64.pkg.tar.zst
+    sudo pacman -U tc_{{ .Version }}_linux_amd64.pkg.tar.zst
+    ```
+
+    ### Windows
+    **Winget (recommended):**
+    ```powershell
+    winget install JetBrains.tc
+    ```
+
+    **Chocolatey:**
+    ```powershell
+    choco install tc
+    ```
+
+    **Scoop:**
+    ```powershell
+    scoop bucket add jetbrains https://github.com/JetBrains/scoop-utils
+    scoop install tc
+    ```
+
+    **Manual:**
+    Download `tc_{{ .Version }}_windows_x86_64.zip`, extract, and add to PATH.
+
+    ### Go Install
+
+    ```bash
+    go install github.com/JetBrains/teamcity-cli/tc@v{{ .Version }}
+    ```
+
+    ## Quick Start
+
+    ```bash
+    # Authenticate with your TeamCity server
+    tc auth login
+
+    # List recent builds
+    tc run list
+
+    # Start a build
+    tc run start MyProject_Build --branch main --watch
+    ```
+
+    See the [README](https://jb.gg/tc/docs) for full documentation.
+
+report_sizes: true
+
+git:
+  ignore_tags:
+    - nightly

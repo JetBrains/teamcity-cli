@@ -80,11 +80,55 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
 
 ## Installation
 
+### macOS & Linux
+
+**Homebrew (recommended):**
+```bash
+brew install jetbrains/utils/tc
+```
+
+**Install script:**
+```bash
+curl -fsSL https://jb.gg/tc/install | bash
+```
+
+**Debian/Ubuntu:**
+```bash
+curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.deb
+sudo dpkg -i tc_linux_amd64.deb
+```
+
+**RHEL/Fedora:**
+```bash
+sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.rpm
+```
+
+**Arch Linux:**
+```bash
+curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.pkg.tar.zst
+sudo pacman -U tc_linux_amd64.pkg.tar.zst
+```
+
+**Install script:**
+```bash
+curl -fsSL https://jb.gg/tc/install | bash
+```
+
+### Windows
+
+**Scoop:**
+```powershell
+scoop bucket add jetbrains https://github.com/JetBrains/scoop-utils
+scoop install tc
+```
+
+### Go
+
 ```bash
 go install github.com/JetBrains/teamcity-cli/tc@latest
 ```
 
-Or build from source:
+### Build from source
 
 ```bash
 git clone https://github.com/JetBrains/teamcity-cli.git

@@ -27,13 +27,13 @@ var rootCmd = &cobra.Command{
 tc provides a complete experience for managing
 TeamCity runs, jobs, projects and more from the command line.
 
-Documentation: https://github.com/JetBrains/teamcity-cli
-Report issues:  https://github.com/JetBrains/teamcity-cli/issues`,
+Documentation:  https://jb.gg/tc/docs
+Report issues:  https://jb.gg/tc/issues`,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
 		output.PrintLogo()
 		fmt.Println()
-		fmt.Println("TeamCity CLI - " + output.Faint("https://github.com/JetBrains/teamcity-cli"))
+		fmt.Println("TeamCity CLI - " + output.Faint("https://jb.gg/tc/docs"))
 		fmt.Println()
 		fmt.Println("Usage: tc <command> [flags]")
 		fmt.Println()
