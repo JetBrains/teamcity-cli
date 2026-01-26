@@ -13,6 +13,7 @@ type AgentsOptions struct {
 	Enabled    bool   // Filter by enabled status
 	Pool       string // Filter by pool name
 	Limit      int
+	Fields     []string // Fields to return (uses AgentFields.Default if empty)
 }
 
 // GetAgents returns a list of agents
@@ -36,8 +37,12 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 	}
 	locator.AddIntDefault("count", opts.Limit, 100)
 
-	fields := "count,agent(id,name,connected,enabled,authorized,pool(id,name))"
-	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
+	fields := opts.Fields
+	if len(fields) == 0 {
+		fields = AgentFields.Default
+	}
+	fieldsParam := fmt.Sprintf("count,agent(%s)", ToAPIFields(fields))
+	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
 	var result AgentList
 	if err := c.get(path, &result); err != nil {

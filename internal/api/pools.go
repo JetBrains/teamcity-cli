@@ -8,9 +8,13 @@ import (
 )
 
 // GetAgentPools returns all agent pools
-func (c *Client) GetAgentPools() (*PoolList, error) {
-	fields := "count,agentPool(id,name,maxAgents)"
-	path := fmt.Sprintf("/app/rest/agentPools?fields=%s", url.QueryEscape(fields))
+func (c *Client) GetAgentPools(requestedFields []string) (*PoolList, error) {
+	fields := requestedFields
+	if len(fields) == 0 {
+		fields = PoolFields.Default
+	}
+	fieldsParam := fmt.Sprintf("count,agentPool(%s)", ToAPIFields(fields))
+	path := fmt.Sprintf("/app/rest/agentPools?fields=%s", url.QueryEscape(fieldsParam))
 
 	var result PoolList
 	if err := c.get(path, &result); err != nil {
