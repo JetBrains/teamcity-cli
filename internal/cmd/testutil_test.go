@@ -441,7 +441,96 @@ func setupMockClient(t *testing.T) *TestServer {
 
 	// Agents
 	ts.Handle("GET /app/rest/agents", func(w http.ResponseWriter, r *http.Request) {
-		JSON(w, api.AgentList{Count: 0, Agents: []api.Agent{}})
+		JSON(w, api.AgentList{
+			Count: 2,
+			Agents: []api.Agent{
+				{ID: 1, Name: "Agent 1", Connected: true, Enabled: true, Authorized: true, Pool: &api.Pool{ID: 0, Name: "Default"}},
+				{ID: 2, Name: "Agent 2", Connected: false, Enabled: true, Authorized: true, Pool: &api.Pool{ID: 0, Name: "Default"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/agents/id:", func(w http.ResponseWriter, r *http.Request) {
+		id := extractID(r.URL.Path, "id:")
+		if id == "999" {
+			Error(w, http.StatusNotFound, "No agent found by locator 'id:999'")
+			return
+		}
+		JSON(w, api.Agent{
+			ID:         1,
+			Name:       "Agent 1",
+			Connected:  true,
+			Enabled:    true,
+			Authorized: true,
+			WebURL:     ts.URL + "/agentDetails.html?id=1",
+			Pool:       &api.Pool{ID: 0, Name: "Default"},
+		})
+	})
+
+	ts.Handle("PUT /app/rest/agents/id:", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	ts.Handle("GET /app/rest/agents/id:1/compatibleBuildTypes", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.BuildTypeList{
+			Count: 2,
+			BuildTypes: []api.BuildType{
+				{ID: "Project_Build", Name: "Build", ProjectName: "Project", ProjectID: "Project"},
+				{ID: "Project_Test", Name: "Test", ProjectName: "Project", ProjectID: "Project"},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/agents/id:1/incompatibleBuildTypes", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.CompatibilityList{
+			Count: 1,
+			Compatibility: []api.Compatibility{
+				{
+					Compatible: false,
+					BuildType:  &api.BuildType{ID: "OtherProject_Build", Name: "Build", ProjectName: "Other Project"},
+					Reasons:    &api.IncompatibleReasons{Reasons: []string{"Missing requirement: docker"}},
+				},
+			},
+		})
+	})
+
+	// Agent Pools
+	ts.Handle("GET /app/rest/agentPools", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.PoolList{
+			Count: 2,
+			Pools: []api.Pool{
+				{ID: 0, Name: "Default", MaxAgents: 0},
+				{ID: 1, Name: "Linux Agents", MaxAgents: 10},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/agentPools/id:", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.Pool{
+			ID:        0,
+			Name:      "Default",
+			MaxAgents: 0,
+			Agents: &api.AgentList{
+				Count: 1,
+				Agents: []api.Agent{
+					{ID: 1, Name: "Agent 1", Connected: true, Enabled: true, Authorized: true},
+				},
+			},
+			Projects: &api.ProjectList{
+				Count: 1,
+				Projects: []api.Project{
+					{ID: "_Root", Name: "Root project"},
+				},
+			},
+		})
+	})
+
+	ts.Handle("POST /app/rest/agentPools/id:", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ts.Handle("DELETE /app/rest/agentPools/id:", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	// Set user for the test server URL (supports @me in run list)
