@@ -8,13 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type runPinOptions struct {
-	comment string
-}
-
 func newRunPinCmd() *cobra.Command {
-	opts := &runPinOptions{}
-
+	var comment string
 	cmd := &cobra.Command{
 		Use:   "pin <run-id>",
 		Short: "Pin a run to prevent cleanup",
@@ -23,59 +18,43 @@ func newRunPinCmd() *cobra.Command {
 		Example: `  tc run pin 12345
   tc run pin 12345 --comment "Release candidate"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRunPin(args[0], opts)
+			client, err := getClient()
+			if err != nil {
+				return err
+			}
+			if err := client.PinBuild(args[0], comment); err != nil {
+				return fmt.Errorf("failed to pin run: %w", err)
+			}
+			output.Success("Pinned run #%s", args[0])
+			if comment != "" {
+				output.Info("  Comment: %s", comment)
+			}
+			return nil
 		},
 	}
-
-	cmd.Flags().StringVarP(&opts.comment, "comment", "m", "", "Comment explaining why the run is pinned")
-
+	cmd.Flags().StringVarP(&comment, "comment", "m", "", "Comment explaining why the run is pinned")
 	return cmd
 }
 
-func runRunPin(runID string, opts *runPinOptions) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if err := client.PinBuild(runID, opts.comment); err != nil {
-		return fmt.Errorf("failed to pin run: %w", err)
-	}
-
-	output.Success("Pinned run #%s", runID)
-	if opts.comment != "" {
-		output.Info("  Comment: %s", opts.comment)
-	}
-	return nil
-}
-
 func newRunUnpinCmd() *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:     "unpin <run-id>",
 		Short:   "Unpin a run",
 		Long:    `Remove the pin from a run, allowing it to be cleaned up by retention policies.`,
 		Args:    cobra.ExactArgs(1),
 		Example: `  tc run unpin 12345`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRunUnpin(args[0])
+			client, err := getClient()
+			if err != nil {
+				return err
+			}
+			if err := client.UnpinBuild(args[0]); err != nil {
+				return fmt.Errorf("failed to unpin run: %w", err)
+			}
+			output.Success("Unpinned run #%s", args[0])
+			return nil
 		},
 	}
-
-	return cmd
-}
-
-func runRunUnpin(runID string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if err := client.UnpinBuild(runID); err != nil {
-		return fmt.Errorf("failed to unpin run: %w", err)
-	}
-
-	output.Success("Unpinned run #%s", runID)
-	return nil
 }
 
 func newRunTagCmd() *cobra.Command {

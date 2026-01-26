@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -104,6 +106,7 @@ func newPoolViewCmd() *cobra.Command {
 		Short: "View pool details",
 		Args:  cobra.ExactArgs(1),
 		Example: `  tc pool view 0
+  tc pool view 1 --web
   tc pool view 1 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0], "pool")
@@ -119,7 +122,12 @@ func newPoolViewCmd() *cobra.Command {
 	return cmd
 }
 
-func runPoolView(poolID int, opts *poolViewOptions) error {
+func runPoolView(poolID int, opts *viewOptions) error {
+	if opts.web {
+		url := fmt.Sprintf("%s/agents.html?tab=agentPools&poolId=%d", config.GetServerURL(), poolID)
+		return browser.OpenURL(url)
+	}
+
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -161,6 +169,9 @@ func runPoolView(poolID int, opts *poolViewOptions) error {
 	} else {
 		fmt.Printf("\n%s\n", output.Faint("No projects assigned to this pool"))
 	}
+
+	webURL := fmt.Sprintf("%s/agents.html?tab=agentPools&poolId=%d", config.GetServerURL(), poolID)
+	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(webURL))
 
 	return nil
 }
