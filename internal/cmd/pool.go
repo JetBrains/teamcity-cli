@@ -102,6 +102,7 @@ type poolViewOptions struct {
 
 func newPoolViewCmd() *cobra.Command {
 	opts := &poolViewOptions{}
+	opts := &viewOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "view <pool-id>",

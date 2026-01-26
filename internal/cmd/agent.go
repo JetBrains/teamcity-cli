@@ -144,6 +144,7 @@ type agentViewOptions struct {
 func newAgentViewCmd() *cobra.Command {
 	opts := &agentViewOptions{}
 
+	opts := &viewOptions{}
 	cmd := &cobra.Command{
 		Use:   "view <agent-id>",
 		Short: "View agent details",
@@ -159,14 +160,11 @@ func newAgentViewCmd() *cobra.Command {
 			return runAgentView(id, opts)
 		},
 	}
-
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
-
+	addViewFlags(cmd, opts)
 	return cmd
 }
 
-func runAgentView(agentID int, opts *agentViewOptions) error {
+func runAgentView(agentID int, opts *viewOptions) error {
 	client, err := getClient()
 	if err != nil {
 		return err

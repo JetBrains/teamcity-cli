@@ -138,10 +138,11 @@ func newProjectViewCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 
+	addViewFlags(cmd, opts)
 	return cmd
 }
 
-func runProjectView(projectID string, opts *projectViewOptions) error {
+func runProjectView(projectID string, opts *viewOptions) error {
 	client, err := getClient()
 	if err != nil {
 		return err
