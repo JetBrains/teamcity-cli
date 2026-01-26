@@ -161,6 +161,10 @@ changelog:
       - '^test:'
       - '^ci:'
       - '^chore:'
+      - '^refactor:'
+      - '^lint:'
+      - '^fixup!'
+      - '^Update '
       - Merge pull request
       - Merge branch
 
