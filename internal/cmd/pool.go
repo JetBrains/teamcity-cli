@@ -64,7 +64,7 @@ func runPoolList(cmd *cobra.Command, opts *poolListOptions) error {
 		return err
 	}
 
-	pools, err := client.GetAgentPools()
+	pools, err := client.GetAgentPools(jsonResult.Fields)
 	if err != nil {
 		return err
 	}

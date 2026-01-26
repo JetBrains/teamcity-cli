@@ -86,7 +86,7 @@ type ClientInterface interface {
 	GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, error)
 
 	// Agent Pools
-	GetAgentPools() (*PoolList, error)
+	GetAgentPools(fields []string) (*PoolList, error)
 	GetAgentPool(id int) (*Pool, error)
 	AddProjectToPool(poolID int, projectID string) error
 	RemoveProjectFromPool(poolID int, projectID string) error

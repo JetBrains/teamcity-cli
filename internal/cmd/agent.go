@@ -85,6 +85,7 @@ func runAgentList(cmd *cobra.Command, opts *agentListOptions) error {
 		Enabled:    opts.enabled,
 		Authorized: opts.authorized,
 		Limit:      opts.limit,
+		Fields:     jsonResult.Fields,
 	})
 	if err != nil {
 		return err
