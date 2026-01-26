@@ -1,7 +1,7 @@
 jobs:
   test_windows:
     name: Test Windows
-    runs-on: Windows-Medium-Internal
+    runs-on: Windows-Medium
     steps:
       - type: script
         script-content: >-
@@ -9,7 +9,7 @@ jobs:
           -coverprofile=coverage.out
   test_linux:
     name: Test Linux
-    runs-on: Ubuntu-22.04-Medium-Internal
+    runs-on: Ubuntu-22.04-Medium
     steps:
       - type: script
         script-content: >-
