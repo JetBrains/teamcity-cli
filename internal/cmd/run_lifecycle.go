@@ -3,7 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"time"
@@ -22,6 +24,7 @@ type runStartOptions struct {
 	envVars           map[string]string
 	comment           string
 	personal          bool
+	localChanges      string // path to diff file, "-" for stdin, or "git" to auto-generate
 	cleanSources      bool
 	rebuildDeps       bool
 	rebuildFailedDeps bool
@@ -50,6 +53,8 @@ func newRunStartCmd() *cobra.Command {
   tc run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
   tc run start Falcon_Build --comment "Release build" --tag release --tag v1.0
   tc run start Falcon_Build --clean --rebuild-deps --top
+  tc run start Falcon_Build --local-changes # personal build with uncommitted Git changes
+  tc run start Falcon_Build --local-changes changes.patch  # from file
   tc run start Falcon_Build --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunStart(args[0], opts)
@@ -63,6 +68,8 @@ func newRunStartCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.comment, "comment", "m", "", "Run comment")
 	cmd.Flags().StringSliceVarP(&opts.tags, "tag", "t", nil, "Run tags (can be repeated)")
 	cmd.Flags().BoolVar(&opts.personal, "personal", false, "Run as personal build")
+	localChangesFlag := cmd.Flags().VarPF(&localChangesValue{val: &opts.localChanges}, "local-changes", "l", "Include local changes (git, -, or path; default: git)")
+	localChangesFlag.NoOptDefVal = "git"
 	cmd.Flags().BoolVar(&opts.cleanSources, "clean", false, "Clean sources before run")
 	cmd.Flags().BoolVar(&opts.rebuildDeps, "rebuild-deps", false, "Rebuild all dependencies")
 	cmd.Flags().BoolVar(&opts.rebuildFailedDeps, "rebuild-failed-deps", false, "Rebuild failed/incomplete dependencies")
@@ -106,8 +113,11 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		if len(opts.tags) > 0 {
 			fmt.Printf("  Tags: %s\n", strings.Join(opts.tags, ", "))
 		}
-		if opts.personal {
+		if opts.personal || opts.localChanges != "" {
 			fmt.Println("  Personal build: yes")
+		}
+		if opts.localChanges != "" {
+			fmt.Printf("  Local changes: %s\n", opts.localChanges)
 		}
 		if opts.cleanSources {
 			fmt.Println("  Clean sources: yes")
@@ -129,6 +139,33 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		return err
 	}
 
+	var personalChangeID string
+	if opts.localChanges != "" {
+		patch, err := loadLocalChanges(opts.localChanges)
+		if err != nil {
+			return fmt.Errorf("failed to load local changes: %w", err)
+		}
+
+		if len(patch) == 0 {
+			return fmt.Errorf("no changes found")
+		}
+
+		output.Info("Uploading local changes...")
+		description := opts.comment
+		if description == "" {
+			description = "Personal build with local changes"
+		}
+
+		changeID, err := client.UploadDiffChanges(patch, description)
+		if err != nil {
+			return fmt.Errorf("failed to upload changes: %w", err)
+		}
+		personalChangeID = changeID
+		output.Success("Uploaded changes (ID: %s)", changeID)
+
+		opts.personal = true
+	}
+
 	build, err := client.RunBuild(jobID, api.RunBuildOptions{
 		Branch:                    opts.branch,
 		Params:                    opts.params,
@@ -142,6 +179,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		QueueAtTop:                opts.queueAtTop,
 		AgentID:                   opts.agent,
 		Tags:                      opts.tags,
+		PersonalChangeID:          personalChangeID,
 	})
 	if err != nil {
 		return err
@@ -417,4 +455,40 @@ func runRunRestart(runID string, opts *runRestartOptions) error {
 	}
 
 	return nil
+}
+
+type localChangesValue struct {
+	val *string
+}
+
+func (v *localChangesValue) String() string {
+	if v.val == nil {
+		return ""
+	}
+	return *v.val
+}
+
+func (v *localChangesValue) Set(s string) error {
+	*v.val = s
+	return nil
+}
+
+func (v *localChangesValue) Type() string {
+	return "string"
+}
+
+func loadLocalChanges(source string) ([]byte, error) {
+	switch source {
+	case "git":
+		return getGitDiff()
+	case "-":
+		return io.ReadAll(os.Stdin)
+	default:
+		return os.ReadFile(source)
+	}
+}
+
+func getGitDiff() ([]byte, error) {
+	cmd := exec.Command("git", "diff", "HEAD")
+	return cmd.Output()
 }

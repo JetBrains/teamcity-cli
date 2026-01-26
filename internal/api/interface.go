@@ -53,6 +53,7 @@ type ClientInterface interface {
 	DeleteBuildComment(buildID string) error
 	GetBuildChanges(buildID string) (*ChangeList, error)
 	GetBuildTests(buildID string, failedOnly bool, limit int) (*TestOccurrences, error)
+	UploadDiffChanges(patch []byte, description string) (string, error)
 
 	// Artifacts
 	GetArtifacts(buildID string) (*Artifacts, error)

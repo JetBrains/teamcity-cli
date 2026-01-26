@@ -47,25 +47,27 @@ type BuildTypeList struct {
 
 // Build represents a TeamCity build
 type Build struct {
-	ID                 int        `json:"id"`
-	BuildTypeID        string     `json:"buildTypeId,omitempty"`
-	Number             string     `json:"number,omitempty"`
-	Status             string     `json:"status,omitempty"`
-	State              string     `json:"state,omitempty"`
-	BranchName         string     `json:"branchName,omitempty"`
-	DefaultBranch      bool       `json:"defaultBranch,omitempty"`
-	Href               string     `json:"href,omitempty"`
-	WebURL             string     `json:"webUrl,omitempty"`
-	StatusText         string     `json:"statusText,omitempty"`
-	QueuedDate         string     `json:"queuedDate,omitempty"`
-	StartDate          string     `json:"startDate,omitempty"`
-	FinishDate         string     `json:"finishDate,omitempty"`
-	BuildType          *BuildType `json:"buildType,omitempty"`
-	Triggered          *Triggered `json:"triggered,omitempty"`
-	Agent              *Agent     `json:"agent,omitempty"`
-	PercentageComplete int        `json:"percentageComplete,omitempty"`
-	Pinned             bool       `json:"pinned,omitempty"`
-	Tags               *TagList   `json:"tags,omitempty"`
+	ID                 int         `json:"id"`
+	BuildTypeID        string      `json:"buildTypeId,omitempty"`
+	Number             string      `json:"number,omitempty"`
+	Status             string      `json:"status,omitempty"`
+	State              string      `json:"state,omitempty"`
+	Personal           bool        `json:"personal,omitempty"`
+	BranchName         string      `json:"branchName,omitempty"`
+	DefaultBranch      bool        `json:"defaultBranch,omitempty"`
+	Href               string      `json:"href,omitempty"`
+	WebURL             string      `json:"webUrl,omitempty"`
+	StatusText         string      `json:"statusText,omitempty"`
+	QueuedDate         string      `json:"queuedDate,omitempty"`
+	StartDate          string      `json:"startDate,omitempty"`
+	FinishDate         string      `json:"finishDate,omitempty"`
+	BuildType          *BuildType  `json:"buildType,omitempty"`
+	Triggered          *Triggered  `json:"triggered,omitempty"`
+	Agent              *Agent      `json:"agent,omitempty"`
+	PercentageComplete int         `json:"percentageComplete,omitempty"`
+	Pinned             bool        `json:"pinned,omitempty"`
+	Tags               *TagList    `json:"tags,omitempty"`
+	LastChanges        *ChangeList `json:"lastChanges,omitempty"`
 }
 
 // BuildList represents a list of builds
@@ -170,6 +172,18 @@ type TriggerBuildRequest struct {
 	TriggeringOptions *TriggeringOptions `json:"triggeringOptions,omitempty"`
 	Agent             *AgentRef          `json:"agent,omitempty"`
 	Tags              *TagList           `json:"tags,omitempty"`
+	LastChanges       *LastChanges       `json:"lastChanges,omitempty"`
+}
+
+// LastChanges represents the changes to include in a build
+type LastChanges struct {
+	Change []PersonalChange `json:"change"`
+}
+
+// PersonalChange represents a personal change (uploaded diff) reference
+type PersonalChange struct {
+	ID       string `json:"id"`
+	Personal bool   `json:"personal,omitempty"`
 }
 
 // BuildComment represents a comment on a build

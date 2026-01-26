@@ -117,6 +117,7 @@ type RunBuildOptions struct {
 	RebuildFailedDependencies bool
 	AgentID                   int
 	Tags                      []string
+	PersonalChangeID          string
 }
 
 // RunBuild runs a new build with full options
@@ -168,6 +169,14 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 			tags = append(tags, Tag{Name: t})
 		}
 		req.Tags = &TagList{Tag: tags}
+	}
+
+	if opts.PersonalChangeID != "" {
+		req.LastChanges = &LastChanges{
+			Change: []PersonalChange{
+				{ID: opts.PersonalChangeID, Personal: true},
+			},
+		}
 	}
 
 	body, err := json.Marshal(req)
@@ -543,6 +552,25 @@ func (c *Client) GetBuildChanges(buildID string) (*ChangeList, error) {
 	}
 
 	return &changes, nil
+}
+
+func (c *Client) UploadDiffChanges(patch []byte, description string) (string, error) {
+	uploadURL := fmt.Sprintf("/uploadDiffChanges.html?description=%s&commitType=0",
+		url.QueryEscape(description))
+
+	resp, err := c.RawRequest("POST", uploadURL, bytes.NewReader(patch), map[string]string{
+		"Content-Type": "text/plain",
+		"Origin":       c.BaseURL,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return "", fmt.Errorf("failed to upload changes (status %d): %s", resp.StatusCode, strings.TrimSpace(string(resp.Body)))
+	}
+
+	return strings.TrimSpace(string(resp.Body)), nil
 }
 
 func (c *Client) GetBuildTests(buildID string, failedOnly bool, limit int) (*TestOccurrences, error) {
