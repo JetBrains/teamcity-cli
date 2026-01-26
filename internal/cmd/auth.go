@@ -38,7 +38,14 @@ func newAuthLoginCmd() *cobra.Command {
 		Short: "Authenticate with a TeamCity server",
 		Long: `Authenticate with a TeamCity server using an access token.
 
-You can generate an access token in your TeamCity profile settings.`,
+This will:
+1. Prompt for your TeamCity server URL
+2. Open your browser to generate an access token
+3. Validate and store the token securely
+
+For CI/CD, use environment variables instead:
+  export TEAMCITY_URL="https://teamcity.example.com"
+  export TEAMCITY_TOKEN="your-access-token"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAuthLogin(serverURL, token)
 		},
