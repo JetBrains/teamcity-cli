@@ -107,9 +107,37 @@ type AgentList struct {
 
 // Pool represents an agent pool
 type Pool struct {
-	ID   int    `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
-	Href string `json:"href,omitempty"`
+	ID        int          `json:"id,omitempty"`
+	Name      string       `json:"name,omitempty"`
+	Href      string       `json:"href,omitempty"`
+	MaxAgents int          `json:"maxAgents,omitempty"`
+	Projects  *ProjectList `json:"projects,omitempty"`
+	Agents    *AgentList   `json:"agents,omitempty"`
+}
+
+// PoolList represents a list of agent pools
+type PoolList struct {
+	Count int    `json:"count"`
+	Pools []Pool `json:"agentPool"`
+}
+
+// Compatibility represents build type compatibility info
+type Compatibility struct {
+	Compatible bool                 `json:"compatible"`
+	BuildType  *BuildType           `json:"buildType,omitempty"`
+	Agent      *Agent               `json:"agent,omitempty"`
+	Reasons    *IncompatibleReasons `json:"incompatibleReasons,omitempty"`
+}
+
+// CompatibilityList represents a list of compatibility entries
+type CompatibilityList struct {
+	Count         int             `json:"count"`
+	Compatibility []Compatibility `json:"compatibility"`
+}
+
+// IncompatibleReasons contains reasons why an agent can't run a build type
+type IncompatibleReasons struct {
+	Reasons []string `json:"reason,omitempty"`
 }
 
 // QueuedBuild represents a build in the queue

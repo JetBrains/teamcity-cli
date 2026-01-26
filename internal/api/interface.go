@@ -79,7 +79,18 @@ type ClientInterface interface {
 
 	// Agents
 	GetAgents(opts AgentsOptions) (*AgentList, error)
+	GetAgent(id int) (*Agent, error)
 	AuthorizeAgent(id int, authorized bool) error
+	EnableAgent(id int, enabled bool) error
+	GetAgentCompatibleBuildTypes(id int) (*BuildTypeList, error)
+	GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, error)
+
+	// Agent Pools
+	GetAgentPools() (*PoolList, error)
+	GetAgentPool(id int) (*Pool, error)
+	AddProjectToPool(poolID int, projectID string) error
+	RemoveProjectFromPool(poolID int, projectID string) error
+	SetAgentPool(agentID int, poolID int) error
 
 	// Raw API access
 	RawRequest(method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)

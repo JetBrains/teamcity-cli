@@ -120,3 +120,8 @@ var AgentFields = FieldSpec{
 	Available: []string{"id", "name", "typeId", "connected", "enabled", "authorized", "href", "webUrl", "pool.id", "pool.name"},
 	Default:   []string{"id", "name", "connected", "enabled", "authorized", "href", "webUrl", "pool.id", "pool.name"},
 }
+
+var PoolFields = FieldSpec{
+	Available: []string{"id", "name", "maxAgents", "href"},
+	Default:   []string{"id", "name", "maxAgents"},
+}

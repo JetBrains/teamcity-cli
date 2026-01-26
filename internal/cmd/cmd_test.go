@@ -206,6 +206,75 @@ func TestQueueTop(T *testing.T) {
 	runCmd(T, "queue", "top", "100")
 }
 
+func TestAgentList(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "agent", "list")
+	runCmd(T, "agent", "list", "--pool", "Default")
+	runCmd(T, "agent", "list", "--connected")
+	runCmd(T, "agent", "list", "--enabled")
+	runCmd(T, "agent", "list", "--authorized")
+	runCmd(T, "agent", "list", "--json")
+	runCmd(T, "agent", "list", "--limit", "10")
+}
+
+func TestAgentView(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "agent", "view", "1")
+	runCmd(T, "agent", "view", "1", "--json")
+}
+
+func TestAgentEnableDisable(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "agent", "enable", "1")
+	runCmd(T, "agent", "disable", "1")
+}
+
+func TestAgentAuthorize(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "agent", "authorize", "1")
+	runCmd(T, "agent", "deauthorize", "1")
+}
+
+func TestAgentJobs(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "agent", "jobs", "1")
+	runCmd(T, "agent", "jobs", "1", "--json")
+	runCmd(T, "agent", "jobs", "1", "--incompatible")
+	runCmd(T, "agent", "jobs", "1", "--incompatible", "--json")
+}
+
+func TestAgentMove(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "agent", "move", "1", "0")
+}
+
+func TestPoolList(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "pool", "list")
+	runCmd(T, "pool", "list", "--json")
+}
+
+func TestPoolView(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "pool", "view", "0")
+	runCmd(T, "pool", "view", "0", "--json")
+}
+
+func TestPoolLinkUnlink(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "pool", "link", "1", "TestProject")
+	runCmd(T, "pool", "unlink", "1", "TestProject")
+}
+
 func TestAPICommand(T *testing.T) {
 	setupMockClient(T)
 
@@ -295,6 +364,8 @@ func TestHelpCommands(T *testing.T) {
 		{"job", "--help"},
 		{"run", "--help"},
 		{"queue", "--help"},
+		{"agent", "--help"},
+		{"pool", "--help"},
 		{"auth", "--help"},
 		{"api", "--help"},
 	}
@@ -341,6 +412,8 @@ func TestUnknownSubcommand(T *testing.T) {
 		{"project", "invalid"},
 		{"queue", "invalid"},
 		{"job", "invalid"},
+		{"agent", "invalid"},
+		{"pool", "invalid"},
 		{"auth", "invalid"},
 	}
 
@@ -362,7 +435,7 @@ func TestUnknownSubcommand(T *testing.T) {
 func TestParentCommandWithoutSubcommand(T *testing.T) {
 	T.Parallel()
 
-	commands := []string{"run", "project", "queue", "job", "auth"}
+	commands := []string{"run", "project", "queue", "job", "agent", "pool", "auth"}
 
 	for _, cmd := range commands {
 		T.Run(cmd, func(t *testing.T) {

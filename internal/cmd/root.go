@@ -66,6 +66,8 @@ func init() {
 	rootCmd.AddCommand(newJobCmd())
 	rootCmd.AddCommand(newRunCmd())
 	rootCmd.AddCommand(newQueueCmd())
+	rootCmd.AddCommand(newAgentCmd())
+	rootCmd.AddCommand(newPoolCmd())
 	rootCmd.AddCommand(newAPICmd())
 }
 
@@ -118,6 +120,8 @@ func NewRootCmd() *RootCommand {
 	cmd.AddCommand(newJobCmd())
 	cmd.AddCommand(newRunCmd())
 	cmd.AddCommand(newQueueCmd())
+	cmd.AddCommand(newAgentCmd())
+	cmd.AddCommand(newPoolCmd())
 	cmd.AddCommand(newAPICmd())
 
 	return cmd
