@@ -115,14 +115,8 @@ func runProjectList(cmd *cobra.Command, opts *projectListOptions) error {
 	return nil
 }
 
-type projectViewOptions struct {
-	json bool
-	web  bool
-}
-
 func newProjectViewCmd() *cobra.Command {
-	opts := &projectViewOptions{}
-
+	opts := &viewOptions{}
 	cmd := &cobra.Command{
 		Use:   "view <project-id>",
 		Short: "View project details",
@@ -134,10 +128,6 @@ func newProjectViewCmd() *cobra.Command {
 			return runProjectView(args[0], opts)
 		},
 	}
-
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
-
 	addViewFlags(cmd, opts)
 	return cmd
 }

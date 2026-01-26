@@ -221,14 +221,7 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 	return nil
 }
 
-type runViewOptions struct {
-	json bool
-	web  bool
-}
-
 func newRunViewCmd() *cobra.Command {
-	opts := &runViewOptions{}
-
 	opts := &viewOptions{}
 	cmd := &cobra.Command{
 		Use:   "view <run-id>",
@@ -241,10 +234,6 @@ func newRunViewCmd() *cobra.Command {
 			return runRunView(args[0], opts)
 		},
 	}
-
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
-
 	addViewFlags(cmd, opts)
 	return cmd
 }

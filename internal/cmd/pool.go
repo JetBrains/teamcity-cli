@@ -96,12 +96,7 @@ func runPoolList(cmd *cobra.Command, opts *poolListOptions) error {
 	return nil
 }
 
-type poolViewOptions struct {
-	json bool
-}
-
 func newPoolViewCmd() *cobra.Command {
-	opts := &poolViewOptions{}
 	opts := &viewOptions{}
 
 	cmd := &cobra.Command{
@@ -119,7 +114,7 @@ func newPoolViewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+	addViewFlags(cmd, opts)
 
 	return cmd
 }
