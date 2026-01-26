@@ -1,5 +1,5 @@
 # tc – TeamCity CLI
-![](https://camo.githubusercontent.com/d9709c2147c51a80d08fae89a583024a5565a1962d5495a16aadd97b79be94ec/68747470733a2f2f6a622e67672f6261646765732f7465616d2d706c61737469632e737667) [![Lint](https://img.shields.io/teamcity/build/s/CLI_Lint?server=https%3A%2F%2Fcli.teamcity.com&label=Lint&style=plastic)](https://cli.teamcity.com/buildConfiguration/CLI_Lint) [![Test](https://img.shields.io/teamcity/build/s/CLI_Test?server=https%3A%2F%2Fcli.teamcity.com&label=Test&style=plastic)](https://cli.teamcity.com/buildConfiguration/CLI_Test)
+![](https://camo.githubusercontent.com/d9709c2147c51a80d08fae89a583024a5565a1962d5495a16aadd97b79be94ec/68747470733a2f2f6a622e67672f6261646765732f7465616d2d706c61737469632e737667)
 
 > Note: this is an experimental project. Team projects are created by JetBrains employees. These projects include 20% projects, internal hackathons, those that support product development process, and/or benefit the JetBrains developer community. Team Projects are available for all to use in accordance to the licensing terms, despite not being officially supported. However, there are times that Team Projects become Official Projects.
 
