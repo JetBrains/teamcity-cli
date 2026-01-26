@@ -14,6 +14,7 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
 <!-- TOC -->
 * [TeamCity CLI](#teamcity-cli)
   * [Why tc?](#why-tc)
+  * [For AI Agents](#for-ai-agents)
   * [Installation](#installation)
     * [macOS & Linux](#macos--linux)
     * [Windows](#windows)
@@ -97,6 +98,21 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
 - **Manage at scale** – List, filter, and batch-operate on runs and jobs across projects
 - **JSON output** – Pipe to `jq` for custom filtering; use `--plain` for awk/grep-friendly output
 - **Escape hatch available** – `tc api` command gives you direct REST API access when you need it
+
+## For AI Agents
+
+An [Agent Skill](https://agentskills.io) is available for AI coding assistants like Claude Code. The skill teaches agents how to use `tc` for common TeamCity workflows - investigating build failures, starting builds, exploring projects, and more.
+
+**Claude Code users:**
+```bash
+# Add this repository as a plugin marketplace
+/plugin marketplace add JetBrains/teamcity-cli
+
+# Install the skill
+/plugin install teamcity-cli@teamcity-cli
+```
+
+The skill is located in [`skills/teamcity-cli/`](skills/teamcity-cli/) and follows the [Agent Skills specification](https://agentskills.io/specification).
 
 ## Installation
 
