@@ -189,7 +189,21 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 	if err != nil {
 		return err
 	}
-	path := fmt.Sprintf("/app/rest/builds/id:%s/cancel", id)
+
+	build, err := c.GetBuild(id)
+	if err != nil {
+		return err
+	}
+
+	if build.State == "finished" {
+		return fmt.Errorf("cannot cancel finished build")
+	}
+
+	if build.State == "queued" {
+		return c.RemoveFromQueue(id)
+	}
+
+	path := fmt.Sprintf("/app/rest/builds/id:%s", id)
 
 	body := struct {
 		Comment        string `json:"comment"`
