@@ -357,10 +357,9 @@ func setupMockClient(t *testing.T) *TestServer {
 			ID:          1,
 			Number:      "1",
 			Status:      "SUCCESS",
-			State:       "finished",
+			State:       "running",
 			BuildTypeID: "TestProject_Build",
 			StartDate:   "20240101T120000+0000",
-			FinishDate:  "20240101T120100+0000",
 			WebURL:      ts.URL + "/viewLog.html?buildId=1",
 		})
 	})
