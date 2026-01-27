@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/api"
+	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -24,7 +25,8 @@ type runStartOptions struct {
 	envVars           map[string]string
 	comment           string
 	personal          bool
-	localChanges      string // path to diff file, "-" for stdin, or "git" to auto-generate
+	localChanges      string // path to a diff file, "-" for stdin, or "git" to auto-generate
+	pushBranch        bool   // push a branch to remote before a personal build
 	cleanSources      bool
 	rebuildDeps       bool
 	rebuildFailedDeps bool
@@ -70,6 +72,7 @@ func newRunStartCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.personal, "personal", false, "Run as personal build")
 	localChangesFlag := cmd.Flags().VarPF(&localChangesValue{val: &opts.localChanges}, "local-changes", "l", "Include local changes (git, -, or path; default: git)")
 	localChangesFlag.NoOptDefVal = "git"
+	cmd.Flags().BoolVar(&opts.pushBranch, "push", false, "Push branch to remote before personal build")
 	cmd.Flags().BoolVar(&opts.cleanSources, "clean", false, "Clean sources before run")
 	cmd.Flags().BoolVar(&opts.rebuildDeps, "rebuild-deps", false, "Rebuild all dependencies")
 	cmd.Flags().BoolVar(&opts.rebuildFailedDeps, "rebuild-failed-deps", false, "Rebuild failed/incomplete dependencies")
@@ -134,6 +137,35 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		return nil
 	}
 
+	if opts.localChanges != "" && opts.branch == "" {
+		if !isGitRepo() {
+			return tcerrors.WithSuggestion(
+				"not a git repository",
+				"Run this command from within a git repository, or specify --branch explicitly",
+			)
+		}
+		branch, err := getCurrentBranch()
+		if err != nil {
+			return err
+		}
+		opts.branch = branch
+		output.Info("Using current branch: %s", branch)
+	}
+
+	if opts.pushBranch {
+		if opts.localChanges == "" {
+			return tcerrors.WithSuggestion(
+				"--push requires --local-changes",
+				"Use --push together with --local-changes to push your branch before a personal build",
+			)
+		}
+		output.Info("Pushing branch to remote...")
+		if err := pushBranch(opts.branch); err != nil {
+			return err
+		}
+		output.Success("Branch pushed to remote")
+	}
+
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -143,11 +175,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 	if opts.localChanges != "" {
 		patch, err := loadLocalChanges(opts.localChanges)
 		if err != nil {
-			return fmt.Errorf("failed to load local changes: %w", err)
-		}
-
-		if len(patch) == 0 {
-			return fmt.Errorf("no changes found")
+			return err
 		}
 
 		output.Info("Uploading local changes...")
@@ -480,15 +508,83 @@ func (v *localChangesValue) Type() string {
 func loadLocalChanges(source string) ([]byte, error) {
 	switch source {
 	case "git":
-		return getGitDiff()
+		if !isGitRepo() {
+			return nil, tcerrors.WithSuggestion(
+				"not a git repository",
+				"Run this command from within a git repository, or use --local-changes <path> to specify a diff file",
+			)
+		}
+		patch, err := getGitDiff()
+		if err != nil {
+			return nil, err
+		}
+		if len(patch) == 0 {
+			return nil, tcerrors.WithSuggestion(
+				"no uncommitted changes found",
+				"Make some changes to your files before running a personal build, or use --local-changes <path> to specify a diff file",
+			)
+		}
+		return patch, nil
 	case "-":
-		return io.ReadAll(os.Stdin)
+		patch, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read from stdin: %w", err)
+		}
+		if len(patch) == 0 {
+			return nil, tcerrors.WithSuggestion(
+				"no changes provided via stdin",
+				"Pipe a diff file to stdin, e.g.: git diff | tc run start Job --local-changes -",
+			)
+		}
+		return patch, nil
 	default:
-		return os.ReadFile(source)
+		patch, err := os.ReadFile(source)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, tcerrors.WithSuggestion(
+					fmt.Sprintf("diff file not found: %s", source),
+					"Check the file path and try again",
+				)
+			}
+			return nil, fmt.Errorf("failed to read diff file: %w", err)
+		}
+		if len(patch) == 0 {
+			return nil, tcerrors.WithSuggestion(
+				fmt.Sprintf("diff file is empty: %s", source),
+				"Provide a non-empty diff file",
+			)
+		}
+		return patch, nil
 	}
 }
 
 func getGitDiff() ([]byte, error) {
+	untrackedFiles, err := getUntrackedFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get untracked files: %w", err)
+	}
+
+	if len(untrackedFiles) > 0 {
+		addArgs := append([]string{"add", "-N", "--"}, untrackedFiles...)
+		addCmd := exec.Command("git", addArgs...)
+		if err := addCmd.Run(); err != nil {
+			output.Debug("Failed to stage untracked files: %v", err)
+		} else {
+			defer func() {
+				resetArgs := append([]string{"reset", "HEAD", "--"}, untrackedFiles...)
+				resetCmd := exec.Command("git", resetArgs...)
+				_ = resetCmd.Run()
+			}()
+		}
+	}
+
 	cmd := exec.Command("git", "diff", "HEAD")
-	return cmd.Output()
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, tcerrors.WithSuggestion(
+			"failed to generate git diff",
+			"Ensure you have at least one commit in your repository",
+		)
+	}
+	return out, nil
 }
