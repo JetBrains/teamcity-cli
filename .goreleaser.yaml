@@ -69,10 +69,8 @@ nfpms:
       - src: README.md
         dst: /usr/share/doc/tc/README.md
 
-homebrew_casks:
+brews:
   - name: tc
-    binaries:
-      - tc
     repository:
       owner: JetBrains
       name: homebrew-utils
@@ -80,9 +78,12 @@ homebrew_casks:
       name: teamcity-bot
       email: teamcity-support@jetbrains.com
     commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
-    directory: Casks
+    directory: Formula
     homepage: https://github.com/JetBrains/teamcity-cli
     description: A command-line interface for TeamCity CI/CD server
+    license: Apache-2.0
+    install: |
+      bin.install "tc"
 
 scoops:
   - repository:
