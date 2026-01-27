@@ -173,6 +173,18 @@ type TriggerBuildRequest struct {
 	Agent             *AgentRef          `json:"agent,omitempty"`
 	Tags              *TagList           `json:"tags,omitempty"`
 	LastChanges       *LastChanges       `json:"lastChanges,omitempty"`
+	Revisions         *Revisions         `json:"revisions,omitempty"`
+}
+
+// Revisions represents a list of VCS revisions for a build
+type Revisions struct {
+	Revision []Revision `json:"revision"`
+}
+
+// Revision represents a specific VCS revision
+type Revision struct {
+	Version       string `json:"version"`
+	VcsBranchName string `json:"vcsBranchName,omitempty"`
 }
 
 // LastChanges represents the changes to include in a build
