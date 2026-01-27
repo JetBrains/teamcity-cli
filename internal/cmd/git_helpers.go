@@ -19,9 +19,10 @@ func getCurrentBranch() (string, error) {
 	cmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
 	out, err := cmd.Output()
 	if err != nil {
+		// Check if we're in detached HEAD state
 		checkCmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-		checkOut, _ := checkCmd.Output()
-		if strings.TrimSpace(string(checkOut)) == "HEAD" {
+		checkOut, checkErr := checkCmd.Output()
+		if checkErr == nil && strings.TrimSpace(string(checkOut)) == "HEAD" {
 			return "", tcerrors.WithSuggestion(
 				"cannot determine branch: you are in detached HEAD state",
 				"Check out a branch with 'git checkout <branch>' or specify --branch explicitly",
@@ -35,9 +36,9 @@ func getCurrentBranch() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// getRemoteName returns the name of the remote for the current branch, or "origin" if no upstream is configured
-func getRemoteName() string {
-	cmd := exec.Command("git", "config", "--get", "branch."+getCurrentBranchSafe()+".remote")
+// getRemoteForBranch returns the name of the remote for the given branch, or "origin" if no upstream is configured
+func getRemoteForBranch(branch string) string {
+	cmd := exec.Command("git", "config", "--get", "branch."+branch+".remote")
 	out, err := cmd.Output()
 	if err != nil || strings.TrimSpace(string(out)) == "" {
 		return "origin"
@@ -45,18 +46,9 @@ func getRemoteName() string {
 	return strings.TrimSpace(string(out))
 }
 
-// getCurrentBranchSafe returns the current branch or empty string on error
-func getCurrentBranchSafe() string {
-	branch, err := getCurrentBranch()
-	if err != nil {
-		return ""
-	}
-	return branch
-}
-
 // pushBranch pushes the given branch to its remote with -u flag
 func pushBranch(branch string) error {
-	remote := getRemoteName()
+	remote := getRemoteForBranch(branch)
 	cmd := exec.Command("git", "push", "-u", remote, branch)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
