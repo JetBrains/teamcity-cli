@@ -1,0 +1,57 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement!
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the CLI does this relate to?
+      options:
+        - Build Operations (run, trigger, cancel, logs)
+        - Agent Management (list, enable, disable)
+        - Configuration (parameters, projects)
+        - VCS Operations (remote run, changes)
+        - Infrastructure (installation, release)
+        - Other / Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem does this solve? What are you trying to do?
+      placeholder: I want to be able to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How do you think this should work?
+      placeholder: |
+        ```bash
+        tc <command> --flag
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you've thought about?
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd be willing to submit a PR for this feature
