@@ -26,7 +26,7 @@ type runStartOptions struct {
 	comment           string
 	personal          bool
 	localChanges      string // path to a diff file, "-" for stdin, or "git" to auto-generate
-	pushBranch        bool   // push a branch to remote before a personal build
+	noPush            bool   // skip auto-push of branch to remote
 	cleanSources      bool
 	rebuildDeps       bool
 	rebuildFailedDeps bool
@@ -72,7 +72,7 @@ func newRunStartCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.personal, "personal", false, "Run as personal build")
 	localChangesFlag := cmd.Flags().VarPF(&localChangesValue{val: &opts.localChanges}, "local-changes", "l", "Include local changes (git, -, or path; default: git)")
 	localChangesFlag.NoOptDefVal = "git"
-	cmd.Flags().BoolVar(&opts.pushBranch, "push", false, "Push branch to remote before personal build")
+	cmd.Flags().BoolVar(&opts.noPush, "no-push", false, "Skip auto-push of branch to remote")
 	cmd.Flags().BoolVar(&opts.cleanSources, "clean", false, "Clean sources before run")
 	cmd.Flags().BoolVar(&opts.rebuildDeps, "rebuild-deps", false, "Rebuild all dependencies")
 	cmd.Flags().BoolVar(&opts.rebuildFailedDeps, "rebuild-failed-deps", false, "Rebuild failed/incomplete dependencies")
@@ -137,6 +137,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		return nil
 	}
 
+	var headCommit string
 	if opts.localChanges != "" && opts.branch == "" {
 		if !isGitRepo() {
 			return tcerrors.WithSuggestion(
@@ -152,18 +153,22 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		output.Info("Using current branch: %s", branch)
 	}
 
-	if opts.pushBranch {
-		if opts.localChanges == "" {
-			return tcerrors.WithSuggestion(
-				"--push requires --local-changes",
-				"Use --push together with --local-changes to push your branch before a personal build",
-			)
+	if opts.localChanges != "" && !opts.noPush {
+		if !branchExistsOnRemote(opts.branch) {
+			output.Info("Pushing branch to remote...")
+			if err := pushBranch(opts.branch); err != nil {
+				return err
+			}
+			output.Success("Branch pushed to remote")
 		}
-		output.Info("Pushing branch to remote...")
-		if err := pushBranch(opts.branch); err != nil {
+	}
+
+	if opts.localChanges != "" {
+		commit, err := getHeadCommit()
+		if err != nil {
 			return err
 		}
-		output.Success("Branch pushed to remote")
+		headCommit = commit
 	}
 
 	client, err := getClient()
@@ -208,6 +213,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		AgentID:                   opts.agent,
 		Tags:                      opts.tags,
 		PersonalChangeID:          personalChangeID,
+		Revision:                  headCommit,
 	})
 	if err != nil {
 		return err

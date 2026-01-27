@@ -118,6 +118,7 @@ type RunBuildOptions struct {
 	AgentID                   int
 	Tags                      []string
 	PersonalChangeID          string
+	Revision                  string // Base revision (commit SHA) for personal builds
 }
 
 // RunBuild runs a new build with full options
@@ -175,6 +176,18 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 		req.LastChanges = &LastChanges{
 			Change: []PersonalChange{
 				{ID: opts.PersonalChangeID, Personal: true},
+			},
+		}
+	}
+
+	if opts.Revision != "" {
+		vcsBranch := opts.Branch
+		if vcsBranch != "" && !strings.HasPrefix(vcsBranch, "refs/") {
+			vcsBranch = "refs/heads/" + vcsBranch
+		}
+		req.Revisions = &Revisions{
+			Revision: []Revision{
+				{Version: opts.Revision, VcsBranchName: vcsBranch},
 			},
 		}
 	}

@@ -36,6 +36,30 @@ func getCurrentBranch() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// getHeadCommit returns the SHA of the current HEAD commit
+func getHeadCommit() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", tcerrors.WithSuggestion(
+			"failed to get HEAD commit",
+			"Ensure you are in a git repository with at least one commit",
+		)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// branchExistsOnRemote checks if the branch exists on the remote
+func branchExistsOnRemote(branch string) bool {
+	remote := getRemoteForBranch(branch)
+	cmd := exec.Command("git", "ls-remote", "--heads", remote, branch)
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) != ""
+}
+
 // getRemoteForBranch returns the name of the remote for the given branch, or "origin" if no upstream is configured
 func getRemoteForBranch(branch string) string {
 	cmd := exec.Command("git", "config", "--get", "branch."+branch+".remote")
