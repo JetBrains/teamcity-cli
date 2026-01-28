@@ -320,14 +320,21 @@ func getClient() (api.ClientInterface, error) {
 	return GetClientFunc()
 }
 
-// defaultGetClient is the default implementation that creates a real API client.
 func defaultGetClient() (api.ClientInterface, error) {
 	serverURL := config.GetServerURL()
 	token := config.GetToken()
 
-	if serverURL == "" || token == "" {
-		return nil, tcerrors.NotAuthenticated()
+	if serverURL != "" && token != "" {
+		return api.NewClient(serverURL, token), nil
 	}
 
-	return api.NewClient(serverURL, token), nil
+	if buildAuth, ok := config.GetBuildAuth(); ok {
+		if serverURL == "" {
+			serverURL = buildAuth.ServerURL
+		}
+		output.Debug("Using build-level authentication")
+		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password), nil
+	}
+
+	return nil, tcerrors.NotAuthenticated()
 }
