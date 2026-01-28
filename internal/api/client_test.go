@@ -64,6 +64,74 @@ func TestNewClientWithBasicAuth(T *testing.T) {
 	assert.Empty(T, client.Token)
 }
 
+func TestBasicAuthSendsCorrectHeaders(T *testing.T) {
+	T.Parallel()
+
+	var receivedUser, receivedPass string
+	var authHeaderPresent bool
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedUser, receivedPass, authHeaderPresent = r.BasicAuth()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(User{ID: 1, Username: receivedUser, Name: "Test"})
+	}))
+	T.Cleanup(server.Close)
+
+	client := NewClientWithBasicAuth(server.URL, "buildUser", "buildPass")
+	_, err := client.GetCurrentUser()
+
+	require.NoError(T, err)
+	assert.True(T, authHeaderPresent, "basic auth header should be present")
+	assert.Equal(T, "buildUser", receivedUser)
+	assert.Equal(T, "buildPass", receivedPass)
+}
+
+func TestBasicAuthWorksForAPIRequests(T *testing.T) {
+	T.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if !ok || user != "testuser" || pass != "testpass" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(ProjectList{
+			Count:    1,
+			Projects: []Project{{ID: "Test", Name: "Test Project"}},
+		})
+	}))
+	T.Cleanup(server.Close)
+
+	client := NewClientWithBasicAuth(server.URL, "testuser", "testpass")
+	projects, err := client.GetProjects(ProjectsOptions{})
+
+	require.NoError(T, err)
+	assert.Equal(T, 1, projects.Count)
+	assert.Equal(T, "Test", projects.Projects[0].ID)
+}
+
+func TestBasicAuthRejectsInvalidCredentials(T *testing.T) {
+	T.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if !ok || user != "validuser" || pass != "validpass" {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Unauthorized"))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(User{ID: 1})
+	}))
+	T.Cleanup(server.Close)
+
+	client := NewClientWithBasicAuth(server.URL, "wronguser", "wrongpass")
+	_, err := client.GetCurrentUser()
+
+	assert.Error(T, err)
+}
+
 func TestAPIPath(T *testing.T) {
 	T.Parallel()
 

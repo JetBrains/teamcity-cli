@@ -177,19 +177,25 @@ func newAuthStatusCmd() *cobra.Command {
 
 func runAuthStatus() error {
 	serverURL := config.GetServerURL()
-	if serverURL == "" {
-		fmt.Println(output.Red("✗"), "Not logged in to any TeamCity server")
-		fmt.Println("\nRun", output.Cyan("tc auth login"), "to authenticate")
-		return nil
-	}
-
 	token := config.GetToken()
-	if token == "" {
-		fmt.Printf("%s Server: %s\n", output.Red("✗"), serverURL)
-		fmt.Println("  No token configured")
-		return nil
+
+	if serverURL != "" && token != "" {
+		return showExplicitAuthStatus(serverURL, token)
 	}
 
+	if buildAuth, ok := config.GetBuildAuth(); ok {
+		return showBuildAuthStatus(buildAuth)
+	}
+
+	fmt.Println(output.Red("✗"), "Not logged in to any TeamCity server")
+	fmt.Println("\nRun", output.Cyan("tc auth login"), "to authenticate")
+	if config.IsBuildEnvironment() {
+		fmt.Println("\n" + output.Yellow("!") + " Build environment detected but credentials not found in properties file")
+	}
+	return nil
+}
+
+func showExplicitAuthStatus(serverURL, token string) error {
 	client := api.NewClient(serverURL, token)
 	user, err := client.GetCurrentUser()
 	if err != nil {
@@ -210,6 +216,28 @@ func runAuthStatus() error {
 		} else {
 			fmt.Printf("  %s API compatible\n", output.Green("✓"))
 		}
+	}
+
+	return nil
+}
+
+func showBuildAuthStatus(buildAuth *config.BuildAuth) error {
+	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password)
+	user, err := client.GetCurrentUser()
+	if err != nil {
+		fmt.Printf("%s Server: %s\n", output.Red("✗"), buildAuth.ServerURL)
+		fmt.Println("  Build credentials are invalid")
+		return nil
+	}
+
+	fmt.Printf("%s Connected to %s\n", output.Green("✓"), output.Cyan(buildAuth.ServerURL))
+	fmt.Printf("  Auth: %s\n", output.Faint("Build-level credentials"))
+	fmt.Printf("  User: %s (%s)\n", user.Name, user.Username)
+	fmt.Printf("  Scope: %s\n", output.Faint("Read-only access to current project"))
+
+	server, err := client.ServerVersion()
+	if err == nil {
+		fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
 	}
 
 	return nil
