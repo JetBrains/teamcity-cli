@@ -13,10 +13,11 @@ import (
 var (
 	Version = "dev"
 
-	NoColor bool
-	Quiet   bool
-	Verbose bool
-	NoInput bool
+	NoColor   bool
+	Quiet     bool
+	Verbose   bool
+	NoInput   bool
+	BuildAuth bool
 )
 
 var rootCmd = &cobra.Command{
@@ -56,6 +57,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&Quiet, "quiet", "q", false, "Suppress non-essential output")
 	rootCmd.PersistentFlags().BoolVar(&Verbose, "verbose", false, "Show detailed output including debug info")
 	rootCmd.PersistentFlags().BoolVar(&NoInput, "no-input", false, "Disable interactive prompts")
+	rootCmd.PersistentFlags().BoolVar(&BuildAuth, "build-auth", false, "Use TeamCity build-level authentication (requires running in a TeamCity build)")
 
 	rootCmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
 
@@ -114,6 +116,7 @@ func NewRootCmd() *RootCommand {
 	cmd.PersistentFlags().BoolVarP(&Quiet, "quiet", "q", false, "Suppress non-essential output")
 	cmd.PersistentFlags().BoolVar(&Verbose, "verbose", false, "Show detailed output including debug info")
 	cmd.PersistentFlags().BoolVar(&NoInput, "no-input", false, "Disable interactive prompts")
+	cmd.PersistentFlags().BoolVar(&BuildAuth, "build-auth", false, "Use TeamCity build-level authentication (requires running in a TeamCity build)")
 
 	cmd.AddCommand(newAuthCmd())
 	cmd.AddCommand(newProjectCmd())

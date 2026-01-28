@@ -322,6 +322,15 @@ func getClient() (api.ClientInterface, error) {
 
 // defaultGetClient is the default implementation that creates a real API client.
 func defaultGetClient() (api.ClientInterface, error) {
+	// Check if build-auth flag is set
+	if BuildAuth {
+		buildAuth, err := config.GetBuildAuth()
+		if err != nil {
+			return nil, fmt.Errorf("build auth failed: %w", err)
+		}
+		return api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.UserID, buildAuth.Password), nil
+	}
+
 	serverURL := config.GetServerURL()
 	token := config.GetToken()
 

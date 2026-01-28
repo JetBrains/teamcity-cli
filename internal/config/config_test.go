@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -243,5 +244,171 @@ func TestSetUserForServer(T *testing.T) {
 		cfg = &Config{DefaultServer: "https://tc.example.com", Servers: nil}
 		// Should not panic
 		SetUserForServer("https://tc.example.com", "user")
+	})
+}
+
+func TestReadPropertiesFile(T *testing.T) {
+	T.Run("basic properties", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		propsFile := filepath.Join(tmpDir, "build.properties")
+
+		content := `# Comment line
+teamcity.auth.userId=build_user_123
+teamcity.auth.password=secret_password
+teamcity.serverUrl=https://teamcity.example.com
+`
+		err := os.WriteFile(propsFile, []byte(content), 0600)
+		require.NoError(t, err)
+
+		props, err := readPropertiesFile(propsFile)
+		require.NoError(t, err)
+
+		assert.Equal(t, "build_user_123", props["teamcity.auth.userId"])
+		assert.Equal(t, "secret_password", props["teamcity.auth.password"])
+		assert.Equal(t, "https://teamcity.example.com", props["teamcity.serverUrl"])
+	})
+
+	T.Run("colon separator", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		propsFile := filepath.Join(tmpDir, "build.properties")
+
+		content := `key1:value1
+key2=value2
+`
+		err := os.WriteFile(propsFile, []byte(content), 0600)
+		require.NoError(t, err)
+
+		props, err := readPropertiesFile(propsFile)
+		require.NoError(t, err)
+
+		assert.Equal(t, "value1", props["key1"])
+		assert.Equal(t, "value2", props["key2"])
+	})
+
+	T.Run("escaped values", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		propsFile := filepath.Join(tmpDir, "build.properties")
+
+		content := `path=C\\:\\Users\\test
+multiline=line1\nline2
+`
+		err := os.WriteFile(propsFile, []byte(content), 0600)
+		require.NoError(t, err)
+
+		props, err := readPropertiesFile(propsFile)
+		require.NoError(t, err)
+
+		// \\\\ in Go string literal is \\ in file, which unescapes to \
+		// So C\\:\Users\\test in file becomes C\:\Users\test
+		assert.Equal(t, "C\\:\\Users\\test", props["path"])
+		// \n in file becomes actual newline
+		assert.Equal(t, "line1\nline2", props["multiline"])
+	})
+
+	T.Run("file not found", func(t *testing.T) {
+		_, err := readPropertiesFile("/nonexistent/file.properties")
+		assert.Error(t, err)
+	})
+}
+
+func TestGetBuildAuth(T *testing.T) {
+	saveCfgState(T)
+
+	T.Run("no env var set", func(t *testing.T) {
+		t.Setenv(EnvBuildPropertiesFile, "")
+
+		auth, err := GetBuildAuth()
+		assert.Nil(t, auth)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not running in a TeamCity build environment")
+	})
+
+	T.Run("valid properties file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		propsFile := filepath.Join(tmpDir, "build.properties")
+
+		content := `teamcity.auth.userId=build_user
+teamcity.auth.password=build_pass
+teamcity.serverUrl=https://tc.example.com/
+`
+		err := os.WriteFile(propsFile, []byte(content), 0600)
+		require.NoError(t, err)
+
+		t.Setenv(EnvBuildPropertiesFile, propsFile)
+		t.Setenv(EnvServerURL, "")
+
+		auth, err := GetBuildAuth()
+		require.NoError(t, err)
+		require.NotNil(t, auth)
+
+		assert.Equal(t, "build_user", auth.UserID)
+		assert.Equal(t, "build_pass", auth.Password)
+		assert.Equal(t, "https://tc.example.com", auth.ServerURL) // trailing slash should be trimmed
+	})
+
+	T.Run("missing credentials in file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		propsFile := filepath.Join(tmpDir, "build.properties")
+
+		content := `teamcity.serverUrl=https://tc.example.com
+`
+		err := os.WriteFile(propsFile, []byte(content), 0600)
+		require.NoError(t, err)
+
+		t.Setenv(EnvBuildPropertiesFile, propsFile)
+
+		auth, err := GetBuildAuth()
+		assert.Nil(t, auth)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "build auth credentials not found")
+	})
+
+	T.Run("fallback to TEAMCITY_URL", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		propsFile := filepath.Join(tmpDir, "build.properties")
+
+		content := `teamcity.auth.userId=build_user
+teamcity.auth.password=build_pass
+`
+		err := os.WriteFile(propsFile, []byte(content), 0600)
+		require.NoError(t, err)
+
+		t.Setenv(EnvBuildPropertiesFile, propsFile)
+		t.Setenv(EnvServerURL, "https://fallback.example.com")
+
+		auth, err := GetBuildAuth()
+		require.NoError(t, err)
+		require.NotNil(t, auth)
+
+		assert.Equal(t, "https://fallback.example.com", auth.ServerURL)
+	})
+
+	T.Run("missing server URL", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		propsFile := filepath.Join(tmpDir, "build.properties")
+
+		content := `teamcity.auth.userId=build_user
+teamcity.auth.password=build_pass
+`
+		err := os.WriteFile(propsFile, []byte(content), 0600)
+		require.NoError(t, err)
+
+		t.Setenv(EnvBuildPropertiesFile, propsFile)
+		t.Setenv(EnvServerURL, "")
+		cfg = &Config{Servers: make(map[string]ServerConfig)}
+
+		auth, err := GetBuildAuth()
+		assert.Nil(t, auth)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "TeamCity server URL not found")
+	})
+
+	T.Run("nonexistent properties file", func(t *testing.T) {
+		t.Setenv(EnvBuildPropertiesFile, "/nonexistent/path/build.properties")
+
+		auth, err := GetBuildAuth()
+		assert.Nil(t, auth)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to read build properties file")
 	})
 }

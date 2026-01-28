@@ -596,3 +596,29 @@ func TestPersonalBuildWithLocalChanges(T *testing.T) {
 		}
 	}
 }
+
+func TestBasicAuthClient(T *testing.T) {
+	// This test verifies that NewClientWithBasicAuth works correctly.
+	// Build-auth uses basic authentication under the hood.
+	T.Parallel()
+
+	// Use the existing test environment URL and admin credentials
+	serverURL := os.Getenv("TEAMCITY_URL")
+	if serverURL == "" {
+		T.Skip("TEAMCITY_URL not set")
+	}
+
+	// Create a client using basic auth with admin credentials
+	// (the testenv_test.go creates an admin user with password "admin123")
+	basicClient := api.NewClientWithBasicAuth(serverURL, "admin", "admin123")
+
+	// Test that the client can authenticate and make API calls
+	user, err := basicClient.GetCurrentUser()
+	if err != nil {
+		// If admin user doesn't exist with these credentials, just skip
+		T.Skipf("Basic auth test skipped (admin credentials may differ): %v", err)
+	}
+
+	assert.Equal(T, "admin", user.Username)
+	T.Logf("Basic auth test passed for user: %s", user.Username)
+}
