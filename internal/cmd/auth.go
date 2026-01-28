@@ -223,7 +223,7 @@ func showExplicitAuthStatus(serverURL, token string) error {
 
 func showBuildAuthStatus(buildAuth *config.BuildAuth) error {
 	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password)
-	user, err := client.GetCurrentUser()
+	server, err := client.GetServer()
 	if err != nil {
 		fmt.Printf("%s Server: %s\n", output.Red("✗"), buildAuth.ServerURL)
 		fmt.Println("  Build credentials are invalid")
@@ -232,13 +232,8 @@ func showBuildAuthStatus(buildAuth *config.BuildAuth) error {
 
 	fmt.Printf("%s Connected to %s\n", output.Green("✓"), output.Cyan(buildAuth.ServerURL))
 	fmt.Printf("  Auth: %s\n", output.Faint("Build-level credentials"))
-	fmt.Printf("  User: %s (%s)\n", user.Name, user.Username)
-	fmt.Printf("  Scope: %s\n", output.Faint("Read-only access to current project"))
-
-	server, err := client.ServerVersion()
-	if err == nil {
-		fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
-	}
+	fmt.Printf("  Scope: %s\n", output.Faint("Build-level access"))
+	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
 
 	return nil
 }

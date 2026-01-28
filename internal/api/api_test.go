@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/internal/api"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,7 @@ var (
 	testConfig  string
 	testProject string
 	testBuild   *api.Build
+	testEnvRef  *testEnv
 )
 
 func TestMain(m *testing.M) {
@@ -35,6 +37,13 @@ func TestMain(m *testing.M) {
 	testConfig = env.ConfigID
 	testProject = env.ProjectID
 	testBuild = env.Build
+	testEnvRef = env
+
+	if env.agent != nil {
+		if err := copyBinaryToAgent(env); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not copy binary to agent: %v\n", err)
+		}
+	}
 
 	code := m.Run()
 	env.Cleanup()
@@ -595,4 +604,93 @@ func TestPersonalBuildWithLocalChanges(T *testing.T) {
 			T.Logf("CancelBuild warning (may have finished): %v", err)
 		}
 	}
+}
+
+func TestBasicAuth(T *testing.T) {
+	serverURL := os.Getenv("TEAMCITY_URL")
+	require.NotEmpty(T, serverURL, "TEAMCITY_URL must be set")
+
+	T.Run("valid credentials", func(t *testing.T) {
+		basicClient := api.NewClientWithBasicAuth(serverURL, "admin", "admin123")
+
+		user, err := basicClient.GetCurrentUser()
+		require.NoError(t, err)
+		assert.Equal(t, "admin", user.Username)
+
+		server, err := basicClient.GetServer()
+		require.NoError(t, err)
+		assert.NotEmpty(t, server.Version)
+	})
+
+	T.Run("invalid credentials", func(t *testing.T) {
+		basicClient := api.NewClientWithBasicAuth(serverURL, "invalid", "wrongpassword")
+		_, err := basicClient.GetCurrentUser()
+		require.Error(t, err)
+	})
+}
+
+// TestBuildLevelAuth verifies that the CLI correctly uses build-level credentials
+// when running inside a TeamCity build. The build runs our actual CLI binary which
+// uses GetBuildAuth() to read credentials from the properties file.
+func TestBuildLevelAuth(T *testing.T) {
+	if testEnvRef == nil || testEnvRef.agent == nil {
+		T.Skip("test requires testcontainers agent")
+	}
+
+	configID := "Sandbox_BuildAuthTest"
+
+	// Script runs our CLI using build-level auth.
+	// We set TEAMCITY_URL to the internal Docker network name because the
+	// properties file contains localhost which isn't reachable from the container.
+	// Setting TEAMCITY_URL (without TEAMCITY_TOKEN) makes CLI use that URL with build credentials.
+	script := `set -e
+which tc || { echo "tc binary not found"; exit 1; }
+export TEAMCITY_URL=http://teamcity-server:8111
+unset TEAMCITY_TOKEN
+tc auth status
+`
+
+	if !client.BuildTypeExists(configID) {
+		_, err := client.CreateBuildType(testProject, api.CreateBuildTypeRequest{
+			ID:   configID,
+			Name: "Build Auth Test",
+		})
+		require.NoError(T, err)
+
+		err = client.CreateBuildStep(configID, api.BuildStep{
+			Name: "Test Build Auth",
+			Type: "simpleRunner",
+			Properties: api.PropertyList{
+				Property: []api.Property{
+					{Name: "script.content", Value: script},
+					{Name: "use.custom.script", Value: "true"},
+				},
+			},
+		})
+		require.NoError(T, err)
+	}
+
+	build, err := client.RunBuild(configID, api.RunBuildOptions{})
+	require.NoError(T, err)
+	T.Logf("Started build #%d", build.ID)
+
+	buildID := fmt.Sprintf("%d", build.ID)
+	deadline := time.Now().Add(3 * time.Minute)
+	for time.Now().Before(deadline) {
+		build, err = client.GetBuild(buildID)
+		require.NoError(T, err)
+		if build.State == "finished" {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+	require.Equal(T, "finished", build.State)
+
+	buildLog, err := client.GetBuildLog(buildID)
+	require.NoError(T, err)
+	T.Logf("Build log:\n%s", buildLog)
+
+	assert.Contains(T, buildLog, "Build-level credentials", "CLI should use build-level auth")
+	assert.Equal(T, "SUCCESS", build.Status)
 }

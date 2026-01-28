@@ -23,6 +23,7 @@ func IsBuildEnvironment() bool {
 }
 
 // GetBuildAuth returns build-level credentials if running inside a TeamCity build.
+// Server URL priority: TEAMCITY_URL > BUILD_URL > teamcity.serverUrl property
 func GetBuildAuth() (*BuildAuth, bool) {
 	propsFile := os.Getenv(EnvBuildPropertiesFile)
 	if propsFile == "" {
@@ -40,7 +41,10 @@ func GetBuildAuth() (*BuildAuth, bool) {
 		return nil, false
 	}
 
-	serverURL := extractServerURL(os.Getenv(EnvBuildURL))
+	serverURL := os.Getenv(EnvServerURL)
+	if serverURL == "" {
+		serverURL = extractServerURL(os.Getenv(EnvBuildURL))
+	}
 	if serverURL == "" {
 		serverURL = props.GetString("teamcity.serverUrl", "")
 	}

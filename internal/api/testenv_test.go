@@ -9,7 +9,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/internal/api"
@@ -311,6 +313,9 @@ func setupServer(serverURL, superToken, projectID, configID string) (string, err
 		time.Sleep(3 * time.Second)
 	}
 
+	// Set internal server URL so build properties use the Docker network name
+	setServerURL(serverURL, superToken, "http://teamcity-server:8111")
+
 	if !client.ProjectExists(projectID) {
 		if _, err := client.CreateProject(api.CreateProjectRequest{ID: projectID, Name: "Sandbox"}); err != nil {
 			return "", err
@@ -365,4 +370,54 @@ func waitForAgent(client *api.Client) error {
 		time.Sleep(5 * time.Second)
 	}
 	return fmt.Errorf("agent timeout")
+}
+
+func setServerURL(serverURL, superToken, internalURL string) {
+	req, err := http.NewRequest("PUT", serverURL+"/app/rest/server/rootUrl", strings.NewReader(internalURL))
+	if err != nil {
+		log.Printf("Warning: could not create request to set server URL: %v", err)
+		return
+	}
+	req.SetBasicAuth("", superToken)
+	req.Header.Set("Content-Type", "text/plain")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("Warning: could not set server URL: %v", err)
+		return
+	}
+	resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		log.Printf("Warning: set server URL returned %d", resp.StatusCode)
+		return
+	}
+	log.Printf("Set server root URL to %s", internalURL)
+}
+
+func copyBinaryToAgent(env *testEnv) error {
+	log.Println("Building CLI binary for agent...")
+
+	tmpDir, err := os.MkdirTemp("", "tc-cli-build")
+	if err != nil {
+		return fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	binaryPath := tmpDir + "/tc"
+	cmd := exec.Command("go", "build", "-o", binaryPath, "../../tc")
+	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64", "CGO_ENABLED=0")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("build binary: %w", err)
+	}
+
+	log.Println("Copying binary to agent container...")
+	err = env.agent.CopyFileToContainer(env.ctx, binaryPath, "/usr/local/bin/tc", 0755)
+	if err != nil {
+		return fmt.Errorf("copy to container: %w", err)
+	}
+
+	log.Println("CLI binary installed on agent at /usr/local/bin/tc")
+	return nil
 }

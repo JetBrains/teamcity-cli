@@ -90,6 +90,7 @@ teamcity.serverUrl=https://tc.example.com
 		require.NoError(t, err)
 
 		t.Setenv(EnvBuildPropertiesFile, propsFile)
+		t.Setenv(EnvServerURL, "")
 		t.Setenv(EnvBuildURL, "")
 
 		auth, ok := GetBuildAuth()
@@ -97,6 +98,26 @@ teamcity.serverUrl=https://tc.example.com
 		assert.Equal(t, "https://tc.example.com", auth.ServerURL)
 		assert.Equal(t, "buildUser123", auth.Username)
 		assert.Equal(t, "buildPass456", auth.Password)
+	})
+
+	t.Run("prefers TEAMCITY_URL over BUILD_URL and properties", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		propsFile := filepath.Join(tmpDir, "build.properties")
+
+		content := `teamcity.auth.userId=user
+teamcity.auth.password=pass
+teamcity.serverUrl=https://props.example.com
+`
+		err := os.WriteFile(propsFile, []byte(content), 0600)
+		require.NoError(t, err)
+
+		t.Setenv(EnvBuildPropertiesFile, propsFile)
+		t.Setenv(EnvServerURL, "https://explicit.example.com")
+		t.Setenv(EnvBuildURL, "https://buildurl.example.com/viewLog.html?buildId=123")
+
+		auth, ok := GetBuildAuth()
+		require.True(t, ok)
+		assert.Equal(t, "https://explicit.example.com", auth.ServerURL)
 	})
 
 	t.Run("prefers BUILD_URL over properties for server URL", func(t *testing.T) {
@@ -111,6 +132,7 @@ teamcity.serverUrl=https://props.example.com
 		require.NoError(t, err)
 
 		t.Setenv(EnvBuildPropertiesFile, propsFile)
+		t.Setenv(EnvServerURL, "")
 		t.Setenv(EnvBuildURL, "https://buildurl.example.com/viewLog.html?buildId=123")
 
 		auth, ok := GetBuildAuth()
