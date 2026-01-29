@@ -6,11 +6,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
 // Minimum supported TeamCity version
@@ -18,6 +20,51 @@ const (
 	MinMajorVersion = 2020
 	MinMinorVersion = 1
 )
+
+// sensitiveHeaders lists headers that should be redacted in debug output
+var sensitiveHeaders = map[string]bool{
+	"Authorization": true,
+	"Cookie":        true,
+	"Set-Cookie":    true,
+}
+
+// debugLogRequest logs HTTP request details when verbose mode is enabled
+func debugLogRequest(req *http.Request) {
+	if !output.Verbose {
+		return
+	}
+	output.Debug("> %s %s", req.Method, req.URL.String())
+	debugLogHeaders(">", req.Header)
+}
+
+// debugLogResponse logs HTTP response details when verbose mode is enabled
+func debugLogResponse(resp *http.Response) {
+	if !output.Verbose {
+		return
+	}
+	output.Debug("< %s %s", resp.Proto, resp.Status)
+	debugLogHeaders("<", resp.Header)
+}
+
+// debugLogHeaders logs HTTP headers with sensitive values redacted
+func debugLogHeaders(prefix string, headers http.Header) {
+	names := make([]string, 0, len(headers))
+	for name := range headers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		values := headers[name]
+		if sensitiveHeaders[name] {
+			output.Debug("%s %s: [REDACTED]", prefix, name)
+		} else {
+			for _, value := range values {
+				output.Debug("%s %s: %s", prefix, name, value)
+			}
+		}
+	}
+}
 
 // Client represents a TeamCity API client
 type Client struct {
@@ -183,10 +230,14 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 		req.Header.Set("Content-Type", contentType)
 	}
 
+	debugLogRequest(req)
+
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
+
+	debugLogResponse(resp)
 
 	return resp, nil
 }
@@ -424,11 +475,15 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 		req.Header.Set(k, v)
 	}
 
+	debugLogRequest(req)
+
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, tcerrors.NetworkError(c.BaseURL, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
+
+	debugLogResponse(resp)
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
