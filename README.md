@@ -796,6 +796,37 @@ tc project param set MyID SECRET_KEY "****" --secure
 **Options:**
 - `--secure` – Mark as secure/password parameter
 
+### project settings export
+
+Export project settings as a ZIP archive containing Kotlin DSL or XML configuration.
+
+The exported archive can be used to:
+- Version control your CI/CD configuration
+- Migrate settings between TeamCity instances
+- Review settings as code
+
+By default, exports in Kotlin DSL format.
+
+```bash
+# Export as Kotlin DSL (default)
+tc project settings export MyProject
+
+# Export as Kotlin DSL explicitly
+tc project settings export MyProject --kotlin
+
+# Export as XML
+tc project settings export MyProject --xml
+
+# Save to specific file
+tc project settings export MyProject -o settings.zip
+```
+
+**Options:**
+- `--kotlin` – Export as Kotlin DSL (default)
+- `-o, --output` – Output file path (default: projectSettings.zip)
+- `--relative-ids` – Use relative IDs in exported settings
+- `--xml` – Export as XML
+
 ### project settings status
 
 Show the synchronization status of versioned settings for a project.

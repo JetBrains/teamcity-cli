@@ -28,6 +28,7 @@ type ClientInterface interface {
 	GetSecureValue(projectID, token string) (string, error)
 	GetVersionedSettingsStatus(projectID string) (*VersionedSettingsStatus, error)
 	GetVersionedSettingsConfig(projectID string) (*VersionedSettingsConfig, error)
+	ExportProjectSettings(projectID, format string, useRelativeIds bool) ([]byte, error)
 
 	// Build Types (Jobs)
 	GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error)

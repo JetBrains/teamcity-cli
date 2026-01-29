@@ -328,6 +328,7 @@ See: https://www.jetbrains.com/help/teamcity/storing-project-settings-in-version
 	}
 
 	cmd.AddCommand(newProjectSettingsStatusCmd())
+	cmd.AddCommand(newProjectSettingsExportCmd())
 
 	return cmd
 }
@@ -455,6 +456,84 @@ func runProjectSettingsStatus(projectID string, opts *projectSettingsStatusOptio
 
 	fmt.Printf("\n%-12s %s\n", output.Faint("View"), output.Faint(project.WebURL+"&tab=versionedSettings"))
 
+	return nil
+}
+
+type projectSettingsExportOptions struct {
+	kotlin         bool
+	xml            bool
+	output         string
+	useRelativeIds bool
+}
+
+func newProjectSettingsExportCmd() *cobra.Command {
+	opts := &projectSettingsExportOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "export <project-id>",
+		Short: "Export project settings as Kotlin DSL or XML",
+		Long: `Export project settings as a ZIP archive containing Kotlin DSL or XML configuration.
+
+The exported archive can be used to:
+- Version control your CI/CD configuration
+- Migrate settings between TeamCity instances
+- Review settings as code
+
+By default, exports in Kotlin DSL format.`,
+		Example: `  # Export as Kotlin DSL (default)
+  tc project settings export MyProject
+
+  # Export as Kotlin DSL explicitly
+  tc project settings export MyProject --kotlin
+
+  # Export as XML
+  tc project settings export MyProject --xml
+
+  # Save to specific file
+  tc project settings export MyProject -o settings.zip`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runProjectSettingsExport(args[0], opts)
+		},
+	}
+
+	cmd.Flags().BoolVar(&opts.kotlin, "kotlin", false, "Export as Kotlin DSL (default)")
+	cmd.Flags().BoolVar(&opts.xml, "xml", false, "Export as XML")
+	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "Output file path (default: projectSettings.zip)")
+	cmd.Flags().BoolVar(&opts.useRelativeIds, "relative-ids", true, "Use relative IDs in exported settings")
+	cmd.MarkFlagsMutuallyExclusive("kotlin", "xml")
+
+	return cmd
+}
+
+func runProjectSettingsExport(projectID string, opts *projectSettingsExportOptions) error {
+	client, err := getClient()
+	if err != nil {
+		return err
+	}
+
+	// Determine format (default to kotlin)
+	format := "kotlin"
+	if opts.xml {
+		format = "xml"
+	}
+
+	// Determine output filename
+	outputFile := opts.output
+	if outputFile == "" {
+		outputFile = "projectSettings.zip"
+	}
+
+	data, err := client.ExportProjectSettings(projectID, format, opts.useRelativeIds)
+	if err != nil {
+		return fmt.Errorf("failed to export settings: %w", err)
+	}
+
+	if err := os.WriteFile(outputFile, data, 0644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	fmt.Printf("Exported %s settings to %s (%d bytes)\n", format, outputFile, len(data))
 	return nil
 }
 

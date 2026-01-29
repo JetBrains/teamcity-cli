@@ -1,6 +1,8 @@
 package api
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -266,5 +268,147 @@ func TestProjectExists(T *testing.T) {
 
 		exists := client.ProjectExists("NonExistentProject")
 		assert.False(t, exists)
+	})
+}
+
+// createTestZip creates a valid ZIP archive with the given files for testing
+func createTestZip(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+	buf := new(bytes.Buffer)
+	w := zip.NewWriter(buf)
+	for name, content := range files {
+		f, err := w.Create(name)
+		require.NoError(t, err)
+		_, err = f.Write([]byte(content))
+		require.NoError(t, err)
+	}
+	require.NoError(t, w.Close())
+	return buf.Bytes()
+}
+
+func TestExportProjectSettings(T *testing.T) {
+	T.Parallel()
+
+	T.Run("kotlin format", func(t *testing.T) {
+		t.Parallel()
+
+		zipData := createTestZip(t, map[string]string{
+			"settings.kts": "// Kotlin DSL settings",
+			"pom.xml":      "<project></project>",
+			"README":       "Project settings",
+		})
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "GET", r.Method)
+			assert.Contains(t, r.URL.Path, "/admin/versionedSettingsActions.html")
+			assert.Equal(t, "TestProject", r.URL.Query().Get("projectId"))
+			assert.Equal(t, "generate", r.URL.Query().Get("action"))
+			assert.Equal(t, "kotlin", r.URL.Query().Get("format"))
+			assert.Equal(t, "true", r.URL.Query().Get("useRelativeIds"))
+
+			w.Header().Set("Content-Type", "application/zip")
+			w.Header().Set("Content-Disposition", "attachment; filename=projectSettings.zip")
+			w.Write(zipData)
+		}))
+		t.Cleanup(server.Close)
+		client := NewClient(server.URL, "test-token")
+
+		data, err := client.ExportProjectSettings("TestProject", "kotlin", true)
+		require.NoError(t, err)
+		assert.NotEmpty(t, data)
+
+		// Verify it's a valid ZIP file
+		zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+		require.NoError(t, err)
+		assert.Len(t, zipReader.File, 3)
+
+		// Verify expected files exist
+		fileNames := make([]string, 0, len(zipReader.File))
+		for _, f := range zipReader.File {
+			fileNames = append(fileNames, f.Name)
+		}
+		assert.Contains(t, fileNames, "settings.kts")
+		assert.Contains(t, fileNames, "pom.xml")
+		assert.Contains(t, fileNames, "README")
+	})
+
+	T.Run("xml format", func(t *testing.T) {
+		t.Parallel()
+
+		zipData := createTestZip(t, map[string]string{
+			"TestProject/project-config.xml":      "<project></project>",
+			"TestProject/buildTypes/Build.xml":    "<buildType></buildType>",
+			"TestProject/vcsRoots/GitHubRepo.xml": "<vcs-root></vcs-root>",
+		})
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "xml", r.URL.Query().Get("format"))
+			assert.Equal(t, "false", r.URL.Query().Get("useRelativeIds"))
+
+			w.Header().Set("Content-Type", "application/zip")
+			w.Write(zipData)
+		}))
+		t.Cleanup(server.Close)
+		client := NewClient(server.URL, "test-token")
+
+		data, err := client.ExportProjectSettings("TestProject", "xml", false)
+		require.NoError(t, err)
+
+		// Verify it's a valid ZIP file with XML content
+		zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+		require.NoError(t, err)
+		assert.Len(t, zipReader.File, 3)
+
+		// Verify XML files exist
+		hasProjectConfig := false
+		for _, f := range zipReader.File {
+			if strings.HasSuffix(f.Name, "project-config.xml") {
+				hasProjectConfig = true
+				break
+			}
+		}
+		assert.True(t, hasProjectConfig, "should contain project-config.xml")
+	})
+
+	T.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Authentication required"))
+		}))
+		t.Cleanup(server.Close)
+		client := NewClient(server.URL, "invalid-token")
+
+		_, err := client.ExportProjectSettings("TestProject", "kotlin", true)
+		assert.Error(t, err)
+	})
+
+	T.Run("project not found", func(t *testing.T) {
+		t.Parallel()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"errors":[{"message":"Project not found"}]}`))
+		}))
+		t.Cleanup(server.Close)
+		client := NewClient(server.URL, "test-token")
+
+		_, err := client.ExportProjectSettings("NonExistent", "kotlin", true)
+		assert.Error(t, err)
+	})
+
+	T.Run("forbidden", func(t *testing.T) {
+		t.Parallel()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"errors":[{"message":"Access denied"}]}`))
+		}))
+		t.Cleanup(server.Close)
+		client := NewClient(server.URL, "test-token")
+
+		_, err := client.ExportProjectSettings("RestrictedProject", "kotlin", true)
+		assert.Error(t, err)
 	})
 }
