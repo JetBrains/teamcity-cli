@@ -796,6 +796,25 @@ tc project param set MyID SECRET_KEY "****" --secure
 **Options:**
 - `--secure` – Mark as secure/password parameter
 
+### project settings status
+
+Show the synchronization status of versioned settings for a project.
+
+Displays:
+- Whether versioned settings are enabled
+- Current sync state (up-to-date, pending changes, errors)
+- Last successful sync timestamp
+- VCS root and format information
+- Any warnings or errors from the last sync attempt
+
+```bash
+tc project settings status MyProject
+tc project settings status MyProject --json
+```
+
+**Options:**
+- `--json` – Output as JSON
+
 ### project token get
 
 Retrieve the original value for a secure token.

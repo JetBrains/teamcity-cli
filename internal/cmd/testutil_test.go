@@ -532,6 +532,53 @@ func setupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
+	// Versioned Settings
+	ts.Handle("GET /app/rest/projects/TestProject/versionedSettings/config", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VersionedSettingsConfig{
+			SynchronizationMode: "enabled",
+			Format:              "kotlin",
+			BuildSettingsMode:   "useFromVCS",
+			VcsRootID:           "TestProject_HttpsGithubComExampleRepoGit",
+			SettingsPath:        ".teamcity",
+			AllowUIEditing:      true,
+			ShowSettingsChanges: true,
+		})
+	})
+
+	ts.Handle("GET /app/rest/projects/TestProject/versionedSettings/status", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VersionedSettingsStatus{
+			Type:        "info",
+			Message:     "Settings are up to date",
+			Timestamp:   "Mon Jan 27 10:30:00 UTC 2025",
+			DslOutdated: false,
+		})
+	})
+
+	ts.Handle("GET /app/rest/projects/WarningProject/versionedSettings/config", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VersionedSettingsConfig{
+			SynchronizationMode: "enabled",
+			Format:              "xml",
+			BuildSettingsMode:   "useCurrentByDefault",
+		})
+	})
+
+	ts.Handle("GET /app/rest/projects/WarningProject/versionedSettings/status", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VersionedSettingsStatus{
+			Type:        "warning",
+			Message:     "DSL scripts need to be regenerated",
+			Timestamp:   "Mon Jan 27 09:00:00 UTC 2025",
+			DslOutdated: true,
+		})
+	})
+
+	ts.Handle("GET /app/rest/projects/NoSettingsProject/versionedSettings/config", func(w http.ResponseWriter, r *http.Request) {
+		Error(w, http.StatusNotFound, "Versioned settings are not configured for this project")
+	})
+
+	ts.Handle("GET /app/rest/projects/NoSettingsProject/versionedSettings/status", func(w http.ResponseWriter, r *http.Request) {
+		Error(w, http.StatusNotFound, "Versioned settings are not configured for this project")
+	})
+
 	// Set user for the test server URL (supports @me in run list)
 	config.SetUserForServer(ts.URL, "admin")
 

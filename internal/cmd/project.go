@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/api"
@@ -27,6 +28,7 @@ func newProjectCmd() *cobra.Command {
 	cmd.AddCommand(newProjectListCmd())
 	cmd.AddCommand(newProjectViewCmd())
 	cmd.AddCommand(newProjectTokenCmd())
+	cmd.AddCommand(newProjectSettingsCmd())
 	cmd.AddCommand(newParamCmd("project", projectParamAPI))
 
 	return cmd
@@ -309,6 +311,182 @@ func runProjectTokenGet(projectID, token string) error {
 
 	fmt.Println(value)
 	return nil
+}
+
+func newProjectSettingsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "settings",
+		Short: "Manage versioned settings",
+		Long: `View and manage versioned settings (Kotlin DSL) for a project.
+
+Versioned settings allow you to store project configuration as code in a VCS repository.
+This enables version control, code review, and automated deployment of CI/CD configuration.
+
+See: https://www.jetbrains.com/help/teamcity/storing-project-settings-in-version-control.html`,
+		Args: cobra.NoArgs,
+		RunE: subcommandRequired,
+	}
+
+	cmd.AddCommand(newProjectSettingsStatusCmd())
+
+	return cmd
+}
+
+type projectSettingsStatusOptions struct {
+	json bool
+}
+
+func newProjectSettingsStatusCmd() *cobra.Command {
+	opts := &projectSettingsStatusOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "status <project-id>",
+		Short: "Show versioned settings sync status",
+		Long: `Show the synchronization status of versioned settings for a project.
+
+Displays:
+- Whether versioned settings are enabled
+- Current sync state (up-to-date, pending changes, errors)
+- Last successful sync timestamp
+- VCS root and format information
+- Any warnings or errors from the last sync attempt`,
+		Example: `  tc project settings status MyProject
+  tc project settings status MyProject --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runProjectSettingsStatus(args[0], opts)
+		},
+	}
+
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+
+	return cmd
+}
+
+func runProjectSettingsStatus(projectID string, opts *projectSettingsStatusOptions) error {
+	client, err := getClient()
+	if err != nil {
+		return err
+	}
+
+	project, err := client.GetProject(projectID)
+	if err != nil {
+		return fmt.Errorf("failed to get project: %w", err)
+	}
+
+	config, configErr := client.GetVersionedSettingsConfig(projectID)
+	status, statusErr := client.GetVersionedSettingsStatus(projectID)
+
+	if opts.json {
+		result := map[string]interface{}{
+			"project": project,
+		}
+		if configErr == nil {
+			result["config"] = config
+		}
+		if statusErr == nil {
+			result["status"] = status
+		}
+		if configErr != nil {
+			result["configError"] = configErr.Error()
+		}
+		if statusErr != nil {
+			result["statusError"] = statusErr.Error()
+		}
+		return output.PrintJSON(result)
+	}
+
+	if configErr != nil {
+		fmt.Printf("%s %s %s %s\n", output.Yellow("!"), output.Cyan(project.Name), output.Faint("·"), "not configured")
+		fmt.Printf("\n%s\n", output.Faint(configErr.Error()))
+		return nil
+	}
+
+	statusIcon := output.Green("✓")
+	statusLabel := "synchronized"
+	if statusErr != nil {
+		statusIcon = output.Red("✗")
+		statusLabel = "unavailable"
+	} else {
+		switch status.Type {
+		case "warning":
+			statusIcon = output.Yellow("!")
+			statusLabel = "warning"
+		case "error":
+			statusIcon = output.Red("✗")
+			statusLabel = "error"
+		}
+	}
+
+	header := output.Cyan(project.Name)
+	if project.ID != project.Name {
+		header += " " + output.Faint("("+project.ID+")")
+	}
+	fmt.Printf("%s %s %s %s\n", statusIcon, header, output.Faint("·"), statusLabel)
+
+	fmt.Println()
+	fmt.Printf("%-12s %s\n", output.Faint("Format"), formatSettingsFormat(config.Format))
+	fmt.Printf("%-12s %s\n", output.Faint("Sync"), config.SynchronizationMode)
+	fmt.Printf("%-12s %s\n", output.Faint("Build"), formatBuildMode(config.BuildSettingsMode))
+	if config.VcsRootID != "" {
+		vcsRoot := config.VcsRootID
+		if config.SettingsPath != "" {
+			vcsRoot += " @ " + config.SettingsPath
+		}
+		fmt.Printf("%-12s %s\n", output.Faint("VCS Root"), vcsRoot)
+	}
+
+	if statusErr != nil {
+		fmt.Printf("\n%s\n", output.Faint(statusErr.Error()))
+		return nil
+	}
+
+	if status.DslOutdated {
+		fmt.Printf("\n%s DSL scripts need to be regenerated\n", output.Yellow("!"))
+	}
+
+	if status.Timestamp != "" {
+		fmt.Printf("\n%-12s %s\n", output.Faint("Last sync"), formatRelativeTime(status.Timestamp))
+	}
+
+	if status.Message != "" && status.Type != "info" {
+		fmt.Printf("%-12s %s\n", output.Faint("Message"), output.Faint(status.Message))
+	}
+
+	fmt.Printf("\n%-12s %s\n", output.Faint("View"), output.Faint(project.WebURL+"&tab=versionedSettings"))
+
+	return nil
+}
+
+func formatSettingsFormat(f string) string {
+	switch strings.ToLower(f) {
+	case "kotlin":
+		return "Kotlin"
+	case "xml":
+		return "XML"
+	default:
+		return f
+	}
+}
+
+func formatBuildMode(mode string) string {
+	switch mode {
+	case "useFromVCS":
+		return "from VCS"
+	case "useCurrentByDefault":
+		return "prefer current"
+	default:
+		return mode
+	}
+}
+
+func formatRelativeTime(ts string) string {
+	t, err := time.Parse("Mon Jan 2 15:04:05 MST 2006", ts)
+	if err != nil {
+		return ts
+	}
+	local := t.Local()
+	return fmt.Sprintf("%s (%s)", output.RelativeTime(local), local.Format("Jan 2 15:04"))
 }
 
 // GetClientFunc is the function used to create API clients.
