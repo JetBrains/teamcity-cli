@@ -147,3 +147,22 @@ func (c *Client) GetVersionedSettingsConfig(projectID string) (*VersionedSetting
 
 	return &config, nil
 }
+
+// ExportProjectSettings exports project settings as a ZIP archive in the specified format.
+// Format can be "kotlin" or "xml". Returns the raw ZIP file bytes.
+func (c *Client) ExportProjectSettings(projectID, format string, useRelativeIds bool) ([]byte, error) {
+	path := fmt.Sprintf("/admin/versionedSettingsActions.html?projectId=%s&action=generate&format=%s&version=latest&useRelativeIds=%t",
+		url.QueryEscape(projectID), url.QueryEscape(format), useRelativeIds)
+
+	resp, err := c.doRequestWithAccept("GET", path, nil, "application/zip")
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != 200 {
+		return nil, c.handleErrorResponse(resp)
+	}
+
+	return io.ReadAll(resp.Body)
+}

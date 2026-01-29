@@ -8,8 +8,11 @@
 package api_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -693,4 +696,64 @@ tc auth status
 
 	assert.Contains(T, buildLog, "Build-level credentials", "CLI should use build-level auth")
 	assert.Equal(T, "SUCCESS", build.Status)
+}
+
+func TestExportProjectSettings(T *testing.T) {
+	T.Run("kotlin format", func(t *testing.T) {
+		t.Parallel()
+
+		data, err := client.ExportProjectSettings(testProject, "kotlin", true)
+		require.NoError(t, err)
+		require.NotEmpty(t, data, "should return data")
+
+		zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+		require.NoError(t, err, "should be a valid ZIP file")
+		require.NotEmpty(t, zipReader.File, "ZIP should contain files")
+
+		hasSettingsKts := false
+		hasPomXml := false
+		for _, f := range zipReader.File {
+			t.Logf("  %s (%d bytes)", f.Name, f.UncompressedSize64)
+			if strings.HasSuffix(f.Name, "settings.kts") {
+				hasSettingsKts = true
+			}
+			if strings.HasSuffix(f.Name, "pom.xml") {
+				hasPomXml = true
+			}
+		}
+		assert.True(t, hasSettingsKts, "should contain settings.kts")
+		assert.True(t, hasPomXml, "should contain pom.xml")
+	})
+
+	T.Run("xml format", func(t *testing.T) {
+		t.Parallel()
+
+		data, err := client.ExportProjectSettings(testProject, "xml", true)
+		require.NoError(t, err)
+		require.NotEmpty(t, data, "should return data")
+
+		zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+		require.NoError(t, err, "should be a valid ZIP file")
+		require.NotEmpty(t, zipReader.File, "ZIP should contain files")
+
+		hasProjectConfig := false
+		for _, f := range zipReader.File {
+			t.Logf("  %s (%d bytes)", f.Name, f.UncompressedSize64)
+			if strings.HasSuffix(f.Name, "project-config.xml") {
+				hasProjectConfig = true
+			}
+		}
+		assert.True(t, hasProjectConfig, "should contain project-config.xml")
+	})
+
+	T.Run("relative ids disabled", func(t *testing.T) {
+		t.Parallel()
+
+		data, err := client.ExportProjectSettings(testProject, "kotlin", false)
+		require.NoError(t, err)
+		require.NotEmpty(t, data)
+
+		_, err = zip.NewReader(bytes.NewReader(data), int64(len(data)))
+		require.NoError(t, err, "should be a valid ZIP file")
+	})
 }
