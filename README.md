@@ -559,6 +559,7 @@ tc run start Falcon_Build --dry-run
 - `-E, --env` – Environment variables (key=value)
 - `--json` – Output as JSON (for scripting)
 - `-l, --local-changes` – Include local changes (git, -, or path; default: git)
+- `--no-push` – Skip auto-push of branch to remote
 - `-P, --param` – Build parameters (key=value)
 - `--personal` – Run as personal build
 - `--rebuild-deps` – Rebuild all dependencies
@@ -928,6 +929,16 @@ Enable an agent to allow it to run builds.
 tc agent enable 1
 ```
 
+### agent exec
+
+Execute a command on a TeamCity build agent and return the output.
+
+```bash
+tc agent exec 1 "ls -la"
+tc agent exec 42 "cat /etc/os-release"
+tc agent exec 1 -- uname -a
+```
+
 ### agent jobs
 
 List build configurations (jobs) that are compatible or incompatible with an agent.
@@ -969,6 +980,15 @@ Move an agent to a different agent pool.
 ```bash
 tc agent move 1 0
 tc agent move 1 2
+```
+
+### agent term
+
+Open an interactive shell session to a TeamCity build agent.
+
+```bash
+tc agent term 1
+tc agent term 42
 ```
 
 ### agent view

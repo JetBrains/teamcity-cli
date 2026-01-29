@@ -26,6 +26,8 @@ func newAgentCmd() *cobra.Command {
 	cmd.AddCommand(newAgentDisableCmd())
 	cmd.AddCommand(newAgentAuthorizeCmd())
 	cmd.AddCommand(newAgentDeauthorizeCmd())
+	cmd.AddCommand(newAgentTerminalCmd())
+	cmd.AddCommand(newAgentExecCmd())
 
 	return cmd
 }
