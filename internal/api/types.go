@@ -314,3 +314,9 @@ type APIError struct {
 type APIErrorResponse struct {
 	Errors []APIError `json:"errors"`
 }
+
+// TerminalSession holds the session token and node ID from TeamCity's agent terminal plugin
+type TerminalSession struct {
+	Token  string `json:"token"`
+	NodeID string `json:"nodeId"`
+}

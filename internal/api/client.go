@@ -280,7 +280,7 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 		return tcerrors.PermissionDenied("perform this action")
 	case http.StatusNotFound:
 		if message != "" {
-			return tcerrors.WithSuggestion(message, "Use 'tc job list' or 'tc run list' to see available resources")
+			return tcerrors.WithSuggestion(message, notFoundHint(message))
 		}
 		return tcerrors.WithSuggestion("Resource not found", "Check the ID and try again")
 	default:
@@ -288,6 +288,23 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 			return tcerrors.New(message)
 		}
 		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(bodyBytes))
+	}
+}
+
+// notFoundHint returns a context-aware hint based on the error message
+func notFoundHint(message string) string {
+	msg := strings.ToLower(message)
+	switch {
+	case strings.Contains(msg, "agent"):
+		return "Use 'tc agent list' to see available agents"
+	case strings.Contains(msg, "pool"):
+		return "Use 'tc pool list' to see available pools"
+	case strings.Contains(msg, "project"):
+		return "Use 'tc project list' to see available projects"
+	case strings.Contains(msg, "build type"), strings.Contains(msg, "job"):
+		return "Use 'tc job list' to see available jobs"
+	default:
+		return "Use 'tc job list' or 'tc run list' to see available resources"
 	}
 }
 

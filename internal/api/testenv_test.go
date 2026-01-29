@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/docker/docker/api/types/container"
 	"github.com/joho/godotenv"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
@@ -184,11 +185,18 @@ func startContainers() (*testEnv, error) {
 	log.Println("Starting TeamCity agent...")
 	env.agent, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Name:       agentName,
-			Image:      agentImage,
-			Networks:   []string{env.network.Name},
+			Name:     agentName,
+			Image:    agentImage,
+			Networks: []string{env.network.Name},
+			NetworkAliases: map[string][]string{
+				env.network.Name: {"teamcity-agent"},
+			},
 			Env:        map[string]string{"SERVER_URL": "http://teamcity-server:8111"},
 			Privileged: true,
+			ConfigModifier: func(c *container.Config) {
+				c.Tty = true
+				c.OpenStdin = true
+			},
 		},
 		Started: true,
 	})
