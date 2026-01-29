@@ -1,0 +1,23 @@
+{
+  "name": "JetBrains-teamcity-cli",
+  "owner": {
+    "name": "JetBrains",
+    "email": "teamcity-cli@jetbrains.com"
+  },
+  "metadata": {
+    "description": "TeamCity CLI tools for Claude Code - manage builds, jobs, queues, agents, and projects",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "teamcity-cli",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/JetBrains/teamcity-cli.git"
+      },
+      "description": "Agent skill for interacting with TeamCity CI/CD using the tc CLI. Enables Claude to explore builds, view logs, start jobs, manage queues, agents, and more.",
+      "version": "0.2.0",
+      "strict": true
+    }
+  ]
+}

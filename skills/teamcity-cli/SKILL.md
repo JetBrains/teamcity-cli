@@ -17,16 +17,18 @@ tc run log <id> --failed          # View failed build log
 
 ## Core Commands
 
-| Task          | Command                 |
-|---------------|-------------------------|
-| List builds   | `tc run list`           |
-| View log      | `tc run log <id>`       |
-| Start build   | `tc run start <job-id>` |
-| Watch build   | `tc run watch <id>`     |
-| List jobs     | `tc job list`           |
-| List projects | `tc project list`       |
-| View queue    | `tc queue list`         |
-| Raw API       | `tc api <endpoint>`     |
+| Task           | Command                 |
+|----------------|-------------------------|
+| List builds    | `tc run list`           |
+| View log       | `tc run log <id>`       |
+| Start build    | `tc run start <job-id>` |
+| Watch build    | `tc run watch <id>`     |
+| List jobs      | `tc job list`           |
+| List projects  | `tc project list`       |
+| View queue     | `tc queue list`         |
+| List agents    | `tc agent list`         |
+| List pools     | `tc pool list`          |
+| Raw API        | `tc api <endpoint>`     |
 
 ## Common Workflows
 

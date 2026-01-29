@@ -49,6 +49,12 @@
 - `--watch` - Watch after starting
 - `--clean` - Clean checkout
 - `--agent <id>` - Run on specific agent
+- `--personal` - Run as personal build
+- `-l, --local-changes` - Include local changes (git, -, or path)
+- `--rebuild-deps` - Rebuild all dependencies
+- `--rebuild-failed-deps` - Rebuild failed/incomplete dependencies
+- `--top` - Add to top of queue
+- `-n, --dry-run` - Show what would be triggered without running
 
 ## Jobs (`tc job`)
 
@@ -108,3 +114,49 @@ tc api /app/rest/builds --paginate --slurp
 - `--input <file>` - Read body from file
 - `--paginate` - Fetch all pages
 - `--slurp` - Combine pages into array
+
+## Agents (`tc agent`)
+
+| Command                    | Description                          |
+|----------------------------|--------------------------------------|
+| `tc agent list`            | List build agents                    |
+| `tc agent view <id>`       | View agent details                   |
+| `tc agent authorize <id>`  | Authorize agent to run builds        |
+| `tc agent deauthorize <id>`| Revoke agent authorization           |
+| `tc agent enable <id>`     | Enable agent                         |
+| `tc agent disable <id>`    | Disable agent                        |
+| `tc agent move <id> <pool>`| Move agent to different pool         |
+| `tc agent jobs <id>`       | List compatible/incompatible jobs    |
+
+### Flags for `tc agent list`
+
+- `-p, --pool <name>` - Filter by agent pool
+- `--connected` - Show only connected agents
+- `--enabled` - Show only enabled agents
+- `--authorized` - Show only authorized agents
+- `-n, --limit <n>` - Limit results
+- `--json` - JSON output
+
+### Flags for `tc agent jobs`
+
+- `--incompatible` - Show incompatible jobs with reasons
+- `--json` - JSON output
+
+## Agent Pools (`tc pool`)
+
+| Command                          | Description                     |
+|----------------------------------|---------------------------------|
+| `tc pool list`                   | List agent pools                |
+| `tc pool view <id>`              | View pool details               |
+| `tc pool link <id> <project>`    | Link project to pool            |
+| `tc pool unlink <id> <project>`  | Unlink project from pool        |
+
+## Global Flags
+
+Available on all commands:
+
+- `--no-color` - Disable colored output
+- `-q, --quiet` - Suppress non-essential output
+- `--verbose` - Show detailed output including debug info
+- `--no-input` - Disable interactive prompts
+- `-w, --web` - Open in browser (on view commands)

@@ -142,6 +142,83 @@ tc run tag <run-id> deployed production
 tc run comment <run-id> "Verified by QA"
 ```
 
+## Personal Builds (Local Changes)
+
+**Run build with uncommitted git changes:**
+```bash
+tc run start <job-id> --local-changes
+```
+
+**Run build from a patch file:**
+```bash
+tc run start <job-id> --local-changes changes.patch
+```
+
+**Personal build with specific branch:**
+```bash
+tc run start <job-id> --personal --branch my-feature --watch
+```
+
+## Managing Agents
+
+**List all agents:**
+```bash
+tc agent list
+```
+
+**List connected agents only:**
+```bash
+tc agent list --connected
+```
+
+**View agent details:**
+```bash
+tc agent view <agent-id>
+```
+
+**See what jobs an agent can run:**
+```bash
+tc agent jobs <agent-id>
+```
+
+**See why jobs are incompatible with an agent:**
+```bash
+tc agent jobs <agent-id> --incompatible
+```
+
+**Enable/disable an agent:**
+```bash
+tc agent enable <agent-id>
+tc agent disable <agent-id>
+```
+
+**Move agent to a different pool:**
+```bash
+tc agent move <agent-id> <pool-id>
+```
+
+## Managing Agent Pools
+
+**List all pools:**
+```bash
+tc pool list
+```
+
+**View pool details:**
+```bash
+tc pool view <pool-id>
+```
+
+**Link a project to a pool:**
+```bash
+tc pool link <pool-id> <project-id>
+```
+
+**Unlink a project from a pool:**
+```bash
+tc pool unlink <pool-id> <project-id>
+```
+
 ## Tips
 
 1. **Use `--json` for programmatic access** - Parse with `jq` for complex queries
