@@ -26,6 +26,8 @@ type ClientInterface interface {
 	ProjectExists(id string) bool
 	CreateSecureToken(projectID, value string) (string, error)
 	GetSecureValue(projectID, token string) (string, error)
+	GetVersionedSettingsStatus(projectID string) (*VersionedSettingsStatus, error)
+	GetVersionedSettingsConfig(projectID string) (*VersionedSettingsConfig, error)
 
 	// Build Types (Jobs)
 	GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error)

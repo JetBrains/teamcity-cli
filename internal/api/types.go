@@ -305,6 +305,25 @@ func ParseTeamCityTime(s string) (time.Time, error) {
 	return time.Parse("20060102T150405-0700", s)
 }
 
+// VersionedSettingsStatus represents the sync status of versioned settings
+type VersionedSettingsStatus struct {
+	Type        string `json:"type,omitempty"`        // info, warning, error
+	Message     string `json:"message,omitempty"`     // Human-readable status message
+	Timestamp   string `json:"timestamp,omitempty"`   // When the status was recorded
+	DslOutdated bool   `json:"dslOutdated,omitempty"` // DSL scripts need regeneration
+}
+
+// VersionedSettingsConfig represents the configuration of versioned settings
+type VersionedSettingsConfig struct {
+	SynchronizationMode string `json:"synchronizationMode,omitempty"` // enabled, disabled
+	Format              string `json:"format,omitempty"`              // kotlin, xml
+	BuildSettingsMode   string `json:"buildSettingsMode,omitempty"`   // useFromVCS, useCurrentByDefault
+	VcsRootID           string `json:"vcsRootId,omitempty"`
+	SettingsPath        string `json:"settingsPath,omitempty"`
+	AllowUIEditing      bool   `json:"allowUIEditing,omitempty"`
+	ShowSettingsChanges bool   `json:"showSettingsChanges,omitempty"`
+}
+
 // APIError represents an error from TeamCity's REST API
 type APIError struct {
 	Message string `json:"message"`

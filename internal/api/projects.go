@@ -123,3 +123,27 @@ func (c *Client) GetSecureValue(projectID, token string) (string, error) {
 
 	return string(body), nil
 }
+
+// GetVersionedSettingsStatus returns the sync status of versioned settings for a project.
+func (c *Client) GetVersionedSettingsStatus(projectID string) (*VersionedSettingsStatus, error) {
+	path := fmt.Sprintf("/app/rest/projects/%s/versionedSettings/status", projectID)
+
+	var status VersionedSettingsStatus
+	if err := c.get(path, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+// GetVersionedSettingsConfig returns the versioned settings configuration for a project.
+func (c *Client) GetVersionedSettingsConfig(projectID string) (*VersionedSettingsConfig, error) {
+	path := fmt.Sprintf("/app/rest/projects/%s/versionedSettings/config", projectID)
+
+	var config VersionedSettingsConfig
+	if err := c.get(path, &config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}

@@ -4,8 +4,10 @@ package cmd_test
 
 import (
 	"bytes"
+	"net/http"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/internal/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/stretchr/testify/assert"
@@ -82,6 +84,37 @@ func TestProjectToken(T *testing.T) {
 
 	err := rootCmd.Execute()
 	require.NoError(T, err)
+}
+
+func TestProjectSettingsStatus(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "project", "settings", "status", testProject)
+	runCmd(T, "project", "settings", "status", testProject, "--json")
+}
+
+func TestProjectSettingsStatusWarning(T *testing.T) {
+	ts := setupMockClient(T)
+	ts.Handle("GET /app/rest/projects/id:WarningProject", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.Project{
+			ID:     "WarningProject",
+			Name:   "Warning Project",
+			WebURL: ts.URL + "/project.html?projectId=WarningProject",
+		})
+	})
+	runCmd(T, "project", "settings", "status", "WarningProject")
+}
+
+func TestProjectSettingsStatusNotConfigured(T *testing.T) {
+	ts := setupMockClient(T)
+	ts.Handle("GET /app/rest/projects/id:NoSettingsProject", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.Project{
+			ID:     "NoSettingsProject",
+			Name:   "No Settings Project",
+			WebURL: ts.URL + "/project.html?projectId=NoSettingsProject",
+		})
+	})
+	runCmd(T, "project", "settings", "status", "NoSettingsProject")
 }
 
 func TestJobList(T *testing.T) {
