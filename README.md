@@ -386,6 +386,9 @@ For CI/CD, use environment variables instead:
   export TEAMCITY_URL="https://teamcity.example.com"
   export TEAMCITY_TOKEN="your-access-token"
 
+When running inside a TeamCity build, authentication is automatic using
+build-level credentials from the build properties file.
+
 **Options:**
 - `-s, --server` – TeamCity server URL
 - `-t, --token` – Access token

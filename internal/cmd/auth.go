@@ -45,7 +45,10 @@ This will:
 
 For CI/CD, use environment variables instead:
   export TEAMCITY_URL="https://teamcity.example.com"
-  export TEAMCITY_TOKEN="your-access-token"`,
+  export TEAMCITY_TOKEN="your-access-token"
+
+When running inside a TeamCity build, authentication is automatic using
+build-level credentials from the build properties file.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAuthLogin(serverURL, token)
 		},
