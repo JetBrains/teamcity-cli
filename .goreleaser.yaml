@@ -146,15 +146,20 @@ winget:
       - jetbrains
     release_notes_url: https://github.com/JetBrains/teamcity-cli/releases/tag/v{{ .Version }}
     repository:
-      owner: microsoft
+      owner: tiulpin
       name: winget-pkgs
-      branch: master
+      branch: "JetBrains.tc-{{.Version}}"
+      token: "{{ .Env.GITHUB_TOKEN }}"
       pull_request:
         enabled: true
         base:
           owner: microsoft
           name: winget-pkgs
           branch: master
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "New version: JetBrains.tc version {{.Version}}"
 
 checksum:
   name_template: checksums.txt
@@ -168,12 +173,12 @@ changelog:
   use: github
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-      - '^ci:'
-      - '^chore:'
-      - '^refactor:'
-      - '^lint:'
+      - '^docs[(:]'
+      - '^test[(:]'
+      - '^ci[(:]'
+      - '^chore[(:]'
+      - '^refactor[(:]'
+      - '^lint[(:]'
       - '^fixup!'
       - '^Update '
       - Merge pull request
