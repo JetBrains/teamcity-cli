@@ -30,7 +30,7 @@ func GetBuildAuth() (*BuildAuth, bool) {
 		return nil, false
 	}
 
-	props, err := properties.LoadFile(propsFile, properties.UTF8)
+	props, err := properties.LoadFile(propsFile, properties.ISO_8859_1)
 	if err != nil {
 		return nil, false
 	}
