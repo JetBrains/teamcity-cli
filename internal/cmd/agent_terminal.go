@@ -61,14 +61,7 @@ func newAgentExecCmd() *cobra.Command {
 			ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 			defer cancel()
 
-			out, err := conn.Exec(ctx, strings.Join(args[1:], " "))
-			if err != nil {
-				return err
-			}
-			if out != "" {
-				fmt.Println(out)
-			}
-			return nil
+			return conn.Exec(ctx, strings.Join(args[1:], " "))
 		},
 	}
 

@@ -5,7 +5,6 @@ package api_test
 import (
 	"context"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -57,7 +56,7 @@ func TestTerminalSession(T *testing.T) {
 		// Properly terminate the shell to avoid leaving server-side zombie sessions
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_, _ = conn.Exec(ctx, "true") // Run trivial command which sends exit
+		_ = conn.Exec(ctx, "true") // Run trivial command which sends exit
 
 		conn.Close()
 		conn.Close() // idempotent
@@ -83,9 +82,8 @@ func TestTerminalExec(T *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		out, err := conn.Exec(ctx, "echo hello-terminal")
+		err = conn.Exec(ctx, "echo hello-terminal")
 		require.NoError(t, err)
-		assert.Contains(t, out, "hello-terminal")
 	})
 
 	T.Run("multiline with env vars", func(t *testing.T) {
@@ -98,10 +96,8 @@ func TestTerminalExec(T *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		out, err := conn.Exec(ctx, "echo L1; echo L2; echo $HOME")
+		err = conn.Exec(ctx, "echo L1; echo L2; echo $HOME")
 		require.NoError(t, err)
-		assert.Contains(t, out, "L1")
-		assert.Contains(t, out, "L2")
 	})
 
 	T.Run("pipes and special chars", func(t *testing.T) {
@@ -114,25 +110,8 @@ func TestTerminalExec(T *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		out, err := conn.Exec(ctx, `echo "test" | tr 'a-z' 'A-Z'`)
+		err = conn.Exec(ctx, `echo "test" | tr 'a-z' 'A-Z'`)
 		require.NoError(t, err)
-		assert.Contains(t, out, "TEST")
-	})
-
-	T.Run("ANSI stripping", func(t *testing.T) {
-		termClient := getTerminalClient()
-		session, err := termClient.OpenSession(agent.ID)
-		require.NoError(t, err)
-		conn, err := termClient.Connect(session, 80, 24)
-		require.NoError(t, err)
-
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		out, err := conn.Exec(ctx, `printf '\033[31mred\033[0m'`)
-		require.NoError(t, err)
-		assert.NotContains(t, out, "\033[")
-		assert.Contains(t, out, "red")
 	})
 
 	T.Run("long output", func(t *testing.T) {
@@ -145,10 +124,8 @@ func TestTerminalExec(T *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		out, err := conn.Exec(ctx, "seq 1 50")
+		err = conn.Exec(ctx, "seq 1 50")
 		require.NoError(t, err)
-		lines := strings.Split(strings.TrimSpace(out), "\n")
-		assert.GreaterOrEqual(t, len(lines), 40)
 	})
 
 	T.Run("timeout", func(t *testing.T) {
@@ -161,7 +138,7 @@ func TestTerminalExec(T *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 		defer cancel()
 
-		_, err = conn.Exec(ctx, "sleep 10")
+		err = conn.Exec(ctx, "sleep 10")
 		require.Error(t, err)
 	})
 }

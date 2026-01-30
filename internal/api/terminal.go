@@ -15,7 +15,6 @@ import (
 
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/acarl005/stripansi"
 	"github.com/gorilla/websocket"
 	"github.com/moby/term"
 )
@@ -28,10 +27,6 @@ const (
 	// writeTimeout is the maximum time to wait for a WebSocket write to complete.
 	// 10s is generous for small control messages; prevents hanging on network issues.
 	writeTimeout = 10 * time.Second
-
-	// execMarker is used to delimit command output.
-	// Using unique string without shell-interpreted chars ($, `, !, etc.)
-	execMarker = "__TC_EXEC_7f3a9e2b__"
 )
 
 type TerminalClient struct {
@@ -159,6 +154,8 @@ type TerminalConn struct {
 	err       error
 }
 
+const execMarker = "__TC_EXEC_7f3a9e2b__"
+
 func (tc *TerminalConn) RunInteractive(ctx context.Context) error {
 	stdin, stdout, _ := term.StdStreams()
 	fd, isTerminal := term.GetFdInfo(stdin)
@@ -203,14 +200,15 @@ func (tc *TerminalConn) RunInteractive(ctx context.Context) error {
 	}
 }
 
-func (tc *TerminalConn) Exec(ctx context.Context, command string) (string, error) {
+func (tc *TerminalConn) Exec(ctx context.Context, command string) error {
+	_, stdout, _ := term.StdStreams()
 	defer tc.Close()
 
-	type readResult struct {
-		data string
-		err  error
+	type result struct {
+		output string
+		err    error
 	}
-	resultCh := make(chan readResult, 1)
+	resultCh := make(chan result, 1)
 	readyCh := make(chan struct{}, 1)
 
 	go func() {
@@ -220,37 +218,29 @@ func (tc *TerminalConn) Exec(ctx context.Context, command string) (string, error
 		for {
 			_, msg, err := tc.conn.ReadMessage()
 			if err != nil {
-				content := buf.String()
-				output.Debug("terminal exec: connection closed, buffer len=%d", len(content))
-				if len(content) > 0 {
-					output.Debug("terminal exec: raw output:\n%s", content)
-				}
 				if buf.Len() > 0 {
-					resultCh <- readResult{data: extractExecOutput(content)}
+					resultCh <- result{output: extractExecOutput(buf.String())}
 				} else if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					resultCh <- readResult{err: fmt.Errorf("connection error: %w", err)}
+					resultCh <- result{err: fmt.Errorf("connection error: %w", err)}
 				} else {
-					resultCh <- readResult{data: ""}
+					resultCh <- result{}
 				}
 				return
 			}
 
 			buf.Write(msg)
-			content := normalizeLineEndings(buf.String())
 
 			if !signalledReady {
 				signalledReady = true
-				output.Debug("terminal exec: shell ready, initial output: %q", content)
 				select {
 				case readyCh <- struct{}{}:
 				default:
 				}
 			}
 
-			markerCount := strings.Count(content, "\n"+execMarker)
-			if markerCount >= 2 {
-				output.Debug("terminal exec: found %d markers, extracting output", markerCount)
-				resultCh <- readResult{data: extractExecOutput(content)}
+			content := normalizeLineEndings(buf.String())
+			if strings.Count(content, "\n"+execMarker) >= 2 {
+				resultCh <- result{output: extractExecOutput(content)}
 				return
 			}
 		}
@@ -258,53 +248,56 @@ func (tc *TerminalConn) Exec(ctx context.Context, command string) (string, error
 
 	select {
 	case <-ctx.Done():
-		return "", tcerrors.New("command timed out")
-	case <-readyCh: // Shell is ready
-	case <-time.After(500 * time.Millisecond): // Timeout waiting for initial output, try anyway
+		return tcerrors.New("command timed out")
+	case <-readyCh:
+	case <-time.After(500 * time.Millisecond):
 	}
 
-	// Brief delay for shell to fully initialize after prompt appears
 	time.Sleep(100 * time.Millisecond)
 
-	// Send everything in one message: start marker, command, end marker, exit
+	if err := tc.writeMessage(websocket.TextMessage, []byte("stty -echo\n")); err != nil {
+		return fmt.Errorf("failed to send stty: %w", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
 	fullCmd := fmt.Sprintf("echo %s; %s; echo; echo %s; exit\n", execMarker, command, execMarker)
 	if err := tc.writeMessage(websocket.TextMessage, []byte(fullCmd)); err != nil {
-		return "", fmt.Errorf("failed to send command: %w", err)
+		return fmt.Errorf("failed to send command: %w", err)
 	}
 
 	select {
 	case <-ctx.Done():
-		return "", tcerrors.New("command timed out")
+		return tcerrors.New("command timed out")
 	case res := <-resultCh:
-		return res.data, res.err
+		if res.err != nil {
+			return res.err
+		}
+		if res.output != "" {
+			_, _ = fmt.Fprintln(stdout, res.output)
+		}
+		return nil
 	}
 }
 
-// normalizeLineEndings converts CRLF to LF and removes standalone CR.
 func normalizeLineEndings(s string) string {
 	s = strings.ReplaceAll(s, "\r\n", "\n")
 	s = strings.ReplaceAll(s, "\r", "")
 	return s
 }
 
-// extractExecOutput extracts the command output from between the markers.
 func extractExecOutput(raw string) string {
 	raw = normalizeLineEndings(raw)
-	markerOnLine := "\n" + execMarker
-	startIdx := strings.Index(raw, markerOnLine)
-	if startIdx != -1 {
-		raw = raw[startIdx+len(markerOnLine):]
-		// Skip to next line
-		if nlIdx := strings.Index(raw, "\n"); nlIdx != -1 {
-			raw = raw[nlIdx+1:]
-		}
+	startPattern := execMarker + "\n"
+	startIdx := strings.Index(raw, startPattern)
+	if startIdx == -1 {
+		return ""
 	}
-	endIdx := strings.Index(raw, markerOnLine)
+	raw = raw[startIdx+len(startPattern):]
+	endIdx := strings.Index(raw, execMarker)
 	if endIdx != -1 {
 		raw = raw[:endIdx]
 	}
 
-	raw = stripansi.Strip(raw)
 	return strings.TrimSpace(raw)
 }
 
@@ -324,7 +317,12 @@ func (tc *TerminalConn) writeMessage(messageType int, data []byte) error {
 }
 
 func (tc *TerminalConn) copyToWriter(w io.Writer, errChan chan<- error) {
+	tc.copyToWriterWithReady(w, errChan, nil)
+}
+
+func (tc *TerminalConn) copyToWriterWithReady(w io.Writer, errChan chan<- error, readyCh chan<- struct{}) {
 	defer tc.Close()
+	signalledReady := false
 	for {
 		_, r, err := tc.conn.NextReader()
 		if err != nil {
@@ -335,6 +333,15 @@ func (tc *TerminalConn) copyToWriter(w io.Writer, errChan chan<- error) {
 			}
 			return
 		}
+
+		if !signalledReady && readyCh != nil {
+			signalledReady = true
+			select {
+			case readyCh <- struct{}{}:
+			default:
+			}
+		}
+
 		if _, err := io.Copy(w, r); err != nil {
 			select {
 			case errChan <- err:
