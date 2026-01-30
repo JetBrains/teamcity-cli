@@ -8,12 +8,9 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"os"
-	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
@@ -181,9 +178,8 @@ func (tc *TerminalConn) RunInteractive(ctx context.Context) error {
 	go tc.copyToWriter(stdout, errChan)
 	go tc.copyFromReader(stdin, errChan)
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGWINCH)
-	defer signal.Stop(sigChan)
+	sigChan, stopSig := resizeSignal()
+	defer stopSig()
 
 	ticker := time.NewTicker(pingInterval)
 	defer ticker.Stop()
