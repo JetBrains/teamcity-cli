@@ -92,12 +92,13 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
 
 ## Why tc?
 
-- **Stay in your terminal** – Start builds, check statuses, and view logs without switching to a browser
-- **Scriptable automation** – Integrate TeamCity into shell scripts, CI pipelines, and git hooks with simple commands
-- **Quick access to logs** – Stream build output or fetch logs with `tc run log`, no clicking through UI panels
-- **Manage at scale** – List, filter, and batch-operate on runs and jobs across projects
-- **JSON output** – Pipe to `jq` for custom filtering; use `--plain` for awk/grep-friendly output
-- **Escape hatch available** – `tc api` command gives you direct REST API access when you need it
+- **[Stay in your terminal](#quick-start)** – Start builds, check statuses, and view logs without context-switching to a browser
+- **[Remote agent terminal](#agent-term)** – Open an interactive shell to any build agent with `tc agent term`, or run commands remotely with [`tc agent exec`](#agent-exec)
+- **[Stream logs in real-time](#run-watch)** – Watch builds as they happen with `tc run watch --logs`, or fetch logs instantly with [`tc run log`](#run-log)
+- **[Scriptable automation](#commands)** – Integrate TeamCity into shell scripts, CI pipelines, and git hooks with simple commands
+- **[Manage at scale](#commands)** – List, filter, and batch-operate on runs, jobs, agents, and pools across projects
+- **[JSON output](#json-output)** – Pipe to `jq` for custom filtering; use `--plain` for awk/grep-friendly output
+- **[Full API access](#api)** – `tc api` gives you direct REST API access when you need it
 
 ## For AI Agents
 
