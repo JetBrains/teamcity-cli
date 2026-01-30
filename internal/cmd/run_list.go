@@ -298,7 +298,11 @@ func runRunView(runID string, opts *viewOptions) error {
 	}
 
 	if build.Agent != nil {
-		fmt.Printf("\nAgent: %s\n", output.Faint(build.Agent.Name))
+		fmt.Printf("\nAgent: %s", output.Faint(build.Agent.Name))
+		if build.State == "running" {
+			fmt.Printf("  %s tc agent term %d", output.Faint("·"), build.Agent.ID)
+		}
+		fmt.Println()
 	}
 
 	if build.Pinned {

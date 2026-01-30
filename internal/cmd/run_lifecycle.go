@@ -240,6 +240,11 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 	}
 
 	output.Info("  URL: %s", build.WebURL)
+	if opts.agent > 0 {
+		fmt.Printf("  %s tc agent term %d\n", output.Faint("Agent terminal:"), opts.agent)
+	} else {
+		fmt.Printf("  %s tc agent term <agent-id>\n", output.Faint("Agent terminal:"))
+	}
 
 	if opts.web {
 		_ = browser.OpenURL(build.WebURL)
