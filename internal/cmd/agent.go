@@ -215,6 +215,10 @@ func runAgentView(agentID int, opts *viewOptions) error {
 
 	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(agent.WebURL))
 
+	if agent.Connected && agent.Authorized && agent.Enabled {
+		fmt.Printf("%s tc agent term %d\n", output.Faint("Open terminal:"), agent.ID)
+	}
+
 	return nil
 }
 
