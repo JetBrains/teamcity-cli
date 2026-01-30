@@ -989,8 +989,11 @@ Execute a command on a TeamCity build agent and return the output.
 ```bash
 tc agent exec 1 "ls -la"
 tc agent exec 42 "cat /etc/os-release"
-tc agent exec 1 -- uname -a
+tc agent exec 1 --timeout 10m -- long-running-script.sh
 ```
+
+**Options:**
+- `--timeout` – Command timeout
 
 ### agent jobs
 
