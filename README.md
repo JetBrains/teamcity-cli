@@ -299,6 +299,10 @@ export TEAMCITY_TOKEN="your-access-token"
 tc run start MyProject_Build  # uses env vars, ignores config file
 ```
 
+**Auto-detection from DSL:**
+
+When working in a project with TeamCity Kotlin DSL configuration, the server URL is automatically detected from `.teamcity/pom.xml`. This means you can run commands without specifying the server – just ensure you've authenticated with that server previously.
+
 ## Shell Completion
 
 ```bash
@@ -849,7 +853,10 @@ tc project settings status MyProject --json
 
 ### project settings validate
 
-Run mvn teamcity-configs:generate to validate DSL configuration.
+Validate Kotlin DSL configuration by running mvn teamcity-configs:generate.
+
+Auto-detects .teamcity directory in the current directory or parents.
+Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.
 
 ```bash
 tc project settings validate
