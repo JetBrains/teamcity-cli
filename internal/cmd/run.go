@@ -20,6 +20,7 @@ func newRunCmd() *cobra.Command {
 	cmd.AddCommand(newRunWatchCmd())
 	cmd.AddCommand(newRunRestartCmd())
 	cmd.AddCommand(newRunDownloadCmd())
+	cmd.AddCommand(newRunArtifactsCmd())
 	cmd.AddCommand(newRunLogCmd())
 	cmd.AddCommand(newRunPinCmd())
 	cmd.AddCommand(newRunUnpinCmd())
