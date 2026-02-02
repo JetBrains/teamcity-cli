@@ -430,6 +430,14 @@ func TestGetArtifacts(T *testing.T) {
 		return
 	}
 	T.Logf("Found %d artifacts", artifacts.Count)
+
+	if artifacts.Count > 0 {
+		assert.Equal(T, artifacts.Count, len(artifacts.File), "count should match file slice length")
+		for _, a := range artifacts.File {
+			assert.NotEmpty(T, a.Name, "artifact should have a name")
+			T.Logf("  %s (%d bytes)", a.Name, a.Size)
+		}
+	}
 }
 
 func TestDownloadArtifact(T *testing.T) {

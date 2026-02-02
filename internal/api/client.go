@@ -159,6 +159,14 @@ func (c *Client) apiPath(path string) string {
 	return path
 }
 
+func (c *Client) setAuth(req *http.Request) {
+	if c.basicPass != "" || c.basicUser != "" {
+		req.SetBasicAuth(c.basicUser, c.basicPass)
+	} else {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+}
+
 // ServerVersion returns cached server version info
 func (c *Client) ServerVersion() (*Server, error) {
 	c.serverInfoOnce.Do(func() {
@@ -220,11 +228,7 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	if c.basicPass != "" || c.basicUser != "" {
-		req.SetBasicAuth(c.basicUser, c.basicPass)
-	} else {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
-	}
+	c.setAuth(req)
 	req.Header.Set("Accept", accept)
 	if body != nil {
 		req.Header.Set("Content-Type", contentType)
@@ -477,11 +481,7 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	if c.basicPass != "" || c.basicUser != "" {
-		req.SetBasicAuth(c.basicUser, c.basicPass)
-	} else {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
-	}
+	c.setAuth(req)
 	req.Header.Set("Accept", "application/json")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
