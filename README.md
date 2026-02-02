@@ -847,6 +847,19 @@ tc project settings status MyProject --json
 **Options:**
 - `--json` – Output as JSON
 
+### project settings validate
+
+Run mvn teamcity-configs:generate to validate DSL configuration.
+
+```bash
+tc project settings validate
+tc project settings validate ./path/to/.teamcity
+tc project settings validate --verbose
+```
+
+**Options:**
+- `-v, --verbose` – Show full Maven output
+
 ### project token get
 
 Retrieve the original value for a secure token.
