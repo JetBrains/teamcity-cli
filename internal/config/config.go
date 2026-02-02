@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
 
 	"github.com/spf13/viper"
 )
@@ -12,6 +15,12 @@ import (
 const (
 	EnvServerURL = "TEAMCITY_URL"
 	EnvToken     = "TEAMCITY_TOKEN"
+	EnvDSLDir    = "TEAMCITY_DSL_DIR"
+
+	DefaultDSLDirTeamCity = ".teamcity"
+	DefaultDSLDirTC       = ".tc"
+
+	dslPluginsRepoSuffix = "/app/dsl-plugins-repository"
 )
 
 type ServerConfig struct {
@@ -27,6 +36,12 @@ type Config struct {
 var (
 	cfg        *Config
 	configPath string
+
+	// cached DSL detection results
+	dslDirOnce    sync.Once
+	dslDirCached  string
+	dslServerOnce sync.Once
+	dslServerURL  string
 )
 
 func Init() error {
@@ -158,6 +173,87 @@ func ConfigPath() string {
 // IsConfigured returns true if both server URL and token are set
 func IsConfigured() bool {
 	return GetServerURL() != "" && GetToken() != ""
+}
+
+func DetectTeamCityDir() string {
+	dslDirOnce.Do(func() {
+		dslDirCached = detectTeamCityDirUncached()
+	})
+	return dslDirCached
+}
+
+func detectTeamCityDirUncached() string {
+	if envDir := os.Getenv(EnvDSLDir); envDir != "" {
+		if abs, err := filepath.Abs(envDir); err == nil {
+			if info, err := os.Stat(abs); err == nil && info.IsDir() {
+				return abs
+			}
+		}
+		return ""
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+
+	dir := cwd
+	for {
+		for _, name := range []string{DefaultDSLDirTeamCity, DefaultDSLDirTC} {
+			candidate := filepath.Join(dir, name)
+			if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+				return candidate
+			}
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+
+	return ""
+}
+
+var teamcityServerRepoRegex = regexp.MustCompile(`<id>teamcity-server</id>\s*<url>([^<]+)</url>`)
+
+func DetectServerFromDSL() string {
+	dslServerOnce.Do(func() {
+		dslServerURL = detectServerFromDSLUncached()
+	})
+	return dslServerURL
+}
+
+func detectServerFromDSLUncached() string {
+	dslDir := DetectTeamCityDir()
+	if dslDir == "" {
+		return ""
+	}
+
+	pomPath := filepath.Join(dslDir, "pom.xml")
+	data, err := os.ReadFile(pomPath)
+	if err != nil {
+		return ""
+	}
+
+	matches := teamcityServerRepoRegex.FindSubmatch(data)
+	if len(matches) < 2 {
+		return ""
+	}
+
+	repoURL := strings.TrimSpace(string(matches[1]))
+	serverURL := strings.TrimSuffix(repoURL, "/")
+	serverURL = strings.TrimSuffix(serverURL, dslPluginsRepoSuffix)
+	return strings.TrimSuffix(serverURL, "/")
+}
+
+// ResetDSLCache resets the cached DSL detection results. Used by tests.
+func ResetDSLCache() {
+	dslDirOnce = sync.Once{}
+	dslDirCached = ""
+	dslServerOnce = sync.Once{}
+	dslServerURL = ""
 }
 
 // SetUserForServer sets the user for a server URL in memory (does not persist to disk).
