@@ -1,9 +1,13 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
+
+	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 )
 
 // AgentsOptions represents options for listing agents
@@ -62,10 +66,26 @@ func (c *Client) AuthorizeAgent(id int, authorized bool) error {
 	return c.doNoContent("PUT", path, strings.NewReader(value), "text/plain")
 }
 
+// agentDetailFields is the fields parameter used for agent detail requests
+const agentDetailFields = "id,name,typeId,connected,enabled,authorized,href,webUrl,pool(id,name),build(id,number,status,buildType(id,name))"
+
 // GetAgent returns details for a single agent
 func (c *Client) GetAgent(id int) (*Agent, error) {
-	fields := "id,name,typeId,connected,enabled,authorized,href,webUrl,pool(id,name),build(id,number,status,buildType(id,name))"
-	path := fmt.Sprintf("/app/rest/agents/id:%d?fields=%s", id, url.QueryEscape(fields))
+	path := fmt.Sprintf("/app/rest/agents/id:%d?fields=%s", id, url.QueryEscape(agentDetailFields))
+
+	var result Agent
+	if err := c.get(path, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetAgentByName returns details for an agent by name.
+// PathEscape is sufficient here: TeamCity prohibits colons and commas in agent names
+// (they conflict with locator syntax), so we only need to escape path-unsafe characters.
+func (c *Client) GetAgentByName(name string) (*Agent, error) {
+	path := fmt.Sprintf("/app/rest/agents/name:%s?fields=%s", url.PathEscape(name), url.QueryEscape(agentDetailFields))
 
 	var result Agent
 	if err := c.get(path, &result); err != nil {
@@ -109,4 +129,47 @@ func (c *Client) GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, err
 	}
 
 	return &result, nil
+}
+
+// RebootAgent requests a reboot of the specified agent.
+// If afterBuild is true, the agent will reboot after the current build finishes.
+// This uses the web UI endpoint as there is no REST API for agent reboot.
+func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error {
+	formData := url.Values{}
+	formData.Set("agent", fmt.Sprintf("%d", id))
+	if afterBuild {
+		formData.Set("rebootAfterBuild", "true")
+	}
+
+	endpoint := fmt.Sprintf("%s/remoteAccess/reboot.html", c.BaseURL)
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(formData.Encode()))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	c.setAuth(req)
+
+	debugLogRequest(req)
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return tcerrors.NetworkError(c.BaseURL, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	debugLogResponse(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusNoContent, http.StatusFound:
+		return nil
+	case http.StatusUnauthorized:
+		return tcerrors.AuthenticationFailed()
+	case http.StatusForbidden:
+		return tcerrors.PermissionDenied("reboot agent")
+	case http.StatusNotFound:
+		return tcerrors.NotFound("agent", fmt.Sprintf("%d", id))
+	default:
+		return fmt.Errorf("server returned status %d", resp.StatusCode)
+	}
 }

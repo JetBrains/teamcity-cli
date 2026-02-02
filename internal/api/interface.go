@@ -88,8 +88,10 @@ type ClientInterface interface {
 	// Agents
 	GetAgents(opts AgentsOptions) (*AgentList, error)
 	GetAgent(id int) (*Agent, error)
+	GetAgentByName(name string) (*Agent, error)
 	AuthorizeAgent(id int, authorized bool) error
 	EnableAgent(id int, enabled bool) error
+	RebootAgent(ctx context.Context, id int, afterBuild bool) error
 	GetAgentCompatibleBuildTypes(id int) (*BuildTypeList, error)
 	GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, error)
 

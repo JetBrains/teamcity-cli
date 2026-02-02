@@ -30,6 +30,7 @@ func newAgentCmd() *cobra.Command {
 	cmd.AddCommand(newAgentDeauthorizeCmd())
 	cmd.AddCommand(newAgentTerminalCmd())
 	cmd.AddCommand(newAgentExecCmd())
+	cmd.AddCommand(newAgentRebootCmd())
 
 	return cmd
 }
@@ -425,5 +426,76 @@ func runAgentMove(nameOrID string, poolID int) error {
 	output.Success("Moved agent %s to pool %d", agentName, poolID)
 	return nil
 }
+
+type agentRebootOptions struct {
+	afterBuild bool
+	yes        bool
+}
+
+func newAgentRebootCmd() *cobra.Command {
+	opts := &agentRebootOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "reboot <agent>",
+		Short: "Reboot an agent",
+		Long: `Request a reboot of a build agent.
+
+The agent can be specified by ID or name. By default, the agent reboots immediately.
+Use --after-build to wait for the current build to finish before rebooting.
+
+Note: Local agents (running on the same machine as the server) cannot be rebooted.`,
+		Args: cobra.ExactArgs(1),
+		Example: `  tc agent reboot 1
+  tc agent reboot Agent-Linux-01
+  tc agent reboot Agent-Linux-01 --after-build
+  tc agent reboot Agent-Linux-01 --yes`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runAgentReboot(cmd.Context(), args[0], opts)
+		},
+	}
+
+	cmd.Flags().BoolVar(&opts.afterBuild, "after-build", false, "Wait for current build to finish before rebooting")
+	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
+
+	return cmd
+}
+
+func runAgentReboot(ctx context.Context, nameOrID string, opts *agentRebootOptions) error {
+	client, err := getClient()
+	if err != nil {
+		return err
+	}
+
+	agentID, agentName, err := resolveAgentID(client, nameOrID)
+	if err != nil {
+		return err
+	}
+
+	needsConfirmation := !opts.yes && !NoInput && output.IsStdinTerminal()
+	if needsConfirmation {
+		var confirm bool
+		prompt := &survey.Confirm{
+			Message: fmt.Sprintf("Reboot agent %s?", agentName),
+			Default: false,
+		}
+		if err := survey.AskOne(prompt, &confirm); err != nil {
+			return err
+		}
+		if !confirm {
+			output.Info("Cancelled")
+			return nil
+		}
+	}
+
+	if err := client.RebootAgent(ctx, agentID, opts.afterBuild); err != nil {
+		return fmt.Errorf("failed to reboot agent: %w", err)
+	}
+
+	if opts.afterBuild {
+		output.Success("Reboot scheduled for %s", agentName)
+		fmt.Println("  The agent will reboot after the current build finishes.")
+	} else {
+		output.Success("Reboot initiated for %s", agentName)
+	}
 	return nil
 }
