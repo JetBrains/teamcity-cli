@@ -2,9 +2,11 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strings"
 )
@@ -325,7 +327,7 @@ func (c *Client) DownloadArtifact(buildID, artifactPath string) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
-	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, artifactPath)
+	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, url.PathEscape(artifactPath))
 
 	resp, err := c.doRequest("GET", path, nil)
 	if err != nil {
@@ -338,6 +340,36 @@ func (c *Client) DownloadArtifact(buildID, artifactPath string) ([]byte, error) 
 	}
 
 	return io.ReadAll(resp.Body)
+}
+
+// DownloadArtifactTo streams an artifact to a writer (accepts ID or #number)
+func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath string, w io.Writer) (int64, error) {
+	id, err := c.ResolveBuildID(buildID)
+	if err != nil {
+		return 0, err
+	}
+
+	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, url.PathEscape(artifactPath))
+	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
+
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	if err != nil {
+		return 0, err
+	}
+	c.setAuth(req)
+
+	client := &http.Client{Transport: c.HTTPClient.Transport}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("failed to download artifact %q: status %d", artifactPath, resp.StatusCode)
+	}
+
+	return io.Copy(w, resp.Body)
 }
 
 // GetBuildLog returns the build log (accepts ID or #number)
