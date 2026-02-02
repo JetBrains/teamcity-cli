@@ -10,6 +10,7 @@ package api_test
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -763,5 +764,89 @@ func TestExportProjectSettings(T *testing.T) {
 
 		_, err = zip.NewReader(bytes.NewReader(data), int64(len(data)))
 		require.NoError(t, err, "should be a valid ZIP file")
+	})
+}
+
+// TestZAgentOperations runs last (Z prefix) since reboot affects agent availability.
+// This test exercises the full agent API, including operations that modify the agent state.
+func TestZAgentOperations(T *testing.T) {
+	// Not parallel - modifies agent state
+
+	T.Run("list agents", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		assert.Greater(t, agents.Count, 0, "should have at least one agent")
+		t.Logf("Found %d agents", agents.Count)
+	})
+
+	T.Run("get agent by id", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		require.Greater(t, len(agents.Agents), 0)
+
+		agent, err := client.GetAgent(agents.Agents[0].ID)
+		require.NoError(t, err)
+		assert.Equal(t, agents.Agents[0].ID, agent.ID)
+		assert.NotEmpty(t, agent.Name)
+		t.Logf("Agent: %s (ID: %d)", agent.Name, agent.ID)
+	})
+
+	T.Run("get agent by name", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		require.Greater(t, len(agents.Agents), 0)
+
+		agentName := agents.Agents[0].Name
+		agent, err := client.GetAgentByName(agentName)
+		require.NoError(t, err)
+		assert.Equal(t, agentName, agent.Name)
+		t.Logf("Found agent by name: %s (ID: %d)", agent.Name, agent.ID)
+	})
+
+	T.Run("get compatible build types", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		require.Greater(t, len(agents.Agents), 0)
+
+		buildTypes, err := client.GetAgentCompatibleBuildTypes(agents.Agents[0].ID)
+		require.NoError(t, err)
+		t.Logf("Agent has %d compatible build types", buildTypes.Count)
+	})
+
+	T.Run("enable and disable", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		require.Greater(t, len(agents.Agents), 0)
+
+		agentID := agents.Agents[0].ID
+
+		// Disable
+		err = client.EnableAgent(agentID, false)
+		require.NoError(t, err)
+
+		agent, err := client.GetAgent(agentID)
+		require.NoError(t, err)
+		assert.False(t, agent.Enabled, "agent should be disabled")
+
+		// Re-enable
+		err = client.EnableAgent(agentID, true)
+		require.NoError(t, err)
+
+		agent, err = client.GetAgent(agentID)
+		require.NoError(t, err)
+		assert.True(t, agent.Enabled, "agent should be enabled")
+	})
+
+	T.Run("reboot agent", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		require.Greater(t, len(agents.Agents), 0)
+
+		agentID := agents.Agents[0].ID
+		t.Logf("Requesting reboot for agent ID %d", agentID)
+
+		err = client.RebootAgent(context.Background(), agentID, true)
+		require.NoError(t, err)
+		t.Log("Reboot scheduled (after build completes)")
 	})
 }
