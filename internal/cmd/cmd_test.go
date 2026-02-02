@@ -263,28 +263,28 @@ func TestAgentView(T *testing.T) {
 	setupMockClient(T)
 
 	runCmd(T, "agent", "view", "1")
-	runCmd(T, "agent", "view", "1", "--json")
+	runCmd(T, "agent", "view", "Agent 1", "--json")
 }
 
 func TestAgentEnableDisable(T *testing.T) {
 	setupMockClient(T)
 
 	runCmd(T, "agent", "enable", "1")
-	runCmd(T, "agent", "disable", "1")
+	runCmd(T, "agent", "disable", "Agent 1")
 }
 
 func TestAgentAuthorize(T *testing.T) {
 	setupMockClient(T)
 
 	runCmd(T, "agent", "authorize", "1")
-	runCmd(T, "agent", "deauthorize", "1")
+	runCmd(T, "agent", "deauthorize", "Agent 1")
 }
 
 func TestAgentJobs(T *testing.T) {
 	setupMockClient(T)
 
 	runCmd(T, "agent", "jobs", "1")
-	runCmd(T, "agent", "jobs", "1", "--json")
+	runCmd(T, "agent", "jobs", "Agent 1", "--json")
 	runCmd(T, "agent", "jobs", "1", "--incompatible")
 	runCmd(T, "agent", "jobs", "1", "--incompatible", "--json")
 }
@@ -292,7 +292,14 @@ func TestAgentJobs(T *testing.T) {
 func TestAgentMove(T *testing.T) {
 	setupMockClient(T)
 
-	runCmd(T, "agent", "move", "1", "0")
+	runCmd(T, "agent", "move", "Agent 1", "0")
+}
+
+func TestAgentReboot(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "agent", "reboot", "Agent 1")
+	runCmd(T, "agent", "reboot", "1", "--after-build")
 }
 
 func TestPoolList(T *testing.T) {
