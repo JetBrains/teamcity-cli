@@ -348,8 +348,27 @@ func setupMockClient(t *testing.T) *TestServer {
 			Text(w, "CLI test comment")
 			return
 		}
+		if strings.Contains(r.URL.Path, "/artifacts/content/") {
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("Content-Length", "12")
+			_, _ = w.Write([]byte("test content"))
+			return
+		}
 		if strings.Contains(r.URL.Path, "/artifacts") {
-			JSON(w, api.Artifacts{Count: 0, File: []api.Artifact{}})
+			JSON(w, api.Artifacts{
+				Count: 3,
+				File: []api.Artifact{
+					{Name: "build.jar", Size: 13002342},
+					{Name: "test-report.html", Size: 239616},
+					{Name: "logs", Children: &api.Artifacts{
+						Count: 2,
+						File: []api.Artifact{
+							{Name: "build.log", Size: 45678},
+							{Name: "test.log", Size: 12345},
+						},
+					}},
+				},
+			})
 			return
 		}
 

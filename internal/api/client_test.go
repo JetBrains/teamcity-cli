@@ -2,7 +2,9 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -521,6 +523,95 @@ func TestCleanupBuildTriggered(T *testing.T) {
 		}
 		cleanupBuildTriggered(&build)
 		assert.NotNil(t, build.Triggered.User, "user with username should be preserved")
+	})
+}
+
+func TestDownloadArtifactTo(T *testing.T) {
+	T.Parallel()
+
+	T.Run("successful download", func(t *testing.T) {
+		t.Parallel()
+
+		content := []byte("test artifact content 12345")
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			assert.Contains(t, r.URL.Path, "/artifacts/content/")
+			w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(content)
+		})
+
+		var buf bytes.Buffer
+		written, err := client.DownloadArtifactTo(context.Background(), "123", "test.txt", &buf)
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(len(content)), written)
+		assert.Equal(t, content, buf.Bytes())
+	})
+
+	T.Run("URL encodes artifact path", func(t *testing.T) {
+		t.Parallel()
+
+		var escapedPath string
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			escapedPath = r.URL.EscapedPath()
+			w.WriteHeader(http.StatusOK)
+		})
+
+		var buf bytes.Buffer
+		_, _ = client.DownloadArtifactTo(context.Background(), "123", "file with spaces#1.txt", &buf)
+
+		assert.Contains(t, escapedPath, "file%20with%20spaces%231.txt")
+	})
+
+	T.Run("returns error on non-200 status", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		})
+
+		var buf bytes.Buffer
+		_, err := client.DownloadArtifactTo(context.Background(), "123", "missing.txt", &buf)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "status 404")
+	})
+
+	T.Run("uses correct auth header", func(t *testing.T) {
+		t.Parallel()
+
+		var authHeader string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader = r.Header.Get("Authorization")
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(server.Close)
+
+		client := NewClient(server.URL, "my-secret-token")
+		var buf bytes.Buffer
+		_, _ = client.DownloadArtifactTo(context.Background(), "123", "test.txt", &buf)
+
+		assert.Equal(t, "Bearer my-secret-token", authHeader)
+	})
+
+	T.Run("uses basic auth when configured", func(t *testing.T) {
+		t.Parallel()
+
+		var user, pass string
+		var hasBasicAuth bool
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, pass, hasBasicAuth = r.BasicAuth()
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(server.Close)
+
+		client := NewClientWithBasicAuth(server.URL, "myuser", "mypass")
+		var buf bytes.Buffer
+		_, _ = client.DownloadArtifactTo(context.Background(), "123", "test.txt", &buf)
+
+		assert.True(t, hasBasicAuth)
+		assert.Equal(t, "myuser", user)
+		assert.Equal(t, "mypass", pass)
 	})
 }
 

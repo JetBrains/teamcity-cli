@@ -1,6 +1,9 @@
 package api
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 // ClientInterface defines the TeamCity API client interface.
 // Cmd package uses this interface for dependency injection in tests.
@@ -61,6 +64,7 @@ type ClientInterface interface {
 	// Artifacts
 	GetArtifacts(buildID string) (*Artifacts, error)
 	DownloadArtifact(buildID, artifactPath string) ([]byte, error)
+	DownloadArtifactTo(ctx context.Context, buildID, artifactPath string, w io.Writer) (int64, error)
 
 	// Build Queue
 	GetBuildQueue(opts QueueOptions) (*BuildQueue, error)

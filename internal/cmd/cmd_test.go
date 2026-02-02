@@ -197,6 +197,14 @@ func TestRunLog(T *testing.T) {
 	runCmd(T, "run", "log", testBuildID)
 }
 
+func TestRunArtifacts(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "run", "artifacts", testBuildID)
+	runCmd(T, "run", "artifacts", testBuildID, "--json")
+	runCmd(T, "run", "artifacts", "--job", testJob)
+}
+
 func TestRunPinUnpin(T *testing.T) {
 	setupMockClient(T)
 
