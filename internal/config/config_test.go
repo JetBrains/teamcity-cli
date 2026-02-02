@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 // Note: Tests in this file cannot use t.Parallel() because they modify
 // package-level state (cfg, configPath) and environment variables.
 
-// saveCfgState saves the current cfg state and returns a cleanup function.
+// saveCfgState saves the current cfg state and restores it on cleanup.
 func saveCfgState(t *testing.T) {
 	t.Helper()
 	oldCfg := cfg
@@ -20,6 +21,15 @@ func saveCfgState(t *testing.T) {
 		cfg = oldCfg
 		configPath = oldPath
 	})
+}
+
+// withWorkingDir changes to dir for the duration of the test.
+func withWorkingDir(t *testing.T, dir string) {
+	t.Helper()
+	oldWd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(dir))
+	t.Cleanup(func() { _ = os.Chdir(oldWd) })
 }
 
 func TestGetServerURLFromEnv(T *testing.T) {
@@ -243,5 +253,120 @@ func TestSetUserForServer(T *testing.T) {
 		cfg = &Config{DefaultServer: "https://tc.example.com", Servers: nil}
 		// Should not panic
 		SetUserForServer("https://tc.example.com", "user")
+	})
+}
+
+func TestDetectTeamCityDir(T *testing.T) {
+	T.Run("env var override", func(t *testing.T) {
+		ResetDSLCache()
+		tmpDir := t.TempDir()
+		dslDir := filepath.Join(tmpDir, "custom-dsl")
+		require.NoError(t, os.Mkdir(dslDir, 0755))
+		t.Setenv(EnvDSLDir, dslDir)
+
+		got := DetectTeamCityDir()
+		assert.Equal(t, dslDir, got)
+	})
+
+	T.Run("walks up tree to find .teamcity", func(t *testing.T) {
+		ResetDSLCache()
+		tmpDir := t.TempDir()
+		tmpDir, err := filepath.EvalSymlinks(tmpDir) // macOS /var -> /private/var
+		require.NoError(t, err)
+		dslDir := filepath.Join(tmpDir, DefaultDSLDirTeamCity)
+		subDir := filepath.Join(tmpDir, "sub", "dir")
+		require.NoError(t, os.Mkdir(dslDir, 0755))
+		require.NoError(t, os.MkdirAll(subDir, 0755))
+
+		t.Setenv(EnvDSLDir, "")
+		withWorkingDir(t, subDir)
+
+		got := DetectTeamCityDir()
+		assert.Equal(t, dslDir, got)
+	})
+
+	T.Run("returns empty when not found", func(t *testing.T) {
+		ResetDSLCache()
+		tmpDir := t.TempDir()
+		t.Setenv(EnvDSLDir, "")
+		withWorkingDir(t, tmpDir)
+
+		got := DetectTeamCityDir()
+		assert.Empty(t, got)
+	})
+}
+
+func TestDetectServerFromDSL(T *testing.T) {
+	T.Run("extracts server URL from pom.xml", func(t *testing.T) {
+		ResetDSLCache()
+		tmpDir := t.TempDir()
+		dslDir := filepath.Join(tmpDir, DefaultDSLDirTeamCity)
+		require.NoError(t, os.Mkdir(dslDir, 0755))
+		pomContent := `<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <repositories>
+        <repository>
+            <id>teamcity-server</id>
+            <url>https://teamcity.example.com/app/dsl-plugins-repository</url>
+        </repository>
+    </repositories>
+</project>`
+		require.NoError(t, os.WriteFile(filepath.Join(dslDir, "pom.xml"), []byte(pomContent), 0644))
+
+		t.Setenv(EnvDSLDir, "")
+		withWorkingDir(t, tmpDir)
+
+		got := DetectServerFromDSL()
+		assert.Equal(t, "https://teamcity.example.com", got)
+	})
+
+	T.Run("returns empty when no pom.xml", func(t *testing.T) {
+		ResetDSLCache()
+		tmpDir := t.TempDir()
+		t.Setenv(EnvDSLDir, "")
+		withWorkingDir(t, tmpDir)
+
+		got := DetectServerFromDSL()
+		assert.Empty(t, got)
+	})
+}
+
+func TestGetServerURLPriority(T *testing.T) {
+	saveCfgState(T)
+
+	pomContent := `<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <repositories>
+        <repository>
+            <id>teamcity-server</id>
+            <url>https://dsl-server.example.com/app/dsl-plugins-repository</url>
+        </repository>
+    </repositories>
+</project>`
+
+	T.Run("env > DSL > config", func(t *testing.T) {
+		ResetDSLCache()
+		tmpDir := t.TempDir()
+		dslDir := filepath.Join(tmpDir, DefaultDSLDirTeamCity)
+		require.NoError(t, os.Mkdir(dslDir, 0755))
+		require.NoError(t, os.WriteFile(filepath.Join(dslDir, "pom.xml"), []byte(pomContent), 0644))
+
+		withWorkingDir(t, tmpDir)
+		cfg = &Config{DefaultServer: "https://config.example.com"}
+
+		// Env var takes priority
+		t.Setenv(EnvDSLDir, "")
+		t.Setenv(EnvServerURL, "https://env.example.com")
+		assert.Equal(t, "https://env.example.com", GetServerURL())
+
+		// DSL takes priority over config
+		t.Setenv(EnvServerURL, "")
+		ResetDSLCache() // reset cache to re-detect
+		assert.Equal(t, "https://dsl-server.example.com", GetServerURL())
+
+		// Falls back to config
+		require.NoError(t, os.RemoveAll(dslDir))
+		ResetDSLCache() // reset cache to re-detect
+		assert.Equal(t, "https://config.example.com", GetServerURL())
 	})
 }

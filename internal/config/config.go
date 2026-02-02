@@ -96,6 +96,11 @@ func GetServerURL() string {
 	if url := os.Getenv(EnvServerURL); url != "" {
 		return url
 	}
+
+	if url := DetectServerFromDSL(); url != "" {
+		return url
+	}
+
 	return cfg.DefaultServer
 }
 
