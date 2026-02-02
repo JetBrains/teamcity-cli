@@ -485,8 +485,39 @@ func setupMockClient(t *testing.T) *TestServer {
 		})
 	})
 
+	ts.Handle("GET /app/rest/agents/name:", func(w http.ResponseWriter, r *http.Request) {
+		name := extractID(r.URL.Path, "name:")
+		if name == "NonExistentAgent" {
+			Error(w, http.StatusNotFound, "No agent found by locator 'name:NonExistentAgent'")
+			return
+		}
+		JSON(w, api.Agent{
+			ID:         1,
+			Name:       name,
+			Connected:  true,
+			Enabled:    true,
+			Authorized: true,
+			WebURL:     ts.URL + "/agentDetails.html?id=1",
+			Pool:       &api.Pool{ID: 0, Name: "Default"},
+		})
+	})
+
 	ts.Handle("PUT /app/rest/agents/id:", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
+	})
+
+	// Agent reboot endpoint (form-based, not REST)
+	ts.Handle("POST /remoteAccess/reboot.html", func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			Error(w, http.StatusBadRequest, "Failed to parse form")
+			return
+		}
+		agentID := r.FormValue("agent")
+		if agentID == "999" {
+			Error(w, http.StatusNotFound, "No agent found")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	})
 
 	ts.Handle("GET /app/rest/agents/id:1/compatibleBuildTypes", func(w http.ResponseWriter, r *http.Request) {

@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
@@ -142,31 +144,28 @@ func formatAgentStatus(a api.Agent) string {
 func newAgentViewCmd() *cobra.Command {
 	opts := &viewOptions{}
 	cmd := &cobra.Command{
-		Use:   "view <agent-id>",
+		Use:   "view <agent>",
 		Short: "View agent details",
 		Args:  cobra.ExactArgs(1),
 		Example: `  tc agent view 1
-  tc agent view 1 --web
+  tc agent view Agent-Linux-01
+  tc agent view Agent-Linux-01 --web
   tc agent view 1 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := parseID(args[0], "agent")
-			if err != nil {
-				return err
-			}
-			return runAgentView(id, opts)
+			return runAgentView(args[0], opts)
 		},
 	}
 	addViewFlags(cmd, opts)
 	return cmd
 }
 
-func runAgentView(agentID int, opts *viewOptions) error {
+func runAgentView(nameOrID string, opts *viewOptions) error {
 	client, err := getClient()
 	if err != nil {
 		return err
 	}
 
-	agent, err := client.GetAgent(agentID)
+	agent, err := resolveAgent(client, nameOrID)
 	if err != nil {
 		return err
 	}
@@ -243,24 +242,25 @@ var agentActions = map[string]agentAction{
 
 func newAgentActionCmd(a agentAction) *cobra.Command {
 	return &cobra.Command{
-		Use:     fmt.Sprintf("%s <agent-id>", a.use),
-		Short:   a.short,
-		Long:    a.long,
-		Args:    cobra.ExactArgs(1),
-		Example: fmt.Sprintf("  tc agent %s 1", a.use),
+		Use:   fmt.Sprintf("%s <agent>", a.use),
+		Short: a.short,
+		Long:  a.long,
+		Args:  cobra.ExactArgs(1),
+		Example: fmt.Sprintf(`  tc agent %s 1
+  tc agent %s Agent-Linux-01`, a.use, a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := parseID(args[0], "agent")
-			if err != nil {
-				return err
-			}
 			client, err := getClient()
 			if err != nil {
 				return err
 			}
-			if err := a.execute(client, id); err != nil {
+			agentID, agentName, err := resolveAgentID(client, args[0])
+			if err != nil {
+				return err
+			}
+			if err := a.execute(client, agentID); err != nil {
 				return fmt.Errorf("failed to %s agent: %w", a.use, err)
 			}
-			output.Success("%s agent %d", a.verb, id)
+			output.Success("%s agent %s", a.verb, agentName)
 			return nil
 		},
 	}
@@ -280,19 +280,16 @@ func newAgentJobsCmd() *cobra.Command {
 	opts := &agentJobsOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "jobs <agent-id>",
+		Use:   "jobs <agent>",
 		Short: "Show jobs an agent can run",
 		Long:  `List build configurations (jobs) that are compatible or incompatible with an agent.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  tc agent jobs 1
-  tc agent jobs 1 --incompatible
+  tc agent jobs Agent-Linux-01
+  tc agent jobs Agent-Linux-01 --incompatible
   tc agent jobs 1 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := parseID(args[0], "agent")
-			if err != nil {
-				return err
-			}
-			return runAgentJobs(id, opts)
+			return runAgentJobs(args[0], opts)
 		},
 	}
 
@@ -302,8 +299,13 @@ func newAgentJobsCmd() *cobra.Command {
 	return cmd
 }
 
-func runAgentJobs(agentID int, opts *agentJobsOptions) error {
+func runAgentJobs(nameOrID string, opts *agentJobsOptions) error {
 	client, err := getClient()
+	if err != nil {
+		return err
+	}
+
+	agentID, _, err := resolveAgentID(client, nameOrID)
 	if err != nil {
 		return err
 	}
@@ -387,30 +389,31 @@ func showIncompatibleJobs(client api.ClientInterface, agentID int, jsonOutput bo
 
 func newAgentMoveCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "move <agent-id> <pool-id>",
+		Use:   "move <agent> <pool-id>",
 		Short: "Move an agent to a different pool",
 		Long:  `Move an agent to a different agent pool.`,
 		Args:  cobra.ExactArgs(2),
 		Example: `  tc agent move 1 0
-  tc agent move 1 2`,
+  tc agent move Agent-Linux-01 2`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			agentID, err := parseID(args[0], "agent")
-			if err != nil {
-				return err
-			}
 			poolID, err := parseID(args[1], "pool")
 			if err != nil {
 				return err
 			}
-			return runAgentMove(agentID, poolID)
+			return runAgentMove(args[0], poolID)
 		},
 	}
 
 	return cmd
 }
 
-func runAgentMove(agentID int, poolID int) error {
+func runAgentMove(nameOrID string, poolID int) error {
 	client, err := getClient()
+	if err != nil {
+		return err
+	}
+
+	agentID, agentName, err := resolveAgentID(client, nameOrID)
 	if err != nil {
 		return err
 	}
@@ -419,6 +422,8 @@ func runAgentMove(agentID int, poolID int) error {
 		return fmt.Errorf("failed to move agent: %w", err)
 	}
 
-	output.Success("Moved agent %d to pool %d", agentID, poolID)
+	output.Success("Moved agent %s to pool %d", agentName, poolID)
+	return nil
+}
 	return nil
 }
