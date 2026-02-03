@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"context"
+	"crypto/subtle"
 	"fmt"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
@@ -11,6 +14,9 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
+
+// authCodeLifetime is the maximum time to wait for the OAuth callback
+const authCodeLifetime = 5 * time.Minute
 
 func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -33,6 +39,8 @@ func newAuthLoginCmd() *cobra.Command {
 	var token string
 	var guest bool
 	var insecureStorage bool
+	var noBrowser bool
+	var scopes []string
 
 	cmd := &cobra.Command{
 		Use:   "login",
@@ -41,8 +49,9 @@ func newAuthLoginCmd() *cobra.Command {
 
 This will:
 1. Prompt for your TeamCity server URL
-2. Open your browser to generate an access token
-3. Validate and store the token securely
+2. Automatically authenticate via browser (if PKCE is enabled)
+3. Or open your browser to generate an access token manually
+4. Validate and store the token securely
 
 The token is stored in your system keyring (macOS Keychain, GNOME Keyring,
 Windows Credential Manager) when available. Use --insecure-storage to store
@@ -64,7 +73,7 @@ build-level credentials from the build properties file.`,
 			if guest {
 				return runAuthLoginGuest(serverURL, token)
 			}
-			return runAuthLogin(serverURL, token, insecureStorage)
+			return runAuthLogin(serverURL, token, insecureStorage, noBrowser, scopes)
 		},
 	}
 
@@ -72,28 +81,67 @@ build-level credentials from the build properties file.`,
 	cmd.Flags().StringVarP(&token, "token", "t", "", "Access token")
 	cmd.Flags().BoolVar(&guest, "guest", false, "Use guest authentication (no token needed, must be enabled on the server)")
 	cmd.Flags().BoolVar(&insecureStorage, "insecure-storage", false, "Store token in plain text config file instead of system keyring")
+	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Skip browser-based auth, use manual token entry")
+	cmd.Flags().StringSliceVar(&scopes, "scopes", api.DefaultScopes(), "Permissions for the token (PKCE only)")
 
 	return cmd
 }
 
-func runAuthLogin(serverURL, token string, insecureStorage bool) error {
+func runAuthLogin(serverURL, token string, insecureStorage bool, noBrowser bool, scopes []string) error {
 	isInteractive := !NoInput && output.IsStdinTerminal()
 
 	if serverURL == "" {
+		// Try to detect server from DSL (pom.xml)
+		detectedServer := config.DetectServerFromDSL()
+
 		if !isInteractive {
-			return tcerrors.RequiredFlag("server")
-		}
-		prompt := &survey.Input{
-			Message: "TeamCity server URL:",
-			Help:    "e.g., https://teamcity.example.com",
-		}
-		if err := survey.AskOne(prompt, &serverURL, survey.WithValidator(survey.Required)); err != nil {
-			return err
+			if detectedServer != "" {
+				serverURL = detectedServer
+			} else {
+				return tcerrors.RequiredFlag("server")
+			}
+		} else {
+			// Interactive mode: let user confirm or change detected server
+			prompt := &survey.Input{
+				Message: "TeamCity server URL:",
+				Help:    "e.g., https://teamcity.example.com",
+			}
+
+			if detectedServer != "" {
+				prompt.Default = detectedServer
+				dslDir := config.DetectTeamCityDir()
+				fmt.Printf("%s Detected server from %s/pom.xml\n", output.Green("✓"), dslDir)
+			}
+
+			if err := survey.AskOne(prompt, &serverURL, survey.WithValidator(survey.Required)); err != nil {
+				return err
+			}
 		}
 	}
 
 	serverURL = config.NormalizeURL(serverURL)
 
+	// Try PKCE authentication first (if available and allowed)
+	var tokenValidUntil string
+	pkceChecked := false
+	if token == "" && !noBrowser && isInteractive {
+		pkceChecked = true
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		enabled, _ := api.IsPkceEnabled(ctx, serverURL)
+		cancel()
+		if enabled {
+			output.Info("Secure browser login enabled on this server")
+			if tokenResp, err := runPkceLogin(serverURL, scopes); err != nil {
+				output.Warn("Browser auth failed: %v", err)
+				output.Info("Falling back to manual token entry...")
+			} else {
+				token = tokenResp.AccessToken
+				tokenValidUntil = tokenResp.ValidUntil
+			}
+		}
+	}
+
+	// Fall back to manual token entry
 	if token == "" {
 		if !isInteractive {
 			return tcerrors.RequiredFlag("token")
@@ -102,6 +150,10 @@ func runAuthLogin(serverURL, token string, insecureStorage bool) error {
 		tokenURL := fmt.Sprintf("%s/profile.html?item=accessTokens", serverURL)
 
 		fmt.Println()
+		if pkceChecked {
+			fmt.Println(output.Faint("Tip: Server admins can enable secure browser login for easier authentication"))
+			fmt.Println()
+		}
 		fmt.Println(output.Yellow("!"), "To authenticate, you need an access token.")
 		fmt.Printf("  Generate one at: %s\n", tokenURL)
 		fmt.Println()
@@ -155,6 +207,11 @@ func runAuthLogin(serverURL, token string, insecureStorage bool) error {
 	} else {
 		fmt.Printf("%s Token stored in system keyring\n", output.Green("✓"))
 	}
+	if tokenValidUntil != "" {
+		if expiry, err := time.Parse(time.RFC3339, tokenValidUntil); err == nil {
+			output.Info("Token expires: %s", output.Yellow(expiry.Local().Format("Jan 2, 2006")))
+		}
+	}
 
 	return nil
 }
@@ -207,6 +264,54 @@ func runAuthLoginGuest(serverURL, token string) error {
 	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
 
 	return nil
+}
+
+func runPkceLogin(serverURL string, scopes []string) (*api.TokenResponse, error) {
+	verifier, err := api.GenerateCodeVerifier()
+	if err != nil {
+		return nil, fmt.Errorf("generate code verifier: %w", err)
+	}
+	state, err := api.GenerateState()
+	if err != nil {
+		return nil, fmt.Errorf("generate state: %w", err)
+	}
+
+	listener, port, err := api.FindAvailableListener()
+	if err != nil {
+		return nil, fmt.Errorf("find available port: %w", err)
+	}
+
+	callbackServer := api.NewCallbackServer(listener, port)
+	callbackServer.Start()
+	defer callbackServer.Shutdown()
+
+	redirectURI := fmt.Sprintf("http://localhost:%d%s", port, api.DefaultCallbackPath)
+	authURL := api.BuildAuthorizeURL(serverURL, redirectURI, api.GenerateCodeChallenge(verifier), state, scopes)
+
+	output.Info("Opening browser for authentication...")
+	fmt.Printf("  %s Approve access in TeamCity\n", output.Yellow("→"))
+
+	if err := browser.OpenURL(authURL); err != nil {
+		return nil, fmt.Errorf("open browser: %w", err)
+	}
+
+	select {
+	case result := <-callbackServer.ResultChan:
+		if result.Error != "" {
+			return nil, fmt.Errorf("authorization denied: %s", result.Error)
+		}
+		if subtle.ConstantTimeCompare([]byte(result.State), []byte(state)) != 1 {
+			return nil, fmt.Errorf("state mismatch: possible CSRF attack")
+		}
+		fmt.Println()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return api.ExchangeCodeForToken(ctx, serverURL, result.Code, verifier, redirectURI)
+
+	case <-time.After(authCodeLifetime):
+		return nil, fmt.Errorf("timeout waiting for callback (exceeded %v)", authCodeLifetime)
+	}
 }
 
 func newAuthLogoutCmd() *cobra.Command {
