@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/fatih/color"
@@ -97,12 +99,31 @@ func Execute() error {
 	RegisterAliases(rootCmd)
 	rootCmd.SilenceErrors = true
 	err := rootCmd.Execute()
+	if err != nil && errors.Is(err, api.ErrAuthentication) {
+		tryAutoReauth()
+	}
 	if err != nil {
 		if _, ok := errors.AsType[*ExitError](err); !ok {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", enrichAPIError(err))
 		}
 	}
 	return err
+}
+
+// tryAutoReauth detects an expired PKCE token and tells the user how to fix it.
+func tryAutoReauth() {
+	if !output.IsStdinTerminal() || NoInput {
+		return
+	}
+	expiry := config.GetTokenExpiry()
+	if expiry == "" {
+		return
+	}
+	t, err := time.Parse(time.RFC3339, expiry)
+	if err != nil || time.Until(t) > 0 {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "\n%s Token expired. Run %s to re-authenticate.\n", output.Yellow("!"), output.Cyan("teamcity auth login"))
 }
 
 // enrichAPIError converts typed API errors into UserErrors with CLI-specific hints.
