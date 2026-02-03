@@ -708,7 +708,7 @@ func TestSetServerWithKeyring(T *testing.T) {
 	configPath = tmpDir + "/config.yml"
 	cfg = &Config{Servers: make(map[string]ServerConfig)}
 
-	insecure, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", false)
+	insecure, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", "", false)
 	require.NoError(T, err)
 	assert.False(T, insecure)
 
@@ -726,7 +726,7 @@ func TestSetServerKeyringFallback(T *testing.T) {
 	configPath = tmpDir + "/config.yml"
 	cfg = &Config{Servers: make(map[string]ServerConfig)}
 
-	insecure, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", false)
+	insecure, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", "", false)
 	require.NoError(T, err)
 	assert.True(T, insecure)
 
@@ -740,7 +740,7 @@ func TestRemoveServerCleansKeyring(T *testing.T) {
 	configPath = tmpDir + "/config.yml"
 	cfg = &Config{Servers: make(map[string]ServerConfig)}
 
-	_, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", false)
+	_, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", "", false)
 	require.NoError(T, err)
 
 	err = RemoveServer("https://tc.example.com")

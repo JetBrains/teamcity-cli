@@ -26,10 +26,11 @@ const (
 )
 
 type ServerConfig struct {
-	Token string `mapstructure:"token"`
-	User  string `mapstructure:"user"`
-	Guest bool   `mapstructure:"guest,omitempty"`
-	RO    bool   `mapstructure:"ro,omitempty"`
+	Token       string `mapstructure:"token"`
+	User        string `mapstructure:"user"`
+	Guest       bool   `mapstructure:"guest,omitempty"`
+	RO          bool   `mapstructure:"ro,omitempty"`
+	TokenExpiry string `mapstructure:"token_expiry,omitempty"`
 }
 
 type Config struct {
@@ -185,23 +186,30 @@ func GetCurrentUser() string {
 }
 
 func SetServer(serverURL, token, user string) error {
-	_, err := SetServerWithKeyring(serverURL, token, user, false)
+	_, err := SetServerWithKeyring(serverURL, token, user, "", false)
 	return err
 }
 
-func SetServerWithKeyring(serverURL, token, user string, insecureStorage bool) (insecureFallback bool, err error) {
+func SetServerWithKeyring(serverURL, token, user, tokenExpiry string, insecureStorage bool) (insecureFallback bool, err error) {
 	serverURL = NormalizeURL(serverURL)
 	cfg.DefaultServer = serverURL
 
 	if !insecureStorage {
 		if krErr := keyringSet(keyringService(serverURL), user, token); krErr == nil {
-			cfg.Servers[serverURL] = ServerConfig{User: user}
+			cfg.Servers[serverURL] = ServerConfig{User: user, TokenExpiry: tokenExpiry}
 			return false, writeConfig()
 		}
 	}
 
-	cfg.Servers[serverURL] = ServerConfig{Token: token, User: user}
+	cfg.Servers[serverURL] = ServerConfig{Token: token, User: user, TokenExpiry: tokenExpiry}
 	return true, writeConfig()
+}
+
+func GetTokenExpiry() string {
+	if server, ok := cfg.Servers[GetServerURL()]; ok {
+		return server.TokenExpiry
+	}
+	return ""
 }
 
 func writeConfig() error {
