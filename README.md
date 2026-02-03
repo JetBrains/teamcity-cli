@@ -153,6 +153,16 @@ curl -fsSL https://jb.gg/tc/install | bash
 
 ### Windows
 
+**Winget (recommended):**
+```powershell
+winget install JetBrains.tc
+```
+
+**Chocolatey:**
+```powershell
+choco install tc
+```
+
 **Scoop:**
 ```powershell
 scoop bucket add jetbrains https://github.com/JetBrains/scoop-utils
