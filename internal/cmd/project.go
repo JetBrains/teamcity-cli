@@ -415,13 +415,18 @@ func runProjectSettingsStatus(projectID string, opts *projectSettingsStatusOptio
 		statusIcon = output.Red("✗")
 		statusLabel = "unavailable"
 	} else {
-		switch status.Type {
-		case "warning":
-			statusIcon = output.Yellow("!")
-			statusLabel = "warning"
-		case "error":
-			statusIcon = output.Red("✗")
-			statusLabel = "error"
+		if syncingStatus := getSyncingStatus(status.Message); syncingStatus != "" {
+			statusIcon = output.Cyan("⟳")
+			statusLabel = syncingStatus
+		} else {
+			switch status.Type {
+			case "warning":
+				statusIcon = output.Yellow("!")
+				statusLabel = "warning"
+			case "error":
+				statusIcon = output.Red("✗")
+				statusLabel = "error"
+			}
 		}
 	}
 
@@ -572,6 +577,29 @@ func formatRelativeTime(ts string) string {
 	}
 	local := t.Local()
 	return fmt.Sprintf("%s (%s)", output.RelativeTime(local), local.Format("Jan 2 15:04"))
+}
+
+// getSyncingStatus returns a status if the message indicates DSL is currently running, or empty string if not
+func getSyncingStatus(message string) string {
+	lowerMsg := strings.ToLower(message)
+
+	if strings.Contains(lowerMsg, "running dsl") {
+		return "running DSL"
+	}
+	if strings.Contains(lowerMsg, "resolving maven dependencies") {
+		return "resolving dependencies"
+	}
+	if strings.Contains(lowerMsg, "loading project settings from vcs") {
+		return "loading from VCS"
+	}
+	if strings.Contains(lowerMsg, "generating settings") {
+		return "generating settings"
+	}
+	if strings.Contains(lowerMsg, "waiting for update") {
+		return "waiting for VCS"
+	}
+
+	return ""
 }
 
 type projectSettingsValidateOptions struct {
