@@ -105,6 +105,35 @@ func TestProjectSettingsStatusWarning(T *testing.T) {
 	runCmd(T, "project", "settings", "status", "WarningProject")
 }
 
+func TestProjectSettingsStatusSyncing(T *testing.T) {
+	ts := setupMockClient(T)
+	ts.Handle("GET /app/rest/projects/id:SyncingProject", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.Project{
+			ID:     "SyncingProject",
+			Name:   "Syncing Project",
+			WebURL: ts.URL + "/project.html?projectId=SyncingProject",
+		})
+	})
+	ts.Handle("GET /app/rest/projects/SyncingProject/versionedSettings/config", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VersionedSettingsConfig{
+			SynchronizationMode: "enabled",
+			Format:              "kotlin",
+			BuildSettingsMode:   "useFromVCS",
+			VcsRootID:           "TestVcsRoot",
+		})
+	})
+	ts.Handle("GET /app/rest/projects/SyncingProject/versionedSettings/status", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VersionedSettingsStatus{
+			Type:        "info",
+			Message:     "Running DSL (incremental compilation disabled)...",
+			Timestamp:   "Mon Jan 27 10:30:00 UTC 2025",
+			DslOutdated: false,
+		})
+	})
+
+	runCmd(T, "project", "settings", "status", "SyncingProject")
+}
+
 func TestProjectSettingsStatusNotConfigured(T *testing.T) {
 	ts := setupMockClient(T)
 	ts.Handle("GET /app/rest/projects/id:NoSettingsProject", func(w http.ResponseWriter, r *http.Request) {
