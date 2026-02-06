@@ -1,7 +1,13 @@
 package output
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -378,6 +384,26 @@ func TestFormatDuration(T *testing.T) {
 	}
 }
 
+func TestPrintLogo(T *testing.T) {
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(T, err)
+
+	os.Stdout = w
+	PrintLogo()
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	r.Close()
+
+	output := buf.String()
+	assert.Contains(T, output, "██", "logo should contain block characters")
+	assert.Contains(T, output, "╗", "logo should contain box-drawing characters")
+}
+
 func TestOutputFunctions(T *testing.T) {
 	// Cannot use T.Parallel() because this test modifies package-level Quiet/Verbose
 	oldQuiet := Quiet
@@ -506,6 +532,38 @@ func TestPrintTable(T *testing.T) {
 	}
 }
 
+// overrideTerminal sets isTerminalFn and getTermSizeFn for the duration of the test.
+func overrideTerminal(t *testing.T, isTerm bool, w, h int, err error) {
+	t.Helper()
+	oldIsTerm := isTerminalFn
+	oldGetSize := getTermSizeFn
+	isTerminalFn = func() bool { return isTerm }
+	getTermSizeFn = func() (int, int, error) { return w, h, err }
+	t.Cleanup(func() {
+		isTerminalFn = oldIsTerm
+		getTermSizeFn = oldGetSize
+	})
+}
+
+// captureStdout replaces os.Stdout with a pipe for the duration of fn and returns what was written.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	fn()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+	r.Close()
+	return buf.String()
+}
+
 func TestPrintPlainTable(T *testing.T) {
 	T.Parallel()
 	tests := []struct {
@@ -528,4 +586,126 @@ func TestPrintPlainTable(T *testing.T) {
 			PrintPlainTable(tc.headers, tc.rows, tc.noHeader)
 		})
 	}
+}
+
+func TestDefaultFnBodies(T *testing.T) {
+	// Exercise the default function literal bodies for coverage.
+	// These only run in production; tests typically override them.
+	_, _, _ = getTermSizeFn()
+
+	// With real PATH: LookPath succeeds
+	cmd, err := pagerCmdFn()
+	if err == nil {
+		assert.NotNil(T, cmd)
+	}
+
+	// With empty PATH: LookPath fails, covering the error branch
+	T.Setenv("PATH", "")
+	_, err = pagerCmdFn()
+	assert.Error(T, err)
+}
+
+func TestTerminalSizeTerminal(T *testing.T) {
+	overrideTerminal(T, true, 100, 50, nil)
+
+	w, h := TerminalSize()
+	assert.Equal(T, 100, w)
+	assert.Equal(T, 50, h)
+}
+
+func TestTerminalSizeError(T *testing.T) {
+	overrideTerminal(T, true, 0, 0, errors.New("not a terminal"))
+
+	w, h := TerminalSize()
+	assert.Equal(T, 80, w)
+	assert.Equal(T, 24, h)
+}
+
+func TestTerminalSizeZeroWidth(T *testing.T) {
+	overrideTerminal(T, true, 0, 50, nil)
+
+	w, h := TerminalSize()
+	assert.Equal(T, 80, w)
+	assert.Equal(T, 24, h)
+}
+
+func TestWithPagerNonTerminal(T *testing.T) {
+	overrideTerminal(T, false, 120, 40, nil)
+
+	output := captureStdout(T, func() {
+		WithPager(func(w io.Writer) {
+			fmt.Fprintln(w, "hello pager")
+		})
+	})
+	assert.Contains(T, output, "hello pager")
+}
+
+func TestWithPagerFallbackShortContent(T *testing.T) {
+	overrideTerminal(T, true, 80, 50, nil)
+
+	output := captureStdout(T, func() {
+		WithPager(func(w io.Writer) {
+			fmt.Fprintln(w, "short content")
+		})
+	})
+	assert.Contains(T, output, "short content")
+}
+
+func TestWithPagerRunsLess(T *testing.T) {
+	overrideTerminal(T, true, 80, 5, nil)
+
+	// Generate content that exceeds terminal height
+	var lines []string
+	for i := 0; i < 20; i++ {
+		lines = append(lines, fmt.Sprintf("line %d", i))
+	}
+	content := strings.Join(lines, "\n") + "\n"
+
+	output := captureStdout(T, func() {
+		WithPager(func(w io.Writer) {
+			fmt.Fprint(w, content)
+		})
+	})
+	// less requires a real terminal for stdin, so it will fail and fall back to direct write
+	assert.Contains(T, output, "line 0")
+}
+
+func TestWithPagerLessError(T *testing.T) {
+	overrideTerminal(T, true, 80, 5, nil)
+
+	oldPager := pagerCmdFn
+	T.Cleanup(func() { pagerCmdFn = oldPager })
+	pagerCmdFn = func() (*exec.Cmd, error) {
+		return exec.Command("false"), nil // "false" always exits 1
+	}
+
+	var lines []string
+	for i := 0; i < 20; i++ {
+		lines = append(lines, fmt.Sprintf("line %d", i))
+	}
+	content := strings.Join(lines, "\n") + "\n"
+
+	output := captureStdout(T, func() {
+		WithPager(func(w io.Writer) {
+			fmt.Fprint(w, content)
+		})
+	})
+	// pager fails → falls back to direct stdout write
+	assert.Contains(T, output, "line 0")
+	assert.Contains(T, output, "line 19")
+}
+
+func TestPrintLogoTerminal(T *testing.T) {
+	overrideTerminal(T, true, 80, 24, nil)
+
+	output := captureStdout(T, func() {
+		PrintLogo()
+	})
+
+	// Terminal animation should contain ANSI escape sequences
+	assert.Contains(T, output, "\033[", "should contain ANSI escape sequences")
+	// Should contain the logo characters
+	stripped := stripansi.Strip(output)
+	assert.Contains(T, stripped, "██", "should contain block characters")
+	assert.Contains(T, stripped, "╗", "should contain box-drawing characters")
 }

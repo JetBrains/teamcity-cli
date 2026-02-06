@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -44,6 +45,24 @@ type timeoutErr struct{}
 func (e timeoutErr) Error() string   { return "timeout" }
 func (e timeoutErr) Timeout() bool   { return true }
 func (e timeoutErr) Temporary() bool { return true }
+
+func TestRetryableError(T *testing.T) {
+	T.Parallel()
+
+	inner := errors.New("connection refused")
+	re := retryableError{err: inner}
+
+	T.Run("Error delegates to wrapped error", func(t *testing.T) {
+		t.Parallel()
+		assert.Equal(t, "connection refused", re.Error())
+	})
+
+	T.Run("Unwrap returns inner error", func(t *testing.T) {
+		t.Parallel()
+		assert.Equal(t, inner, re.Unwrap())
+		assert.True(t, errors.Is(re, inner))
+	})
+}
 
 // Integration test: verify retry actually happens
 func TestWithRetry_RetriesOnServerError(T *testing.T) {

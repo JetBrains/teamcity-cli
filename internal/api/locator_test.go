@@ -203,6 +203,24 @@ func TestLocator(T *testing.T) {
 			},
 			want: "branch:(:main)",
 		},
+		// AddRaw tests
+		{
+			name: "raw value not escaped",
+			build: func() *Locator {
+				return NewLocator().
+					AddRaw("buildType", "id:Foo,project:(id:Bar)")
+			},
+			want: "buildType:id:Foo,project:(id:Bar)",
+		},
+		{
+			name: "raw empty value skipped",
+			build: func() *Locator {
+				return NewLocator().
+					Add("project", "MyProject").
+					AddRaw("buildType", "")
+			},
+			want: "project:MyProject",
+		},
 	}
 
 	for _, tc := range tests {

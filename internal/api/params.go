@@ -114,7 +114,7 @@ func (c *Client) DeleteBuildTypeParameter(buildTypeID, name string) error {
 
 // GetParameterValue returns just the raw value of a parameter
 func (c *Client) GetParameterValue(path string) (string, error) {
-	resp, err := c.doRequest("GET", path, nil)
+	resp, err := c.doRequestWithAccept("GET", path, nil, "text/plain")
 	if err != nil {
 		return "", err
 	}

@@ -767,6 +767,103 @@ func TestExportProjectSettings(T *testing.T) {
 	})
 }
 
+func TestPoolOperations(T *testing.T) {
+	// Not parallel - modifies pool state
+
+	T.Run("list pools", func(t *testing.T) {
+		pools, err := client.GetAgentPools(nil)
+		require.NoError(t, err)
+		assert.Greater(t, pools.Count, 0, "should have at least one pool")
+		t.Logf("Found %d pools", pools.Count)
+	})
+
+	T.Run("get default pool", func(t *testing.T) {
+		pool, err := client.GetAgentPool(0)
+		require.NoError(t, err)
+		assert.Equal(t, 0, pool.ID)
+		assert.NotEmpty(t, pool.Name)
+		t.Logf("Default pool: %s", pool.Name)
+	})
+
+	T.Run("add and remove project from pool", func(t *testing.T) {
+		// Get the default pool first
+		pool, err := client.GetAgentPool(0)
+		require.NoError(t, err)
+
+		// Add the test project to the default pool
+		err = client.AddProjectToPool(pool.ID, testProject)
+		if err != nil {
+			t.Logf("AddProjectToPool: %v (project may already be in pool)", err)
+		} else {
+			// Only try to remove if adding succeeded
+			err = client.RemoveProjectFromPool(pool.ID, testProject)
+			if err != nil {
+				t.Logf("RemoveProjectFromPool: %v", err)
+			}
+		}
+	})
+
+	T.Run("move agent to pool and back", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		if len(agents.Agents) == 0 {
+			t.Skip("no agents available")
+		}
+
+		agentID := agents.Agents[0].ID
+
+		// Get the agent's current pool
+		agent, err := client.GetAgent(agentID)
+		require.NoError(t, err)
+		originalPoolID := agent.Pool.ID
+
+		// Move agent to default pool (id:0) and back
+		err = client.SetAgentPool(agentID, 0)
+		if err != nil {
+			t.Logf("SetAgentPool to default: %v", err)
+			return
+		}
+
+		// Move back to original pool
+		err = client.SetAgentPool(agentID, originalPoolID)
+		if err != nil {
+			t.Logf("SetAgentPool back: %v", err)
+		}
+	})
+}
+
+func TestGetAgentIncompatibleBuildTypes(T *testing.T) {
+	T.Parallel()
+
+	agents, err := client.GetAgents(api.AgentsOptions{})
+	require.NoError(T, err)
+	require.Greater(T, len(agents.Agents), 0)
+
+	incompatible, err := client.GetAgentIncompatibleBuildTypes(agents.Agents[0].ID)
+	require.NoError(T, err)
+	T.Logf("Agent has %d incompatible build types", incompatible.Count)
+}
+
+func TestGetParameterValue(T *testing.T) {
+	// Not parallel - creates and deletes a parameter
+	paramName := "TC_CLI_RAW_PARAM"
+	paramValue := "raw_test_value"
+
+	// Set a parameter on the test project
+	err := client.SetProjectParameter(testProject, paramName, paramValue, false)
+	require.NoError(T, err)
+
+	// Get the raw value via GetParameterValue
+	path := fmt.Sprintf("/app/rest/projects/id:%s/parameters/%s/value", testProject, paramName)
+	got, err := client.GetParameterValue(path)
+	require.NoError(T, err)
+	assert.Equal(T, paramValue, got)
+
+	// Cleanup
+	err = client.DeleteProjectParameter(testProject, paramName)
+	require.NoError(T, err)
+}
+
 // TestZAgentOperations runs last (Z prefix) since reboot affects agent availability.
 // This test exercises the full agent API, including operations that modify the agent state.
 func TestZAgentOperations(T *testing.T) {

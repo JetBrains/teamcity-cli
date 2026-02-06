@@ -615,6 +615,32 @@ func TestDownloadArtifactTo(T *testing.T) {
 	})
 }
 
+func TestNotFoundHint(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name    string
+		message string
+		want    string
+	}{
+		{"pool message", "Agent pool 'MyPool' not found", "Use 'tc pool list' to see available pools"},
+		{"agent message", "Agent 'MyAgent' not found", "Use 'tc agent list' to see available agents"},
+		{"project message", "Project 'Foo' not found", "Use 'tc project list' to see available projects"},
+		{"build type message", "Build type 'Foo_Bar' not found", "Use 'tc job list' to see available jobs"},
+		{"job message", "job 'Foo' not found", "Use 'tc job list' to see available jobs"},
+		{"default message", "Something else went wrong", "Use 'tc job list' or 'tc run list' to see available resources"},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := notFoundHint(tc.message)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestVerboseLogging(T *testing.T) {
 	// Not parallel - modifies global output.Verbose
 
@@ -670,4 +696,3 @@ func TestVerboseLogging(T *testing.T) {
 		assert.Empty(t, captured)
 	})
 }
-
