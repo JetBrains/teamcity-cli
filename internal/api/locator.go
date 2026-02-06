@@ -34,6 +34,15 @@ func escapeLocatorValue(value string) string {
 	return "(" + escaped + ")"
 }
 
+// AddRaw adds a key:value pair without escaping the value.
+// Use for values that are already valid locator syntax (e.g. sub-locators).
+func (l *Locator) AddRaw(key, value string) *Locator {
+	if value != "" {
+		l.parts = append(l.parts, fmt.Sprintf("%s:%s", key, value))
+	}
+	return l
+}
+
 func (l *Locator) AddUpper(key, value string) *Locator {
 	if value != "" {
 		l.parts = append(l.parts, fmt.Sprintf("%s:%s", key, strings.ToUpper(value)))

@@ -37,7 +37,11 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 		locator.Add("enabled", "true")
 	}
 	if opts.Pool != "" {
-		locator.Add("pool", opts.Pool)
+		if _, err := fmt.Sscanf(opts.Pool, "%d", new(int)); err == nil {
+			locator.AddRaw("pool", "(id:"+opts.Pool+")")
+		} else {
+			locator.AddRaw("pool", "(name:"+opts.Pool+")")
+		}
 	}
 	locator.AddIntDefault("count", opts.Limit, 100)
 
