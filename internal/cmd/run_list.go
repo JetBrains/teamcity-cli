@@ -65,6 +65,9 @@ func newRunListCmd() *cobra.Command {
 }
 
 func runRunList(cmd *cobra.Command, opts *runListOptions) error {
+	if err := validateLimit(opts.limit); err != nil {
+		return err
+	}
 	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.BuildFields)
 	if err != nil {
 		return err

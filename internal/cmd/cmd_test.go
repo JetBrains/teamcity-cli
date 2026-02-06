@@ -35,6 +35,18 @@ func runCmd(t *testing.T, args ...string) {
 	require.NoError(t, err, "Execute(%v)", args)
 }
 
+func runCmdExpectErr(t *testing.T, want string, args ...string) {
+	t.Helper()
+	rootCmd := newRootCmd()
+	rootCmd.SetArgs(args)
+	var out bytes.Buffer
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+	err := rootCmd.Execute()
+	require.Error(t, err, "expected error for Execute(%v)", args)
+	assert.Contains(t, err.Error(), want)
+}
+
 func TestConfig(T *testing.T) {
 	setupMockClient(T)
 
@@ -49,6 +61,15 @@ func TestProjectList(T *testing.T) {
 	runCmd(T, "project", "list", "--limit", "5")
 	runCmd(T, "project", "list", "--parent", "_Root", "--limit", "3")
 	runCmd(T, "project", "list", "--json", "--limit", "2")
+}
+
+func TestListLimitValidation(T *testing.T) {
+	setupMockClient(T)
+
+	runCmdExpectErr(T, "--limit must be a positive number", "project", "list", "--limit", "0")
+	runCmdExpectErr(T, "--limit must be a positive number", "run", "list", "--limit", "-1")
+	runCmdExpectErr(T, "--limit must be a positive number", "job", "list", "--limit", "0")
+	runCmdExpectErr(T, "--limit must be a positive number", "agent", "list", "--limit", "-5")
 }
 
 func TestProjectView(T *testing.T) {

@@ -20,6 +20,14 @@ func addViewFlags(cmd *cobra.Command, opts *viewOptions) {
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 }
 
+// validateLimit returns an error if limit is not positive.
+func validateLimit(limit int) error {
+	if limit <= 0 {
+		return fmt.Errorf("--limit must be a positive number, got %d", limit)
+	}
+	return nil
+}
+
 // parseID converts a string argument to an integer ID.
 // Used for parsing agent and pool IDs from command line arguments.
 func parseID(s string, entity string) (int, error) {
