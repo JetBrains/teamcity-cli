@@ -420,6 +420,22 @@ Show authentication status
 
 ## Runs
 
+### run artifacts
+
+List artifacts from a run without downloading them.
+
+Shows artifact names and sizes. Use tc run download to download artifacts.
+
+```bash
+tc run artifacts 12345
+tc run artifacts 12345 --json
+tc run artifacts --job MyBuild
+```
+
+**Options:**
+- `-j, --job` – List artifacts from latest run of this job
+- `--json` – Output as JSON
+
 ### run cancel
 
 Cancel a running or queued run.
@@ -659,6 +675,8 @@ tc run watch 12345 --logs
 **Options:**
 - `-i, --interval` – Refresh interval in seconds
 - `--logs` – Stream build logs while watching
+- `-Q, --quiet` – Minimal output, show only state changes and result
+- `--timeout` – Timeout duration (e.g., 30m, 1h)
 
 ---
 
@@ -987,6 +1005,7 @@ Authorize an agent to allow it to connect and run builds.
 
 ```bash
 tc agent authorize 1
+tc agent authorize Agent-Linux-01
 ```
 
 ### agent deauthorize
@@ -995,6 +1014,7 @@ Deauthorize an agent to revoke its permission to connect.
 
 ```bash
 tc agent deauthorize 1
+tc agent deauthorize Agent-Linux-01
 ```
 
 ### agent disable
@@ -1003,6 +1023,7 @@ Disable an agent to prevent it from running builds.
 
 ```bash
 tc agent disable 1
+tc agent disable Agent-Linux-01
 ```
 
 ### agent enable
@@ -1011,6 +1032,7 @@ Enable an agent to allow it to run builds.
 
 ```bash
 tc agent enable 1
+tc agent enable Agent-Linux-01
 ```
 
 ### agent exec
@@ -1019,8 +1041,8 @@ Execute a command on a TeamCity build agent and return the output.
 
 ```bash
 tc agent exec 1 "ls -la"
-tc agent exec 42 "cat /etc/os-release"
-tc agent exec 1 --timeout 10m -- long-running-script.sh
+tc agent exec Agent-Linux-01 "cat /etc/os-release"
+tc agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh
 ```
 
 **Options:**
@@ -1032,7 +1054,8 @@ List build configurations (jobs) that are compatible or incompatible with an age
 
 ```bash
 tc agent jobs 1
-tc agent jobs 1 --incompatible
+tc agent jobs Agent-Linux-01
+tc agent jobs Agent-Linux-01 --incompatible
 tc agent jobs 1 --json
 ```
 
@@ -1066,8 +1089,28 @@ Move an agent to a different agent pool.
 
 ```bash
 tc agent move 1 0
-tc agent move 1 2
+tc agent move Agent-Linux-01 2
 ```
+
+### agent reboot
+
+Request a reboot of a build agent.
+
+The agent can be specified by ID or name. By default, the agent reboots immediately.
+Use --after-build to wait for the current build to finish before rebooting.
+
+Note: Local agents (running on the same machine as the server) cannot be rebooted.
+
+```bash
+tc agent reboot 1
+tc agent reboot Agent-Linux-01
+tc agent reboot Agent-Linux-01 --after-build
+tc agent reboot Agent-Linux-01 --yes
+```
+
+**Options:**
+- `--after-build` – Wait for current build to finish before rebooting
+- `-y, --yes` – Skip confirmation prompt
 
 ### agent term
 
@@ -1075,7 +1118,7 @@ Open an interactive shell session to a TeamCity build agent.
 
 ```bash
 tc agent term 1
-tc agent term 42
+tc agent term Agent-Linux-01
 ```
 
 ### agent view
@@ -1084,7 +1127,8 @@ View agent details
 
 ```bash
 tc agent view 1
-tc agent view 1 --web
+tc agent view Agent-Linux-01
+tc agent view Agent-Linux-01 --web
 tc agent view 1 --json
 ```
 

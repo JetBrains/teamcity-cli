@@ -288,6 +288,7 @@ type TestOccurrence struct {
 	Name     string `json:"name"`
 	Status   string `json:"status"` // SUCCESS, FAILURE, IGNORED
 	Duration int    `json:"duration,omitempty"`
+	Details  string `json:"details,omitempty"`
 	Ignored  bool   `json:"ignored,omitempty"`
 	Href     string `json:"href,omitempty"`
 }
@@ -298,6 +299,18 @@ type TestOccurrences struct {
 	Failed         int              `json:"failed,omitempty"`
 	Ignored        int              `json:"ignored,omitempty"`
 	TestOccurrence []TestOccurrence `json:"testOccurrence"`
+}
+
+type ProblemOccurrence struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Identity string `json:"identity"`
+	Details  string `json:"details"`
+}
+
+type ProblemOccurrences struct {
+	Count             int                 `json:"count"`
+	ProblemOccurrence []ProblemOccurrence `json:"problemOccurrence"`
 }
 
 // ParseTeamCityTime parses TeamCity's time format (20250710T080607+0000)
