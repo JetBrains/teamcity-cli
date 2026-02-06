@@ -655,3 +655,21 @@ func (c *Client) GetBuildTests(buildID string, failedOnly bool, limit int) (*Tes
 	summary.TestOccurrence = details.TestOccurrence
 	return &summary, nil
 }
+
+func (c *Client) GetBuildProblems(buildID string) (*ProblemOccurrences, error) {
+	id, err := c.ResolveBuildID(buildID)
+	if err != nil {
+		return nil, err
+	}
+
+	locator := fmt.Sprintf("build:(id:%s)", id)
+	fields := "count,problemOccurrence(id,type,identity,details)"
+	path := fmt.Sprintf("/app/rest/problemOccurrences?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(fields))
+
+	var problems ProblemOccurrences
+	if err := c.get(path, &problems); err != nil {
+		return nil, err
+	}
+
+	return &problems, nil
+}

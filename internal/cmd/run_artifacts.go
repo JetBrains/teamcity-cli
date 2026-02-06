@@ -342,7 +342,7 @@ Use --raw to bypass the pager.`,
 	}
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Get log for latest run of this job")
-	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show only failed step logs")
+	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show failure summary (problems and failed tests)")
 	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Show raw log without formatting")
 
 	return cmd
@@ -411,6 +411,19 @@ func runRunLog(runID string, opts *runLogOptions) error {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
 
+	if opts.failed {
+		build, err := client.GetBuild(runID)
+		if err != nil {
+			return fmt.Errorf("failed to get build: %w", err)
+		}
+		if build.Status == "SUCCESS" {
+			output.Success("Build #%s succeeded", build.Number)
+			return nil
+		}
+		printFailureSummary(client, runID, build.Number, build.WebURL)
+		return nil
+	}
+
 	log, err := client.GetBuildLog(runID)
 	if err != nil {
 		return fmt.Errorf("failed to get run log: %w", err)
@@ -422,35 +435,6 @@ func runRunLog(runID string, opts *runLogOptions) error {
 	}
 
 	lines := strings.Split(log, "\n")
-
-	if opts.failed {
-		var errorLines []string
-		inErrorSection := false
-
-		for _, line := range lines {
-			lower := strings.ToLower(line)
-			if strings.Contains(lower, "error") || strings.Contains(lower, "failed") || strings.Contains(lower, "failure") {
-				inErrorSection = true
-			}
-			if inErrorSection {
-				errorLines = append(errorLines, line)
-				if len(errorLines) > 50 {
-					break
-				}
-			}
-		}
-
-		if len(errorLines) > 0 {
-			for _, line := range errorLines {
-				if opts.raw {
-					fmt.Println(line)
-				} else {
-					fmt.Println(formatLogLine(line))
-				}
-			}
-			return nil
-		}
-	}
 
 	output.WithPager(func(w io.Writer) {
 		if opts.raw {

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -324,6 +325,8 @@ func runRunCancel(runID string, opts *runCancelOptions) error {
 type runWatchOptions struct {
 	interval int
 	logs     bool
+	quiet    bool
+	timeout  time.Duration
 }
 
 func newRunWatchCmd() *cobra.Command {
@@ -338,12 +341,21 @@ func newRunWatchCmd() *cobra.Command {
   tc run watch 12345 --interval 10
   tc run watch 12345 --logs`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return doRunWatch(args[0], opts)
+			err := doRunWatch(args[0], opts)
+			var exitErr *ExitError
+			if errors.As(err, &exitErr) {
+				cmd.SilenceErrors = true
+				cmd.SilenceUsage = true
+			}
+			return err
 		},
 	}
 
 	cmd.Flags().IntVarP(&opts.interval, "interval", "i", 5, "Refresh interval in seconds")
 	cmd.Flags().BoolVar(&opts.logs, "logs", false, "Stream build logs while watching")
+	cmd.Flags().BoolVarP(&opts.quiet, "quiet", "Q", false, "Minimal output, show only state changes and result")
+	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Timeout duration (e.g., 30m, 1h)")
+	cmd.MarkFlagsMutuallyExclusive("quiet", "logs")
 
 	return cmd
 }
@@ -354,34 +366,64 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 		return err
 	}
 
-	if opts.logs {
+	if opts.logs && !opts.quiet {
 		return runWatchTUI(client, runID, opts.interval)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	if opts.timeout > 0 {
+		var timeoutCancel context.CancelFunc
+		ctx, timeoutCancel = context.WithTimeout(ctx, opts.timeout)
+		defer timeoutCancel()
+	}
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
+	defer signal.Stop(sigCh)
 	go func() {
-		<-sigCh
-		fmt.Println()
-		fmt.Println()
-		fmt.Println(output.Faint("Interrupted. Run continues in background."))
-		fmt.Printf("%s Resume watching: tc run watch %s\n", output.Faint("Hint:"), runID)
-		cancel()
+		select {
+		case <-sigCh:
+			fmt.Println()
+			if !opts.quiet {
+				fmt.Println()
+				fmt.Println(output.Faint("Interrupted. Run continues in background."))
+				fmt.Printf("%s Resume watching: tc run watch %s\n", output.Faint("Hint:"), runID)
+			}
+			cancel()
+		case <-ctx.Done():
+			return
+		}
 	}()
 
-	output.Info("Watching run #%s... %s\n", runID, output.Faint("(Ctrl-C to stop watching)"))
+	build, err := client.GetBuild(runID)
+	if err != nil {
+		return err
+	}
 
+	if opts.quiet {
+		fmt.Printf("Watching: %s\n", build.WebURL)
+	} else {
+		output.Info("Watching run #%s... %s\n", runID, output.Faint("(Ctrl-C to stop watching)"))
+	}
+
+	lastState := ""
+	lastPercent := 0
+	lastOvertimeMin := 0
+	var reachedComplete time.Time
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				fmt.Printf("\n%s Timeout exceeded\n", output.Red("✗"))
+				return &ExitError{Code: ExitTimeout}
+			}
+			return nil // interrupted by user, build continues
 		default:
 		}
 
-		build, err := client.GetBuild(runID)
+		build, err = client.GetBuild(runID)
 		if err != nil {
 			return err
 		}
@@ -391,39 +433,80 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 			jobName = build.BuildType.Name
 		}
 
-		status := output.Yellow("Running")
-		if build.State == "queued" {
-			status = output.Faint("Queued")
+		if opts.quiet {
+			if build.State != lastState {
+				switch build.State {
+				case "queued":
+					fmt.Print("Queued")
+				case "running":
+					fmt.Print("\rRunning")
+				}
+				lastState = build.State
+			}
+			if build.State == "running" {
+				pct := build.PercentageComplete
+				if pct > lastPercent && pct > 0 {
+					fmt.Printf("... %d%%", pct)
+					lastPercent = pct
+					if pct == 100 {
+						reachedComplete = time.Now()
+					}
+				}
+				if pct == 100 && !reachedComplete.IsZero() {
+					overtimeMin := int(time.Since(reachedComplete).Minutes())
+					if overtimeMin > lastOvertimeMin {
+						fmt.Printf("... +%dm", overtimeMin)
+						lastOvertimeMin = overtimeMin
+					}
+				}
+			}
+		} else {
+			status := output.Yellow("Running")
+			if build.State == "queued" {
+				status = output.Faint("Queued")
+			}
+			progress := ""
+			if build.PercentageComplete > 0 {
+				progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
+			}
+			fmt.Printf("\r%s %s #%s %s · %s%s    ",
+				output.StatusIcon(build.Status, build.State),
+				output.Cyan(jobName),
+				build.Number,
+				output.Faint(build.WebURL),
+				status,
+				progress)
 		}
-		progress := ""
-		if build.PercentageComplete > 0 {
-			progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
-		}
-		fmt.Printf("\r%s %s #%s %s · %s%s    ",
-			output.StatusIcon(build.Status, build.State),
-			output.Cyan(jobName),
-			build.Number,
-			output.Faint(build.WebURL),
-			status,
-			progress)
 
 		if build.State == "finished" {
 			fmt.Println()
-			fmt.Println()
-
-			if build.Status == "SUCCESS" {
-				fmt.Printf("%s %s #%s succeeded!\n", output.Green("✓"), output.Cyan(jobName), build.Number)
-			} else {
-				fmt.Printf("%s %s #%s failed: %s\n", output.Red("✗"), output.Cyan(jobName), build.Number, build.StatusText)
+			if !opts.quiet {
+				fmt.Println()
 			}
 
-			fmt.Printf("\nView details: %s\n", build.WebURL)
-			return nil
+			switch build.Status {
+			case "SUCCESS":
+				fmt.Printf("%s %s #%s succeeded\n", output.Green("✓"), output.Cyan(jobName), build.Number)
+				if !opts.quiet {
+					fmt.Printf("\nView details: %s\n", build.WebURL)
+				}
+				return nil
+			case "FAILURE":
+				printFailureSummary(client, runID, build.Number, build.WebURL)
+				return &ExitError{Code: ExitFailure}
+			default:
+				fmt.Printf("%s Build #%s cancelled\n", output.Yellow("○"), build.Number)
+				return &ExitError{Code: ExitCancelled}
+			}
 		}
 
 		select {
 		case <-ctx.Done():
-			return nil
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				fmt.Printf("\n%s Timeout exceeded\n", output.Red("✗"))
+				return &ExitError{Code: ExitTimeout}
+			}
+			return nil // interrupted by user, build continues
 		case <-time.After(time.Duration(opts.interval) * time.Second):
 		}
 	}
