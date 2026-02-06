@@ -113,7 +113,7 @@ func TestLocator(T *testing.T) {
 				return NewLocator().
 					Add("branch", "feature(test)")
 			},
-			want: "branch:(feature(test))",
+			want: "branch:(feature(test$))",
 		},
 		{
 			name: "multiple special chars",
@@ -121,7 +121,7 @@ func TestLocator(T *testing.T) {
 				return NewLocator().
 					Add("branch", "a:b,c(d)")
 			},
-			want: "branch:(a:b,c(d))",
+			want: "branch:(a:b,c(d$))",
 		},
 		{
 			name: "unicode characters",
@@ -145,7 +145,15 @@ func TestLocator(T *testing.T) {
 				return NewLocator().
 					Add("branch", ":,:()")
 			},
-			want: "branch:(:,:())",
+			want: "branch:(:,:($))",
+		},
+		{
+			name: "injection attempt via closing paren",
+			build: func() *Locator {
+				return NewLocator().
+					Add("project", "Foo),status:FAILURE,tag:(bar")
+			},
+			want: "project:(Foo$),status:FAILURE,tag:(bar)",
 		},
 		{
 			name: "negative int value is skipped",

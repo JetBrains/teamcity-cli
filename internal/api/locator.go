@@ -21,13 +21,17 @@ func (l *Locator) Add(key, value string) *Locator {
 	return l
 }
 
-// escapeLocatorValue wraps values containing special characters in parentheses
-// TeamCity locator syntax uses : and , as delimiters
+// escapeLocatorValue wraps values containing special characters in parentheses.
+// TeamCity locator syntax uses : and , as delimiters, and $ as escape char
+// inside parenthesized values ($) for literal ), $$ for literal $).
 func escapeLocatorValue(value string) string {
-	if strings.ContainsAny(value, ":,()") {
-		return "(" + value + ")"
+	if !strings.ContainsAny(value, ":,()$") {
+		return value
 	}
-	return value
+	// Escape $ first (so we don't double-escape), then )
+	escaped := strings.ReplaceAll(value, "$", "$$")
+	escaped = strings.ReplaceAll(escaped, ")", "$)")
+	return "(" + escaped + ")"
 }
 
 func (l *Locator) AddUpper(key, value string) *Locator {
