@@ -36,7 +36,7 @@ type BuildType struct {
 	Href        string  `json:"href,omitempty"`
 	WebURL      string  `json:"webUrl,omitempty"`
 	Paused      bool    `json:"paused,omitempty"`
-	Project     Project `json:"project,omitempty"`
+	Project     *Project `json:"project,omitempty"`
 }
 
 // BuildTypeList represents a list of build configurations
