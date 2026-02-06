@@ -15,6 +15,9 @@ func ParseUserDate(input string) (string, error) {
 	}
 
 	if duration, err := time.ParseDuration(input); err == nil {
+		if duration < 0 {
+			return "", fmt.Errorf("negative duration not allowed: %s (use a positive value like 24h)", input)
+		}
 		targetTime := time.Now().UTC().Add(-duration)
 		return FormatTeamCityTime(targetTime), nil
 	}
