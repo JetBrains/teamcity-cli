@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -86,7 +87,15 @@ func initColorSettings() {
 }
 
 func Execute() error {
-	return rootCmd.Execute()
+	rootCmd.SilenceErrors = true
+	err := rootCmd.Execute()
+	if err != nil {
+		var exitErr *ExitError
+		if !errors.As(err, &exitErr) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
+	}
+	return err
 }
 
 // subcommandRequired is a RunE function for parent commands that require a subcommand.

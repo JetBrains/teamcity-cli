@@ -300,6 +300,18 @@ type TestOccurrences struct {
 	TestOccurrence []TestOccurrence `json:"testOccurrence"`
 }
 
+type ProblemOccurrence struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Identity string `json:"identity"`
+	Details  string `json:"details"`
+}
+
+type ProblemOccurrences struct {
+	Count             int                 `json:"count"`
+	ProblemOccurrence []ProblemOccurrence `json:"problemOccurrence"`
+}
+
 // ParseTeamCityTime parses TeamCity's time format (20250710T080607+0000)
 func ParseTeamCityTime(s string) (time.Time, error) {
 	return time.Parse("20060102T150405-0700", s)
