@@ -18,7 +18,7 @@ type BuildTypesOptions struct {
 // GetBuildTypes returns a list of build configurations
 func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 	locator := NewLocator().
-		Add("project", opts.Project).
+		Add("affectedProject", opts.Project).
 		AddIntDefault("count", opts.Limit, 30)
 
 	fields := opts.Fields
