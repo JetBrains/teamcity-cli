@@ -457,6 +457,16 @@ func setupMockClient(t *testing.T) *TestServer {
 		})
 	})
 
+	// Problem occurrences
+	ts.Handle("GET /app/rest/problemOccurrences", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.ProblemOccurrences{
+			Count: 1,
+			ProblemOccurrence: []api.ProblemOccurrence{
+				{ID: "1", Type: "TC_COMPILATION_ERROR", Identity: "compilationError", Details: "Compilation failed with 3 errors"},
+			},
+		})
+	})
+
 	// Agents
 	ts.Handle("GET /app/rest/agents", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, api.AgentList{

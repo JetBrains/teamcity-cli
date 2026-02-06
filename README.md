@@ -677,6 +677,8 @@ tc run watch 12345 --logs
 **Options:**
 - `-i, --interval` – Refresh interval in seconds
 - `--logs` – Stream build logs while watching
+- `-Q, --quiet` – Minimal output, show only state changes and result
+- `--timeout` – Timeout duration (e.g., 30m, 1h)
 
 ---
 
