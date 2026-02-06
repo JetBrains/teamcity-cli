@@ -670,3 +670,4 @@ func TestVerboseLogging(T *testing.T) {
 		assert.Empty(t, captured)
 	})
 }
+
