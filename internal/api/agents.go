@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
@@ -37,7 +38,7 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 		locator.Add("enabled", "true")
 	}
 	if opts.Pool != "" {
-		if _, err := fmt.Sscanf(opts.Pool, "%d", new(int)); err == nil {
+		if _, err := strconv.Atoi(opts.Pool); err == nil {
 			locator.AddRaw("pool", "(id:"+opts.Pool+")")
 		} else {
 			locator.AddRaw("pool", "(name:"+opts.Pool+")")

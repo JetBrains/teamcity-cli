@@ -72,6 +72,12 @@ func TestListLimitValidation(T *testing.T) {
 	runCmdExpectErr(T, "--limit must be a positive number", "agent", "list", "--limit", "-5")
 }
 
+func TestRunListBackwardsDateRange(T *testing.T) {
+	setupMockClient(T)
+
+	runCmdExpectErr(T, "is more recent than", "run", "list", "--since", "2020-01-01", "--until", "2019-01-01")
+}
+
 func TestProjectView(T *testing.T) {
 	setupMockClient(T)
 
