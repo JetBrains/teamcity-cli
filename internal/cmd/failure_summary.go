@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/internal/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -9,14 +11,33 @@ import (
 
 const maxFailedTestsToShow = 10
 
-func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webURL string) {
-	fmt.Printf("\n%s Build #%s failed\n", output.Red("✗"), buildNumber)
+func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webURL, statusText string) {
+	header := fmt.Sprintf("%s Build #%s failed", output.Red("✗"), buildNumber)
+	if statusText != "" {
+		header += ": " + statusText
+	}
+	fmt.Printf("\n%s\n", header)
+
+	var hasTests bool
+	var testsErr error
+	var tests *api.TestOccurrences
+
+	tests, testsErr = client.GetBuildTests(buildID, true, maxFailedTestsToShow)
+	if testsErr != nil {
+		output.Debug("Failed to fetch build tests: %v", testsErr)
+	} else if tests.Failed > 0 {
+		hasTests = true
+	}
 
 	if problems, err := client.GetBuildProblems(buildID); err != nil {
 		output.Debug("Failed to fetch build problems: %v", err)
 	} else if problems.Count > 0 {
 		fmt.Printf("\nProblems:\n")
 		for _, p := range problems.ProblemOccurrence {
+			// Skip TC_FAILED_TESTS when we already show the tests section.
+			if hasTests && p.Type == "TC_FAILED_TESTS" {
+				continue
+			}
 			detail := p.Details
 			if detail == "" {
 				detail = p.Identity
@@ -25,12 +46,20 @@ func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webUR
 		}
 	}
 
-	if tests, err := client.GetBuildTests(buildID, true, maxFailedTestsToShow); err != nil {
-		output.Debug("Failed to fetch build tests: %v", err)
-	} else if tests.Failed > 0 {
+	if testsErr == nil && tests != nil && tests.Failed > 0 {
 		fmt.Printf("\nFailed tests (%d):\n", tests.Failed)
 		for _, t := range tests.TestOccurrence {
-			fmt.Printf("  %s %s\n", output.Red("•"), t.Name)
+			line := fmt.Sprintf("  %s %s", output.Red("•"), t.Name)
+			if t.Duration > 0 {
+				dur := time.Duration(t.Duration) * time.Millisecond
+				line += " " + output.Faint("("+output.FormatDuration(dur)+")")
+			}
+			fmt.Println(line)
+			if t.Details != "" {
+				msg := firstLine(t.Details)
+				msg = output.Truncate(msg, 120)
+				fmt.Printf("    %s\n", output.Faint(msg))
+			}
 		}
 		if tests.Failed > len(tests.TestOccurrence) {
 			fmt.Printf("  %s\n", output.Faint(fmt.Sprintf("... and %d more", tests.Failed-len(tests.TestOccurrence))))
@@ -38,4 +67,13 @@ func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webUR
 	}
 
 	fmt.Printf("\nView details: %s\n", webURL)
+}
+
+// firstLine returns the first non-empty line of s.
+func firstLine(s string) string {
+	s = strings.TrimSpace(s)
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		return strings.TrimSpace(s[:i])
+	}
+	return s
 }

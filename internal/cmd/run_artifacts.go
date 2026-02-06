@@ -420,7 +420,7 @@ func runRunLog(runID string, opts *runLogOptions) error {
 			output.Success("Build #%s succeeded", build.Number)
 			return nil
 		}
-		printFailureSummary(client, runID, build.Number, build.WebURL)
+		printFailureSummary(client, runID, build.Number, build.WebURL, build.StatusText)
 		return nil
 	}
 
