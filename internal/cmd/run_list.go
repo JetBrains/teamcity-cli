@@ -124,6 +124,14 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 		}
 	}
 
+	if sinceDate != "" && untilDate != "" {
+		sinceTime, err1 := api.ParseTeamCityTime(sinceDate)
+		untilTime, err2 := api.ParseTeamCityTime(untilDate)
+		if err1 == nil && err2 == nil && sinceTime.After(untilTime) {
+			return fmt.Errorf("--since (%s) is more recent than --until (%s), resulting in an empty range", opts.since, opts.until)
+		}
+	}
+
 	runs, err := client.GetBuilds(api.BuildsOptions{
 		BuildTypeID: opts.job,
 		Branch:      opts.branch,
