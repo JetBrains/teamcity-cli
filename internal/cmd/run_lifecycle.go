@@ -492,7 +492,7 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 				}
 				return nil
 			case "FAILURE":
-				printFailureSummary(client, runID, build.Number, build.WebURL)
+				printFailureSummary(client, runID, build.Number, build.WebURL, build.StatusText)
 				return &ExitError{Code: ExitFailure}
 			default:
 				fmt.Printf("%s Build #%s cancelled\n", output.Yellow("○"), build.Number)

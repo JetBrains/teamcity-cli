@@ -288,6 +288,7 @@ type TestOccurrence struct {
 	Name     string `json:"name"`
 	Status   string `json:"status"` // SUCCESS, FAILURE, IGNORED
 	Duration int    `json:"duration,omitempty"`
+	Details  string `json:"details,omitempty"`
 	Ignored  bool   `json:"ignored,omitempty"`
 	Href     string `json:"href,omitempty"`
 }
