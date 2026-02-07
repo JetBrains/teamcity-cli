@@ -70,7 +70,7 @@ func newRunStartCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.comment, "comment", "m", "", "Run comment")
 	cmd.Flags().StringSliceVarP(&opts.tags, "tag", "t", nil, "Run tags (can be repeated)")
 	cmd.Flags().BoolVar(&opts.personal, "personal", false, "Run as personal build")
-	localChangesFlag := cmd.Flags().VarPF(&localChangesValue{val: &opts.localChanges}, "local-changes", "l", "Include local changes (git, -, or path; default: git)")
+	localChangesFlag := cmd.Flags().VarPF(&localChangesValue{val: &opts.localChanges}, "local-changes", "l", "Include local changes (git, p4, auto, -, or path; default: git)")
 	localChangesFlag.NoOptDefVal = "git"
 	cmd.Flags().BoolVar(&opts.noPush, "no-push", false, "Skip auto-push of branch to remote")
 	cmd.Flags().BoolVar(&opts.cleanSources, "clean", false, "Clean sources before run")
@@ -139,24 +139,26 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 
 	var headCommit string
 	if opts.localChanges != "" && opts.branch == "" {
-		if !isGitRepo() {
+		vcs := DetectVCS()
+		if vcs == nil {
 			return tcerrors.WithSuggestion(
-				"not a git repository",
-				"Run this command from within a git repository, or specify --branch explicitly",
+				"no supported VCS detected",
+				"Run this command from within a git repository or Perforce workspace, or specify --branch explicitly",
 			)
 		}
-		branch, err := getCurrentBranch()
+		branch, err := vcs.GetCurrentBranch()
 		if err != nil {
 			return err
 		}
 		opts.branch = branch
-		output.Info("Using current branch: %s", branch)
+		output.Info("Using current %s branch: %s", vcs.Name(), branch)
 	}
 
 	if opts.localChanges != "" && !opts.noPush {
-		if !branchExistsOnRemote(opts.branch) {
+		vcs := DetectVCS()
+		if vcs != nil && !vcs.BranchExistsOnRemote(opts.branch) {
 			output.Info("Pushing branch to remote...")
-			if err := pushBranch(opts.branch); err != nil {
+			if err := vcs.PushBranch(opts.branch); err != nil {
 				return err
 			}
 			output.Success("Branch pushed to remote")
@@ -164,11 +166,14 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 	}
 
 	if opts.localChanges != "" {
-		commit, err := getHeadCommit()
-		if err != nil {
-			return err
+		vcs := DetectVCS()
+		if vcs != nil {
+			commit, err := vcs.GetHeadRevision()
+			if err != nil {
+				return err
+			}
+			headCommit = commit
 		}
-		headCommit = commit
 	}
 
 	client, err := getClient()
@@ -199,7 +204,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		opts.personal = true
 	}
 
-	build, err := client.RunBuild(jobID, api.RunBuildOptions{
+	buildOpts := api.RunBuildOptions{
 		Branch:                    opts.branch,
 		Params:                    opts.params,
 		SystemProps:               opts.systemProps,
@@ -214,7 +219,14 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		Tags:                      opts.tags,
 		PersonalChangeID:          personalChangeID,
 		Revision:                  headCommit,
-	})
+	}
+
+	// Wire up VCS-specific branch formatting when a provider is available
+	if vcs := DetectVCS(); vcs != nil {
+		buildOpts.VCSBranchFormatter = vcs.FormatVCSBranch
+	}
+
+	build, err := client.RunBuild(jobID, buildOpts)
 	if err != nil {
 		return err
 	}
@@ -526,6 +538,44 @@ func loadLocalChanges(source string) ([]byte, error) {
 			)
 		}
 		patch, err := getGitDiff()
+		if err != nil {
+			return nil, err
+		}
+		if len(patch) == 0 {
+			return nil, tcerrors.WithSuggestion(
+				"no uncommitted changes found",
+				"Make some changes to your files before running a personal build, or use --local-changes <path> to specify a diff file",
+			)
+		}
+		return patch, nil
+	case "p4", "perforce":
+		p4 := &PerforceProvider{}
+		if !p4.IsAvailable() {
+			return nil, tcerrors.WithSuggestion(
+				"not a Perforce workspace",
+				"Run this command from within a Perforce workspace, or use --local-changes <path> to specify a diff file",
+			)
+		}
+		patch, err := p4.GetLocalDiff()
+		if err != nil {
+			return nil, err
+		}
+		if len(patch) == 0 {
+			return nil, tcerrors.WithSuggestion(
+				"no pending changes found",
+				"Open files for edit before running a personal build, or use --local-changes <path> to specify a diff file",
+			)
+		}
+		return patch, nil
+	case "auto", "":
+		vcs := DetectVCS()
+		if vcs == nil {
+			return nil, tcerrors.WithSuggestion(
+				"no supported VCS detected",
+				"Run this command from within a git repository or Perforce workspace, or use --local-changes <path> to specify a diff file",
+			)
+		}
+		patch, err := vcs.GetLocalDiff()
 		if err != nil {
 			return nil, err
 		}

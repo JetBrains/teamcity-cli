@@ -60,17 +60,20 @@ func runRunChanges(runID string, opts *runChangesOptions) error {
 
 	fmt.Printf("CHANGES (%d %s)\n\n", changes.Count, english.PluralWord(changes.Count, "commit", "commits"))
 
-	var firstSHA, lastSHA string
+	// Detect VCS provider for formatting (falls back to Git-style if unavailable)
+	vcs := DetectVCS()
+	if vcs == nil {
+		vcs = &GitProvider{} // default to Git formatting
+	}
+
+	var firstRev, lastRev string
 	for i, c := range changes.Change {
 		if i == 0 {
-			lastSHA = c.Version
+			lastRev = c.Version
 		}
-		firstSHA = c.Version
+		firstRev = c.Version
 
-		sha := c.Version
-		if len(sha) > 7 {
-			sha = sha[:7]
-		}
+		rev := vcs.FormatRevision(c.Version)
 
 		date := ""
 		if c.Date != "" {
@@ -79,7 +82,7 @@ func runRunChanges(runID string, opts *runChangesOptions) error {
 			}
 		}
 
-		fmt.Printf("%s  %s  %s\n", output.Yellow(sha), output.Faint(c.Username), output.Faint(date))
+		fmt.Printf("%s  %s  %s\n", output.Yellow(rev), output.Faint(c.Username), output.Faint(date))
 
 		comment := strings.TrimSpace(c.Comment)
 		if idx := strings.Index(comment, "\n"); idx > 0 {
@@ -104,16 +107,8 @@ func runRunChanges(runID string, opts *runChangesOptions) error {
 		fmt.Println()
 	}
 
-	if firstSHA != "" && lastSHA != "" && firstSHA != lastSHA {
-		first := firstSHA
-		last := lastSHA
-		if len(first) > 7 {
-			first = first[:7]
-		}
-		if len(last) > 7 {
-			last = last[:7]
-		}
-		fmt.Printf("%s git diff %s^..%s\n", output.Faint("# For full diff:"), first, last)
+	if firstRev != "" && lastRev != "" && firstRev != lastRev {
+		fmt.Printf("%s %s\n", output.Faint("# For full diff:"), vcs.DiffHint(firstRev, lastRev))
 	}
 
 	return nil
