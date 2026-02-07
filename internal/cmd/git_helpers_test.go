@@ -360,7 +360,7 @@ func TestLoadLocalChanges(t *testing.T) {
 
 		_, err := loadLocalChanges("git")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "no uncommitted changes")
+		assert.Contains(t, err.Error(), "no local changes found")
 	})
 
 	t.Run("git source not in repo", func(t *testing.T) {
@@ -370,7 +370,7 @@ func TestLoadLocalChanges(t *testing.T) {
 
 		_, err := loadLocalChanges("git")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not a git repository")
+		assert.Contains(t, err.Error(), "no supported VCS detected")
 	})
 
 	t.Run("file source", func(t *testing.T) {
