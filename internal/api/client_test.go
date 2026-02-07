@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -695,4 +696,149 @@ func TestVerboseLogging(T *testing.T) {
 
 		assert.Empty(t, captured)
 	})
+}
+
+func TestApproveQueuedBuild(T *testing.T) {
+	T.Parallel()
+
+	T.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "PUT", r.Method)
+			assert.Equal(t, "/app/rest/buildQueue/id:456/approval/status", r.URL.Path)
+
+			body, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+			assert.Equal(t, `"approved"`, string(body))
+
+			w.WriteHeader(http.StatusOK)
+		})
+
+		err := client.ApproveQueuedBuild("456")
+		assert.NoError(t, err)
+	})
+
+	T.Run("error not found", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"errors":[{"message":"No build found by locator '999'."}]}`))
+		})
+
+		err := client.ApproveQueuedBuild("999")
+		assert.Error(t, err)
+	})
+}
+
+func TestRebootAgentHTTPErrors(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name       string
+		statusCode int
+		wantErr    string
+	}{
+		{
+			name:       "401 Unauthorized",
+			statusCode: http.StatusUnauthorized,
+			wantErr:    "Authentication failed",
+		},
+		{
+			name:       "403 Forbidden",
+			statusCode: http.StatusForbidden,
+			wantErr:    "Permission denied",
+		},
+		{
+			name:       "404 Not Found",
+			statusCode: http.StatusNotFound,
+			wantErr:    "not found",
+		},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "POST", r.Method)
+				assert.Equal(t, "/remoteAccess/reboot.html", r.URL.Path)
+				w.WriteHeader(tc.statusCode)
+			})
+
+			err := client.RebootAgent(context.Background(), 42, false)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+func TestGetBuildCommentServerError(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	})
+
+	_, err := client.GetBuildComment("123")
+	assert.Error(T, err)
+}
+
+func TestUploadDiffChangesServerError(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "POST", r.Method)
+		assert.Contains(T, r.URL.Path, "/uploadDiffChanges.html")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	})
+
+	_, err := client.UploadDiffChanges([]byte("diff content"), "test change")
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "500")
+}
+
+func TestCreateProjectServerError(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "POST", r.Method)
+		assert.Equal(T, "/app/rest/projects", r.URL.Path)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	})
+
+	_, err := client.CreateProject(CreateProjectRequest{Name: "TestProject"})
+	assert.Error(T, err)
+}
+
+func TestCreateUserServerError(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "POST", r.Method)
+		assert.Equal(T, "/app/rest/users", r.URL.Path)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	})
+
+	_, err := client.CreateUser(CreateUserRequest{Username: "newuser", Password: "pass"})
+	assert.Error(T, err)
+}
+
+func TestGetServerError(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "GET", r.Method)
+		assert.Equal(T, "/app/rest/server", r.URL.Path)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	})
+
+	_, err := client.GetServer()
+	assert.Error(T, err)
 }
