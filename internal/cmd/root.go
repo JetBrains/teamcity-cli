@@ -22,7 +22,9 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "tc",
 	Short: "TeamCity CLI",
-	Long: `A command-line interface for interacting with TeamCity CI/CD server.
+	Long: "TeamCity CLI v" + Version + `
+
+A command-line interface for interacting with TeamCity CI/CD server.
 
 tc provides a complete experience for managing
 TeamCity runs, jobs, projects and more from the command line.
@@ -33,7 +35,7 @@ Report issues:  https://jb.gg/tc/issues`,
 	Run: func(cmd *cobra.Command, args []string) {
 		output.PrintLogo()
 		fmt.Println()
-		fmt.Println("TeamCity CLI - " + output.Faint("https://jb.gg/tc/docs"))
+		fmt.Println("TeamCity CLI " + output.Faint("v"+Version) + " - " + output.Faint("https://jb.gg/tc/docs"))
 		fmt.Println()
 		fmt.Println("Usage: tc <command> [flags]")
 		fmt.Println()
