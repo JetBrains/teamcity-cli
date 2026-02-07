@@ -37,6 +37,10 @@ var (
 	cfg        *Config
 	configPath string
 
+	// injectable for testing
+	userHomeDirFn = os.UserHomeDir
+	getwdFn       = os.Getwd
+
 	// cached DSL detection results
 	dslDirOnce    sync.Once
 	dslDirCached  string
@@ -45,7 +49,7 @@ var (
 )
 
 func Init() error {
-	home, err := os.UserHomeDir()
+	home, err := userHomeDirFn()
 	if err != nil {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
@@ -73,10 +77,6 @@ func Init() error {
 	cfg = &Config{}
 	if err := viper.Unmarshal(cfg); err != nil {
 		return fmt.Errorf("failed to parse config: %w", err)
-	}
-
-	if cfg.Servers == nil {
-		cfg.Servers = make(map[string]ServerConfig)
 	}
 
 	return nil
@@ -197,7 +197,7 @@ func detectTeamCityDirUncached() string {
 		return ""
 	}
 
-	cwd, err := os.Getwd()
+	cwd, err := getwdFn()
 	if err != nil {
 		return ""
 	}

@@ -102,6 +102,11 @@ func TestParseUserDate(T *testing.T) {
 			input:   "notadate",
 			wantErr: true,
 		},
+		{
+			name:    "negative duration returns error",
+			input:   "-1h",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

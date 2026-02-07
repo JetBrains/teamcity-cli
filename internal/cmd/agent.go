@@ -71,6 +71,9 @@ func newAgentListCmd() *cobra.Command {
 }
 
 func runAgentList(cmd *cobra.Command, opts *agentListOptions) error {
+	if err := validateLimit(opts.limit); err != nil {
+		return err
+	}
 	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.AgentFields)
 	if err != nil {
 		return err

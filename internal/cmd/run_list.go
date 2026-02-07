@@ -65,6 +65,9 @@ func newRunListCmd() *cobra.Command {
 }
 
 func runRunList(cmd *cobra.Command, opts *runListOptions) error {
+	if err := validateLimit(opts.limit); err != nil {
+		return err
+	}
 	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.BuildFields)
 	if err != nil {
 		return err
@@ -118,6 +121,14 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 		untilDate, err = api.ParseUserDate(opts.until)
 		if err != nil {
 			return fmt.Errorf("invalid --until date: %w", err)
+		}
+	}
+
+	if sinceDate != "" && untilDate != "" {
+		sinceTime, err1 := api.ParseTeamCityTime(sinceDate)
+		untilTime, err2 := api.ParseTeamCityTime(untilDate)
+		if err1 == nil && err2 == nil && sinceTime.After(untilTime) {
+			return fmt.Errorf("--since (%s) is more recent than --until (%s), resulting in an empty range", opts.since, opts.until)
 		}
 	}
 

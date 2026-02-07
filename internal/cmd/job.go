@@ -56,6 +56,9 @@ func newJobListCmd() *cobra.Command {
 }
 
 func runJobList(cmd *cobra.Command, opts *jobListOptions) error {
+	if err := validateLimit(opts.limit); err != nil {
+		return err
+	}
 	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.BuildTypeFields)
 	if err != nil {
 		return err

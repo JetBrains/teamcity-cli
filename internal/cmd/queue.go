@@ -56,6 +56,9 @@ func newQueueListCmd() *cobra.Command {
 }
 
 func runQueueList(cmd *cobra.Command, opts *queueListOptions) error {
+	if err := validateLimit(opts.limit); err != nil {
+		return err
+	}
 	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.QueuedBuildFields)
 	if err != nil {
 		return err

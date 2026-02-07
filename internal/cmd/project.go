@@ -69,6 +69,9 @@ func newProjectListCmd() *cobra.Command {
 }
 
 func runProjectList(cmd *cobra.Command, opts *projectListOptions) error {
+	if err := validateLimit(opts.limit); err != nil {
+		return err
+	}
 	jsonResult, showHelp, err := ParseJSONFields(cmd, opts.jsonFields, &api.ProjectFields)
 	if err != nil {
 		return err

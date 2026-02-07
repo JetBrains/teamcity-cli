@@ -29,14 +29,14 @@ type ProjectList struct {
 
 // BuildType represents a build configuration
 type BuildType struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name,omitempty"`
-	ProjectName string  `json:"projectName,omitempty"`
-	ProjectID   string  `json:"projectId,omitempty"`
-	Href        string  `json:"href,omitempty"`
-	WebURL      string  `json:"webUrl,omitempty"`
-	Paused      bool    `json:"paused,omitempty"`
-	Project     Project `json:"project,omitempty"`
+	ID          string   `json:"id"`
+	Name        string   `json:"name,omitempty"`
+	ProjectName string   `json:"projectName,omitempty"`
+	ProjectID   string   `json:"projectId,omitempty"`
+	Href        string   `json:"href,omitempty"`
+	WebURL      string   `json:"webUrl,omitempty"`
+	Paused      bool     `json:"paused,omitempty"`
+	Project     *Project `json:"project,omitempty"`
 }
 
 // BuildTypeList represents a list of build configurations

@@ -1,10 +1,12 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -331,6 +333,77 @@ func TestDetectServerFromDSL(T *testing.T) {
 	})
 }
 
+func TestGetTokenNoServer(T *testing.T) {
+	saveCfgState(T)
+	T.Setenv(EnvServerURL, "")
+	T.Setenv(EnvToken, "")
+	ResetDSLCache()
+
+	cfg = &Config{
+		DefaultServer: "",
+		Servers:       make(map[string]ServerConfig),
+	}
+
+	got := GetToken()
+	assert.Equal(T, "", got)
+}
+
+func TestGetTokenUnknownServer(T *testing.T) {
+	saveCfgState(T)
+	T.Setenv(EnvServerURL, "https://unknown.example.com")
+	T.Setenv(EnvToken, "")
+
+	cfg = &Config{
+		DefaultServer: "https://known.example.com",
+		Servers: map[string]ServerConfig{
+			"https://known.example.com": {Token: "known-token", User: "user"},
+		},
+	}
+
+	got := GetToken()
+	assert.Equal(T, "", got)
+}
+
+func TestGetCurrentUserNoServer(T *testing.T) {
+	saveCfgState(T)
+	T.Setenv(EnvServerURL, "")
+	T.Setenv(EnvToken, "")
+	ResetDSLCache()
+
+	cfg = &Config{
+		DefaultServer: "",
+		Servers:       make(map[string]ServerConfig),
+	}
+
+	got := GetCurrentUser()
+	assert.Equal(T, "", got)
+}
+
+func TestRemoveDefaultServer(T *testing.T) {
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	configPath = tmpDir + "/config.yml"
+	cfg = &Config{Servers: make(map[string]ServerConfig)}
+
+	// Add two servers
+	err := SetServer("https://tc1.example.com", "token1", "user1")
+	require.NoError(T, err)
+	err = SetServer("https://tc2.example.com", "token2", "user2")
+	require.NoError(T, err)
+
+	// Default is now tc2 (the last one set)
+	assert.Equal(T, "https://tc2.example.com", cfg.DefaultServer)
+
+	// Remove the default server
+	err = RemoveServer("https://tc2.example.com")
+	require.NoError(T, err)
+
+	// A new default should have been picked from the remaining servers
+	assert.Equal(T, "https://tc1.example.com", cfg.DefaultServer)
+	_, ok := cfg.Servers["https://tc2.example.com"]
+	assert.False(T, ok, "removed server should not exist")
+}
+
 func TestGetServerURLPriority(T *testing.T) {
 	saveCfgState(T)
 
@@ -369,4 +442,172 @@ func TestGetServerURLPriority(T *testing.T) {
 		ResetDSLCache() // reset cache to re-detect
 		assert.Equal(t, "https://config.example.com", GetServerURL())
 	})
+}
+
+func TestInitHomeDirError(T *testing.T) {
+	saveCfgState(T)
+	old := userHomeDirFn
+	T.Cleanup(func() { userHomeDirFn = old })
+	userHomeDirFn = func() (string, error) { return "", errors.New("no home") }
+
+	err := Init()
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "home directory")
+}
+
+func TestInitMkdirFails(T *testing.T) {
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	// Create a regular file where the config dir hierarchy would need to go
+	blocker := filepath.Join(tmpDir, ".config")
+	require.NoError(T, os.WriteFile(blocker, []byte("not a dir"), 0644))
+
+	T.Setenv("HOME", tmpDir)
+	T.Setenv("USERPROFILE", tmpDir)
+
+	err := Init()
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "config directory")
+}
+
+func TestInitInvalidConfig(T *testing.T) {
+	saveCfgState(T)
+	viper.Reset()
+	tmpDir := T.TempDir()
+	T.Setenv("HOME", tmpDir)
+	T.Setenv("USERPROFILE", tmpDir)
+
+	configDir := filepath.Join(tmpDir, ".config", "tc")
+	require.NoError(T, os.MkdirAll(configDir, 0700))
+	require.NoError(T, os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(":\x00\xff invalid yaml [[["), 0644))
+
+	err := Init()
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "failed to read config")
+}
+
+func TestInitUnmarshalError(T *testing.T) {
+	saveCfgState(T)
+	viper.Reset()
+	tmpDir := T.TempDir()
+	T.Setenv("HOME", tmpDir)
+	T.Setenv("USERPROFILE", tmpDir)
+
+	configDir := filepath.Join(tmpDir, ".config", "tc")
+	require.NoError(T, os.MkdirAll(configDir, 0700))
+	// servers as a string instead of a map causes Unmarshal to fail
+	require.NoError(T, os.WriteFile(filepath.Join(configDir, "config.yml"), []byte("servers: not-a-map\n"), 0644))
+
+	err := Init()
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "failed to parse config")
+}
+
+func TestInitServersDefaulted(T *testing.T) {
+	saveCfgState(T)
+	viper.Reset()
+	tmpDir := T.TempDir()
+	T.Setenv("HOME", tmpDir)
+	T.Setenv("USERPROFILE", tmpDir)
+
+	configDir := filepath.Join(tmpDir, ".config", "tc")
+	require.NoError(T, os.MkdirAll(configDir, 0700))
+	require.NoError(T, os.WriteFile(filepath.Join(configDir, "config.yml"), []byte("default_server: https://tc.example.com\n"), 0644))
+
+	err := Init()
+	require.NoError(T, err)
+	require.NotNil(T, cfg)
+	assert.NotNil(T, cfg.Servers, "viper.SetDefault should ensure servers map is initialized")
+}
+
+func TestGetCurrentUserUnknownServer(T *testing.T) {
+	saveCfgState(T)
+	T.Setenv(EnvServerURL, "https://unknown.example.com")
+
+	cfg = &Config{
+		DefaultServer: "https://known.example.com",
+		Servers: map[string]ServerConfig{
+			"https://known.example.com": {Token: "token", User: "user"},
+		},
+	}
+
+	got := GetCurrentUser()
+	assert.Equal(T, "", got)
+}
+
+func TestSetServerWriteError(T *testing.T) {
+	saveCfgState(T)
+	configPath = "/dev/null/impossible/path/config.yml"
+	cfg = &Config{Servers: make(map[string]ServerConfig)}
+
+	err := SetServer("https://tc.example.com", "token", "user")
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "failed to write config")
+}
+
+func TestRemoveServerWriteError(T *testing.T) {
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	configPath = tmpDir + "/config.yml"
+	cfg = &Config{
+		DefaultServer: "https://tc.example.com",
+		Servers: map[string]ServerConfig{
+			"https://tc.example.com": {Token: "token", User: "user"},
+		},
+	}
+	// First write must succeed so viper knows the file
+	viper.Set("default_server", cfg.DefaultServer)
+	viper.Set("servers", cfg.Servers)
+	require.NoError(T, viper.WriteConfigAs(configPath))
+
+	// Now point to unwritable path
+	configPath = "/dev/null/impossible/path/config.yml"
+
+	err := RemoveServer("https://tc.example.com")
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "failed to write config")
+}
+
+func TestDetectDSLDirEnvNotExist(T *testing.T) {
+	ResetDSLCache()
+	T.Setenv(EnvDSLDir, "/nonexistent/path/that/does/not/exist")
+
+	got := DetectTeamCityDir()
+	assert.Empty(T, got)
+}
+
+func TestDetectTeamCityDirGetwdError(T *testing.T) {
+	ResetDSLCache()
+	T.Setenv(EnvDSLDir, "")
+	old := getwdFn
+	T.Cleanup(func() { getwdFn = old })
+	getwdFn = func() (string, error) { return "", errors.New("getwd failed") }
+
+	got := DetectTeamCityDir()
+	assert.Empty(T, got)
+}
+
+func TestDetectServerFromDSLNoMatch(T *testing.T) {
+	ResetDSLCache()
+	tmpDir := T.TempDir()
+	dslDir := filepath.Join(tmpDir, DefaultDSLDirTeamCity)
+	require.NoError(T, os.Mkdir(dslDir, 0755))
+
+	// pom.xml without the teamcity-server repo pattern
+	pomContent := `<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <repositories>
+        <repository>
+            <id>some-other-repo</id>
+            <url>https://example.com/repo</url>
+        </repository>
+    </repositories>
+</project>`
+	require.NoError(T, os.WriteFile(filepath.Join(dslDir, "pom.xml"), []byte(pomContent), 0644))
+
+	T.Setenv(EnvDSLDir, "")
+	withWorkingDir(T, tmpDir)
+
+	got := DetectServerFromDSL()
+	assert.Empty(T, got)
 }

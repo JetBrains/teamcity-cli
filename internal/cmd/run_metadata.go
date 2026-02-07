@@ -74,6 +74,17 @@ func newRunTagCmd() *cobra.Command {
 }
 
 func runRunTag(runID string, tags []string) error {
+	var filtered []string
+	for _, t := range tags {
+		if t != "" {
+			filtered = append(filtered, t)
+		}
+	}
+	if len(filtered) == 0 {
+		return fmt.Errorf("at least one non-empty tag is required")
+	}
+	tags = filtered
+
 	client, err := getClient()
 	if err != nil {
 		return err

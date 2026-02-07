@@ -299,10 +299,10 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 func notFoundHint(message string) string {
 	msg := strings.ToLower(message)
 	switch {
+	case strings.Contains(msg, "agent pool"), strings.Contains(msg, "pool"):
+		return "Use 'tc pool list' to see available pools"
 	case strings.Contains(msg, "agent"):
 		return "Use 'tc agent list' to see available agents"
-	case strings.Contains(msg, "pool"):
-		return "Use 'tc pool list' to see available pools"
 	case strings.Contains(msg, "project"):
 		return "Use 'tc project list' to see available projects"
 	case strings.Contains(msg, "build type"), strings.Contains(msg, "job"):

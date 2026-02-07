@@ -767,6 +767,230 @@ func TestExportProjectSettings(T *testing.T) {
 	})
 }
 
+func TestPoolOperations(T *testing.T) {
+	// Not parallel - modifies pool state
+
+	T.Run("list pools", func(t *testing.T) {
+		pools, err := client.GetAgentPools(nil)
+		require.NoError(t, err)
+		assert.Greater(t, pools.Count, 0, "should have at least one pool")
+		t.Logf("Found %d pools", pools.Count)
+	})
+
+	T.Run("get default pool", func(t *testing.T) {
+		pool, err := client.GetAgentPool(0)
+		require.NoError(t, err)
+		assert.Equal(t, 0, pool.ID)
+		assert.NotEmpty(t, pool.Name)
+		t.Logf("Default pool: %s", pool.Name)
+	})
+
+	T.Run("add and remove project from pool", func(t *testing.T) {
+		// Get the default pool first
+		pool, err := client.GetAgentPool(0)
+		require.NoError(t, err)
+
+		// Add the test project to the default pool
+		err = client.AddProjectToPool(pool.ID, testProject)
+		if err != nil {
+			t.Logf("AddProjectToPool: %v (project may already be in pool)", err)
+		} else {
+			// Only try to remove if adding succeeded
+			err = client.RemoveProjectFromPool(pool.ID, testProject)
+			if err != nil {
+				t.Logf("RemoveProjectFromPool: %v", err)
+			}
+		}
+	})
+
+	T.Run("move agent to pool and back", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		if len(agents.Agents) == 0 {
+			t.Skip("no agents available")
+		}
+
+		agentID := agents.Agents[0].ID
+
+		// Get the agent's current pool
+		agent, err := client.GetAgent(agentID)
+		require.NoError(t, err)
+		originalPoolID := agent.Pool.ID
+
+		// Move agent to default pool (id:0) and back
+		err = client.SetAgentPool(agentID, 0)
+		if err != nil {
+			t.Logf("SetAgentPool to default: %v", err)
+			return
+		}
+
+		// Move back to original pool
+		err = client.SetAgentPool(agentID, originalPoolID)
+		if err != nil {
+			t.Logf("SetAgentPool back: %v", err)
+		}
+	})
+}
+
+func TestGetAgentIncompatibleBuildTypes(T *testing.T) {
+	T.Parallel()
+
+	agents, err := client.GetAgents(api.AgentsOptions{})
+	require.NoError(T, err)
+	require.Greater(T, len(agents.Agents), 0)
+
+	incompatible, err := client.GetAgentIncompatibleBuildTypes(agents.Agents[0].ID)
+	require.NoError(T, err)
+	T.Logf("Agent has %d incompatible build types", incompatible.Count)
+}
+
+func TestGetParameterValue(T *testing.T) {
+	// Not parallel - creates and deletes a parameter
+	paramName := "TC_CLI_RAW_PARAM"
+	paramValue := "raw_test_value"
+
+	// Set a parameter on the test project
+	err := client.SetProjectParameter(testProject, paramName, paramValue, false)
+	require.NoError(T, err)
+
+	// Get the raw value via GetParameterValue
+	path := fmt.Sprintf("/app/rest/projects/id:%s/parameters/%s/value", testProject, paramName)
+	got, err := client.GetParameterValue(path)
+	require.NoError(T, err)
+	assert.Equal(T, paramValue, got)
+
+	// Cleanup
+	err = client.DeleteProjectParameter(testProject, paramName)
+	require.NoError(T, err)
+}
+
+func TestRunBuildAdvancedOptions(T *testing.T) {
+	T.Run("rebuild dependencies and queue at top", func(t *testing.T) {
+		build, err := client.RunBuild(testConfig, api.RunBuildOptions{
+			Comment:             "Test rebuild deps + queue at top",
+			RebuildDependencies: true,
+			QueueAtTop:          true,
+		})
+		require.NoError(t, err)
+		t.Logf("Started build #%d with rebuild deps + queue at top", build.ID)
+
+		client.CancelBuild(fmt.Sprintf("%d", build.ID), "Test cleanup")
+	})
+
+	T.Run("with agent ID", func(t *testing.T) {
+		agents, err := client.GetAgents(api.AgentsOptions{})
+		require.NoError(t, err)
+		if len(agents.Agents) == 0 {
+			t.Skip("no agents available")
+		}
+
+		agentID := agents.Agents[0].ID
+		build, err := client.RunBuild(testConfig, api.RunBuildOptions{
+			Comment: "Test with agent ID",
+			AgentID: agentID,
+		})
+		require.NoError(t, err)
+		t.Logf("Started build #%d on agent %d", build.ID, agentID)
+
+		client.CancelBuild(fmt.Sprintf("%d", build.ID), "Test cleanup")
+	})
+
+	T.Run("with refs branch prefix", func(t *testing.T) {
+		build, err := client.RunBuild(testConfig, api.RunBuildOptions{
+			Comment: "Test with refs/ branch prefix",
+			Branch:  "refs/heads/main",
+		})
+		require.NoError(t, err)
+		t.Logf("Started build #%d with refs/ branch", build.ID)
+
+		client.CancelBuild(fmt.Sprintf("%d", build.ID), "Test cleanup")
+	})
+}
+
+func TestGetAgentsPoolFilter(T *testing.T) {
+	T.Parallel()
+
+	T.Run("filter by pool name", func(t *testing.T) {
+		t.Parallel()
+
+		pool, err := client.GetAgentPool(0)
+		require.NoError(t, err)
+
+		agents, err := client.GetAgents(api.AgentsOptions{Pool: pool.Name})
+		require.NoError(t, err)
+		t.Logf("Found %d agents in pool '%s'", agents.Count, pool.Name)
+	})
+
+	T.Run("filter by pool numeric ID", func(t *testing.T) {
+		t.Parallel()
+
+		agents, err := client.GetAgents(api.AgentsOptions{Pool: "0"})
+		require.NoError(t, err)
+		t.Logf("Found %d agents in pool ID 0", agents.Count)
+	})
+}
+
+func TestCancelBuildNonExistent(T *testing.T) {
+	T.Parallel()
+
+	err := client.CancelBuild("999999999", "Test cancel non-existent")
+	assert.Error(T, err)
+}
+
+func TestGetBuildLogEmpty(T *testing.T) {
+	build, err := client.RunBuild(testConfig, api.RunBuildOptions{Comment: "Empty log test"})
+	require.NoError(T, err)
+
+	buildID := fmt.Sprintf("%d", build.ID)
+	client.CancelBuild(buildID, "Empty log test cleanup")
+
+	log, err := client.GetBuildLog(buildID)
+	if err != nil {
+		T.Logf("GetBuildLog on cancelled build: %v", err)
+		return
+	}
+	T.Logf("Log length for cancelled build: %d", len(log))
+}
+
+func TestGetParameterValueNonExistent(T *testing.T) {
+	T.Parallel()
+
+	path := fmt.Sprintf("/app/rest/projects/id:%s/parameters/%s/value", testProject, "NON_EXISTENT_PARAM_12345")
+	_, err := client.GetParameterValue(path)
+	assert.Error(T, err, "should error for non-existent parameter")
+}
+
+func TestGetBuildInvalidRef(T *testing.T) {
+	T.Parallel()
+
+	_, err := client.GetBuild("999999999")
+	assert.Error(T, err, "should error for invalid build ID")
+}
+
+func TestRebootAgentCancelledContext(T *testing.T) {
+	T.Parallel()
+
+	agents, err := client.GetAgents(api.AgentsOptions{})
+	require.NoError(T, err)
+	if len(agents.Agents) == 0 {
+		T.Skip("no agents available")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	err = client.RebootAgent(ctx, agents.Agents[0].ID, false)
+	assert.Error(T, err, "should error with cancelled context")
+}
+
+func TestGetBuildQueueWithFilter(T *testing.T) {
+	T.Parallel()
+
+	queue, err := client.GetBuildQueue(api.QueueOptions{BuildTypeID: testConfig, Limit: 5})
+	require.NoError(T, err)
+	T.Logf("Queue has %d builds for config %s", queue.Count, testConfig)
+}
+
 // TestZAgentOperations runs last (Z prefix) since reboot affects agent availability.
 // This test exercises the full agent API, including operations that modify the agent state.
 func TestZAgentOperations(T *testing.T) {
