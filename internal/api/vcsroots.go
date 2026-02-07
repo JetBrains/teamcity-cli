@@ -156,9 +156,9 @@ func NewPerforceVcsRootProperties(port, user, password, stream string) PropertyL
 }
 
 // Helper: creates a property list for a Git VCS root
-func NewGitVcsRootProperties(url, branch string) PropertyList {
+func NewGitVcsRootProperties(repoURL, branch string) PropertyList {
 	props := []Property{
-		{Name: "url", Value: url},
+		{Name: "url", Value: repoURL},
 	}
 	if branch != "" {
 		props = append(props, Property{Name: "branch", Value: branch})

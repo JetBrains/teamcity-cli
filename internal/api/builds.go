@@ -120,8 +120,7 @@ type RunBuildOptions struct {
 	AgentID                   int
 	Tags                      []string
 	PersonalChangeID          string
-	Revision                  string                // Base revision (commit SHA or changelist number) for personal builds
-	VCSBranchFormatter        func(string) string   `json:"-"` // Optional: converts branch name to VCS-specific ref format
+	Revision string // Base revision (commit SHA or changelist number) for personal builds
 }
 
 // RunBuild runs a new build with full options
@@ -185,10 +184,7 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 
 	if opts.Revision != "" {
 		vcsBranch := opts.Branch
-		if opts.VCSBranchFormatter != nil {
-			vcsBranch = opts.VCSBranchFormatter(vcsBranch)
-		} else if vcsBranch != "" && !strings.HasPrefix(vcsBranch, "refs/") && !strings.HasPrefix(vcsBranch, "//") {
-			// Default: assume Git-style refs unless it looks like a Perforce depot path
+		if vcsBranch != "" && !strings.HasPrefix(vcsBranch, "refs/") && !strings.HasPrefix(vcsBranch, "//") {
 			vcsBranch = "refs/heads/" + vcsBranch
 		}
 		req.Revisions = &Revisions{

@@ -28,8 +28,6 @@ type perforceTestEnv struct {
 	port      string
 	host      string
 	ctx       context.Context
-	vcsRootID string
-	configID  string
 }
 
 func (e *perforceTestEnv) Cleanup() {
@@ -77,16 +75,36 @@ func startP4D(ctx context.Context, networkName string) (*perforceTestEnv, error)
 
 	log.Printf("P4D running at %s:%s", host, env.port)
 
-	// Give p4d a moment to fully initialize
-	time.Sleep(3 * time.Second)
+	if err := waitForP4D(ctx, container); err != nil {
+		env.Cleanup()
+		return nil, fmt.Errorf("p4d not ready: %w", err)
+	}
 
-	// Populate with test depot content
 	if err := populateP4Depot(ctx, container); err != nil {
 		env.Cleanup()
 		return nil, fmt.Errorf("populate depot: %w", err)
 	}
 
 	return env, nil
+}
+
+// waitForP4D polls p4d until it accepts connections.
+func waitForP4D(ctx context.Context, container testcontainers.Container) error {
+	deadline := time.After(30 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			return fmt.Errorf("timeout waiting for p4d to accept connections")
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			_, _, err := container.Exec(ctx, []string{"p4", "-p", "localhost:1666", "info"})
+			if err == nil {
+				return nil
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
 }
 
 // populateP4Depot creates a test depot with files in the p4d container.
@@ -111,10 +129,9 @@ p4 -p localhost:1666 -u admin -c test-setup submit -d "Initial commit" 2>/dev/nu
 	for _, cmd := range commands {
 		_, _, err := container.Exec(ctx, cmd)
 		if err != nil {
-			log.Printf("Warning: p4d setup command failed: %v (cmd: %v)", err, cmd)
+			return fmt.Errorf("p4d setup failed: %w", err)
 		}
 	}
-
 	return nil
 }
 

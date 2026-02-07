@@ -138,35 +138,35 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 	}
 
 	var headCommit string
-	if opts.localChanges != "" && opts.branch == "" {
-		vcs := DetectVCS()
-		if vcs == nil {
-			return tcerrors.WithSuggestion(
-				"no supported VCS detected",
-				"Run this command from within a git repository or Perforce workspace, or specify --branch explicitly",
-			)
-		}
-		branch, err := vcs.GetCurrentBranch()
-		if err != nil {
-			return err
-		}
-		opts.branch = branch
-		output.Info("Using current %s branch: %s", vcs.Name(), branch)
-	}
+	var personalChangeID string
+	var localPatch []byte
 
-	if opts.localChanges != "" && !opts.noPush {
+	if opts.localChanges != "" {
 		vcs := DetectVCS()
-		if vcs != nil && !vcs.BranchExistsOnRemote(opts.branch) {
+
+		if opts.branch == "" {
+			if vcs == nil {
+				return tcerrors.WithSuggestion(
+					"no supported VCS detected",
+					"Run this command from within a git repository or Perforce workspace, or specify --branch explicitly",
+				)
+			}
+			branch, err := vcs.GetCurrentBranch()
+			if err != nil {
+				return err
+			}
+			opts.branch = branch
+			output.Info("Using current %s branch: %s", vcs.Name(), branch)
+		}
+
+		if !opts.noPush && vcs != nil && !vcs.BranchExistsOnRemote(opts.branch) {
 			output.Info("Pushing branch to remote...")
 			if err := vcs.PushBranch(opts.branch); err != nil {
 				return err
 			}
 			output.Success("Branch pushed to remote")
 		}
-	}
 
-	if opts.localChanges != "" {
-		vcs := DetectVCS()
 		if vcs != nil {
 			commit, err := vcs.GetHeadRevision()
 			if err != nil {
@@ -174,6 +174,13 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 			}
 			headCommit = commit
 		}
+
+		patch, err := loadLocalChanges(opts.localChanges)
+		if err != nil {
+			return err
+		}
+		localPatch = patch
+		opts.personal = true
 	}
 
 	client, err := getClient()
@@ -181,27 +188,18 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		return err
 	}
 
-	var personalChangeID string
-	if opts.localChanges != "" {
-		patch, err := loadLocalChanges(opts.localChanges)
-		if err != nil {
-			return err
-		}
-
+	if localPatch != nil {
 		output.Info("Uploading local changes...")
 		description := opts.comment
 		if description == "" {
 			description = "Personal build with local changes"
 		}
-
-		changeID, err := client.UploadDiffChanges(patch, description)
+		changeID, err := client.UploadDiffChanges(localPatch, description)
 		if err != nil {
 			return fmt.Errorf("failed to upload changes: %w", err)
 		}
 		personalChangeID = changeID
 		output.Success("Uploaded changes (ID: %s)", changeID)
-
-		opts.personal = true
 	}
 
 	buildOpts := api.RunBuildOptions{
@@ -219,11 +217,6 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		Tags:                      opts.tags,
 		PersonalChangeID:          personalChangeID,
 		Revision:                  headCommit,
-	}
-
-	// Wire up VCS-specific branch formatting when a provider is available
-	if vcs := DetectVCS(); vcs != nil {
-		buildOpts.VCSBranchFormatter = vcs.FormatVCSBranch
 	}
 
 	build, err := client.RunBuild(jobID, buildOpts)
@@ -530,62 +523,6 @@ func (v *localChangesValue) Type() string {
 
 func loadLocalChanges(source string) ([]byte, error) {
 	switch source {
-	case "git":
-		if !isGitRepo() {
-			return nil, tcerrors.WithSuggestion(
-				"not a git repository",
-				"Run this command from within a git repository, or use --local-changes <path> to specify a diff file",
-			)
-		}
-		patch, err := getGitDiff()
-		if err != nil {
-			return nil, err
-		}
-		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
-				"no uncommitted changes found",
-				"Make some changes to your files before running a personal build, or use --local-changes <path> to specify a diff file",
-			)
-		}
-		return patch, nil
-	case "p4", "perforce":
-		p4 := &PerforceProvider{}
-		if !p4.IsAvailable() {
-			return nil, tcerrors.WithSuggestion(
-				"not a Perforce workspace",
-				"Run this command from within a Perforce workspace, or use --local-changes <path> to specify a diff file",
-			)
-		}
-		patch, err := p4.GetLocalDiff()
-		if err != nil {
-			return nil, err
-		}
-		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
-				"no pending changes found",
-				"Open files for edit before running a personal build, or use --local-changes <path> to specify a diff file",
-			)
-		}
-		return patch, nil
-	case "auto", "":
-		vcs := DetectVCS()
-		if vcs == nil {
-			return nil, tcerrors.WithSuggestion(
-				"no supported VCS detected",
-				"Run this command from within a git repository or Perforce workspace, or use --local-changes <path> to specify a diff file",
-			)
-		}
-		patch, err := vcs.GetLocalDiff()
-		if err != nil {
-			return nil, err
-		}
-		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
-				"no uncommitted changes found",
-				"Make some changes to your files before running a personal build, or use --local-changes <path> to specify a diff file",
-			)
-		}
-		return patch, nil
 	case "-":
 		patch, err := io.ReadAll(os.Stdin)
 		if err != nil {
@@ -598,6 +535,8 @@ func loadLocalChanges(source string) ([]byte, error) {
 			)
 		}
 		return patch, nil
+	case "git", "p4", "perforce", "auto":
+		return loadVCSDiff(source)
 	default:
 		patch, err := os.ReadFile(source)
 		if err != nil {
@@ -617,6 +556,32 @@ func loadLocalChanges(source string) ([]byte, error) {
 		}
 		return patch, nil
 	}
+}
+
+func loadVCSDiff(source string) ([]byte, error) {
+	var vcs VCSProvider
+	if source == "auto" {
+		vcs = DetectVCS()
+	} else if p := DetectVCSByName(source); p != nil && p.IsAvailable() {
+		vcs = p
+	}
+	if vcs == nil {
+		return nil, tcerrors.WithSuggestion(
+			"no supported VCS detected",
+			"Run this command from within a git repository or Perforce workspace, or use --local-changes <path>",
+		)
+	}
+	patch, err := vcs.GetLocalDiff()
+	if err != nil {
+		return nil, err
+	}
+	if len(patch) == 0 {
+		return nil, tcerrors.WithSuggestion(
+			"no local changes found",
+			"Make some changes before running a personal build, or use --local-changes <path>",
+		)
+	}
+	return patch, nil
 }
 
 func getGitDiff() ([]byte, error) {

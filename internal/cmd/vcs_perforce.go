@@ -1,12 +1,42 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 )
+
+const p4Timeout = 10 * time.Second
+
+// p4Output runs a p4 command with a timeout and returns its stdout.
+func p4Output(args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), p4Timeout)
+	defer cancel()
+	return exec.CommandContext(ctx, "p4", args...).Output()
+}
+
+// p4Run runs a p4 command with a timeout and returns any error.
+func p4Run(args ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), p4Timeout)
+	defer cancel()
+	return exec.CommandContext(ctx, "p4", args...).Run()
+}
+
+// p4ZtagField extracts a named field from p4 -ztag output.
+func p4ZtagField(output []byte, field string) string {
+	prefix := "... " + field + " "
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, prefix) {
+			return strings.TrimPrefix(line, prefix)
+		}
+	}
+	return ""
+}
 
 // PerforceProvider implements VCSProvider for Perforce (Helix Core) workspaces.
 type PerforceProvider struct{}
@@ -16,78 +46,21 @@ func (p *PerforceProvider) Name() string {
 }
 
 func (p *PerforceProvider) IsAvailable() bool {
-	return isPerforceWorkspace()
-}
-
-func (p *PerforceProvider) GetCurrentBranch() (string, error) {
-	return getPerforceStream()
-}
-
-func (p *PerforceProvider) GetHeadRevision() (string, error) {
-	return getPerforceChangelist()
-}
-
-func (p *PerforceProvider) GetLocalDiff() ([]byte, error) {
-	return getPerforceDiff()
-}
-
-func (p *PerforceProvider) BranchExistsOnRemote(branch string) bool {
-	// Perforce streams/depot paths always exist on the server if the workspace is valid.
-	// Check by querying the stream spec.
-	if strings.HasPrefix(branch, "//") {
-		cmd := exec.Command("p4", "stream", "-o", branch)
-		err := cmd.Run()
-		return err == nil
-	}
-	return true
-}
-
-func (p *PerforceProvider) PushBranch(_ string) error {
-	// Perforce doesn't have a push concept; changes are submitted directly.
-	return nil
-}
-
-func (p *PerforceProvider) FormatRevision(rev string) string {
-	// Perforce changelist numbers are typically short; return as-is.
-	return rev
-}
-
-func (p *PerforceProvider) FormatVCSBranch(branch string) string {
-	// Perforce depot paths are used as-is in TeamCity VCS branch references.
-	return branch
-}
-
-func (p *PerforceProvider) DiffHint(firstRev, lastRev string) string {
-	return fmt.Sprintf("p4 changes -l @%s,@%s", firstRev, lastRev)
-}
-
-// isPerforceWorkspace checks if the current directory is inside a Perforce workspace.
-func isPerforceWorkspace() bool {
-	cmd := exec.Command("p4", "info")
-	out, err := cmd.Output()
+	out, err := p4Output("info")
 	if err != nil {
 		return false
 	}
-	// p4 info returns "Client unknown" when not in a valid workspace
-	outStr := string(out)
-	if strings.Contains(outStr, "Client unknown") {
-		return false
-	}
-	// Verify there's a Client root set
-	return strings.Contains(outStr, "Client root:")
+	s := string(out)
+	return !strings.Contains(s, "Client unknown") && strings.Contains(s, "Client root:")
 }
 
-// getPerforceStream returns the current Perforce stream depot path.
-// Falls back to the depot path if streams are not used.
-func getPerforceStream() (string, error) {
-	// Try to get the stream from the current client spec
+func (p *PerforceProvider) GetCurrentBranch() (string, error) {
 	clientName, err := getPerforceClientName()
 	if err != nil {
 		return "", err
 	}
 
-	cmd := exec.Command("p4", "-ztag", "client", "-o", clientName)
-	out, err := cmd.Output()
+	out, err := p4Output("-ztag", "client", "-o", clientName)
 	if err != nil {
 		return "", tcerrors.WithSuggestion(
 			"failed to get Perforce client spec",
@@ -95,26 +68,12 @@ func getPerforceStream() (string, error) {
 		)
 	}
 
-	// Parse the stream field from ztag output
-	for _, line := range strings.Split(string(out), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "... Stream ") {
-			stream := strings.TrimPrefix(line, "... Stream ")
-			return strings.TrimSpace(stream), nil
-		}
+	if stream := p4ZtagField(out, "Stream"); stream != "" {
+		return stream, nil
 	}
-
-	// If no stream, try to extract the depot path from the client mapping
-	for _, line := range strings.Split(string(out), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "... View0 ") {
-			view := strings.TrimPrefix(line, "... View0 ")
-			// View format: "//depot/path/... //client/..."
-			parts := strings.Fields(view)
-			if len(parts) >= 1 {
-				depotPath := strings.TrimSuffix(parts[0], "/...")
-				return depotPath, nil
-			}
+	if view := p4ZtagField(out, "View0"); view != "" {
+		if parts := strings.Fields(view); len(parts) >= 1 {
+			return strings.TrimSuffix(parts[0], "/..."), nil
 		}
 	}
 
@@ -124,41 +83,13 @@ func getPerforceStream() (string, error) {
 	)
 }
 
-// getPerforceClientName returns the name of the current Perforce client/workspace.
-func getPerforceClientName() (string, error) {
-	cmd := exec.Command("p4", "-ztag", "info")
-	out, err := cmd.Output()
-	if err != nil {
-		return "", tcerrors.WithSuggestion(
-			"failed to get Perforce info",
-			"Ensure p4 is installed and P4PORT/P4USER/P4CLIENT are configured",
-		)
-	}
-
-	for _, line := range strings.Split(string(out), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "... clientName ") {
-			return strings.TrimPrefix(line, "... clientName "), nil
-		}
-	}
-
-	return "", tcerrors.WithSuggestion(
-		"no Perforce client found",
-		"Set P4CLIENT or run 'p4 set P4CLIENT=<workspace-name>'",
-	)
-}
-
-// getPerforceChangelist returns the latest submitted changelist number
-// that affects the current workspace.
-func getPerforceChangelist() (string, error) {
+func (p *PerforceProvider) GetHeadRevision() (string, error) {
 	clientName, err := getPerforceClientName()
 	if err != nil {
 		return "", err
 	}
 
-	// Get the latest changelist synced to this workspace
-	cmd := exec.Command("p4", "changes", "-m1", "-s", "submitted", "@"+clientName)
-	out, err := cmd.Output()
+	out, err := p4Output("changes", "-m1", "-s", "submitted", "@"+clientName)
 	if err != nil {
 		return "", tcerrors.WithSuggestion(
 			"failed to get Perforce changelist",
@@ -166,47 +97,34 @@ func getPerforceChangelist() (string, error) {
 		)
 	}
 
-	// Output format: "Change 12345 on 2024/01/01 by user@client 'description'"
-	outStr := strings.TrimSpace(string(out))
-	if outStr == "" {
-		return "", tcerrors.WithSuggestion(
-			"no submitted changelists found",
-			"Submit at least one changelist, or specify --branch explicitly",
-		)
-	}
-
-	fields := strings.Fields(outStr)
+	fields := strings.Fields(strings.TrimSpace(string(out)))
 	if len(fields) >= 2 && fields[0] == "Change" {
 		return fields[1], nil
 	}
 
 	return "", tcerrors.WithSuggestion(
-		"unexpected p4 changes output",
-		"Ensure p4 is working correctly",
+		"no submitted changelists found",
+		"Submit at least one changelist, or specify --branch explicitly",
 	)
 }
 
-// getPerforceDiff generates a unified diff from pending changes in the default changelist.
-func getPerforceDiff() ([]byte, error) {
-	// First check if there are any open files
-	openCmd := exec.Command("p4", "opened")
-	openOut, err := openCmd.Output()
+func (p *PerforceProvider) GetLocalDiff() ([]byte, error) {
+	openOut, err := p4Output("opened")
 	if err != nil {
 		return nil, tcerrors.WithSuggestion(
 			"failed to list opened files",
 			"Ensure you are in a Perforce workspace with pending changes",
 		)
 	}
-
 	if strings.TrimSpace(string(openOut)) == "" {
-		return nil, nil // No pending changes
+		return nil, nil
 	}
 
-	// Generate unified diff of all opened files
-	cmd := exec.Command("p4", "diff", "-du")
-	out, err := cmd.Output()
+	ctx, cancel := context.WithTimeout(context.Background(), p4Timeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "p4", "diff", "-du").Output()
 	if err != nil {
-		// p4 diff returns exit code 1 if there are differences (which is expected)
+		// p4 diff returns exit code 1 when differences exist (expected)
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
 			return out, nil
 		}
@@ -215,24 +133,43 @@ func getPerforceDiff() ([]byte, error) {
 			"Ensure you have pending changes in your workspace",
 		)
 	}
-
 	return out, nil
 }
 
-// getPerforcePort returns the Perforce server address (P4PORT).
-func getPerforcePort() (string, error) {
-	cmd := exec.Command("p4", "-ztag", "info")
-	out, err := cmd.Output()
+func (p *PerforceProvider) BranchExistsOnRemote(_ string) bool {
+	// Perforce depot paths/streams always exist on the server; no push needed.
+	return true
+}
+
+func (p *PerforceProvider) PushBranch(_ string) error {
+	return nil // Perforce doesn't have a push concept
+}
+
+func (p *PerforceProvider) FormatRevision(rev string) string {
+	return rev
+}
+
+func (p *PerforceProvider) FormatVCSBranch(branch string) string {
+	return branch
+}
+
+func (p *PerforceProvider) DiffHint(firstRev, lastRev string) string {
+	return fmt.Sprintf("p4 changes -l @%s,@%s", firstRev, lastRev)
+}
+
+func getPerforceClientName() (string, error) {
+	out, err := p4Output("-ztag", "info")
 	if err != nil {
-		return "", err
+		return "", tcerrors.WithSuggestion(
+			"failed to get Perforce info",
+			"Ensure p4 is installed and P4PORT/P4USER/P4CLIENT are configured",
+		)
 	}
-
-	for _, line := range strings.Split(string(out), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "... serverAddress ") {
-			return strings.TrimPrefix(line, "... serverAddress "), nil
-		}
+	if name := p4ZtagField(out, "clientName"); name != "" {
+		return name, nil
 	}
-
-	return "", fmt.Errorf("P4PORT not found")
+	return "", tcerrors.WithSuggestion(
+		"no Perforce client found",
+		"Set P4CLIENT or run 'p4 set P4CLIENT=<workspace-name>'",
+	)
 }
