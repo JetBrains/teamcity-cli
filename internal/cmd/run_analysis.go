@@ -60,10 +60,9 @@ func runRunChanges(runID string, opts *runChangesOptions) error {
 
 	fmt.Printf("CHANGES (%d %s)\n\n", changes.Count, english.PluralWord(changes.Count, "commit", "commits"))
 
-	// Detect VCS provider for formatting (falls back to Git-style if unavailable)
 	vcs := DetectVCS()
 	if vcs == nil {
-		vcs = &GitProvider{} // default to Git formatting
+		vcs = &GitProvider{}
 	}
 
 	var firstRev, lastRev string

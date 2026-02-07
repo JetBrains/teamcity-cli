@@ -5,36 +5,15 @@ import (
 	"strings"
 )
 
-// GitProvider implements VCSProvider for Git repositories.
 type GitProvider struct{}
 
-func (g *GitProvider) Name() string {
-	return "git"
-}
-
-func (g *GitProvider) IsAvailable() bool {
-	return isGitRepo()
-}
-
-func (g *GitProvider) GetCurrentBranch() (string, error) {
-	return getCurrentBranch()
-}
-
-func (g *GitProvider) GetHeadRevision() (string, error) {
-	return getHeadCommit()
-}
-
-func (g *GitProvider) GetLocalDiff() ([]byte, error) {
-	return getGitDiff()
-}
-
-func (g *GitProvider) BranchExistsOnRemote(branch string) bool {
-	return branchExistsOnRemote(branch)
-}
-
-func (g *GitProvider) PushBranch(branch string) error {
-	return pushBranch(branch)
-}
+func (g *GitProvider) Name() string                        { return "git" }
+func (g *GitProvider) IsAvailable() bool                   { return isGitRepo() }
+func (g *GitProvider) GetCurrentBranch() (string, error)   { return getCurrentBranch() }
+func (g *GitProvider) GetHeadRevision() (string, error)    { return getHeadCommit() }
+func (g *GitProvider) GetLocalDiff() ([]byte, error)       { return getGitDiff() }
+func (g *GitProvider) BranchExistsOnRemote(b string) bool  { return branchExistsOnRemote(b) }
+func (g *GitProvider) PushBranch(b string) error           { return pushBranch(b) }
 
 func (g *GitProvider) FormatRevision(rev string) string {
 	if len(rev) > 7 {
@@ -51,8 +30,7 @@ func (g *GitProvider) FormatVCSBranch(branch string) string {
 }
 
 func (g *GitProvider) DiffHint(firstRev, lastRev string) string {
-	first := firstRev
-	last := lastRev
+	first, last := firstRev, lastRev
 	if len(first) > 7 {
 		first = first[:7]
 	}

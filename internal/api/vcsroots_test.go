@@ -174,7 +174,6 @@ func TestCreateVcsRoot(T *testing.T) {
 			assert.Equal(t, "perforce", payload.VcsName)
 			assert.Equal(t, "P4 Stream", payload.Name)
 
-			// Verify Perforce-specific properties
 			props := make(map[string]string)
 			for _, p := range payload.Properties.Property {
 				props[p.Name] = p.Value

@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"testing"
 	"time"
 
@@ -22,7 +21,6 @@ const (
 	p4dName  = "tc-test-p4d"
 )
 
-// perforceTestEnv holds the state for Perforce integration tests
 type perforceTestEnv struct {
 	container testcontainers.Container
 	port      string
@@ -36,7 +34,6 @@ func (e *perforceTestEnv) Cleanup() {
 	}
 }
 
-// startP4D starts a Perforce server container and populates it with test data.
 func startP4D(ctx context.Context, networkName string) (*perforceTestEnv, error) {
 	log.Println("Starting Perforce server (p4d)...")
 
@@ -88,7 +85,6 @@ func startP4D(ctx context.Context, networkName string) (*perforceTestEnv, error)
 	return env, nil
 }
 
-// waitForP4D polls p4d until it accepts connections.
 func waitForP4D(ctx context.Context, container testcontainers.Container) error {
 	deadline := time.After(30 * time.Second)
 	for {
@@ -107,14 +103,11 @@ func waitForP4D(ctx context.Context, container testcontainers.Container) error {
 	}
 }
 
-// populateP4Depot creates a test depot with files in the p4d container.
 func populateP4Depot(ctx context.Context, container testcontainers.Container) error {
 	commands := [][]string{
-		// Create a client workspace for initial setup
 		{"bash", "-c", `p4 -p localhost:1666 -u admin client -o test-setup |
 sed 's|//depot/...|//depot/main/...|' |
 p4 -p localhost:1666 -u admin client -i`},
-		// Create the depot structure with a test file
 		{"bash", "-c", `export P4PORT=localhost:1666 P4USER=admin P4CLIENT=test-setup
 mkdir -p /tmp/p4ws/main
 cd /tmp/p4ws
@@ -135,7 +128,6 @@ p4 -p localhost:1666 -u admin -c test-setup submit -d "Initial commit" 2>/dev/nu
 	return nil
 }
 
-// TestPerforceVcsRootCRUD tests creating, reading, and deleting a Perforce VCS root.
 func TestPerforceVcsRootCRUD(T *testing.T) {
 	if testEnvRef == nil || testEnvRef.network == nil {
 		T.Skip("test requires testcontainers with Docker network")
@@ -151,16 +143,13 @@ func TestPerforceVcsRootCRUD(T *testing.T) {
 	vcsRootID := "Sandbox_PerforceTest"
 
 	T.Run("create perforce vcs root", func(t *testing.T) {
-		// Use the Docker network name for the P4 port so TeamCity server can reach it
-		p4Port := fmt.Sprintf("perforce-server:1666")
-
 		root, err := client.CreateVcsRoot(api.CreateVcsRootRequest{
-			ID:      vcsRootID,
-			Name:    "Perforce Test Depot",
-			VcsName: "perforce",
+			ID:        vcsRootID,
+			Name:      "Perforce Test Depot",
+			VcsName:   "perforce",
 			ProjectID: testProject,
 			Properties: api.NewPerforceVcsRootProperties(
-				p4Port,
+				"perforce-server:1666",
 				"admin",
 				"",
 				"",
@@ -169,7 +158,6 @@ func TestPerforceVcsRootCRUD(T *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, vcsRootID, root.ID)
 		assert.Equal(t, "perforce", root.VcsName)
-		t.Logf("Created VCS root: %s", root.ID)
 	})
 
 	T.Run("get perforce vcs root", func(t *testing.T) {
@@ -178,14 +166,12 @@ func TestPerforceVcsRootCRUD(T *testing.T) {
 		assert.Equal(t, "perforce", root.VcsName)
 		assert.Equal(t, "Perforce Test Depot", root.Name)
 
-		// Verify properties
 		props := make(map[string]string)
 		for _, p := range root.Properties.Property {
 			props[p.Name] = p.Value
 		}
 		assert.Contains(t, props["port"], "perforce-server:1666")
 		assert.Equal(t, "admin", props["user"])
-		t.Logf("VCS root properties: %v", props)
 	})
 
 	T.Run("list vcs roots includes perforce", func(t *testing.T) {
@@ -209,7 +195,6 @@ func TestPerforceVcsRootCRUD(T *testing.T) {
 	})
 
 	T.Run("attach to build config", func(t *testing.T) {
-		// Create a new build config for this test
 		p4ConfigID := "Sandbox_PerforceDemo"
 		if !client.BuildTypeExists(p4ConfigID) {
 			_, err := client.CreateBuildType(testProject, api.CreateBuildTypeRequest{
@@ -221,15 +206,11 @@ func TestPerforceVcsRootCRUD(T *testing.T) {
 
 		err := client.AttachVcsRoot(p4ConfigID, vcsRootID)
 		require.NoError(t, err)
-		t.Logf("Attached VCS root %s to build config %s", vcsRootID, p4ConfigID)
 	})
 
 	T.Run("delete perforce vcs root", func(t *testing.T) {
-		// First detach from build configs by deleting the build config
-		// (simpler than detaching VCS root entries)
 		p4ConfigID := "Sandbox_PerforceDemo"
 		if client.BuildTypeExists(p4ConfigID) {
-			// Delete the build config first to avoid "VCS root is in use" error
 			raw, err := client.RawRequest("DELETE", fmt.Sprintf("/app/rest/buildTypes/id:%s", p4ConfigID), nil, nil)
 			if err != nil {
 				t.Logf("Warning: could not delete build config: %v", err)
@@ -240,12 +221,10 @@ func TestPerforceVcsRootCRUD(T *testing.T) {
 
 		err := client.DeleteVcsRoot(vcsRootID)
 		require.NoError(t, err)
-
-		assert.False(t, client.VcsRootExists(vcsRootID), "VCS root should be deleted")
+		assert.False(t, client.VcsRootExists(vcsRootID))
 	})
 }
 
-// TestPerforceBuildWithVcsRoot tests running a build that uses a Perforce VCS root.
 func TestPerforceBuildWithVcsRoot(T *testing.T) {
 	if testEnvRef == nil || testEnvRef.network == nil {
 		T.Skip("test requires testcontainers with Docker network")
@@ -258,7 +237,6 @@ func TestPerforceBuildWithVcsRoot(T *testing.T) {
 	}
 	defer p4Env.Cleanup()
 
-	// Create a Perforce VCS root
 	vcsRootID := "Sandbox_P4BuildTest"
 	p4ConfigID := "Sandbox_P4BuildDemo"
 
@@ -270,7 +248,6 @@ func TestPerforceBuildWithVcsRoot(T *testing.T) {
 		client.DeleteVcsRoot(vcsRootID)
 	}
 
-	// Create VCS root pointing to the p4d container
 	root, err := client.CreateVcsRoot(api.CreateVcsRootRequest{
 		ID:        vcsRootID,
 		Name:      "P4 Build Test",
@@ -293,7 +270,6 @@ func TestPerforceBuildWithVcsRoot(T *testing.T) {
 		client.DeleteVcsRoot(vcsRootID)
 	}()
 
-	// Create build config with a simple step
 	_, err = client.CreateBuildType(testProject, api.CreateBuildTypeRequest{
 		ID:   p4ConfigID,
 		Name: "P4 Build Demo",
@@ -315,15 +291,12 @@ func TestPerforceBuildWithVcsRoot(T *testing.T) {
 	})
 	require.NoError(T, err)
 
-	// Trigger a build
 	build, err := client.RunBuild(p4ConfigID, api.RunBuildOptions{
 		Comment: "Perforce integration test",
 	})
 	require.NoError(T, err)
 	T.Logf("Triggered build #%d", build.ID)
 
-	// Wait for build to complete (it may fail if p4 checkout doesn't work,
-	// but the important thing is that the VCS root integration works)
 	buildID := fmt.Sprintf("%d", build.ID)
 	deadline := time.Now().Add(3 * time.Minute)
 	for time.Now().Before(deadline) {
@@ -337,14 +310,8 @@ func TestPerforceBuildWithVcsRoot(T *testing.T) {
 
 	T.Logf("Build finished: state=%s status=%s", build.State, build.Status)
 
-	// Get build log to see what happened
 	buildLog, err := client.GetBuildLog(buildID)
 	if err == nil {
-		// Look for Perforce-related output in the log
-		if strings.Contains(buildLog, "Perforce") || strings.Contains(buildLog, "p4") {
-			T.Logf("Build log contains Perforce references")
-		}
-		// Log last 500 chars for debugging
 		if len(buildLog) > 500 {
 			T.Logf("Build log (tail):\n%s", buildLog[len(buildLog)-500:])
 		} else {
@@ -352,15 +319,12 @@ func TestPerforceBuildWithVcsRoot(T *testing.T) {
 		}
 	}
 
-	// The build triggered successfully with a Perforce VCS root - that's the key assertion
 	assert.Equal(T, "finished", build.State, "build should have finished")
 }
 
-// TestPerforceUploadDiffChanges tests uploading a Perforce-style diff as personal changes.
 func TestPerforceUploadDiffChanges(T *testing.T) {
 	T.Parallel()
 
-	// Perforce diffs in unified format should upload just like Git diffs
 	patch := []byte(`--- a/depot/main/test.txt
 +++ b/depot/main/test.txt
 @@ -1 +1 @@

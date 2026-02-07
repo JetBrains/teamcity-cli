@@ -12,21 +12,12 @@ import (
 
 const p4Timeout = 10 * time.Second
 
-// p4Output runs a p4 command with a timeout and returns its stdout.
 func p4Output(args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), p4Timeout)
 	defer cancel()
 	return exec.CommandContext(ctx, "p4", args...).Output()
 }
 
-// p4Run runs a p4 command with a timeout and returns any error.
-func p4Run(args ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), p4Timeout)
-	defer cancel()
-	return exec.CommandContext(ctx, "p4", args...).Run()
-}
-
-// p4ZtagField extracts a named field from p4 -ztag output.
 func p4ZtagField(output []byte, field string) string {
 	prefix := "... " + field + " "
 	for _, line := range strings.Split(string(output), "\n") {
@@ -38,12 +29,9 @@ func p4ZtagField(output []byte, field string) string {
 	return ""
 }
 
-// PerforceProvider implements VCSProvider for Perforce (Helix Core) workspaces.
 type PerforceProvider struct{}
 
-func (p *PerforceProvider) Name() string {
-	return "perforce"
-}
+func (p *PerforceProvider) Name() string { return "perforce" }
 
 func (p *PerforceProvider) IsAvailable() bool {
 	out, err := p4Output("info")
@@ -124,9 +112,8 @@ func (p *PerforceProvider) GetLocalDiff() ([]byte, error) {
 	defer cancel()
 	out, err := exec.CommandContext(ctx, "p4", "diff", "-du").Output()
 	if err != nil {
-		// p4 diff returns exit code 1 when differences exist (expected)
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-			return out, nil
+			return out, nil // p4 diff returns exit 1 when differences exist
 		}
 		return nil, tcerrors.WithSuggestion(
 			"failed to generate Perforce diff",
@@ -136,22 +123,10 @@ func (p *PerforceProvider) GetLocalDiff() ([]byte, error) {
 	return out, nil
 }
 
-func (p *PerforceProvider) BranchExistsOnRemote(_ string) bool {
-	// Perforce depot paths/streams always exist on the server; no push needed.
-	return true
-}
-
-func (p *PerforceProvider) PushBranch(_ string) error {
-	return nil // Perforce doesn't have a push concept
-}
-
-func (p *PerforceProvider) FormatRevision(rev string) string {
-	return rev
-}
-
-func (p *PerforceProvider) FormatVCSBranch(branch string) string {
-	return branch
-}
+func (p *PerforceProvider) BranchExistsOnRemote(_ string) bool { return true }
+func (p *PerforceProvider) PushBranch(_ string) error          { return nil }
+func (p *PerforceProvider) FormatRevision(rev string) string   { return rev }
+func (p *PerforceProvider) FormatVCSBranch(branch string) string { return branch }
 
 func (p *PerforceProvider) DiffHint(firstRev, lastRev string) string {
 	return fmt.Sprintf("p4 changes -l @%s,@%s", firstRev, lastRev)
