@@ -545,6 +545,7 @@ func overrideTerminal(t *testing.T, isTerm bool, w, h int, err error) {
 }
 
 // captureStdout replaces os.Stdout with a pipe for the duration of fn and returns what was written.
+// Reading happens concurrently to prevent deadlock when output exceeds the OS pipe buffer.
 func captureStdout(t *testing.T, fn func()) string {
 	t.Helper()
 	oldStdout := os.Stdout
@@ -552,13 +553,18 @@ func captureStdout(t *testing.T, fn func()) string {
 	require.NoError(t, err)
 	os.Stdout = w
 
+	var buf bytes.Buffer
+	done := make(chan struct{})
+	go func() {
+		_, _ = buf.ReadFrom(r)
+		close(done)
+	}()
+
 	fn()
 
 	w.Close()
 	os.Stdout = oldStdout
-
-	var buf bytes.Buffer
-	_, _ = buf.ReadFrom(r)
+	<-done
 	r.Close()
 	return buf.String()
 }
