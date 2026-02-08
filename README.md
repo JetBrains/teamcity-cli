@@ -1,9 +1,9 @@
 # TeamCity CLI
 ![](https://camo.githubusercontent.com/d9709c2147c51a80d08fae89a583024a5565a1962d5495a16aadd97b79be94ec/68747470733a2f2f6a622e67672f6261646765732f7465616d2d706c61737469632e737667)
 
-> Note: this is an experimental project. Team projects are created by JetBrains employees. These projects include 20% projects, internal hackathons, those that support product development process, and/or benefit the JetBrains developer community. Team Projects are available for all to use in accordance to the licensing terms, despite not being officially supported. However, there are times that Team Projects become Official Projects.
+A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail logs, manage agents and queues — without leaving your terminal.
 
-A command-line interface for TeamCity that lets you manage builds, jobs, and projects without leaving your terminal.
+> **Experimental:** This is a [JetBrains Team Project](https://github.com/jetbrains#jetbrains-open-source) — not fully officially supported for now but free to use under the [Apache-2.0 license](#license)
 
 ![cli](https://github.com/user-attachments/assets/fa6546f2-5630-4116-aa6c-5addc8d83318)
 
@@ -32,6 +32,7 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
     * [auth logout](#auth-logout)
     * [auth status](#auth-status)
   * [Runs](#runs)
+    * [run artifacts](#run-artifacts)
     * [run cancel](#run-cancel)
     * [run changes](#run-changes)
     * [run comment](#run-comment)
@@ -62,6 +63,9 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
     * [project param get](#project-param-get)
     * [project param list](#project-param-list)
     * [project param set](#project-param-set)
+    * [project settings export](#project-settings-export)
+    * [project settings status](#project-settings-status)
+    * [project settings validate](#project-settings-validate)
     * [project token get](#project-token-get)
     * [project token put](#project-token-put)
     * [project view](#project-view)
@@ -75,9 +79,12 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
     * [agent deauthorize](#agent-deauthorize)
     * [agent disable](#agent-disable)
     * [agent enable](#agent-enable)
+    * [agent exec](#agent-exec)
     * [agent jobs](#agent-jobs)
     * [agent list](#agent-list)
     * [agent move](#agent-move)
+    * [agent reboot](#agent-reboot)
+    * [agent term](#agent-term)
     * [agent view](#agent-view)
   * [Agent Pools](#agent-pools)
     * [pool link](#pool-link)
@@ -85,6 +92,7 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
     * [pool unlink](#pool-unlink)
     * [pool view](#pool-view)
   * [API](#api)
+  * [Contributing](#contributing)
   * [License](#license)
 <!-- TOC -->
 
@@ -92,24 +100,18 @@ A command-line interface for TeamCity that lets you manage builds, jobs, and pro
 
 ## Why tc?
 
-- **[Stay in your terminal](#quick-start)** – Start builds, check statuses, and view logs without context-switching to a browser
-- **[Remote agent terminal](#agent-term)** – Open an interactive shell to any build agent with `tc agent term`, or run commands remotely with [`tc agent exec`](#agent-exec)
-- **[Stream logs in real-time](#run-watch)** – Watch builds as they happen with `tc run watch --logs`, or fetch logs instantly with [`tc run log`](#run-log)
-- **[Scriptable automation](#commands)** – Integrate TeamCity into shell scripts, CI pipelines, and git hooks with simple commands
-- **[Manage at scale](#commands)** – List, filter, and batch-operate on runs, jobs, agents, and pools across projects
-- **[JSON output](#json-output)** – Pipe to `jq` for custom filtering; use `--plain` for awk/grep-friendly output
-- **[Full API access](#api)** – `tc api` gives you direct REST API access when you need it
+- **[Stay in your terminal](#quick-start)** – Start builds, view logs, manage queues — no browser needed
+- **[Remote agent access](#agent-term)** – Shell into any build agent with [`tc agent term`](#agent-term), or run commands with [`tc agent exec`](#agent-exec)
+- **[Real-time logs](#run-watch)** – Stream build output as it happens with [`tc run watch --logs`](#run-watch)
+- **[Scriptable](#json-output)** – `--json` and `--plain` output for pipelines, plus direct REST API access via [`tc api`](#api)
 
 ## For AI Agents
 
-An [Agent Skill](https://agentskills.io) is available for AI coding assistants like Claude Code. The skill teaches agents how to use `tc` for common TeamCity workflows - investigating build failures, starting builds, exploring projects, and more.
+An [Agent Skill](https://agentskills.io) is available for AI coding assistants. It teaches agents how to use `tc` for common TeamCity workflows.
 
-**Claude Code users:**
+**Claude Code:**
 ```bash
-# Add this repository as a plugin marketplace
 /plugin marketplace add JetBrains/teamcity-cli
-
-# Install the skill
 /plugin install teamcity-cli@teamcity-cli
 ```
 
@@ -419,6 +421,22 @@ Show authentication status
 ---
 
 ## Runs
+
+### run artifacts
+
+List artifacts from a run without downloading them.
+
+Shows artifact names and sizes. Use tc run download to download artifacts.
+
+```bash
+tc run artifacts 12345
+tc run artifacts 12345 --json
+tc run artifacts --job MyBuild
+```
+
+**Options:**
+- `-j, --job` – List artifacts from latest run of this job
+- `--json` – Output as JSON
 
 ### run cancel
 
@@ -987,6 +1005,7 @@ Authorize an agent to allow it to connect and run builds.
 
 ```bash
 tc agent authorize 1
+tc agent authorize Agent-Linux-01
 ```
 
 ### agent deauthorize
@@ -995,6 +1014,7 @@ Deauthorize an agent to revoke its permission to connect.
 
 ```bash
 tc agent deauthorize 1
+tc agent deauthorize Agent-Linux-01
 ```
 
 ### agent disable
@@ -1003,6 +1023,7 @@ Disable an agent to prevent it from running builds.
 
 ```bash
 tc agent disable 1
+tc agent disable Agent-Linux-01
 ```
 
 ### agent enable
@@ -1011,6 +1032,7 @@ Enable an agent to allow it to run builds.
 
 ```bash
 tc agent enable 1
+tc agent enable Agent-Linux-01
 ```
 
 ### agent exec
@@ -1019,8 +1041,8 @@ Execute a command on a TeamCity build agent and return the output.
 
 ```bash
 tc agent exec 1 "ls -la"
-tc agent exec 42 "cat /etc/os-release"
-tc agent exec 1 --timeout 10m -- long-running-script.sh
+tc agent exec Agent-Linux-01 "cat /etc/os-release"
+tc agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh
 ```
 
 **Options:**
@@ -1032,7 +1054,8 @@ List build configurations (jobs) that are compatible or incompatible with an age
 
 ```bash
 tc agent jobs 1
-tc agent jobs 1 --incompatible
+tc agent jobs Agent-Linux-01
+tc agent jobs Agent-Linux-01 --incompatible
 tc agent jobs 1 --json
 ```
 
@@ -1066,8 +1089,28 @@ Move an agent to a different agent pool.
 
 ```bash
 tc agent move 1 0
-tc agent move 1 2
+tc agent move Agent-Linux-01 2
 ```
+
+### agent reboot
+
+Request a reboot of a build agent.
+
+The agent can be specified by ID or name. By default, the agent reboots immediately.
+Use --after-build to wait for the current build to finish before rebooting.
+
+Note: Local agents (running on the same machine as the server) cannot be rebooted.
+
+```bash
+tc agent reboot 1
+tc agent reboot Agent-Linux-01
+tc agent reboot Agent-Linux-01 --after-build
+tc agent reboot Agent-Linux-01 --yes
+```
+
+**Options:**
+- `--after-build` – Wait for current build to finish before rebooting
+- `-y, --yes` – Skip confirmation prompt
 
 ### agent term
 
@@ -1075,7 +1118,7 @@ Open an interactive shell session to a TeamCity build agent.
 
 ```bash
 tc agent term 1
-tc agent term 42
+tc agent term Agent-Linux-01
 ```
 
 ### agent view
@@ -1084,7 +1127,8 @@ View agent details
 
 ```bash
 tc agent view 1
-tc agent view 1 --web
+tc agent view Agent-Linux-01
+tc agent view Agent-Linux-01 --web
 tc agent view 1 --json
 ```
 
@@ -1180,6 +1224,10 @@ tc api /app/rest/builds --paginate --slurp
 - `--slurp` – Combine paginated results into a JSON array (requires --paginate)
 
 <!-- COMMANDS_END -->
+
+## Contributing
+
+Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and guidelines.
 
 ## License
 
