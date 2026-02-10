@@ -361,6 +361,10 @@ func newRunWatchCmd() *cobra.Command {
 }
 
 func doRunWatch(runID string, opts *runWatchOptions) error {
+	if opts.interval < 1 {
+		return fmt.Errorf("--interval must be at least 1 second, got %d", opts.interval)
+	}
+
 	client, err := getClient()
 	if err != nil {
 		return err
