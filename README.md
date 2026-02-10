@@ -542,7 +542,7 @@ tc run log --job Falcon_Build
 ```
 
 **Options:**
-- `--failed` – Show only failed step logs
+- `--failed` – Show failure summary (problems and failed tests)
 - `-j, --job` – Get log for latest run of this job
 - `--raw` – Show raw log without formatting
 
