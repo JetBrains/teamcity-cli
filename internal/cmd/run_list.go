@@ -106,7 +106,7 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 			}
 		}
 		if !valid {
-			return fmt.Errorf("invalid status %q, must be one of: success, failure, running", opts.status)
+			return fmt.Errorf("invalid status %q, must be one of: %s", opts.status, strings.Join(validStatuses, ", "))
 		}
 	}
 
