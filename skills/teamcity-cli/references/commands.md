@@ -296,7 +296,7 @@ Login options:
 
 ## Direct API (`tc api`)
 
-For features not covered by specific commands:
+For features not covered by specific commands. Endpoints always start with `/app/rest/`.
 
 ```bash
 # GET request
@@ -307,6 +307,9 @@ tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
 
 # With pagination
 tc api /app/rest/builds --paginate --slurp
+
+# Browse artifact subdirectory
+tc api /app/rest/builds/id:BUILD_ID/artifacts/children/SUBPATH
 ```
 
 ### Flags

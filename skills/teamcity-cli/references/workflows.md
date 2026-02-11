@@ -1,6 +1,37 @@
 # Common Workflows
 
+## Inspecting a Build from a TeamCity URL
+
+When a user provides a TeamCity URL, parse it and map to `tc` commands.
+
+**Format 1: Specific build** — `https://host/buildConfiguration/ConfigId/12345`
+```bash
+# Extract build ID (last numeric path segment): 12345
+tc run view 12345
+# If failed:
+tc run log 12345 --failed
+tc run tests 12345 --failed
+```
+
+**Format 2: Build configuration** — `https://host/buildConfiguration/ConfigId`
+```bash
+# Extract config ID (last non-numeric path segment): ConfigId
+tc run list --job ConfigId
+```
+
+**Format 3: Project** — `https://host/project/ProjectId`
+```bash
+# Extract project ID: ProjectId
+tc job list --project ProjectId
+```
+
+Strip query params (`?mode=builds`) and fragments (`#all-projects`) before parsing.
+
 ## Investigating a Build Failure
+
+When a build has **FAILURE** status, proactively suggest: `tc run log <id> --failed` (failure summary), `tc run tests <id> --failed` (failed tests), `tc run changes <id>` (triggering changes).
+
+For **composite/matrix builds** (snapshot dependencies, no agent), find failed children with `tc run list --status failure` and appropriate filters.
 
 1. **Find the failed build:**
    ```bash
@@ -168,6 +199,11 @@ tc run download <run-id> --dir ./artifacts
 **Download specific artifact:**
 ```bash
 tc run download <run-id> --artifact "*.jar"
+```
+
+**Browse artifact subdirectory:**
+```bash
+tc api /app/rest/builds/id:<run-id>/artifacts/children/html_reports
 ```
 
 ## Build Metadata
@@ -420,3 +456,13 @@ tc pool unlink <pool-id> <project-id>
 6. **Auto-detection from DSL** – When working in a project with Kotlin DSL config, the server URL is auto-detected from `.teamcity/pom.xml`
 
 7. **Multiple servers** - Use `TEAMCITY_URL` env var to switch between servers, or `tc auth login --server <url>` to add servers
+
+## Troubleshooting
+
+| Symptom | Likely Cause | Action |
+|---------|--------------|--------|
+| `401 Unauthorized` | Invalid or expired token | Run `tc auth status` to check; re-login with `tc auth login` |
+| `403 Forbidden` | Insufficient permissions | Build config may require different access rights; check with TeamCity admin |
+| `404 Not Found` | Build deleted or wrong ID | Verify the build ID/URL; the build may have been cleaned up |
+| Connection refused / timeout | Server unreachable | Check if TeamCity instance is accessible; verify server URL with `tc auth status` |
+| `No server configured` | Missing auth config | Run `tc auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars |

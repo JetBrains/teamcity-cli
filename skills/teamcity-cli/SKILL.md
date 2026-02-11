@@ -1,6 +1,6 @@
 ---
 name: teamcity-cli
-description: Use when working with TeamCity CI/CD. Use `tc` CLI for builds, logs, jobs, queues, agents, and pipelines.
+description: Use when working with TeamCity CI/CD or when user provides a TeamCity build URL. Use `tc` CLI for builds, logs, jobs, queues, agents, and pipelines.
 ---
 
 # TeamCity CLI (`tc`)
@@ -15,31 +15,33 @@ tc run list --status failure      # Find failed builds
 tc run log <id> --failed          # View failed build log
 ```
 
+## Before Running Commands
+
+**Do not guess flags or syntax.** Only use flags in the [Command Reference](references/commands.md). If unsure, run `tc <command> --help` first. If a command doesn't support what you need, fall back to `tc api /app/rest/...`.
+
 ## Core Commands
 
-| Area     | Commands                                                                                  |
-|----------|-------------------------------------------------------------------------------------------|
-| Builds   | `run list`, `view`, `start`, `watch`, `log`, `cancel`, `restart`, `tests`, `changes`     |
-| Artifacts| `run artifacts`, `run download`                                                           |
-| Metadata | `run pin/unpin`, `run tag/untag`, `run comment`                                           |
-| Jobs     | `job list`, `view`, `pause/resume`, `param list/get/set/delete`                           |
-| Projects | `project list`, `view`, `param`, `token put/get`, `settings export/status/validate`       |
-| Queue    | `queue list`, `approve`, `remove`, `top`                                                  |
-| Agents   | `agent list`, `view`, `enable/disable`, `authorize`, `exec`, `term`, `reboot`, `move`     |
-| Pools    | `pool list`, `view`, `link/unlink`                                                        |
-| API      | `tc api <endpoint>` — raw REST API access                                                 |
+| Area      | Commands                                                                              |
+|-----------|---------------------------------------------------------------------------------------|
+| Builds    | `run list`, `view`, `start`, `watch`, `log`, `cancel`, `restart`, `tests`, `changes`  |
+| Artifacts | `run artifacts`, `run download`                                                       |
+| Metadata  | `run pin/unpin`, `run tag/untag`, `run comment`                                       |
+| Jobs      | `job list`, `view`, `pause/resume`, `param list/get/set/delete`                       |
+| Projects  | `project list`, `view`, `param`, `token put/get`, `settings export/status/validate`   |
+| Queue     | `queue list`, `approve`, `remove`, `top`                                              |
+| Agents    | `agent list`, `view`, `enable/disable`, `authorize`, `exec`, `term`, `reboot`, `move` |
+| Pools     | `pool list`, `view`, `link/unlink`                                                    |
+| API       | `tc api <endpoint>` — raw REST API access                                             |
 
-## Common Workflows
+## Quick Workflows
 
 **Investigate failure:** `tc run list --status failure` → `tc run log <id> --failed` → `tc run tests <id> --failed`
+**From a URL:** Extract build ID from `https://host/buildConfiguration/ConfigId/12345` → `tc run view 12345`
 **Start build:** `tc run start <job-id> --branch <branch> --watch`
-**Personal build:** `tc run start <job-id> --local-changes --watch`
 **Find jobs:** `tc project list` → `tc job list --project <id>`
-**Remote agent:** `tc agent term <id>` or `tc agent exec <id> "command"`
-**Stream logs:** `tc run watch <id> --logs`
 
 ## References
 
 - [Command Reference](references/commands.md) - All commands and flags
-- [Workflows](references/workflows.md) - Detailed workflow examples
+- [Workflows](references/workflows.md) - URL handling, failure investigation, artifacts, agents, and more
 - [Output Formats](references/output.md) - JSON, plain text, scripting
