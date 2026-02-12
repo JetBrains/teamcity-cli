@@ -111,8 +111,6 @@ func runAgentList(cmd *cobra.Command, opts *agentListOptions) error {
 	headers := []string{"ID", "NAME", "POOL", "STATUS"}
 	var rows [][]string
 
-	widths := output.ColumnWidths(20, 40, 40, 10)
-
 	for _, a := range agents.Agents {
 		status := formatAgentStatus(a)
 		poolName := ""
@@ -122,12 +120,13 @@ func runAgentList(cmd *cobra.Command, opts *agentListOptions) error {
 
 		rows = append(rows, []string{
 			fmt.Sprintf("%d", a.ID),
-			output.Truncate(a.Name, widths[0]),
-			output.Truncate(poolName, widths[1]),
+			a.Name,
+			poolName,
 			status,
 		})
 	}
 
+	output.AutoSizeColumns(headers, rows, 2, 1, 2)
 	output.PrintTable(headers, rows)
 	return nil
 }
@@ -340,15 +339,15 @@ func showCompatibleJobs(client api.ClientInterface, agentID int, jsonOutput bool
 	headers := []string{"ID", "NAME", "PROJECT"}
 	var rows [][]string
 
-	widths := output.ColumnWidths(20, 40, 20, 40, 30)
-
 	for _, j := range jobs.BuildTypes {
 		rows = append(rows, []string{
-			output.Truncate(j.ID, widths[0]),
-			output.Truncate(j.Name, widths[1]),
-			output.Truncate(j.ProjectName, widths[2]),
+			j.ID,
+			j.Name,
+			j.ProjectName,
 		})
 	}
+
+	output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
 
 	output.PrintTable(headers, rows)
 	return nil

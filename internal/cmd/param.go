@@ -105,8 +105,6 @@ func runParamList(id string, opts *paramListOptions, api paramAPI) error {
 	headers := []string{"NAME", "VALUE"}
 	var rows [][]string
 
-	widths := output.ColumnWidths(10, 40, 40, 60)
-
 	for _, p := range params.Property {
 		value := p.Value
 		if p.Type != nil && p.Type.RawValue == "password" {
@@ -114,11 +112,12 @@ func runParamList(id string, opts *paramListOptions, api paramAPI) error {
 		}
 
 		rows = append(rows, []string{
-			output.Truncate(p.Name, widths[0]),
-			output.Truncate(value, widths[1]),
+			p.Name,
+			value,
 		})
 	}
 
+	output.AutoSizeColumns(headers, rows, 2, 0, 1)
 	output.PrintTable(headers, rows)
 	return nil
 }

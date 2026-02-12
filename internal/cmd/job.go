@@ -93,8 +93,6 @@ func runJobList(cmd *cobra.Command, opts *jobListOptions) error {
 	headers := []string{"ID", "NAME", "PROJECT", "STATUS"}
 	var rows [][]string
 
-	widths := output.ColumnWidths(20, 60, 40, 30, 30)
-
 	for _, j := range jobs.BuildTypes {
 		status := output.Green("Active")
 		if j.Paused {
@@ -102,13 +100,14 @@ func runJobList(cmd *cobra.Command, opts *jobListOptions) error {
 		}
 
 		rows = append(rows, []string{
-			output.Truncate(j.ID, widths[0]),
-			output.Truncate(j.Name, widths[1]),
-			output.Truncate(j.ProjectName, widths[2]),
+			j.ID,
+			j.Name,
+			j.ProjectName,
 			status,
 		})
 	}
 
+	output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
 	output.PrintTable(headers, rows)
 	return nil
 }

@@ -106,8 +106,6 @@ func runProjectList(cmd *cobra.Command, opts *projectListOptions) error {
 	headers := []string{"ID", "NAME", "PARENT"}
 	var rows [][]string
 
-	widths := output.ColumnWidths(20, 40, 33, 34, 33)
-
 	for _, p := range projects.Projects {
 		parent := "-"
 		if p.ParentProjectID != "" {
@@ -115,12 +113,13 @@ func runProjectList(cmd *cobra.Command, opts *projectListOptions) error {
 		}
 
 		rows = append(rows, []string{
-			output.Truncate(p.ID, widths[0]),
-			output.Truncate(p.Name, widths[1]),
-			output.Truncate(parent, widths[2]),
+			p.ID,
+			p.Name,
+			parent,
 		})
 	}
 
+	output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
 	output.PrintTable(headers, rows)
 	return nil
 }

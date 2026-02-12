@@ -93,8 +93,6 @@ func runQueueList(cmd *cobra.Command, opts *queueListOptions) error {
 	headers := []string{"ID", "JOB", "BRANCH", "STATE"}
 	var rows [][]string
 
-	widths := output.ColumnWidths(30, 40, 60, 40)
-
 	for _, r := range queue.Builds {
 		branch := r.BranchName
 		if branch == "" {
@@ -103,12 +101,13 @@ func runQueueList(cmd *cobra.Command, opts *queueListOptions) error {
 
 		rows = append(rows, []string{
 			fmt.Sprintf("%d", r.ID),
-			output.Truncate(r.BuildTypeID, widths[0]),
-			output.Truncate(branch, widths[1]),
+			r.BuildTypeID,
+			branch,
 			r.State,
 		})
 	}
 
+	output.AutoSizeColumns(headers, rows, 2, 1, 2)
 	output.PrintTable(headers, rows)
 	return nil
 }
