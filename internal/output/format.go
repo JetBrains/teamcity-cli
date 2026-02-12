@@ -237,23 +237,117 @@ func PrintJSON(data interface{}) error {
 	return encoder.Encode(data)
 }
 
-// ColumnWidths calculates column widths for a table based on terminal width.
-// margin is the space reserved for non-flexible content (padding, fixed columns).
-// minFlex is the minimum flexible space to use.
-// percentages defines how to divide the flexible space among columns.
-// Returns the calculated widths for each column.
-func ColumnWidths(margin, minFlex int, percentages ...int) []int {
-	termWidth := TerminalWidth()
-	flexSpace := termWidth - margin
-	if flexSpace < minFlex {
-		flexSpace = minFlex
+// AutoSizeColumns truncates flexible columns in-place to fit the terminal width.
+// Fixed columns keep their natural width; the remaining space goes to flex columns.
+func AutoSizeColumns(headers []string, rows [][]string, padding int, flexCols ...int) {
+	if len(rows) == 0 || len(flexCols) == 0 {
+		return
 	}
 
-	widths := make([]int, len(percentages))
-	for i, pct := range percentages {
-		widths[i] = flexSpace * pct / 100
+	maxW := measureColumnWidths(headers, rows)
+	n := len(maxW)
+
+	var flex []int
+	isFlex := make([]bool, n)
+	for _, c := range flexCols {
+		if c >= 0 && c < n && !isFlex[c] {
+			flex = append(flex, c)
+			isFlex[c] = true
+		}
+	}
+	if len(flex) == 0 {
+		return
+	}
+
+	fixed := padding * (n - 1)
+	for i, w := range maxW {
+		if !isFlex[i] {
+			fixed += w
+		}
+	}
+	budget := max(TerminalWidth()-fixed, 8*len(flex))
+
+	needs := make([]int, len(flex))
+	for i, c := range flex {
+		needs[i] = maxW[c]
+	}
+	alloc := distributeSpace(budget, needs)
+
+	for _, row := range rows {
+		for i, c := range flex {
+			if c < len(row) {
+				row[c] = Truncate(row[c], alloc[i])
+			}
+		}
+	}
+}
+
+// measureColumnWidths returns the max display width per column (ANSI-aware).
+func measureColumnWidths(headers []string, rows [][]string) []int {
+	n := len(headers)
+	for _, row := range rows {
+		n = max(n, len(row))
+	}
+	widths := make([]int, n)
+	for i, h := range headers {
+		widths[i] = runewidth.StringWidth(h)
+	}
+	for _, row := range rows {
+		for i, cell := range row {
+			if w := lipgloss.Width(cell); w > widths[i] {
+				widths[i] = w
+			}
+		}
 	}
 	return widths
+}
+
+// distributeSpace divides budget among columns. Columns that fit get their full
+// width; the rest is split proportionally among those that overflow.
+func distributeSpace(budget int, needs []int) []int {
+	alloc := make([]int, len(needs))
+	remaining := budget
+	settled := make([]bool, len(needs))
+
+	for {
+		unsettled := 0
+		for i := range needs {
+			if !settled[i] {
+				unsettled++
+			}
+		}
+		if unsettled == 0 {
+			break
+		}
+
+		fair := remaining / unsettled
+		changed := false
+		for i, need := range needs {
+			if !settled[i] && need <= fair {
+				alloc[i] = need
+				remaining -= need
+				settled[i] = true
+				changed = true
+			}
+		}
+
+		if !changed {
+			totalNeed := 0
+			for i, need := range needs {
+				if !settled[i] {
+					totalNeed += need
+				}
+			}
+			for i, need := range needs {
+				if !settled[i] {
+					alloc[i] = remaining * need / totalNeed
+				}
+			}
+			break
+		}
+	}
+
+	return alloc
 }
 
 // Truncate truncates a string to maxLen display width, adding "..." if truncated

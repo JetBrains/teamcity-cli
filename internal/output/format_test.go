@@ -430,33 +430,98 @@ func TestOutputFunctions(T *testing.T) {
 	}
 }
 
-func TestColumnWidths(T *testing.T) {
-	T.Parallel()
-	tests := []struct {
-		name        string
-		margin      int
-		minFlex     int
-		percentages []int
-		wantLen     int
-	}{
-		{"single", 20, 50, []int{100}, 1},
-		{"two", 20, 50, []int{50, 50}, 2},
-		{"three", 30, 60, []int{40, 30, 30}, 3},
-		{"large_margin", 10000, 50, []int{50, 50}, 2},
-		{"zero_pct", 0, 0, []int{0, 0, 0}, 3},
-	}
+func TestAutoSizeColumns(T *testing.T) {
+	T.Run("all data fits no truncation", func(t *testing.T) {
+		overrideTerminal(t, true, 80, 24, nil)
 
-	for _, tc := range tests {
-		T.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+		headers := []string{"A", "B", "C"}
+		rows := [][]string{
+			{"ID1", "short", "val"},
+			{"ID2", "data", "ok"},
+		}
+		AutoSizeColumns(headers, rows, 2, 1)
+		assert.Equal(t, "short", rows[0][1])
+		assert.Equal(t, "data", rows[1][1])
+	})
 
-			got := ColumnWidths(tc.margin, tc.minFlex, tc.percentages...)
-			assert.Equal(t, tc.wantLen, len(got))
-			for i, w := range got {
-				assert.GreaterOrEqual(t, w, 0, "ColumnWidths()[%d] should be non-negative", i)
-			}
-		})
-	}
+	T.Run("truncates overflowing flex column", func(t *testing.T) {
+		overrideTerminal(t, true, 40, 24, nil)
+
+		headers := []string{"A", "B", "C"}
+		long := strings.Repeat("x", 50)
+		rows := [][]string{
+			{"ID", long, "end"},
+		}
+		AutoSizeColumns(headers, rows, 2, 1)
+		assert.Less(t, len(rows[0][1]), 50)
+		assert.Contains(t, rows[0][1], "...")
+	})
+
+	T.Run("short columns give space to long ones", func(t *testing.T) {
+		overrideTerminal(t, true, 80, 24, nil)
+
+		headers := []string{"F", "LONG", "B", "C"}
+		rows := [][]string{
+			{"F", strings.Repeat("a", 70), "bb", "cc"},
+		}
+		AutoSizeColumns(headers, rows, 2, 1, 2, 3)
+		assert.Equal(t, "bb", rows[0][2])
+		assert.Equal(t, "cc", rows[0][3])
+		assert.GreaterOrEqual(t, len(rows[0][1]), 55, "long column should get most of the space")
+	})
+
+	T.Run("multiple overflowing columns split proportionally", func(t *testing.T) {
+		overrideTerminal(t, true, 50, 24, nil)
+
+		headers := []string{"X", "A", "B"}
+		rows := [][]string{
+			{"X", strings.Repeat("a", 80), strings.Repeat("b", 40)},
+		}
+		AutoSizeColumns(headers, rows, 2, 1, 2)
+		w1 := len(rows[0][1])
+		w2 := len(rows[0][2])
+		assert.Greater(t, w1, w2, "wider-content column should get more space")
+	})
+
+	T.Run("empty rows is a no-op", func(t *testing.T) {
+		AutoSizeColumns([]string{"A", "B"}, nil, 2, 0, 1)
+		AutoSizeColumns([]string{}, [][]string{}, 2, 0)
+	})
+
+	T.Run("no flex cols is a no-op", func(t *testing.T) {
+		rows := [][]string{{"a", "b"}}
+		AutoSizeColumns([]string{"A", "B"}, rows, 2)
+		assert.Equal(t, "a", rows[0][0])
+		assert.Equal(t, "b", rows[0][1])
+	})
+
+	T.Run("fixed columns with ANSI keep correct width", func(t *testing.T) {
+		overrideTerminal(t, true, 60, 24, nil)
+
+		headers := []string{"STATUS", "DATA"}
+		ansiRed := "\033[31mFailed\033[0m"
+		rows := [][]string{
+			{ansiRed, strings.Repeat("x", 80)},
+		}
+		AutoSizeColumns(headers, rows, 2, 1)
+		assert.Equal(t, ansiRed, rows[0][0])
+		assert.Contains(t, rows[0][1], "...")
+	})
+
+	T.Run("headers wider than data are accounted for", func(t *testing.T) {
+		overrideTerminal(t, true, 50, 24, nil)
+
+		// Fixed column header "TRIGGERED BY" (12 chars) is wider than data "vcs" (3 chars).
+		// The function must reserve 12 chars for it, not 3.
+		headers := []string{"TRIGGERED BY", "JOB"}
+		rows := [][]string{
+			{"vcs", strings.Repeat("j", 60)},
+		}
+		AutoSizeColumns(headers, rows, 2, 1)
+		// JOB should get 50 - 12 - 2 = 36 chars (not 50 - 3 - 2 = 45)
+		jobWidth := len(rows[0][1])
+		assert.LessOrEqual(t, jobWidth, 38, "should account for header width of fixed column")
+	})
 }
 
 func TestTerminal(T *testing.T) {

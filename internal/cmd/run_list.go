@@ -164,15 +164,6 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 	}
 	var rows [][]string
 
-	widths := output.ColumnWidths(47, 30, 40, 35, 25)
-
-	maybeTruncate := func(s string, maxLen int) string {
-		if opts.plain {
-			return s
-		}
-		return output.Truncate(s, maxLen)
-	}
-
 	for _, r := range runs.Builds {
 		var status, runRef string
 		if opts.plain {
@@ -216,14 +207,17 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 		rows = append(rows, []string{
 			status,
 			runRef,
-			maybeTruncate(r.BuildTypeID, widths[0]),
-			maybeTruncate(branch, widths[1]),
-			maybeTruncate(triggeredBy, widths[2]),
+			r.BuildTypeID,
+			branch,
+			triggeredBy,
 			duration,
 			age,
 		})
 	}
 
+	if !opts.plain {
+		output.AutoSizeColumns(headers, rows, 2, 2, 3, 4)
+	}
 	if opts.plain {
 		output.PrintPlainTable(headers, rows, opts.noHeader)
 	} else {
