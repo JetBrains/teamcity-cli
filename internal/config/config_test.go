@@ -348,6 +348,37 @@ func TestGetTokenNoServer(T *testing.T) {
 	assert.Equal(T, "", got)
 }
 
+func TestGetTokenMatchesNormalizedURL(T *testing.T) {
+	saveCfgState(T)
+	T.Setenv(EnvToken, "")
+
+	cfg = &Config{
+		DefaultServer: "https://tc.example.com",
+		Servers: map[string]ServerConfig{
+			"https://tc.example.com": {Token: "config-token", User: "user"},
+		},
+	}
+
+	tests := []struct {
+		name   string
+		envURL string
+	}{
+		{"trailing slash", "https://tc.example.com/"},
+		{"no scheme", "tc.example.com"},
+		{"no scheme trailing slash", "tc.example.com/"},
+		{"exact match", "https://tc.example.com"},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Setenv(EnvServerURL, tc.envURL)
+
+			got := GetToken()
+			assert.Equal(t, "config-token", got, "TEAMCITY_URL=%q should find token", tc.envURL)
+		})
+	}
+}
+
 func TestGetTokenUnknownServer(T *testing.T) {
 	saveCfgState(T)
 	T.Setenv(EnvServerURL, "https://unknown.example.com")

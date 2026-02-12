@@ -92,9 +92,18 @@ func Get() *Config {
 	return cfg
 }
 
+//goland:noinspection HttpUrlsUsage
+func normalizeURL(u string) string {
+	u = strings.TrimSuffix(u, "/")
+	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
+		u = "https://" + u
+	}
+	return u
+}
+
 func GetServerURL() string {
 	if url := os.Getenv(EnvServerURL); url != "" {
-		return url
+		return normalizeURL(url)
 	}
 
 	if url := DetectServerFromDSL(); url != "" {
