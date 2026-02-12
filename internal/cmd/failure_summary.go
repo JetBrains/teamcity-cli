@@ -12,7 +12,7 @@ import (
 const maxFailedTestsToShow = 10
 
 func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webURL, statusText string) {
-	header := fmt.Sprintf("%s Build #%s failed", output.Red("✗"), buildNumber)
+	header := fmt.Sprintf("%s Build %s  #%s failed", output.Red("✗"), buildID, buildNumber)
 	if statusText != "" {
 		header += ": " + statusText
 	}

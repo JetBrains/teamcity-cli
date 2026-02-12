@@ -73,7 +73,7 @@ func runRunArtifacts(runID string, opts *runArtifactsOptions) error {
 			return fmt.Errorf("no runs found for job %s", opts.job)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
-		output.Info("Listing artifacts for run #%s (ID: %s)", runs.Builds[0].Number, runID)
+		output.Info("Listing artifacts for run %s  #%s", runID, runs.Builds[0].Number)
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
@@ -406,7 +406,7 @@ func runRunLog(runID string, opts *runLogOptions) error {
 			return fmt.Errorf("no runs found for job %s", opts.job)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
-		output.Info("Showing log for run #%s (ID: %s)", runs.Builds[0].Number, runID)
+		output.Info("Showing log for run %s  #%s", runID, runs.Builds[0].Number)
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
@@ -417,7 +417,7 @@ func runRunLog(runID string, opts *runLogOptions) error {
 			return fmt.Errorf("failed to get build: %w", err)
 		}
 		if build.Status == "SUCCESS" {
-			output.Success("Build #%s succeeded", build.Number)
+			output.Success("Build %d  #%s succeeded", build.ID, build.Number)
 			return nil
 		}
 		printFailureSummary(client, runID, build.Number, build.WebURL, build.StatusText)

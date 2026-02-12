@@ -209,8 +209,9 @@ func runAgentView(nameOrID string, opts *viewOptions) error {
 	}
 
 	if agent.Build != nil {
-		fmt.Printf("\nCurrent build: %s #%s (%s)\n",
+		fmt.Printf("\nCurrent build: %s %d  #%s (%s)\n",
 			agent.Build.BuildType.Name,
+			agent.Build.ID,
 			agent.Build.Number,
 			agent.Build.Status)
 	}
