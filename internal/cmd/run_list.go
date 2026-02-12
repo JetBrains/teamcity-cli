@@ -13,18 +13,19 @@ import (
 )
 
 type runListOptions struct {
-	job        string
-	branch     string
-	status     string
-	user       string
-	project    string
-	limit      int
-	since      string
-	until      string
-	jsonFields string
-	plain      bool
-	noHeader   bool
-	web        bool
+	job         string
+	branch      string
+	allBranches bool
+	status      string
+	user        string
+	project     string
+	limit       int
+	since       string
+	until       string
+	jsonFields  string
+	plain       bool
+	noHeader    bool
+	web         bool
 }
 
 func newRunListCmd() *cobra.Command {
@@ -48,6 +49,7 @@ func newRunListCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Filter by branch name")
+	cmd.Flags().BoolVarP(&opts.allBranches, "all", "a", false, "Show runs from all branches")
 	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running)")
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
@@ -60,6 +62,7 @@ func newRunListCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 
 	cmd.MarkFlagsMutuallyExclusive("json", "plain")
+	cmd.MarkFlagsMutuallyExclusive("all", "branch")
 
 	return cmd
 }
@@ -135,6 +138,7 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 	runs, err := client.GetBuilds(api.BuildsOptions{
 		BuildTypeID: opts.job,
 		Branch:      opts.branch,
+		AllBranches: opts.allBranches,
 		Status:      opts.status,
 		User:        user,
 		Project:     opts.project,

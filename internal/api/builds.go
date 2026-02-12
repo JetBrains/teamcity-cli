@@ -15,6 +15,7 @@ import (
 type BuildsOptions struct {
 	BuildTypeID string
 	Branch      string
+	AllBranches bool
 	Status      string
 	State       string
 	User        string
@@ -29,8 +30,13 @@ type BuildsOptions struct {
 // GetBuilds returns a list of builds
 func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 	locator := NewLocator().
-		Add("buildType", opts.BuildTypeID).
-		Add("branch", opts.Branch).
+		Add("buildType", opts.BuildTypeID)
+	if opts.AllBranches {
+		locator.AddRaw("branch", "(default:any)")
+	} else {
+		locator.Add("branch", opts.Branch)
+	}
+	locator.
 		AddUpper("status", opts.Status).
 		Add("state", opts.State).
 		Add("user", opts.User).
