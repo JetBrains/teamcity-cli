@@ -10,13 +10,6 @@ if not exist "%INSTALL_DIR%" (
 )
 
 echo.
-echo  ████████╗ ██████╗
-echo  ╚══██╔══╝██╔════╝   TeamCity CLI (installer)
-echo     ██║   ██║        Documentation
-echo     ██║   ██║        https://jb.gg/tc/docs
-echo     ██║   ╚██████╗   Report issues
-echo     ╚═╝    ╚═════╝   https://jb.gg/tc/issues
-echo.
 
 echo This script will download TeamCity CLI to %INSTALL_DIR%\%BIN_NAME%
 echo.
