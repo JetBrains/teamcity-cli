@@ -36,5 +36,5 @@ func ParseUserDate(input string) (string, error) {
 
 // FormatTeamCityTime formats time to TeamCity's date format.
 func FormatTeamCityTime(t time.Time) string {
-	return t.Format("20060102T150405-0700")
+	return t.Format("2006-01-02T150405-0700")
 }
