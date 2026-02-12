@@ -135,19 +135,19 @@ curl -fsSL https://jb.gg/tc/install | bash
 
 **Debian/Ubuntu:**
 ```bash
-curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v0.4.0/tc_0.4.0_linux_amd64.deb
-sudo dpkg -i tc_0.4.0_linux_amd64.deb
+curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.deb
+sudo dpkg -i tc_linux_amd64.deb
 ```
 
 **RHEL/Fedora:**
 ```bash
-sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/download/v0.4.0/tc_0.4.0_linux_amd64.rpm
+sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.rpm
 ```
 
 **Arch Linux:**
 ```bash
-curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v0.4.0/tc_0.4.0_linux_amd64.pkg.tar.zst
-sudo pacman -U tc_0.4.0_linux_amd64.pkg.tar.zst
+curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.pkg.tar.zst
+sudo pacman -U tc_linux_amd64.pkg.tar.zst
 ```
 
 ### Windows
