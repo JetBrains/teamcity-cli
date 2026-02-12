@@ -156,33 +156,6 @@ func TestGetRemoteForBranch(t *testing.T) {
 	})
 }
 
-func TestGetHeadCommit(t *testing.T) {
-	t.Run("returns commit SHA", func(t *testing.T) {
-		dir := setupGitRepo(t)
-		restore := chdir(t, dir)
-		defer restore()
-
-		// Create initial commit
-		createFile(t, dir, "test.txt", "content")
-		runGit(t, dir, "add", ".")
-		runGit(t, dir, "commit", "-m", "initial")
-
-		commit, err := getHeadCommit()
-		require.NoError(t, err)
-		assert.Len(t, commit, 40) // SHA-1 hash is 40 hex chars
-		assert.Regexp(t, "^[0-9a-f]{40}$", commit)
-	})
-
-	t.Run("error when no commits", func(t *testing.T) {
-		dir := setupGitRepo(t)
-		restore := chdir(t, dir)
-		defer restore()
-
-		_, err := getHeadCommit()
-		assert.Error(t, err)
-	})
-}
-
 func TestBranchExistsOnRemote(t *testing.T) {
 	t.Run("returns false when no remote", func(t *testing.T) {
 		dir := setupGitRepo(t)

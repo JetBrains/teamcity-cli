@@ -126,7 +126,7 @@ type RunBuildOptions struct {
 	AgentID                   int
 	Tags                      []string
 	PersonalChangeID          string
-	Revision                  string // Base revision (commit SHA) for personal builds
+	Revision                  string
 }
 
 // RunBuild runs a new build with full options
@@ -189,14 +189,37 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 	}
 
 	if opts.Revision != "" {
-		vcsBranch := opts.Branch
-		if vcsBranch != "" && !strings.HasPrefix(vcsBranch, "refs/") {
-			vcsBranch = "refs/heads/" + vcsBranch
+		entries, err := c.GetVcsRootEntries(buildTypeID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get VCS root entries: %w", err)
 		}
-		req.Revisions = &Revisions{
-			Revision: []Revision{
-				{Version: opts.Revision, VcsBranchName: vcsBranch},
-			},
+		if entries.Count == 0 {
+			return nil, fmt.Errorf("build configuration %s has no VCS roots; cannot pin revision", buildTypeID)
+		}
+
+		branch := opts.Branch
+		if branch != "" && !strings.HasPrefix(branch, "refs/") {
+			branch = "refs/heads/" + branch
+		}
+
+		var revisions []Revision
+		for _, entry := range entries.VcsRootEntry {
+			vcsRootID := ""
+			if entry.VcsRoot != nil {
+				vcsRootID = entry.VcsRoot.ID
+			}
+			if vcsRootID == "" {
+				continue
+			}
+			rev := Revision{
+				Version:         opts.Revision,
+				VcsBranchName:   branch,
+				VcsRootInstance: &VcsRootInstanceRef{VcsRootID: vcsRootID},
+			}
+			revisions = append(revisions, rev)
+		}
+		if len(revisions) > 0 {
+			req.Revisions = &Revisions{Revision: revisions}
 		}
 	}
 

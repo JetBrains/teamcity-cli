@@ -113,6 +113,18 @@ func (c *Client) CreateBuildStep(buildTypeID string, step BuildStep) error {
 	return c.doNoContent("POST", path, bytes.NewReader(body), "")
 }
 
+// GetVcsRootEntries returns the VCS root entries attached to a build configuration
+func (c *Client) GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error) {
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/vcs-root-entries", buildTypeID)
+
+	var result VcsRootEntries
+	if err := c.get(path, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 // SetBuildTypeSetting sets a build configuration setting
 func (c *Client) SetBuildTypeSetting(buildTypeID, setting, value string) error {
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings/%s", buildTypeID, setting)
