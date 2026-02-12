@@ -176,15 +176,33 @@ type TriggerBuildRequest struct {
 	Revisions         *Revisions         `json:"revisions,omitempty"`
 }
 
-// Revisions represents a list of VCS revisions for a build
 type Revisions struct {
 	Revision []Revision `json:"revision"`
 }
 
-// Revision represents a specific VCS revision
 type Revision struct {
-	Version       string `json:"version"`
-	VcsBranchName string `json:"vcsBranchName,omitempty"`
+	Version         string              `json:"version"`
+	VcsBranchName   string              `json:"vcsBranchName,omitempty"`
+	VcsRootInstance *VcsRootInstanceRef `json:"vcs-root-instance,omitempty"`
+}
+
+type VcsRootInstanceRef struct {
+	VcsRootID string `json:"vcs-root-id"`
+}
+
+type VcsRootEntries struct {
+	Count        int            `json:"count"`
+	VcsRootEntry []VcsRootEntry `json:"vcs-root-entry"`
+}
+
+type VcsRootEntry struct {
+	ID      string      `json:"id,omitempty"`
+	VcsRoot *VcsRootRef `json:"vcs-root,omitempty"`
+}
+
+type VcsRootRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name,omitempty"`
 }
 
 // LastChanges represents the changes to include in a build

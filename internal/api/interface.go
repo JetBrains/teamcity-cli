@@ -40,6 +40,7 @@ type ClientInterface interface {
 	CreateBuildType(projectID string, req CreateBuildTypeRequest) (*BuildType, error)
 	BuildTypeExists(id string) bool
 	CreateBuildStep(buildTypeID string, step BuildStep) error
+	GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error)
 	SetBuildTypeSetting(buildTypeID, setting, value string) error
 
 	// Builds (Runs)

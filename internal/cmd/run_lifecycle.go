@@ -21,6 +21,7 @@ import (
 
 type runStartOptions struct {
 	branch            string
+	revision          string
 	params            map[string]string
 	systemProps       map[string]string
 	envVars           map[string]string
@@ -58,6 +59,7 @@ func newRunStartCmd() *cobra.Command {
   tc run start Falcon_Build --clean --rebuild-deps --top
   tc run start Falcon_Build --local-changes # personal build with uncommitted Git changes
   tc run start Falcon_Build --local-changes changes.patch  # from file
+  tc run start Falcon_Build --revision abc123def --branch main
   tc run start Falcon_Build --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunStart(args[0], opts)
@@ -65,6 +67,7 @@ func newRunStartCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Branch to build")
+	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin build to a specific Git commit SHA")
 	cmd.Flags().StringToStringVarP(&opts.params, "param", "P", nil, "Build parameters (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.systemProps, "system", "S", nil, "System properties (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.envVars, "env", "E", nil, "Environment variables (key=value)")
@@ -92,6 +95,9 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		fmt.Printf("%s Would trigger run for %s\n", output.Faint("[dry-run]"), output.Cyan(jobID))
 		if opts.branch != "" {
 			fmt.Printf("  Branch: %s\n", opts.branch)
+		}
+		if opts.revision != "" {
+			fmt.Printf("  Revision: %s\n", opts.revision)
 		}
 		if len(opts.params) > 0 {
 			fmt.Println("  Parameters:")
@@ -138,7 +144,6 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		return nil
 	}
 
-	var headCommit string
 	if opts.localChanges != "" && opts.branch == "" {
 		if !isGitRepo() {
 			return tcerrors.WithSuggestion(
@@ -162,14 +167,6 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 			}
 			output.Success("Branch pushed to remote")
 		}
-	}
-
-	if opts.localChanges != "" {
-		commit, err := getHeadCommit()
-		if err != nil {
-			return err
-		}
-		headCommit = commit
 	}
 
 	client, err := getClient()
@@ -214,7 +211,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		AgentID:                   opts.agent,
 		Tags:                      opts.tags,
 		PersonalChangeID:          personalChangeID,
-		Revision:                  headCommit,
+		Revision:                  opts.revision,
 	})
 	if err != nil {
 		return err
