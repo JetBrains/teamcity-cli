@@ -155,6 +155,16 @@ sudo pacman -U tc_0.4.0_linux_amd64.pkg.tar.zst
 winget install JetBrains.tc
 ```
 
+**PowerShell:**
+```powershell
+irm https://jb.gg/tc/install.ps1 | iex
+```
+
+**CMD:**
+```cmd
+curl -fsSL https://jb.gg/tc/install.cmd -o install.cmd && install.cmd && del install.cmd
+```
+
 **Chocolatey:**
 ```powershell
 choco install tc
