@@ -171,7 +171,7 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 			runRef = fmt.Sprintf("%d", r.ID)
 		} else {
 			status = fmt.Sprintf("%s %s", output.StatusIcon(r.Status, r.State), output.StatusText(r.Status, r.State))
-			runRef = fmt.Sprintf("#%s (%d)", r.Number, r.ID)
+			runRef = fmt.Sprintf("%d  #%s", r.ID, r.Number)
 		}
 
 		triggeredBy := "-"
@@ -268,7 +268,7 @@ func runRunView(runID string, opts *viewOptions) error {
 		jobName = build.BuildType.Name
 	}
 
-	fmt.Printf("%s %s #%s", icon, output.Cyan(jobName), build.Number)
+	fmt.Printf("%s %s %d  #%s", icon, output.Cyan(jobName), build.ID, build.Number)
 	if build.BranchName != "" {
 		fmt.Printf(" · %s", build.BranchName)
 	}

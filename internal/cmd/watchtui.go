@@ -211,7 +211,7 @@ func (m watchModel) renderHeader() string {
 	icon := output.StatusIcon(m.build.Status, m.build.State)
 	status := output.StatusText(m.build.Status, m.build.State)
 
-	header := fmt.Sprintf("%s %s #%s %s · %s", icon, output.Bold(jobName), m.build.Number, output.Faint(m.build.WebURL), status)
+	header := fmt.Sprintf("%s %s %d  #%s %s · %s", icon, output.Bold(jobName), m.build.ID, m.build.Number, output.Faint(m.build.WebURL), status)
 	if m.build.PercentageComplete > 0 && m.build.State != "finished" {
 		header += fmt.Sprintf(" (%d%%)", m.build.PercentageComplete)
 	}
@@ -275,9 +275,9 @@ func runWatchTUI(client api.ClientInterface, runID string, interval int) error {
 		icon := output.StatusIcon(fm.build.Status, fm.build.State)
 		if fm.build.State == "finished" {
 			if fm.build.Status == "SUCCESS" {
-				fmt.Printf("%s %s #%s completed\n", icon, output.Cyan(jobName), fm.build.Number)
+				fmt.Printf("%s %s %d  #%s completed\n", icon, output.Cyan(jobName), fm.build.ID, fm.build.Number)
 			} else {
-				fmt.Printf("%s %s #%s failed: %s\n", icon, output.Cyan(jobName), fm.build.Number, fm.build.StatusText)
+				fmt.Printf("%s %s %d  #%s failed: %s\n", icon, output.Cyan(jobName), fm.build.ID, fm.build.Number, fm.build.StatusText)
 			}
 		} else {
 			fmt.Println(output.Faint("Build still running in background"))

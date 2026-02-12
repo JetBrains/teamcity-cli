@@ -224,9 +224,9 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		return output.PrintJSON(build)
 	}
 
-	runRef := fmt.Sprintf("#%s", build.Number)
+	runRef := fmt.Sprintf("%d  #%s", build.ID, build.Number)
 	if build.Number == "" {
-		runRef = fmt.Sprintf("(ID: %d)", build.ID)
+		runRef = fmt.Sprintf("%d", build.ID)
 	}
 	output.Success("Queued run %s for %s", runRef, jobID)
 
@@ -473,9 +473,10 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 			if build.PercentageComplete > 0 {
 				progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
 			}
-			fmt.Printf("\r%s %s #%s %s · %s%s    ",
+			fmt.Printf("\r%s %s %d  #%s %s · %s%s    ",
 				output.StatusIcon(build.Status, build.State),
 				output.Cyan(jobName),
+				build.ID,
 				build.Number,
 				output.Faint(build.WebURL),
 				status,
@@ -490,7 +491,7 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 
 			switch build.Status {
 			case "SUCCESS":
-				fmt.Printf("%s %s #%s succeeded\n", output.Green("✓"), output.Cyan(jobName), build.Number)
+				fmt.Printf("%s %s %d  #%s succeeded\n", output.Green("✓"), output.Cyan(jobName), build.ID, build.Number)
 				if !opts.quiet {
 					fmt.Printf("\nView details: %s\n", build.WebURL)
 				}
@@ -499,7 +500,7 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 				printFailureSummary(client, runID, build.Number, build.WebURL, build.StatusText)
 				return &ExitError{Code: ExitFailure}
 			default:
-				fmt.Printf("%s Build #%s cancelled\n", output.Yellow("○"), build.Number)
+				fmt.Printf("%s Build %d  #%s cancelled\n", output.Yellow("○"), build.ID, build.Number)
 				return &ExitError{Code: ExitCancelled}
 			}
 		}
@@ -560,11 +561,11 @@ func runRunRestart(runID string, opts *runRestartOptions) error {
 		return fmt.Errorf("failed to trigger run: %w", err)
 	}
 
-	newRef := fmt.Sprintf("#%s", newBuild.Number)
+	newRef := fmt.Sprintf("%d  #%s", newBuild.ID, newBuild.Number)
 	if newBuild.Number == "" {
-		newRef = fmt.Sprintf("(ID: %d)", newBuild.ID)
+		newRef = fmt.Sprintf("%d", newBuild.ID)
 	}
-	fmt.Printf("%s Queued run %s (restart of #%s)\n", output.Green("✓"), newRef, originalBuild.Number)
+	fmt.Printf("%s Queued run %s (restart of %d)\n", output.Green("✓"), newRef, originalBuild.ID)
 	fmt.Printf("  Job: %s\n", originalBuild.BuildTypeID)
 	if originalBuild.BranchName != "" {
 		fmt.Printf("  Branch: %s\n", originalBuild.BranchName)
