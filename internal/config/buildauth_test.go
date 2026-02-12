@@ -182,6 +182,7 @@ teamcity.auth.password=pass
 		require.NoError(t, err)
 
 		t.Setenv(EnvBuildPropertiesFile, propsFile)
+		t.Setenv(EnvServerURL, "")
 		t.Setenv(EnvBuildURL, "")
 
 		_, ok := GetBuildAuth()
