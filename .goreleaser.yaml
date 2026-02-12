@@ -52,6 +52,7 @@ archives:
 
 nfpms:
   - package_name: tc
+    file_name_template: '{{ .PackageName }}_{{ .Os }}_{{ .Arch }}'
     vendor: JetBrains s.r.o.
     homepage: https://github.com/JetBrains/teamcity-cli
     maintainer: JetBrains <teamcity-support@jetbrains.com>
