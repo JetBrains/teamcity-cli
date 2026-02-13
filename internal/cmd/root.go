@@ -72,6 +72,7 @@ func init() {
 	rootCmd.AddCommand(newAgentCmd())
 	rootCmd.AddCommand(newPoolCmd())
 	rootCmd.AddCommand(newAPICmd())
+	rootCmd.AddCommand(newSkillCmd())
 }
 
 func initColorSettings() {
@@ -134,6 +135,7 @@ func NewRootCmd() *RootCommand {
 	cmd.AddCommand(newAgentCmd())
 	cmd.AddCommand(newPoolCmd())
 	cmd.AddCommand(newAPICmd())
+	cmd.AddCommand(newSkillCmd())
 
 	return cmd
 }
