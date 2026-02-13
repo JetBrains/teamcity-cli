@@ -92,6 +92,10 @@ A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail lo
     * [pool unlink](#pool-unlink)
     * [pool view](#pool-view)
   * [API](#api)
+  * [Skills](#skills)
+    * [skill install](#skill-install)
+    * [skill remove](#skill-remove)
+    * [skill update](#skill-update)
   * [Contributing](#contributing)
   * [License](#license)
 <!-- TOC -->
@@ -518,6 +522,7 @@ tc run list --plain | grep failure
 ```
 
 **Options:**
+- `-a, --all` – Show runs from all branches
 - `-b, --branch` – Filter by branch name
 - `-j, --job` – Filter by job ID
 - `--json` – Output JSON with fields (use --json= to list, --json=f1,f2 for specific)
@@ -1229,6 +1234,58 @@ tc api /app/rest/builds --paginate --slurp
 - `--raw` – Output raw response without formatting
 - `--silent` – Suppress output on success
 - `--slurp` – Combine paginated results into a JSON array (requires --paginate)
+
+---
+
+## Skills
+
+### skill install
+
+Install the teamcity-cli skill so AI coding agents can use tc commands.
+
+Installs globally by default. Use --project to install to the current project only.
+Auto-detects installed agents when --agent is not specified.
+
+```bash
+tc skill install
+tc skill install --agent claude-code --agent cursor
+tc skill install --project
+```
+
+**Options:**
+- `-a, --agent` – Target agent(s); auto-detects if omitted
+- `--project` – Install to current project instead of globally
+
+### skill remove
+
+Remove the teamcity-cli skill from AI coding agents
+
+```bash
+tc skill remove
+tc skill remove --agent claude-code
+tc skill remove --project
+```
+
+**Options:**
+- `-a, --agent` – Target agent(s); auto-detects if omitted
+- `--project` – Install to current project instead of globally
+
+### skill update
+
+Update the teamcity-cli skill to the latest version bundled with this tc release.
+
+Skips if the installed version already matches.
+Auto-detects installed agents when --agent is not specified.
+
+```bash
+tc skill update
+tc skill update --agent claude-code
+tc skill update --project
+```
+
+**Options:**
+- `-a, --agent` – Target agent(s); auto-detects if omitted
+- `--project` – Install to current project instead of globally
 
 <!-- COMMANDS_END -->
 
