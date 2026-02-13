@@ -592,6 +592,37 @@ func setupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
+	// VCS Roots
+	ts.Handle("GET /app/rest/vcs-roots", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VcsRootList{
+			Count: 2,
+			VcsRoots: []api.VcsRoot{
+				{ID: "TestProject_GitRepo", Name: "Git Repository", VcsName: "jetbrains.git"},
+				{ID: "TestProject_P4Depot", Name: "Perforce Depot", VcsName: "perforce"},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/vcs-roots/id:", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VcsRoot{
+			ID:      "TestProject_GitRepo",
+			Name:    "Git Repository",
+			VcsName: "jetbrains.git",
+		})
+	})
+
+	ts.Handle("POST /app/rest/vcs-roots", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VcsRoot{
+			ID:      "TestProject_NewRoot",
+			Name:    "New Root",
+			VcsName: "perforce",
+		})
+	})
+
+	ts.Handle("DELETE /app/rest/vcs-roots/id:", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	// Versioned Settings
 	ts.Handle("GET /app/rest/projects/TestProject/versionedSettings/config", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, api.VersionedSettingsConfig{

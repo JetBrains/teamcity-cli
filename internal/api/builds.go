@@ -126,7 +126,7 @@ type RunBuildOptions struct {
 	AgentID                   int
 	Tags                      []string
 	PersonalChangeID          string
-	Revision                  string // Base revision (commit SHA) for personal builds
+	Revision string // Base revision (commit SHA or changelist number) for personal builds
 }
 
 // RunBuild runs a new build with full options
@@ -190,7 +190,7 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 
 	if opts.Revision != "" {
 		vcsBranch := opts.Branch
-		if vcsBranch != "" && !strings.HasPrefix(vcsBranch, "refs/") {
+		if vcsBranch != "" && !strings.HasPrefix(vcsBranch, "refs/") && !strings.HasPrefix(vcsBranch, "//") {
 			vcsBranch = "refs/heads/" + vcsBranch
 		}
 		req.Revisions = &Revisions{
