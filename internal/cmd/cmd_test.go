@@ -472,6 +472,7 @@ func TestHelpCommands(T *testing.T) {
 		{"pool", "--help"},
 		{"auth", "--help"},
 		{"api", "--help"},
+		{"skill", "--help"},
 	}
 	for _, args := range commands {
 		T.Run(args[0], func(t *testing.T) {
@@ -519,6 +520,7 @@ func TestUnknownSubcommand(T *testing.T) {
 		{"agent", "invalid"},
 		{"pool", "invalid"},
 		{"auth", "invalid"},
+		{"skill", "invalid"},
 	}
 
 	for _, args := range commands {
@@ -539,7 +541,7 @@ func TestUnknownSubcommand(T *testing.T) {
 func TestParentCommandWithoutSubcommand(T *testing.T) {
 	T.Parallel()
 
-	commands := []string{"run", "project", "queue", "job", "agent", "pool", "auth"}
+	commands := []string{"run", "project", "queue", "job", "agent", "pool", "auth", "skill"}
 
 	for _, cmd := range commands {
 		T.Run(cmd, func(t *testing.T) {
