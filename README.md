@@ -1,9 +1,7 @@
 # TeamCity CLI
-![](https://camo.githubusercontent.com/d9709c2147c51a80d08fae89a583024a5565a1962d5495a16aadd97b79be94ec/68747470733a2f2f6a622e67672f6261646765732f7465616d2d706c61737469632e737667)
+![](https://camo.githubusercontent.com/078d7efd31e09afaa403fc886eac57d43ece79ad24fb75be8e05ac2b13175bef/68747470733a2f2f6a622e67672f6261646765732f6f6666696369616c2d706c61737469632e737667)
 
 A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail logs, manage agents and queues — without leaving your terminal.
-
-> **Experimental:** This is a [JetBrains Team Project](https://github.com/jetbrains#jetbrains-open-source) — not fully officially supported for now but free to use under the [Apache-2.0 license](#license)
 
 ![cli](https://github.com/user-attachments/assets/fa6546f2-5630-4116-aa6c-5addc8d83318)
 
