@@ -32,6 +32,7 @@ func newAuthCmd() *cobra.Command {
 func newAuthLoginCmd() *cobra.Command {
 	var serverURL string
 	var token string
+	var insecureStorage bool
 
 	cmd := &cobra.Command{
 		Use:   "login",
@@ -43,6 +44,10 @@ This will:
 2. Open your browser to generate an access token
 3. Validate and store the token securely
 
+The token is stored in your system keyring (macOS Keychain, GNOME Keyring,
+Windows Credential Manager) when available. Use --insecure-storage to store
+the token in plain text in the config file instead.
+
 For CI/CD, use environment variables instead:
   export TEAMCITY_URL="https://teamcity.example.com"
   export TEAMCITY_TOKEN="your-access-token"
@@ -50,17 +55,18 @@ For CI/CD, use environment variables instead:
 When running inside a TeamCity build, authentication is automatic using
 build-level credentials from the build properties file.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAuthLogin(serverURL, token)
+			return runAuthLogin(serverURL, token, insecureStorage)
 		},
 	}
 
 	cmd.Flags().StringVarP(&serverURL, "server", "s", "", "TeamCity server URL")
 	cmd.Flags().StringVarP(&token, "token", "t", "", "Access token")
+	cmd.Flags().BoolVar(&insecureStorage, "insecure-storage", false, "Store token in plain text config file instead of system keyring")
 
 	return cmd
 }
 
-func runAuthLogin(serverURL, token string) error {
+func runAuthLogin(serverURL, token string, insecureStorage bool) error {
 	isInteractive := !NoInput && output.IsStdinTerminal()
 
 	if serverURL == "" {
@@ -130,12 +136,17 @@ func runAuthLogin(serverURL, token string) error {
 
 	output.Info("%s", output.Green("✓"))
 
-	if err := config.SetServer(serverURL, token, user.Username); err != nil {
+	insecureFallback, err := config.SetServerWithKeyring(serverURL, token, user.Username, insecureStorage)
+	if err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
 	output.Success("Logged in as %s", output.Cyan(user.Name))
-	output.Info("\nConfiguration saved to %s", config.ConfigPath())
+	if insecureFallback {
+		fmt.Printf("%s Token stored in plain text at %s\n", output.Yellow("!"), config.ConfigPath())
+	} else {
+		fmt.Printf("%s Token stored in system keyring\n", output.Green("✓"))
+	}
 
 	return nil
 }
@@ -180,10 +191,10 @@ func newAuthStatusCmd() *cobra.Command {
 
 func runAuthStatus() error {
 	serverURL := config.GetServerURL()
-	token := config.GetToken()
+	token, tokenSource := config.GetTokenWithSource()
 
 	if serverURL != "" && token != "" {
-		return showExplicitAuthStatus(serverURL, token)
+		return showExplicitAuthStatus(serverURL, token, tokenSource)
 	}
 
 	if buildAuth, ok := config.GetBuildAuth(); ok {
@@ -198,7 +209,20 @@ func runAuthStatus() error {
 	return nil
 }
 
-func showExplicitAuthStatus(serverURL, token string) error {
+func tokenSourceLabel(source string) string {
+	switch source {
+	case "env":
+		return "environment variable"
+	case "keyring":
+		return "system keyring"
+	case "config":
+		return config.ConfigPath()
+	default:
+		return "unknown"
+	}
+}
+
+func showExplicitAuthStatus(serverURL, token, tokenSource string) error {
 	client := api.NewClient(serverURL, token)
 	user, err := client.GetCurrentUser()
 	if err != nil {
@@ -208,7 +232,7 @@ func showExplicitAuthStatus(serverURL, token string) error {
 	}
 
 	fmt.Printf("%s Logged in to %s\n", output.Green("✓"), output.Cyan(serverURL))
-	fmt.Printf("  User: %s (%s)\n", user.Name, user.Username)
+	fmt.Printf("  User: %s (%s) · %s\n", user.Name, user.Username, tokenSourceLabel(tokenSource))
 
 	server, err := client.ServerVersion()
 	if err == nil {
