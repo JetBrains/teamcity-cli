@@ -9,16 +9,28 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	gokeyring "github.com/zalando/go-keyring"
 )
+
+func keyringMockInit() {
+	gokeyring.MockInit()
+}
+
+func keyringMockInitWithError(err error) {
+	gokeyring.MockInitWithError(err)
+}
 
 // Note: Tests in this file cannot use t.Parallel() because they modify
 // package-level state (cfg, configPath) and environment variables.
 
 // saveCfgState saves the current cfg state and restores it on cleanup.
+// Installs a mock keyring that errors by default so existing tests that
+// expect tokens in config continue to work.
 func saveCfgState(t *testing.T) {
 	t.Helper()
 	oldCfg := cfg
 	oldPath := configPath
+	keyringMockInitWithError(errors.New("keyring disabled in test"))
 	t.Cleanup(func() {
 		cfg = oldCfg
 		configPath = oldPath
@@ -641,4 +653,98 @@ func TestDetectServerFromDSLNoMatch(T *testing.T) {
 
 	got := DetectServerFromDSL()
 	assert.Empty(T, got)
+}
+
+func TestGetTokenPriority(T *testing.T) {
+	saveCfgState(T)
+	keyringMockInit()
+
+	serverURL := "https://tc.example.com"
+	require.NoError(T, keyringSet("tc:"+serverURL, "admin", "keyring-token"))
+
+	cfg = &Config{
+		DefaultServer: serverURL,
+		Servers: map[string]ServerConfig{
+			serverURL: {Token: "config-token", User: "admin"},
+		},
+	}
+
+	T.Run("env wins over keyring", func(t *testing.T) {
+		t.Setenv(EnvToken, "env-token")
+		t.Setenv(EnvServerURL, serverURL)
+
+		token, source := GetTokenWithSource()
+		assert.Equal(t, "env-token", token)
+		assert.Equal(t, "env", source)
+	})
+
+	T.Run("keyring wins over config", func(t *testing.T) {
+		t.Setenv(EnvToken, "")
+		t.Setenv(EnvServerURL, serverURL)
+
+		token, source := GetTokenWithSource()
+		assert.Equal(t, "keyring-token", token)
+		assert.Equal(t, "keyring", source)
+	})
+
+	T.Run("config used when keyring empty", func(t *testing.T) {
+		t.Setenv(EnvToken, "")
+		t.Setenv(EnvServerURL, serverURL)
+		require.NoError(t, keyringDelete("tc:"+serverURL, "admin"))
+
+		token, source := GetTokenWithSource()
+		assert.Equal(t, "config-token", token)
+		assert.Equal(t, "config", source)
+	})
+}
+
+func TestSetServerWithKeyring(T *testing.T) {
+	saveCfgState(T)
+	keyringMockInit()
+	tmpDir := T.TempDir()
+	configPath = tmpDir + "/config.yml"
+	cfg = &Config{Servers: make(map[string]ServerConfig)}
+
+	insecure, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", false)
+	require.NoError(T, err)
+	assert.False(T, insecure)
+
+	// Token in keyring, not in config
+	assert.Empty(T, cfg.Servers["https://tc.example.com"].Token)
+	assert.Equal(T, "admin", cfg.Servers["https://tc.example.com"].User)
+	val, err := keyringGet("tc:https://tc.example.com", "admin")
+	require.NoError(T, err)
+	assert.Equal(T, "my-token", val)
+}
+
+func TestSetServerKeyringFallback(T *testing.T) {
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	configPath = tmpDir + "/config.yml"
+	cfg = &Config{Servers: make(map[string]ServerConfig)}
+
+	insecure, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", false)
+	require.NoError(T, err)
+	assert.True(T, insecure)
+
+	assert.Equal(T, "my-token", cfg.Servers["https://tc.example.com"].Token)
+}
+
+func TestRemoveServerCleansKeyring(T *testing.T) {
+	saveCfgState(T)
+	keyringMockInit()
+	tmpDir := T.TempDir()
+	configPath = tmpDir + "/config.yml"
+	cfg = &Config{Servers: make(map[string]ServerConfig)}
+
+	_, err := SetServerWithKeyring("https://tc.example.com", "my-token", "admin", false)
+	require.NoError(T, err)
+
+	err = RemoveServer("https://tc.example.com")
+	require.NoError(T, err)
+
+	_, ok := cfg.Servers["https://tc.example.com"]
+	assert.False(T, ok)
+	_, err = keyringGet("tc:https://tc.example.com", "admin")
+	assert.ErrorIs(T, err, errKeyringNotFound)
 }

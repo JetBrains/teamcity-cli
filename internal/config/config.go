@@ -101,6 +101,10 @@ func normalizeURL(u string) string {
 	return u
 }
 
+func keyringService(serverURL string) string {
+	return "tc:" + serverURL
+}
+
 func GetServerURL() string {
 	if url := os.Getenv(EnvServerURL); url != "" {
 		return normalizeURL(url)
@@ -114,19 +118,31 @@ func GetServerURL() string {
 }
 
 func GetToken() string {
+	token, _ := GetTokenWithSource()
+	return token
+}
+
+func GetTokenWithSource() (token, source string) {
 	if token := os.Getenv(EnvToken); token != "" {
-		return token
+		return token, "env"
 	}
 
 	serverURL := GetServerURL()
 	if serverURL == "" {
-		return ""
+		return "", ""
 	}
 
-	if server, ok := cfg.Servers[serverURL]; ok {
-		return server.Token
+	server, ok := cfg.Servers[serverURL]
+	if ok && server.User != "" {
+		if t, err := keyringGet(keyringService(serverURL), server.User); err == nil && t != "" {
+			return t, "keyring"
+		}
 	}
-	return ""
+
+	if ok && server.Token != "" {
+		return server.Token, "config"
+	}
+	return "", ""
 }
 
 // GetCurrentUser returns the current user from config
@@ -143,23 +159,42 @@ func GetCurrentUser() string {
 }
 
 func SetServer(serverURL, token, user string) error {
+	_, err := SetServerWithKeyring(serverURL, token, user, false)
+	return err
+}
+
+func SetServerWithKeyring(serverURL, token, user string, insecureStorage bool) (insecureFallback bool, err error) {
 	cfg.DefaultServer = serverURL
-	cfg.Servers[serverURL] = ServerConfig{
-		Token: token,
-		User:  user,
+
+	if !insecureStorage {
+		if krErr := keyringSet(keyringService(serverURL), user, token); krErr == nil {
+			cfg.Servers[serverURL] = ServerConfig{User: user}
+			return false, writeConfig()
+		}
 	}
 
-	viper.Set("default_server", serverURL)
+	cfg.Servers[serverURL] = ServerConfig{Token: token, User: user}
+	return true, writeConfig()
+}
+
+func writeConfig() error {
+	viper.Set("default_server", cfg.DefaultServer)
 	viper.Set("servers", cfg.Servers)
 
 	if err := viper.WriteConfigAs(configPath); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
-
+	if err := os.Chmod(configPath, 0600); err != nil {
+		return fmt.Errorf("failed to set config permissions: %w", err)
+	}
 	return nil
 }
 
 func RemoveServer(serverURL string) error {
+	if server, ok := cfg.Servers[serverURL]; ok && server.User != "" {
+		_ = keyringDelete(keyringService(serverURL), server.User)
+	}
+
 	delete(cfg.Servers, serverURL)
 
 	if cfg.DefaultServer == serverURL {
@@ -170,14 +205,7 @@ func RemoveServer(serverURL string) error {
 		}
 	}
 
-	viper.Set("default_server", cfg.DefaultServer)
-	viper.Set("servers", cfg.Servers)
-
-	if err := viper.WriteConfigAs(configPath); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-
-	return nil
+	return writeConfig()
 }
 
 func ConfigPath() string {
