@@ -261,15 +261,16 @@ The skill is located in [`skills/teamcity-cli/`](skills/teamcity-cli/) and follo
 
 ## Configuration
 
-Configuration is stored in `~/.config/tc/config.yml`:
+Tokens are stored in your system keyring (macOS Keychain, GNOME Keyring, Windows Credential Manager) when available. The config file at `~/.config/tc/config.yml` stores server URLs and usernames:
 
 ```yaml
 default_server: https://teamcity.example.com
 servers:
   https://teamcity.example.com:
-    token: <your-token>
     user: username
 ```
+
+If the system keyring is unavailable (or `--insecure-storage` is used), the token is stored in the config file instead.
 
 ### Multiple Servers
 
@@ -306,13 +307,10 @@ tc auth login --server https://teamcity1.example.com
 default_server: https://teamcity-prod.example.com
 servers:
   https://teamcity-prod.example.com:
-    token: <token>
     user: alice
   https://teamcity-staging.example.com:
-    token: <token>
     user: alice
   https://teamcity-dev.example.com:
-    token: <token>
     user: alice
 ```
 
@@ -414,6 +412,10 @@ This will:
 2. Open your browser to generate an access token
 3. Validate and store the token securely
 
+The token is stored in your system keyring (macOS Keychain, GNOME Keyring,
+Windows Credential Manager) when available. Use --insecure-storage to store
+the token in plain text in the config file instead.
+
 For CI/CD, use environment variables instead:
   export TEAMCITY_URL="https://teamcity.example.com"
   export TEAMCITY_TOKEN="your-access-token"
@@ -422,6 +424,7 @@ When running inside a TeamCity build, authentication is automatic using
 build-level credentials from the build properties file.
 
 **Options:**
+- `--insecure-storage` – Store token in plain text config file instead of system keyring
 - `-s, --server` – TeamCity server URL
 - `-t, --token` – Access token
 
