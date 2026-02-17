@@ -12,13 +12,13 @@ A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail lo
 <!-- TOC -->
 * [TeamCity CLI](#teamcity-cli)
   * [Why tc?](#why-tc)
-  * [For AI Agents](#for-ai-agents)
   * [Installation](#installation)
     * [macOS & Linux](#macos--linux)
     * [Windows](#windows)
     * [Go](#go)
     * [Build from source](#build-from-source)
   * [Quick Start](#quick-start)
+  * [For AI Agents](#for-ai-agents)
   * [Commands](#commands)
   * [Configuration](#configuration)
     * [Multiple Servers](#multiple-servers)
@@ -106,18 +106,7 @@ A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail lo
 - **[Remote agent access](#agent-term)** – Shell into any build agent with [`tc agent term`](#agent-term), or run commands with [`tc agent exec`](#agent-exec)
 - **[Real-time logs](#run-watch)** – Stream build output as it happens with [`tc run watch --logs`](#run-watch)
 - **[Scriptable](#json-output)** – `--json` and `--plain` output for pipelines, plus direct REST API access via [`tc api`](#api)
-
-## For AI Agents
-
-An [Agent Skill](https://agentskills.io) is available for AI coding assistants. It teaches agents how to use `tc` for common TeamCity workflows.
-
-**Claude Code:**
-```bash
-/plugin marketplace add JetBrains/teamcity-cli
-/plugin install teamcity-cli@teamcity-cli
-```
-
-The skill is located in [`skills/teamcity-cli/`](skills/teamcity-cli/) and follows the [Agent Skills specification](https://agentskills.io/specification).
+- **[AI agent ready](#for-ai-agents)** – Built-in [skill](https://agentskills.io) for Claude Code, Cursor, and other AI coding agents — just run `tc skill install`
 
 ## Installation
 
@@ -210,6 +199,25 @@ tc run log --job MyProject_Build
 # Check what's in the queue
 tc queue list
 ```
+
+## For AI Agents
+
+An [Agent Skill](https://agentskills.io) is included with `tc`. It teaches AI coding agents how to use `tc` for common TeamCity workflows.
+
+```bash
+tc skill install           # auto-detects installed agents (Claude Code, Cursor, etc.)
+tc skill install --project # install to current project only
+tc skill update            # update to latest version bundled with tc
+tc skill remove            # uninstall
+```
+
+or specifically for **Claude Code:**
+```bash
+/plugin marketplace add JetBrains/teamcity-cli
+/plugin install teamcity-cli@teamcity-cli
+```
+
+The skill is located in [`skills/teamcity-cli/`](skills/teamcity-cli/) and follows the [Agent Skills specification](https://agentskills.io/specification).
 
 ## Commands
 
