@@ -520,7 +520,6 @@ tc run list --plain | grep failure
 ```
 
 **Options:**
-- `-a, --all` – Show runs from all branches
 - `-b, --branch` – Filter by branch name
 - `-j, --job` – Filter by job ID
 - `--json` – Output JSON with fields (use --json= to list, --json=f1,f2 for specific)
@@ -591,6 +590,7 @@ tc run start Falcon_Build --comment "Release build" --tag release --tag v1.0
 tc run start Falcon_Build --clean --rebuild-deps --top
 tc run start Falcon_Build --local-changes # personal build with uncommitted Git changes
 tc run start Falcon_Build --local-changes changes.patch  # from file
+tc run start Falcon_Build --revision abc123def --branch main
 tc run start Falcon_Build --dry-run
 ```
 
@@ -608,6 +608,7 @@ tc run start Falcon_Build --dry-run
 - `--personal` – Run as personal build
 - `--rebuild-deps` – Rebuild all dependencies
 - `--rebuild-failed-deps` – Rebuild failed/incomplete dependencies
+- `--revision` – Pin build to a specific Git commit SHA
 - `-S, --system` – System properties (key=value)
 - `-t, --tag` – Run tags (can be repeated)
 - `--top` – Add to top of queue
