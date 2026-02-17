@@ -35,12 +35,14 @@ Login options:
 
 ### Flags for `tc run list`
 
+Shows all branches and all build states (including canceled, personal, composite sub-builds) by default — matching the TeamCity UI. Use `--branch` to narrow to a specific branch.
+
 - `-j, --job <id>` - Filter by job
 - `-b, --branch <name>` - Filter by branch
-- `--status <status>` - Filter: success, failure, running
+- `--status <status>` - Filter: success, failure, running, error, unknown
 - `-u, --user <name>` - Filter by user
 - `-p, --project <id>` - Filter by project
-- `-n, --limit <n>` - Limit results
+- `-n, --limit <n>` - Limit results (default: 30)
 - `--since <time>` - Since time (e.g., 24h, 2026-01-01)
 - `--until <time>` - Until time (e.g., 12h, 2026-01-02)
 - `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
