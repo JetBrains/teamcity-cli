@@ -1,6 +1,6 @@
 ---
 name: teamcity-cli
-version: "0.4.0"
+version: "0.5.0"
 author: JetBrains
 description: Use when working with TeamCity CI/CD or when user provides a TeamCity build URL. Use `tc` CLI for builds, logs, jobs, queues, agents, and pipelines.
 ---
