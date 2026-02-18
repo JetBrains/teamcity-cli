@@ -387,7 +387,7 @@ func runProjectSettingsStatus(projectID string, opts *projectSettingsStatusOptio
 	status, statusErr := client.GetVersionedSettingsStatus(projectID)
 
 	if opts.json {
-		result := map[string]interface{}{
+		result := map[string]any{
 			"project": project,
 		}
 		if configErr == nil {
@@ -735,7 +735,7 @@ func parseKotlinErrors(mavenOutput string) []string {
 		for scanner.Scan() {
 			line := scanner.Text()
 			if strings.Contains(line, "[ERROR]") && !strings.Contains(line, "BUILD FAILURE") {
-				if msg := strings.TrimPrefix(line, "[ERROR] "); msg != line {
+				if msg, ok := strings.CutPrefix(line, "[ERROR] "); ok {
 					errs = append(errs, output.Red("Error: ")+msg)
 				}
 			}

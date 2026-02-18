@@ -49,7 +49,7 @@ type CreateUserRequest struct {
 	Password string   `json:"password"`
 	Name     string   `json:"name,omitempty"`
 	Email    string   `json:"email,omitempty"`
-	Roles    RoleList `json:"roles,omitempty"`
+	Roles    RoleList `json:"roles"`
 }
 
 // CreateUser creates a new user

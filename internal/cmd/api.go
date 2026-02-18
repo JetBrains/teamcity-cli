@@ -119,7 +119,7 @@ func runAPI(endpoint string, opts *apiOptions) error {
 			body = bytes.NewReader(data)
 		}
 	} else if len(opts.fields) > 0 {
-		jsonBody := make(map[string]interface{})
+		jsonBody := make(map[string]any)
 		for _, f := range opts.fields {
 			parts := strings.SplitN(f, "=", 2)
 			if len(parts) != 2 {
@@ -128,7 +128,7 @@ func runAPI(endpoint string, opts *apiOptions) error {
 			key := parts[0]
 			value := parts[1]
 
-			var jsonValue interface{}
+			var jsonValue any
 			if err := json.Unmarshal([]byte(value), &jsonValue); err != nil {
 				jsonValue = value
 			}
@@ -218,7 +218,7 @@ func outputAPIResponse(body []byte, statusCode int, respHeaders map[string][]str
 			// Don't dump HTML error pages, show clean error
 			output.Warn("Server returned HTML error page (status %d)", statusCode)
 		} else {
-			var jsonData interface{}
+			var jsonData any
 			if err := json.Unmarshal(body, &jsonData); err == nil {
 				prettyJSON, err := json.MarshalIndent(jsonData, "", "  ")
 				if err == nil {
@@ -246,7 +246,7 @@ func fetchAllPages(client api.ClientInterface, endpoint string, headers map[stri
 	var pages [][]byte
 	currentEndpoint := endpoint
 
-	for i := 0; i < maxPaginationPages; i++ {
+	for range maxPaginationPages {
 		resp, err := client.RawRequest("GET", currentEndpoint, nil, headers)
 		if err != nil {
 			return nil, err

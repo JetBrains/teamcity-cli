@@ -99,7 +99,7 @@ type BuildStep struct {
 	ID         string       `json:"id,omitempty"`
 	Name       string       `json:"name"`
 	Type       string       `json:"type"`
-	Properties PropertyList `json:"properties,omitempty"`
+	Properties PropertyList `json:"properties"`
 }
 
 // CreateBuildStep adds a build step to a build configuration

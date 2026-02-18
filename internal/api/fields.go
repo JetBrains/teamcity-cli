@@ -20,7 +20,7 @@ func (fs *FieldSpec) ParseFields(input string) ([]string, error) {
 		return fs.Default, nil
 	}
 	var fields, invalid []string
-	for _, f := range strings.Split(input, ",") {
+	for f := range strings.SplitSeq(input, ",") {
 		if f = strings.TrimSpace(f); f != "" {
 			fields = append(fields, f)
 			if !slices.Contains(fs.Available, f) {

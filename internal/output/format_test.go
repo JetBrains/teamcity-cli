@@ -556,12 +556,12 @@ func TestPrintJSON(T *testing.T) {
 	T.Parallel()
 	tests := []struct {
 		name string
-		data interface{}
+		data any
 	}{
 		{"map with string value", map[string]string{"key": "value"}},
 		{"empty map", map[string]string{}},
 		{"string slice", []string{"a", "b", "c"}},
-		{"nested structure", map[string]interface{}{"builds": []map[string]string{{"id": "1"}}}},
+		{"nested structure", map[string]any{"builds": []map[string]string{{"id": "1"}}}},
 	}
 
 	for _, tc := range tests {
@@ -726,7 +726,7 @@ func TestWithPagerRunsLess(T *testing.T) {
 
 	// Generate content that exceeds terminal height
 	var lines []string
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		lines = append(lines, fmt.Sprintf("line %d", i))
 	}
 	content := strings.Join(lines, "\n") + "\n"
@@ -750,7 +750,7 @@ func TestWithPagerLessError(T *testing.T) {
 	}
 
 	var lines []string
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		lines = append(lines, fmt.Sprintf("line %d", i))
 	}
 	content := strings.Join(lines, "\n") + "\n"

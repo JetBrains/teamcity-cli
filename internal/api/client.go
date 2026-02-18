@@ -246,11 +246,11 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 	return resp, nil
 }
 
-func (c *Client) get(path string, result interface{}) error {
+func (c *Client) get(path string, result any) error {
 	return c.getWithRetry(path, result, ReadRetry)
 }
 
-func (c *Client) getWithRetry(path string, result interface{}, retry RetryConfig) error {
+func (c *Client) getWithRetry(path string, result any, retry RetryConfig) error {
 	resp, err := withRetry(retry, func() (*http.Response, error) {
 		return c.doRequest("GET", path, nil)
 	})
@@ -396,8 +396,8 @@ func extractIDFromLocator(msg, prefix string) string {
 	}
 
 	// Try to find "id:" in the locator and extract its value
-	if idStart := strings.Index(locator, "id:"); idStart != -1 {
-		idValue := locator[idStart+3:]
+	if _, after, ok := strings.Cut(locator, "id:"); ok {
+		idValue := after
 		// The ID ends at comma, closing paren, or end of string
 		endIdx := strings.IndexAny(idValue, ",)")
 		if endIdx != -1 {
@@ -411,12 +411,12 @@ func extractIDFromLocator(msg, prefix string) string {
 }
 
 // post performs a POST request without retry (non-idempotent by default).
-func (c *Client) post(path string, body io.Reader, result interface{}) error {
+func (c *Client) post(path string, body io.Reader, result any) error {
 	return c.postWithRetry(path, body, result, NoRetry)
 }
 
 // postWithRetry performs a POST request with configurable retry.
-func (c *Client) postWithRetry(path string, body io.Reader, result interface{}, retry RetryConfig) error {
+func (c *Client) postWithRetry(path string, body io.Reader, result any, retry RetryConfig) error {
 	resp, err := withRetry(retry, func() (*http.Response, error) {
 		return c.doRequest("POST", path, body)
 	})

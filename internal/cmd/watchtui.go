@@ -183,10 +183,7 @@ func (m watchModel) View() string {
 	b.WriteString(m.renderHeader())
 	b.WriteString("\n\n")
 
-	logHeight := m.height - 3
-	if logHeight < 3 {
-		logHeight = 3
-	}
+	logHeight := max(m.height-3, 3)
 	b.WriteString(m.renderLogs(logHeight))
 
 	spinnerView := ""
@@ -229,16 +226,10 @@ func (m watchModel) renderLogs(height int) string {
 		return result.String()
 	}
 
-	start := len(m.logLines) - height
-	if start < 0 {
-		start = 0
-	}
+	start := max(len(m.logLines)-height, 0)
 	visible := m.logLines[start:]
 
-	maxWidth := m.width - 1
-	if maxWidth < 40 {
-		maxWidth = 40
-	}
+	maxWidth := max(m.width-1, 40)
 
 	var result strings.Builder
 	for _, line := range visible {
