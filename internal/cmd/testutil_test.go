@@ -117,11 +117,11 @@ func Error(w http.ResponseWriter, status int, message string) {
 
 // extractID extracts an ID from a path like /app/rest/builds/id:123/something
 func extractID(path, prefix string) string {
-	idx := strings.Index(path, prefix)
-	if idx == -1 {
+	_, after, ok := strings.Cut(path, prefix)
+	if !ok {
 		return ""
 	}
-	rest := path[idx+len(prefix):]
+	rest := after
 	// ID ends at / or ? or end of string
 	end := strings.IndexAny(rest, "/?")
 	if end == -1 {

@@ -36,35 +36,35 @@ var Quiet bool
 var Verbose bool
 
 // Success prints a success message with green checkmark (respects --quiet)
-func Success(format string, args ...interface{}) {
+func Success(format string, args ...any) {
 	if !Quiet {
 		fmt.Printf("%s %s\n", Green("✓"), fmt.Sprintf(format, args...))
 	}
 }
 
 // Info prints an informational message (respects --quiet)
-func Info(format string, args ...interface{}) {
+func Info(format string, args ...any) {
 	if !Quiet {
 		fmt.Printf(format+"\n", args...)
 	}
 }
 
 // Infof prints formatted info without newline (respects --quiet)
-func Infof(format string, args ...interface{}) {
+func Infof(format string, args ...any) {
 	if !Quiet {
 		fmt.Printf(format, args...)
 	}
 }
 
 // Warn prints a warning to stderr (respects --quiet)
-func Warn(format string, args ...interface{}) {
+func Warn(format string, args ...any) {
 	if !Quiet {
 		fmt.Fprintf(os.Stderr, "%s %s\n", Yellow("!"), fmt.Sprintf(format, args...))
 	}
 }
 
 // Debug prints debug info when verbose mode is enabled
-func Debug(format string, args ...interface{}) {
+func Debug(format string, args ...any) {
 	if Verbose {
 		fmt.Fprintf(os.Stderr, "%s %s\n", Faint("[debug]"), fmt.Sprintf(format, args...))
 	}
@@ -231,7 +231,7 @@ func PrintTable(headers []string, rows [][]string) {
 }
 
 // PrintJSON prints data as JSON
-func PrintJSON(data interface{}) error {
+func PrintJSON(data any) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(data)
@@ -505,7 +505,7 @@ func PrintLogo() {
 	defer fmt.Print("\033[?25h")
 	moveUp := fmt.Sprintf("\033[%dA", height)
 	frame := func(d time.Duration) { render(); time.Sleep(d); fmt.Print(moveUp) }
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		frame(50 * time.Millisecond)
 	}
 	perFrame := max(len(chars)/15, 2)
@@ -515,7 +515,7 @@ func PrintLogo() {
 		}
 		frame(40 * time.Millisecond)
 	}
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		frame(50 * time.Millisecond)
 	}
 	for _, line := range lines {

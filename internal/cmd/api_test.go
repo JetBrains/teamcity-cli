@@ -61,7 +61,7 @@ func TestAPICommandBasicGET(T *testing.T) {
 		assert.Equal(T, "/app/rest/server", r.URL.Path, "URL.Path")
 		assert.Equal(T, "Bearer test-token", r.Header.Get("Authorization"), "Authorization header")
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"version":      " (build 197398)",
 			"versionMajor": 2025,
 			"versionMinor": 7,
@@ -86,7 +86,7 @@ func TestAPICommandPOSTWithFields(T *testing.T) {
 		assert.Equal(T, "POST", r.Method, "Method")
 		assert.Equal(T, "application/json", r.Header.Get("Content-Type"), "Content-Type")
 
-		var body map[string]interface{}
+		var body map[string]any
 		json.NewDecoder(r.Body).Decode(&body)
 		assert.Equal(T, "MyBuild", body["buildType"], "body[buildType]")
 
@@ -263,11 +263,11 @@ func TestAPICommandInvalidFieldFormat(T *testing.T) {
 
 func TestAPICommandWithJSONField(T *testing.T) {
 	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
-		var body map[string]interface{}
+		var body map[string]any
 		json.NewDecoder(r.Body).Decode(&body)
 
 		// Check that nested JSON was parsed correctly
-		buildType, ok := body["buildType"].(map[string]interface{})
+		buildType, ok := body["buildType"].(map[string]any)
 		require.True(T, ok, "body[buildType] should be a map")
 		assert.Equal(T, "MyBuild", buildType["id"], "buildType[id]")
 
@@ -319,13 +319,13 @@ func TestAPICommandPaginate(T *testing.T) {
 
 		switch pageNum {
 		case 1:
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"count":    2,
 				"nextHref": "/app/rest/builds?start=2",
 				"build":    []map[string]int{{"id": 1}, {"id": 2}},
 			})
 		case 2:
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"count": 1,
 				"build": []map[string]int{{"id": 3}},
 			})
@@ -348,7 +348,7 @@ func TestAPICommandPaginateNoNextHref(T *testing.T) {
 	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"count": 2,
 			"build": []map[string]int{{"id": 1}, {"id": 2}},
 		})
@@ -373,13 +373,13 @@ func TestAPICommandSlurp(T *testing.T) {
 
 		switch pageNum {
 		case 1:
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"count":    2,
 				"nextHref": "/app/rest/builds?start=2",
 				"build":    []map[string]int{{"id": 1}, {"id": 2}},
 			})
 		case 2:
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"count": 1,
 				"build": []map[string]int{{"id": 3}},
 			})
@@ -670,7 +670,7 @@ func TestMergePages(T *testing.T) {
 			require.NoError(t, err)
 
 			// Compare as JSON to ignore whitespace differences
-			var gotJSON, wantJSON interface{}
+			var gotJSON, wantJSON any
 			json.Unmarshal(got, &gotJSON)
 			json.Unmarshal([]byte(tc.want), &wantJSON)
 
@@ -687,20 +687,20 @@ func TestFetchAllPages(T *testing.T) {
 
 		switch pageNum {
 		case 1:
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"count":    2,
 				"nextHref": "/app/rest/builds?start=2",
 				"build":    []map[string]int{{"id": 1}, {"id": 2}},
 			})
 		case 2:
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"count":    2,
 				"nextHref": "/app/rest/builds?start=4",
 				"build":    []map[string]int{{"id": 3}, {"id": 4}},
 			})
 		case 3:
 			// Last page, no nextHref
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"count": 1,
 				"build": []map[string]int{{"id": 5}},
 			})
@@ -741,7 +741,7 @@ func TestFetchAllPagesSinglePage(T *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// Single page, no nextHref
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"count": 2,
 			"build": []map[string]int{{"id": 1}, {"id": 2}},
 		})

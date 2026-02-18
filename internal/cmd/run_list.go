@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -98,13 +99,7 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 	if opts.status != "" {
 		validStatuses := []string{"success", "failure", "running", "error", "unknown"}
 		status := strings.ToLower(opts.status)
-		valid := false
-		for _, v := range validStatuses {
-			if status == v {
-				valid = true
-				break
-			}
-		}
+		valid := slices.Contains(validStatuses, status)
 		if !valid {
 			return fmt.Errorf("invalid status %q, must be one of: %s", opts.status, strings.Join(validStatuses, ", "))
 		}
