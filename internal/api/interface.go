@@ -64,7 +64,7 @@ type ClientInterface interface {
 	UploadDiffChanges(patch []byte, description string) (string, error)
 
 	// Artifacts
-	GetArtifacts(buildID string) (*Artifacts, error)
+	GetArtifacts(buildID string, path string) (*Artifacts, error)
 	DownloadArtifact(buildID, artifactPath string) ([]byte, error)
 	DownloadArtifactTo(ctx context.Context, buildID, artifactPath string, w io.Writer) (int64, error)
 
