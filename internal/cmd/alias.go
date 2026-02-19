@@ -111,12 +111,7 @@ func newAliasListCmd() *cobra.Command {
 			if jsonOutput {
 				entries := make([]aliasEntry, 0, len(aliases))
 				for _, name := range names {
-					exp := aliases[name]
-					isShell := strings.HasPrefix(exp, "!")
-					displayExp := exp
-					if isShell {
-						displayExp = exp[1:]
-					}
+					displayExp, isShell := config.ParseExpansion(aliases[name])
 					entries = append(entries, aliasEntry{
 						Name:      name,
 						Expansion: displayExp,
@@ -129,12 +124,10 @@ func newAliasListCmd() *cobra.Command {
 			headers := []string{"NAME", "EXPANSION", "TYPE"}
 			var rows [][]string
 			for _, name := range names {
-				exp := aliases[name]
+				displayExp, isShell := config.ParseExpansion(aliases[name])
 				aliasType := "expansion"
-				displayExp := exp
-				if strings.HasPrefix(exp, "!") {
+				if isShell {
 					aliasType = "shell"
-					displayExp = exp[1:]
 				}
 				rows = append(rows, []string{name, displayExp, aliasType})
 			}

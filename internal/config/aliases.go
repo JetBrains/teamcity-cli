@@ -25,6 +25,15 @@ func IsShellAlias(name string) bool {
 	return ok && len(exp) > 0 && exp[0] == '!'
 }
 
+// ParseExpansion strips the "!" shell prefix from an alias expansion.
+// Returns the clean expansion string and whether it is a shell alias.
+func ParseExpansion(expansion string) (string, bool) {
+	if len(expansion) > 0 && expansion[0] == '!' {
+		return expansion[1:], true
+	}
+	return expansion, false
+}
+
 func AddAlias(name, expansion string) error {
 	if cfg.Aliases == nil {
 		cfg.Aliases = make(map[string]string)
