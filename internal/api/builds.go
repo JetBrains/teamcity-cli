@@ -334,16 +334,20 @@ type Artifacts struct {
 	File  []Artifact `json:"file"`
 }
 
-// GetArtifacts returns the artifacts for a build (accepts ID or #number)
-func (c *Client) GetArtifacts(buildID string) (*Artifacts, error) {
+// GetArtifacts returns the artifacts for a build (accepts ID or #number).
+// If subpath is non-empty, it lists artifacts under that subdirectory.
+func (c *Client) GetArtifacts(buildID string, subpath string) (*Artifacts, error) {
 	id, err := c.ResolveBuildID(buildID)
 	if err != nil {
 		return nil, err
 	}
-	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/children", id)
+	p := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/children", id)
+	if subpath != "" {
+		p += "/" + subpath
+	}
 
 	var artifacts Artifacts
-	if err := c.get(path, &artifacts); err != nil {
+	if err := c.get(p, &artifacts); err != nil {
 		return nil, err
 	}
 

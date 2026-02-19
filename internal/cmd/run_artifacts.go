@@ -19,6 +19,7 @@ import (
 
 type runArtifactsOptions struct {
 	job  string
+	path string
 	json bool
 }
 
@@ -39,6 +40,7 @@ Shows artifact names and sizes. Use tc run download to download artifacts.`,
 		},
 		Example: `  tc run artifacts 12345
   tc run artifacts 12345 --json
+  tc run artifacts 12345 --path html_reports/coverage
   tc run artifacts --job MyBuild`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var runID string
@@ -50,6 +52,7 @@ Shows artifact names and sizes. Use tc run download to download artifacts.`,
 	}
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "List artifacts from latest run of this job")
+	cmd.Flags().StringVarP(&opts.path, "path", "p", "", "Browse artifacts under this subdirectory")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 
 	return cmd
@@ -78,7 +81,7 @@ func runRunArtifacts(runID string, opts *runArtifactsOptions) error {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
 
-	artifacts, err := client.GetArtifacts(runID)
+	artifacts, err := client.GetArtifacts(runID, opts.path)
 	if err != nil {
 		return fmt.Errorf("failed to get artifacts: %w", err)
 	}
@@ -174,7 +177,7 @@ func runRunDownload(runID string, opts *runDownloadOptions) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	artifacts, err := client.GetArtifacts(runID)
+	artifacts, err := client.GetArtifacts(runID, "")
 	if err != nil {
 		return fmt.Errorf("failed to get artifacts: %w", err)
 	}
