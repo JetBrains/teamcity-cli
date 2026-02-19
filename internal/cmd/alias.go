@@ -52,8 +52,8 @@ Use --shell for aliases that need pipes, redirection, or other shell features.`,
   tc alias set hotfix 'run start $1 --top --clean --watch'
 
   # Shell aliases for pipes and external tools
-  tc alias set --shell watchnotify 'tc run watch $1 && notify-send "Build $1 done"'
-  tc alias set --shell faillog 'tc run list --status=failure --json | jq ".[].id"'`,
+  tc alias set watchnotify '!tc run watch $1 && notify-send "Build $1 done"'
+  tc alias set faillog '!tc run list --status=failure --json | jq ".[].id"'`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, expansion := args[0], args[1]
