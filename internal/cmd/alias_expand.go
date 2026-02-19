@@ -15,6 +15,8 @@ import (
 
 const maxAliasDepth = 10
 
+// aliasDepth tracks recursive alias expansion. Safe without synchronization
+// because cobra executes a single command tree per Execute() call.
 var aliasDepth int
 
 func RegisterAliases(rootCmd *cobra.Command) {
@@ -23,10 +25,10 @@ func RegisterAliases(rootCmd *cobra.Command) {
 			output.Debug("skipping alias %q: conflicts with built-in command", name)
 			continue
 		}
-		if config.IsShellAlias(name) {
-			rootCmd.AddCommand(newShellAliasCmd(name, expansion[1:]))
+		if exp, shell := config.ParseExpansion(expansion); shell {
+			rootCmd.AddCommand(newShellAliasCmd(name, exp))
 		} else {
-			rootCmd.AddCommand(newExpansionAliasCmd(name, expansion))
+			rootCmd.AddCommand(newExpansionAliasCmd(name, exp))
 		}
 	}
 }
@@ -53,11 +55,10 @@ func newExpansionAliasCmd(name, expansion string) *cobra.Command {
 				return nil
 			}
 
-			aliasDepth++
-			if aliasDepth > maxAliasDepth {
-				aliasDepth--
+			if aliasDepth >= maxAliasDepth {
 				return fmt.Errorf("alias expansion depth limit exceeded (possible infinite loop)")
 			}
+			aliasDepth++
 			defer func() { aliasDepth-- }()
 
 			expanded, err := expandArgs(expansion, args)

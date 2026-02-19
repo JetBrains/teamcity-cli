@@ -117,6 +117,7 @@ func GetRootCmd() *RootCommand {
 
 // NewRootCmd creates a fresh root command instance for testing.
 // This ensures tests don't share flag state from previous test runs.
+// Callers must call RegisterAliases explicitly if alias expansion is needed.
 func NewRootCmd() *RootCommand {
 	cmd := &cobra.Command{
 		Use:     "tc",
