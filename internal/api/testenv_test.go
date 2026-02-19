@@ -331,12 +331,12 @@ func setupServer(serverURL, superToken, projectID, configID string) (string, err
 			Type: "simpleRunner",
 			Properties: api.PropertyList{
 				Property: []api.Property{
-					{Name: "script.content", Value: "echo Hello\necho 'test artifact content' > result.txt"},
+					{Name: "script.content", Value: "echo Hello\necho 'test artifact content' > result.txt\nmkdir -p reports\necho 'report data' > reports/summary.txt"},
 					{Name: "use.custom.script", Value: "true"},
 				},
 			},
 		})
-		client.SetBuildTypeSetting(configID, "artifactRules", "result.txt")
+		client.SetBuildTypeSetting(configID, "artifactRules", "result.txt\nreports => reports")
 	}
 
 	if !client.UserExists("admin") {

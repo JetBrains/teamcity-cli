@@ -425,7 +425,7 @@ func TestGetArtifacts(T *testing.T) {
 	}
 
 	buildID := fmt.Sprintf("%d", testBuild.ID)
-	artifacts, err := client.GetArtifacts(buildID)
+	artifacts, err := client.GetArtifacts(buildID, "")
 	if err != nil {
 		T.Logf("GetArtifacts: %v (may be empty)", err)
 		return
@@ -441,6 +441,49 @@ func TestGetArtifacts(T *testing.T) {
 	}
 }
 
+func TestGetArtifactsSubdirectory(T *testing.T) {
+	T.Parallel()
+
+	if testBuild == nil {
+		T.Skip("no test build available")
+	}
+
+	buildID := fmt.Sprintf("%d", testBuild.ID)
+
+	// First get root artifacts and find a directory entry
+	rootArtifacts, err := client.GetArtifacts(buildID, "")
+	if err != nil {
+		T.Skip("could not list root artifacts:", err)
+	}
+
+	var dirName string
+	for _, a := range rootArtifacts.File {
+		if a.Children != nil {
+			dirName = a.Name
+			break
+		}
+	}
+	if dirName == "" {
+		T.Skip("no subdirectories in artifacts")
+	}
+
+	// Browse into the subdirectory
+	subArtifacts, err := client.GetArtifacts(buildID, dirName)
+	if err != nil {
+		T.Fatalf("GetArtifacts(%s, %q): %v", buildID, dirName, err)
+	}
+	T.Logf("Found %d artifacts in %s/", subArtifacts.Count, dirName)
+	assert.Greater(T, subArtifacts.Count, 0, "subdirectory should have artifacts")
+	for _, a := range subArtifacts.File {
+		assert.NotEmpty(T, a.Name, "artifact should have a name")
+		T.Logf("  %s/%s (%d bytes)", dirName, a.Name, a.Size)
+	}
+
+	// Nonexistent path should return an error
+	_, err = client.GetArtifacts(buildID, "nonexistent_path_12345")
+	assert.Error(T, err, "nonexistent path should return error")
+}
+
 func TestDownloadArtifact(T *testing.T) {
 	T.Parallel()
 
@@ -450,7 +493,7 @@ func TestDownloadArtifact(T *testing.T) {
 
 	buildID := fmt.Sprintf("%d", testBuild.ID)
 
-	artifacts, err := client.GetArtifacts(buildID)
+	artifacts, err := client.GetArtifacts(buildID, "")
 	if err != nil {
 		T.Skip("could not list artifacts:", err)
 	}
