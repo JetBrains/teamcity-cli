@@ -449,12 +449,14 @@ Shows artifact names and sizes. Use tc run download to download artifacts.
 ```bash
 tc run artifacts 12345
 tc run artifacts 12345 --json
+tc run artifacts 12345 --path html_reports/coverage
 tc run artifacts --job MyBuild
 ```
 
 **Options:**
 - `-j, --job` – List artifacts from latest run of this job
 - `--json` – Output as JSON
+- `-p, --path` – Browse artifacts under this subdirectory
 
 ### run cancel
 
@@ -1244,6 +1246,38 @@ tc api /app/rest/builds --paginate --slurp
 - `--raw` – Output raw response without formatting
 - `--silent` – Suppress output on success
 - `--slurp` – Combine paginated results into a JSON array (requires --paginate)
+
+---
+
+## Aliass
+
+### alias delete
+
+Delete an alias
+
+### alias list
+
+List configured aliases
+
+**Options:**
+- `--json` – Output as JSON
+
+### alias set
+
+Create a shortcut that expands into a full tc command.
+
+Use , , ... for positional arguments. Extra arguments are appended.
+Use --shell for aliases that need pipes, redirection, or other shell features.
+
+```bash
+tc alias set fl 'run list --status=failure --since=24h'
+tc alias set mybuilds 'run list --user= --status=success'
+tc alias set --shell failing 'tc run list --status=failure | jq .'
+tc alias set failing '!tc run list --status=failure | jq .'
+```
+
+**Options:**
+- `--shell` – Evaluate expansion as a shell expression via sh
 
 ---
 
