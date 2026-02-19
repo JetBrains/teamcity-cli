@@ -354,6 +354,20 @@ func setupMockClient(t *testing.T) *TestServer {
 			_, _ = w.Write([]byte("test content"))
 			return
 		}
+		if strings.Contains(r.URL.Path, "/artifacts/children/logs") {
+			JSON(w, api.Artifacts{
+				Count: 2,
+				File: []api.Artifact{
+					{Name: "build.log", Size: 45678},
+					{Name: "test.log", Size: 12345},
+				},
+			})
+			return
+		}
+		if strings.Contains(r.URL.Path, "/artifacts/children/nonexistent") {
+			Error(w, http.StatusNotFound, "Artifact not found: nonexistent")
+			return
+		}
 		if strings.Contains(r.URL.Path, "/artifacts") {
 			JSON(w, api.Artifacts{
 				Count: 3,

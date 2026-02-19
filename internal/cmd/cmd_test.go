@@ -259,6 +259,8 @@ func TestRunArtifacts(T *testing.T) {
 	runCmd(T, "run", "artifacts", testBuildID)
 	runCmd(T, "run", "artifacts", testBuildID, "--json")
 	runCmd(T, "run", "artifacts", "--job", testJob)
+	runCmd(T, "run", "artifacts", testBuildID, "--path", "logs", "--json")
+	runCmdExpectErr(T, "failed to get artifacts", "run", "artifacts", testBuildID, "--path", "nonexistent")
 }
 
 func TestRunPinUnpin(T *testing.T) {
