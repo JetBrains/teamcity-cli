@@ -11,7 +11,7 @@ import (
 func TestAliasAddAndGet(t *testing.T) {
 	saveCfgState(t)
 	configPath = t.TempDir() + "/config.yml"
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
+	ResetForTest()
 
 	require.NoError(t, AddAlias("fl", "run list --status=failure"))
 
@@ -23,7 +23,7 @@ func TestAliasAddAndGet(t *testing.T) {
 func TestAliasAddShellPrefix(t *testing.T) {
 	saveCfgState(t)
 	configPath = t.TempDir() + "/config.yml"
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
+	ResetForTest()
 
 	require.NoError(t, AddAlias("failing", "!tc run list | jq ."))
 
@@ -37,7 +37,7 @@ func TestAliasAddShellPrefix(t *testing.T) {
 func TestAliasOverwrite(t *testing.T) {
 	saveCfgState(t)
 	configPath = t.TempDir() + "/config.yml"
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
+	ResetForTest()
 
 	require.NoError(t, AddAlias("fl", "run list --status=failure"))
 	require.NoError(t, AddAlias("fl", "run list --status=success"))
@@ -49,7 +49,7 @@ func TestAliasOverwrite(t *testing.T) {
 func TestAliasDelete(t *testing.T) {
 	saveCfgState(t)
 	configPath = t.TempDir() + "/config.yml"
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
+	ResetForTest()
 
 	require.NoError(t, AddAlias("fl", "run list"))
 	require.NoError(t, DeleteAlias("fl"))
@@ -61,7 +61,7 @@ func TestAliasDelete(t *testing.T) {
 func TestAliasDeleteNonexistent(t *testing.T) {
 	saveCfgState(t)
 	configPath = t.TempDir() + "/config.yml"
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
+	ResetForTest()
 
 	err := DeleteAlias("nope")
 	assert.ErrorContains(t, err, "no such alias")
@@ -70,7 +70,7 @@ func TestAliasDeleteNonexistent(t *testing.T) {
 func TestGetAllAliases(t *testing.T) {
 	saveCfgState(t)
 	configPath = t.TempDir() + "/config.yml"
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
+	ResetForTest()
 
 	require.NoError(t, AddAlias("a", "run list"))
 	require.NoError(t, AddAlias("b", "job list"))
@@ -83,7 +83,7 @@ func TestGetAllAliases(t *testing.T) {
 
 func TestGetAllAliasesEmpty(t *testing.T) {
 	saveCfgState(t)
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
+	ResetForTest()
 
 	all := GetAllAliases()
 	assert.Empty(t, all)
@@ -92,7 +92,7 @@ func TestGetAllAliasesEmpty(t *testing.T) {
 func TestAliasPersistence(t *testing.T) {
 	saveCfgState(t)
 	configPath = t.TempDir() + "/config.yml"
-	cfg = &Config{Servers: make(map[string]ServerConfig)}
+	ResetForTest()
 
 	require.NoError(t, AddAlias("fl", "run list"))
 
