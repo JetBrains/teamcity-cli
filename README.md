@@ -90,6 +90,10 @@ A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail lo
     * [pool unlink](#pool-unlink)
     * [pool view](#pool-view)
   * [API](#api)
+  * [Aliases](#aliases)
+    * [alias delete](#alias-delete)
+    * [alias list](#alias-list)
+    * [alias set](#alias-set)
   * [Skills](#skills)
     * [skill install](#skill-install)
     * [skill remove](#skill-remove)
@@ -1249,7 +1253,7 @@ tc api /app/rest/builds --paginate --slurp
 
 ---
 
-## Aliass
+## Aliases
 
 ### alias delete
 
@@ -1266,14 +1270,26 @@ List configured aliases
 
 Create a shortcut that expands into a full tc command.
 
-Use , , ... for positional arguments. Extra arguments are appended.
+Use $1, $2, ... for positional arguments. Extra arguments are appended.
 Use --shell for aliases that need pipes, redirection, or other shell features.
 
 ```bash
-tc alias set fl 'run list --status=failure --since=24h'
-tc alias set mybuilds 'run list --user= --status=success'
-tc alias set --shell failing 'tc run list --status=failure | jq .'
-tc alias set failing '!tc run list --status=failure | jq .'
+# Quick shortcuts
+tc alias set rl  'run list'
+tc alias set rw  'run view $1 --web'
+
+# Filtered views
+tc alias set mine    'run list --user=@me'
+tc alias set fails   'run list --status=failure --since=24h'
+tc alias set running 'run list --status=running'
+
+# Trigger-and-watch workflows
+tc alias set go    'run start $1 --watch'
+tc alias set hotfix 'run start $1 --top --clean --watch'
+
+# Shell aliases for pipes and external tools
+tc alias set watchnotify '!tc run watch $1 && notify-send "Build $1 done"'
+tc alias set faillog '!tc run list --status=failure --json | jq ".[].id"'
 ```
 
 **Options:**
@@ -1332,6 +1348,46 @@ tc skill update --project
 - `--project` – Install to current project instead of globally
 
 <!-- COMMANDS_END -->
+
+## Awesome Aliases
+
+A collection of useful aliases to get started with:
+
+```bash
+# ── Quick shortcuts ─────────────────────────────────────────────
+tc alias set rl       'run list'                        # List recent runs
+tc alias set rv       'run view $1'                     # View a run
+tc alias set rw       'run view $1 --web'               # Open run in browser
+tc alias set jl       'job list'                        # List jobs
+tc alias set ql       'queue list'                      # List queued runs
+
+# ── Filtered views ──────────────────────────────────────────────
+tc alias set mine     'run list --user=@me'             # My runs
+tc alias set fails    'run list --status=failure --since=24h'  # Recent failures
+tc alias set running  'run list --status=running'       # What's running now
+tc alias set morning  'run list --status=failure --since=12h'  # Overnight failures
+
+# ── Trigger-and-watch ──────────────────────────────────────────
+tc alias set go       'run start $1 --watch'            # Start and watch
+tc alias set try      'run start $1 --local-changes --watch'  # Test local changes
+tc alias set hotfix   'run start $1 --top --clean --watch'    # Priority build
+tc alias set retry    'run restart $1 --watch'          # Re-run a build
+
+# ── Queue management ───────────────────────────────────────────
+tc alias set rush     'queue top $1'                    # Prioritize a build
+tc alias set ok       'queue approve $1'                # Approve a queued run
+
+# ── Agent operations ───────────────────────────────────────────
+tc alias set maint    'agent disable $1'                # Put agent in maintenance
+tc alias set unmaint  'agent enable $1'                 # Bring agent back
+
+# ── API shortcuts ──────────────────────────────────────────────
+tc alias set whoami   'api /app/rest/users/current'     # Who am I?
+
+# ── Shell aliases (pipes & external tools) ─────────────────────
+tc alias set watchnotify '!tc run watch $1 && notify-send "Build $1 done"'
+tc alias set faillog     '!tc run list --status=failure --json | jq ".[].id"'
+```
 
 ## Contributing
 

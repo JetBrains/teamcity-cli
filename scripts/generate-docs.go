@@ -23,9 +23,10 @@ var preferredOrder = []string{"auth", "run", "job", "project", "queue", "agent",
 
 // Custom display names for commands that need special treatment.
 var displayNames = map[string]string{
-	"api":  "API",
-	"auth": "Authentication",
-	"pool": "Agent Pools",
+	"alias": "Aliases",
+	"api":   "API",
+	"auth":  "Authentication",
+	"pool":  "Agent Pools",
 }
 
 func main() {
@@ -60,7 +61,7 @@ func main() {
 
 func replaceBetweenMarkers(content, generated string) string {
 	re := regexp.MustCompile(`(?s)<!-- COMMANDS_START -->.*<!-- COMMANDS_END -->`)
-	return re.ReplaceAllString(content, "<!-- COMMANDS_START -->\n\n"+generated+"<!-- COMMANDS_END -->")
+	return re.ReplaceAllLiteralString(content, "<!-- COMMANDS_START -->\n\n"+generated+"<!-- COMMANDS_END -->")
 }
 
 func generateDocs(buf *bytes.Buffer, rootCmd *cobra.Command) {
