@@ -31,6 +31,7 @@ type ServerConfig struct {
 type Config struct {
 	DefaultServer string                  `mapstructure:"default_server"`
 	Servers       map[string]ServerConfig `mapstructure:"servers"`
+	Aliases       map[string]string       `mapstructure:"aliases"`
 }
 
 var (
@@ -180,6 +181,7 @@ func SetServerWithKeyring(serverURL, token, user string, insecureStorage bool) (
 func writeConfig() error {
 	viper.Set("default_server", cfg.DefaultServer)
 	viper.Set("servers", cfg.Servers)
+	viper.Set("aliases", cfg.Aliases)
 
 	if err := viper.WriteConfigAs(configPath); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
@@ -313,4 +315,15 @@ func SetUserForServer(serverURL, user string) {
 	server := cfg.Servers[serverURL]
 	server.User = user
 	cfg.Servers[serverURL] = server
+}
+
+func SetConfigPathForTest(path string) {
+	configPath = path
+}
+
+func ResetForTest() {
+	cfg = &Config{
+		Servers: make(map[string]ServerConfig),
+		Aliases: make(map[string]string),
+	}
 }

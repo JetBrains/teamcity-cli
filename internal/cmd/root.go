@@ -73,6 +73,7 @@ func init() {
 	rootCmd.AddCommand(newPoolCmd())
 	rootCmd.AddCommand(newAPICmd())
 	rootCmd.AddCommand(newSkillCmd())
+	rootCmd.AddCommand(newAliasCmd())
 }
 
 func initColorSettings() {
@@ -88,6 +89,7 @@ func initColorSettings() {
 }
 
 func Execute() error {
+	RegisterAliases(rootCmd)
 	rootCmd.SilenceErrors = true
 	err := rootCmd.Execute()
 	if err != nil {
@@ -136,6 +138,7 @@ func NewRootCmd() *RootCommand {
 	cmd.AddCommand(newPoolCmd())
 	cmd.AddCommand(newAPICmd())
 	cmd.AddCommand(newSkillCmd())
+	cmd.AddCommand(newAliasCmd())
 
 	return cmd
 }
