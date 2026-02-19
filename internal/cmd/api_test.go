@@ -21,7 +21,7 @@ import (
 // createTestRootCmd creates a fresh root command with the api subcommand for testing.
 func createTestRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use: "tc",
+		Use: "teamcity",
 	}
 	rootCmd.PersistentFlags().Bool("no-color", false, "")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "")

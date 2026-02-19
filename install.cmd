@@ -2,7 +2,7 @@
 setlocal
 
 set "REPO=JetBrains/teamcity-cli"
-set "BIN_NAME=tc.exe"
+set "BIN_NAME=teamcity.exe"
 set "INSTALL_DIR=%USERPROFILE%\.local\bin"
 
 if not exist "%INSTALL_DIR%" (
@@ -21,13 +21,13 @@ powershell -NoProfile -Command ^
     "$tag = $release.tag_name;" ^
     "$version = $tag.TrimStart('v');" ^
     "$arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x86_64' };" ^
-    "$assetName = \"tc_$($version)_windows_$($arch).zip\";" ^
+    "$assetName = \"teamcity_$($version)_windows_$($arch).zip\";" ^
     "$asset = $release.assets | Where-Object { $_.name -eq $assetName };" ^
     "if (-not $asset) { Write-Error \"Could not find asset $assetName in release $tag\"; exit 1 };" ^
-    "$tempZip = Join-Path $env:TEMP 'tc.zip';" ^
+    "$tempZip = Join-Path $env:TEMP 'teamcity.zip';" ^
     "Write-Host \"Downloading $assetName...\";" ^
     "Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $tempZip;" ^
-    "$tempExtract = Join-Path $env:TEMP 'tc_extract';" ^
+    "$tempExtract = Join-Path $env:TEMP 'teamcity_extract';" ^
     "if (Test-Path $tempExtract) { Remove-Item -Recurse -Force $tempExtract };" ^
     "New-Item -ItemType Directory -Path $tempExtract | Out-Null;" ^
     "Write-Host \"Extracting...\";" ^
@@ -61,13 +61,13 @@ powershell -NoProfile -Command ^
 echo.
 echo Next steps:
 echo   Authenticate with TeamCity
-echo   tc auth login
+echo   teamcity auth login
 echo.
 echo   List recent builds
-echo   tc run list
+echo   teamcity run list
 echo.
 echo   Get help
-echo   tc --help
+echo   teamcity --help
 echo.
 
 endlocal

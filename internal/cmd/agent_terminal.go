@@ -22,8 +22,8 @@ func newAgentTerminalCmd() *cobra.Command {
 		Short: "Open interactive terminal to agent",
 		Long:  `Open an interactive shell session to a TeamCity build agent.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc agent term 1
-  tc agent term Agent-Linux-01`,
+		Example: `  teamcity agent term 1
+  teamcity agent term Agent-Linux-01`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conn, err := connectToAgent(cmd.Context(), args[0], true)
 			if err != nil {
@@ -42,9 +42,9 @@ func newAgentExecCmd() *cobra.Command {
 		Short: "Execute command on agent",
 		Long:  `Execute a command on a TeamCity build agent and return the output.`,
 		Args:  cobra.MinimumNArgs(2),
-		Example: `  tc agent exec 1 "ls -la"
-  tc agent exec Agent-Linux-01 "cat /etc/os-release"
-  tc agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh`,
+		Example: `  teamcity agent exec 1 "ls -la"
+  teamcity agent exec Agent-Linux-01 "cat /etc/os-release"
+  teamcity agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conn, err := connectToAgent(cmd.Context(), args[0], false)
 			if err != nil {
@@ -81,19 +81,19 @@ func connectToAgent(ctx context.Context, nameOrID string, showProgress bool) (*a
 	if !agent.Connected {
 		return nil, tcerrors.WithSuggestion(
 			fmt.Sprintf("Agent %s is not connected", agent.Name),
-			"Wait for the agent to connect or check agent status with 'tc agent view'",
+			"Wait for the agent to connect or check agent status with 'teamcity agent view'",
 		)
 	}
 	if !agent.Authorized {
 		return nil, tcerrors.WithSuggestion(
 			fmt.Sprintf("Agent %s is not authorized", agent.Name),
-			"Authorize the agent in TeamCity or use 'tc agent authorize'",
+			"Authorize the agent in TeamCity or use 'teamcity agent authorize'",
 		)
 	}
 	if !agent.Enabled {
 		return nil, tcerrors.WithSuggestion(
 			fmt.Sprintf("Agent %s is disabled", agent.Name),
-			"Enable the agent in TeamCity or use 'tc agent enable'",
+			"Enable the agent in TeamCity or use 'teamcity agent enable'",
 		)
 	}
 

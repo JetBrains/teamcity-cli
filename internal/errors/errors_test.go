@@ -52,7 +52,7 @@ func TestNotAuthenticated(T *testing.T) {
 	T.Parallel()
 	err := NotAuthenticated()
 	assert.Contains(T, err.Message, "Not authenticated")
-	assert.Contains(T, err.Suggestion, "tc auth login")
+	assert.Contains(T, err.Suggestion, "teamcity auth login")
 }
 
 func TestNotFound(T *testing.T) {
@@ -67,7 +67,7 @@ func TestAuthenticationFailed(T *testing.T) {
 	T.Parallel()
 	err := AuthenticationFailed()
 	assert.Contains(T, err.Message, "Authentication failed")
-	assert.Contains(T, err.Suggestion, "tc auth login")
+	assert.Contains(T, err.Suggestion, "teamcity auth login")
 }
 
 func TestPermissionDenied(T *testing.T) {

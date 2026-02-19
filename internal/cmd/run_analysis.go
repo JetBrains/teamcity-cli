@@ -24,9 +24,9 @@ func newRunChangesCmd() *cobra.Command {
 		Short: "Show VCS changes in a run",
 		Long:  `Show the VCS changes (commits) included in a run.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run changes 12345
-  tc run changes 12345 --no-files
-  tc run changes 12345 --json`,
+		Example: `  teamcity run changes 12345
+  teamcity run changes 12345 --no-files
+  teamcity run changes 12345 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunChanges(args[0], opts)
 		},
@@ -141,9 +141,9 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
-		Example: `  tc run tests 12345
-  tc run tests 12345 --failed
-  tc run tests --job Falcon_Build`,
+		Example: `  teamcity run tests 12345
+  teamcity run tests 12345 --failed
+  teamcity run tests --job Falcon_Build`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var runID string
 			if len(args) > 0 {

@@ -50,11 +50,11 @@ func newAgentListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List build agents",
-		Example: `  tc agent list
-  tc agent list --pool Default
-  tc agent list --connected
-  tc agent list --json
-  tc agent list --json=id,name,connected,enabled`,
+		Example: `  teamcity agent list
+  teamcity agent list --pool Default
+  teamcity agent list --connected
+  teamcity agent list --json
+  teamcity agent list --json=id,name,connected,enabled`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentList(cmd, opts)
 		},
@@ -150,10 +150,10 @@ func newAgentViewCmd() *cobra.Command {
 		Use:   "view <agent>",
 		Short: "View agent details",
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc agent view 1
-  tc agent view Agent-Linux-01
-  tc agent view Agent-Linux-01 --web
-  tc agent view 1 --json`,
+		Example: `  teamcity agent view 1
+  teamcity agent view Agent-Linux-01
+  teamcity agent view Agent-Linux-01 --web
+  teamcity agent view 1 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentView(args[0], opts)
 		},
@@ -219,7 +219,7 @@ func runAgentView(nameOrID string, opts *viewOptions) error {
 	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(agent.WebURL))
 
 	if agent.Connected && agent.Authorized && agent.Enabled {
-		fmt.Printf("%s tc agent term %d\n", output.Faint("Open terminal:"), agent.ID)
+		fmt.Printf("%s teamcity agent term %d\n", output.Faint("Open terminal:"), agent.ID)
 	}
 
 	return nil
@@ -250,8 +250,8 @@ func newAgentActionCmd(a agentAction) *cobra.Command {
 		Short: a.short,
 		Long:  a.long,
 		Args:  cobra.ExactArgs(1),
-		Example: fmt.Sprintf(`  tc agent %s 1
-  tc agent %s Agent-Linux-01`, a.use, a.use),
+		Example: fmt.Sprintf(`  teamcity agent %s 1
+  teamcity agent %s Agent-Linux-01`, a.use, a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := getClient()
 			if err != nil {
@@ -288,10 +288,10 @@ func newAgentJobsCmd() *cobra.Command {
 		Short: "Show jobs an agent can run",
 		Long:  `List build configurations (jobs) that are compatible or incompatible with an agent.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc agent jobs 1
-  tc agent jobs Agent-Linux-01
-  tc agent jobs Agent-Linux-01 --incompatible
-  tc agent jobs 1 --json`,
+		Example: `  teamcity agent jobs 1
+  teamcity agent jobs Agent-Linux-01
+  teamcity agent jobs Agent-Linux-01 --incompatible
+  teamcity agent jobs 1 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentJobs(args[0], opts)
 		},
@@ -397,8 +397,8 @@ func newAgentMoveCmd() *cobra.Command {
 		Short: "Move an agent to a different pool",
 		Long:  `Move an agent to a different agent pool.`,
 		Args:  cobra.ExactArgs(2),
-		Example: `  tc agent move 1 0
-  tc agent move Agent-Linux-01 2`,
+		Example: `  teamcity agent move 1 0
+  teamcity agent move Agent-Linux-01 2`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			poolID, err := parseID(args[1], "pool")
 			if err != nil {
@@ -448,10 +448,10 @@ Use --after-build to wait for the current build to finish before rebooting.
 
 Note: Local agents (running on the same machine as the server) cannot be rebooted.`,
 		Args: cobra.ExactArgs(1),
-		Example: `  tc agent reboot 1
-  tc agent reboot Agent-Linux-01
-  tc agent reboot Agent-Linux-01 --after-build
-  tc agent reboot Agent-Linux-01 --yes`,
+		Example: `  teamcity agent reboot 1
+  teamcity agent reboot Agent-Linux-01
+  teamcity agent reboot Agent-Linux-01 --after-build
+  teamcity agent reboot Agent-Linux-01 --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentReboot(cmd.Context(), args[0], opts)
 		},

@@ -2,7 +2,7 @@
 
 ## Set up your machine
 
-`tc` is written in [Go](https://golang.org/).
+`teamcity` is written in [Go](https://golang.org/).
 
 Prerequisites:
 
@@ -36,7 +36,7 @@ cp .env.example .env
 ## Development workflow
 
 ```sh
-just build        # build binary to bin/tc
+just build        # build binary to bin/teamcity
 just unit         # run unit tests only
 just test         # run all tests (unit + integration) with coverage
 just lint         # go fmt + golangci-lint
@@ -52,7 +52,7 @@ All new features and bug fixes must include tests. We have a solid integration t
 
 ## AI-assisted contributions
 
-We're fine with AI tools — Junie, Claude Code, Copilot, whatever helps you move faster. But you must understand the code you're submitting. `tc` is a tool where we prioritize security and reliability. PRs with AI-generated code that the author can't explain or defend during review will not be merged.
+We're fine with AI tools — Junie, Claude Code, Copilot, whatever helps you move faster. But you must understand the code you're submitting. `teamcity` is a tool where we prioritize security and reliability. PRs with AI-generated code that the author can't explain or defend during review will not be merged.
 
 ## Submit a pull request
 

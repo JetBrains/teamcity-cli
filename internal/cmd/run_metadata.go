@@ -15,8 +15,8 @@ func newRunPinCmd() *cobra.Command {
 		Short: "Pin a run to prevent cleanup",
 		Long:  `Pin a run to prevent it from being automatically cleaned up by retention policies.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run pin 12345
-  tc run pin 12345 --comment "Release candidate"`,
+		Example: `  teamcity run pin 12345
+  teamcity run pin 12345 --comment "Release candidate"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := getClient()
 			if err != nil {
@@ -42,7 +42,7 @@ func newRunUnpinCmd() *cobra.Command {
 		Short:   "Unpin a run",
 		Long:    `Remove the pin from a run, allowing it to be cleaned up by retention policies.`,
 		Args:    cobra.ExactArgs(1),
-		Example: `  tc run unpin 12345`,
+		Example: `  teamcity run unpin 12345`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := getClient()
 			if err != nil {
@@ -63,8 +63,8 @@ func newRunTagCmd() *cobra.Command {
 		Short: "Add tags to a run",
 		Long:  `Add one or more tags to a run for categorization and filtering.`,
 		Args:  cobra.MinimumNArgs(2),
-		Example: `  tc run tag 12345 release
-  tc run tag 12345 release v1.0 production`,
+		Example: `  teamcity run tag 12345 release
+  teamcity run tag 12345 release v1.0 production`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunTag(args[0], args[1:])
 		},
@@ -105,8 +105,8 @@ func newRunUntagCmd() *cobra.Command {
 		Short: "Remove tags from a run",
 		Long:  `Remove one or more tags from a run.`,
 		Args:  cobra.MinimumNArgs(2),
-		Example: `  tc run untag 12345 release
-  tc run untag 12345 release v1.0`,
+		Example: `  teamcity run untag 12345 release
+  teamcity run untag 12345 release v1.0`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunUntag(args[0], args[1:])
 		},
@@ -163,9 +163,9 @@ Without a comment argument, displays the current comment.
 With a comment argument, sets the comment.
 Use --delete to remove the comment.`,
 		Args: cobra.RangeArgs(1, 2),
-		Example: `  tc run comment 12345
-  tc run comment 12345 "Deployed to production"
-  tc run comment 12345 --delete`,
+		Example: `  teamcity run comment 12345
+  teamcity run comment 12345 "Deployed to production"
+  teamcity run comment 12345 --delete`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			comment := ""
 			if len(args) > 1 {

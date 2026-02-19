@@ -4,7 +4,7 @@ set quiet
 
 # Build the CLI binary
 build:
-    go build -o bin/tc ./tc
+    go build -o bin/teamcity ./tc
 
 # Format and lint the codebase
 lint:

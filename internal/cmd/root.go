@@ -21,13 +21,13 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "tc",
+	Use:   "teamcity",
 	Short: "TeamCity CLI",
 	Long: "TeamCity CLI v" + Version + `
 
 A command-line interface for interacting with TeamCity CI/CD server.
 
-tc provides a complete experience for managing
+teamcity provides a complete experience for managing
 TeamCity runs, jobs, projects and more from the command line.
 
 Documentation:  https://jb.gg/tc/docs
@@ -38,7 +38,7 @@ Report issues:  https://jb.gg/tc/issues`,
 		fmt.Println()
 		fmt.Println("TeamCity CLI " + output.Faint("v"+Version) + " - " + output.Faint("https://jb.gg/tc/docs"))
 		fmt.Println()
-		fmt.Println("Usage: tc <command> [flags]")
+		fmt.Println("Usage: teamcity <command> [flags]")
 		fmt.Println()
 		fmt.Println("Common commands:")
 		fmt.Println("  auth login              Authenticate with TeamCity")
@@ -47,12 +47,12 @@ Report issues:  https://jb.gg/tc/issues`,
 		fmt.Println("  run view <id>           View run details")
 		fmt.Println("  job list                List jobs")
 		fmt.Println()
-		fmt.Println(output.Faint("Run 'tc --help' for full command list, or 'tc <command> --help' for details"))
+		fmt.Println(output.Faint("Run 'teamcity --help' for full command list, or 'teamcity <command> --help' for details"))
 	},
 }
 
 func init() {
-	rootCmd.SetVersionTemplate("tc version {{.Version}}\n")
+	rootCmd.SetVersionTemplate("teamcity version {{.Version}}\n")
 	rootCmd.SuggestionsMinimumDistance = 2
 
 	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", false, "Disable colored output")
@@ -120,7 +120,7 @@ func GetRootCmd() *RootCommand {
 // Callers must call RegisterAliases explicitly if alias expansion is needed.
 func NewRootCmd() *RootCommand {
 	cmd := &cobra.Command{
-		Use:     "tc",
+		Use:     "teamcity",
 		Short:   "TeamCity CLI",
 		Version: Version,
 	}

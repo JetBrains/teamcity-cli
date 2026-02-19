@@ -37,9 +37,9 @@ func newPoolListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List agent pools",
-		Example: `  tc pool list
-  tc pool list --json
-  tc pool list --json=id,name,maxAgents`,
+		Example: `  teamcity pool list
+  teamcity pool list --json
+  teamcity pool list --json=id,name,maxAgents`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPoolList(cmd, opts)
 		},
@@ -105,9 +105,9 @@ func newPoolViewCmd() *cobra.Command {
 		Use:   "view <pool-id>",
 		Short: "View pool details",
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc pool view 0
-  tc pool view 1 --web
-  tc pool view 1 --json`,
+		Example: `  teamcity pool view 0
+  teamcity pool view 1 --web
+  teamcity pool view 1 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0], "pool")
 			if err != nil {
@@ -211,7 +211,7 @@ func newPoolProjectCmd(a poolProjectAction) *cobra.Command {
 		Short:   a.short,
 		Long:    a.long,
 		Args:    cobra.ExactArgs(2),
-		Example: fmt.Sprintf("  tc pool %s 1 MyProject", a.use),
+		Example: fmt.Sprintf("  teamcity pool %s 1 MyProject", a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			poolID, err := parseID(args[0], "pool")
 			if err != nil {

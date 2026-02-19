@@ -1,8 +1,8 @@
 version: 2
-project_name: tc
+project_name: teamcity
 
 builds:
-  - binary: tc
+  - binary: teamcity
     main: ./tc
     env:
       - CGO_ENABLED=0
@@ -22,7 +22,7 @@ builds:
             sh -c '
             if [ "{{ .IsSnapshot }}" = "false" ] && [ "{{ .Os }}" = "$(go env GOOS)" ] && [ "{{ .Arch }}" = "$(go env GOARCH)" ]; then
               ver=$(chmod +x "{{ .Path }}"; "{{ .Path }}" --version)
-              expected="tc version {{ .Version }}"
+              expected="teamcity version {{ .Version }}"
               if [ "$ver" != "$expected" ]; then
                 echo "Version mismatch: expected \"$expected\" but got \"$ver\""
                 exit 1
@@ -34,8 +34,8 @@ builds:
             sh -c '
             set -e
             if [ "{{ .IsSnapshot }}" = "false" ] && [ "{{ .Os }}" != "linux" ] && [ "$SIGN" = "true" ]; then
-              DIST_DIR="./dist/tc_{{ .Os }}_{{ .Arch }}{{ if eq .Arch "amd64" }}_v1{{ end }}{{ if eq .Arch "arm64" }}_v8.0{{ end }}"
-              BINARY_NAME="tc{{ if eq .Os "windows" }}.exe{{ end }}"
+              DIST_DIR="./dist/teamcity_{{ .Os }}_{{ .Arch }}{{ if eq .Arch "amd64" }}_v1{{ end }}{{ if eq .Arch "arm64" }}_v8.0{{ end }}"
+              BINARY_NAME="teamcity{{ if eq .Os "windows" }}.exe{{ end }}"
               echo "Signing $DIST_DIR/$BINARY_NAME"
               codesign-client {{ if eq .Os "darwin" }}-denoted-content-type=application/x-mac-app-bin {{ end }}-signed-files-dir="$DIST_DIR/" "$DIST_DIR/$BINARY_NAME"
             fi'
@@ -51,7 +51,7 @@ archives:
       - README.md
 
 nfpms:
-  - package_name: tc
+  - package_name: teamcity
     file_name_template: '{{ .PackageName }}_{{ .Os }}_{{ .Arch }}'
     vendor: JetBrains s.r.o.
     homepage: https://github.com/JetBrains/teamcity-cli
@@ -66,12 +66,12 @@ nfpms:
     bindir: /usr/bin
     contents:
       - src: LICENSE
-        dst: /usr/share/licenses/tc/LICENSE
+        dst: /usr/share/licenses/teamcity/LICENSE
       - src: README.md
-        dst: /usr/share/doc/tc/README.md
+        dst: /usr/share/doc/teamcity/README.md
 
 brews:
-  - name: tc
+  - name: teamcity
     repository:
       owner: JetBrains
       name: homebrew-utils
@@ -84,7 +84,7 @@ brews:
     description: A command-line interface for TeamCity CI/CD server
     license: Apache-2.0
     install: |
-      bin.install "tc"
+      bin.install "teamcity"
 
 scoops:
   - repository:
@@ -99,7 +99,7 @@ scoops:
     license: Apache-2.0
 
 chocolateys:
-  - name: tc
+  - name: teamcity
     title: TeamCity CLI
     authors: JetBrains
     owners: JetBrains
@@ -126,13 +126,13 @@ chocolateys:
     source_repo: https://push.chocolatey.org/
 
 winget:
-  - name: tc
+  - name: teamcity
     publisher: JetBrains
     publisher_url: https://www.jetbrains.com/
     publisher_support_url: https://jb.gg/tc/issues
     short_description: A command-line interface for TeamCity CI/CD server
     description: |
-      tc is a command-line interface for interacting with TeamCity CI/CD server.
+      teamcity is a command-line interface for interacting with TeamCity CI/CD server.
       Manage builds, jobs, and projects without leaving your terminal.
     license: Apache-2.0
     license_url: https://github.com/JetBrains/teamcity-cli/blob/main/LICENSE
@@ -149,7 +149,7 @@ winget:
     repository:
       owner: tiulpin
       name: winget-pkgs
-      branch: "JetBrains.tc-{{.Version}}"
+      branch: "JetBrains.teamcity-{{.Version}}"
       token: "{{ .Env.GITHUB_TOKEN }}"
       pull_request:
         enabled: true
@@ -160,7 +160,7 @@ winget:
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    commit_msg_template: "New version: JetBrains.tc version {{.Version}}"
+    commit_msg_template: "New version: JetBrains.teamcity version {{.Version}}"
 
 checksum:
   name_template: checksums.txt
@@ -199,7 +199,7 @@ release:
 
     **Homebrew (recommended):**
     ```bash
-    brew install jetbrains/utils/tc
+    brew install jetbrains/utils/teamcity
     ```
 
     **Install script:**
@@ -209,40 +209,40 @@ release:
 
     **Debian/Ubuntu:**
     ```bash
-    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/tc_{{ .Version }}_linux_amd64.deb
-    sudo dpkg -i tc_{{ .Version }}_linux_amd64.deb
+    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_{{ .Version }}_linux_amd64.deb
+    sudo dpkg -i teamcity_{{ .Version }}_linux_amd64.deb
     ```
 
     **RHEL/Fedora:**
     ```bash
-    sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/tc_{{ .Version }}_linux_amd64.rpm
+    sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_{{ .Version }}_linux_amd64.rpm
     ```
 
     **Arch Linux:**
     ```bash
-    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/tc_{{ .Version }}_linux_amd64.pkg.tar.zst
-    sudo pacman -U tc_{{ .Version }}_linux_amd64.pkg.tar.zst
+    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_{{ .Version }}_linux_amd64.pkg.tar.zst
+    sudo pacman -U teamcity_{{ .Version }}_linux_amd64.pkg.tar.zst
     ```
 
     ### Windows
     **Winget (recommended):**
     ```powershell
-    winget install JetBrains.tc
+    winget install JetBrains.teamcity
     ```
 
     **Chocolatey:**
     ```powershell
-    choco install tc
+    choco install teamcity
     ```
 
     **Scoop:**
     ```powershell
     scoop bucket add jetbrains https://github.com/JetBrains/scoop-utils
-    scoop install tc
+    scoop install teamcity
     ```
 
     **Manual:**
-    Download `tc_{{ .Version }}_windows_x86_64.zip`, extract, and add to PATH.
+    Download `teamcity_{{ .Version }}_windows_x86_64.zip`, extract, and add to PATH.
 
     ### Go Install
 
@@ -254,13 +254,13 @@ release:
 
     ```bash
     # Authenticate with your TeamCity server
-    tc auth login
+    teamcity auth login
 
     # List recent builds
-    tc run list
+    teamcity run list
 
     # Start a build
-    tc run start MyProject_Build --branch main --watch
+    teamcity run start MyProject_Build --branch main --watch
     ```
 
     See the [README](https://jb.gg/tc/docs) for full documentation.

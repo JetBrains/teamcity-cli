@@ -70,8 +70,8 @@ func newParamListCmd(resource string, api paramAPI) *cobra.Command {
 		Short: fmt.Sprintf("List %s parameters", resource),
 		Long:  fmt.Sprintf("List all parameters for a %s.", resource),
 		Args:  cobra.ExactArgs(1),
-		Example: fmt.Sprintf(`  tc %s param list MyID
-  tc %s param list MyID --json`, resource, resource),
+		Example: fmt.Sprintf(`  teamcity %s param list MyID
+  teamcity %s param list MyID --json`, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runParamList(args[0], opts, api)
 		},
@@ -128,8 +128,8 @@ func newParamGetCmd(resource string, api paramAPI) *cobra.Command {
 		Short: fmt.Sprintf("Get a %s parameter value", resource),
 		Long:  fmt.Sprintf("Get the value of a specific %s parameter.", resource),
 		Args:  cobra.ExactArgs(2),
-		Example: fmt.Sprintf(`  tc %s param get MyID MY_PARAM
-  tc %s param get MyID VERSION`, resource, resource),
+		Example: fmt.Sprintf(`  teamcity %s param get MyID MY_PARAM
+  teamcity %s param get MyID VERSION`, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runParamGet(args[0], args[1], api)
 		},
@@ -170,8 +170,8 @@ func newParamSetCmd(resource string, api paramAPI) *cobra.Command {
 		Short: fmt.Sprintf("Set a %s parameter value", resource),
 		Long:  fmt.Sprintf("Set or update a %s parameter value.", resource),
 		Args:  cobra.ExactArgs(3),
-		Example: fmt.Sprintf(`  tc %s param set MyID MY_PARAM "my value"
-  tc %s param set MyID SECRET_KEY "****" --secure`, resource, resource),
+		Example: fmt.Sprintf(`  teamcity %s param set MyID MY_PARAM "my value"
+  teamcity %s param set MyID SECRET_KEY "****" --secure`, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runParamSet(args[0], args[1], args[2], opts, api)
 		},
@@ -202,7 +202,7 @@ func newParamDeleteCmd(resource string, api paramAPI) *cobra.Command {
 		Short:   fmt.Sprintf("Delete a %s parameter", resource),
 		Long:    fmt.Sprintf("Delete a parameter from a %s.", resource),
 		Args:    cobra.ExactArgs(2),
-		Example: fmt.Sprintf(`  tc %s param delete MyID MY_PARAM`, resource),
+		Example: fmt.Sprintf(`  teamcity %s param delete MyID MY_PARAM`, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runParamDelete(args[0], args[1], api)
 		},

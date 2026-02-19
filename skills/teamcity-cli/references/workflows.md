@@ -2,452 +2,452 @@
 
 ## Inspecting a Build from a TeamCity URL
 
-When a user provides a TeamCity URL, parse it and map to `tc` commands.
+When a user provides a TeamCity URL, parse it and map to `teamcity` commands.
 
 **Format 1: Specific build** — `https://host/buildConfiguration/ConfigId/12345`
 ```bash
 # Extract build ID (last numeric path segment): 12345
-tc run view 12345
+teamcity run view 12345
 # If failed:
-tc run log 12345 --failed
-tc run tests 12345 --failed
+teamcity run log 12345 --failed
+teamcity run tests 12345 --failed
 ```
 
 **Format 2: Build configuration** — `https://host/buildConfiguration/ConfigId`
 ```bash
 # Extract config ID (last non-numeric path segment): ConfigId
-tc run list --job ConfigId
+teamcity run list --job ConfigId
 ```
 
 **Format 3: Project** — `https://host/project/ProjectId`
 ```bash
 # Extract project ID: ProjectId
-tc job list --project ProjectId
+teamcity job list --project ProjectId
 ```
 
 Strip query params (`?mode=builds`) and fragments (`#all-projects`) before parsing.
 
 ## Investigating a Build Failure
 
-When a build has **FAILURE** status, proactively suggest: `tc run log <id> --failed` (failure summary), `tc run tests <id> --failed` (failed tests), `tc run changes <id>` (triggering changes).
+When a build has **FAILURE** status, proactively suggest: `teamcity run log <id> --failed` (failure summary), `teamcity run tests <id> --failed` (failed tests), `teamcity run changes <id>` (triggering changes).
 
-For **composite/matrix builds** (snapshot dependencies, no agent), find failed children with `tc run list --status failure` and appropriate filters.
+For **composite/matrix builds** (snapshot dependencies, no agent), find failed children with `teamcity run list --status failure` and appropriate filters.
 
 1. **Find the failed build:**
    ```bash
-   tc run list --status failure -n 10
+   teamcity run list --status failure -n 10
    ```
 
 2. **View build details:**
    ```bash
-   tc run view <run-id>
+   teamcity run view <run-id>
    ```
 
 3. **Check the build log:**
    ```bash
-   tc run log <run-id>
+   teamcity run log <run-id>
    ```
 
    For failed steps only:
    ```bash
-   tc run log <run-id> --failed
+   teamcity run log <run-id> --failed
    ```
 
 4. **View test results:**
    ```bash
-   tc run tests <run-id>
+   teamcity run tests <run-id>
    ```
 
    For failed tests only:
    ```bash
-   tc run tests <run-id> --failed
+   teamcity run tests <run-id> --failed
    ```
 
 5. **See what changes triggered the build:**
    ```bash
-   tc run changes <run-id>
+   teamcity run changes <run-id>
    ```
 
 ## Starting and Monitoring Builds
 
 **Start a build:**
 ```bash
-tc run start <job-id>
+teamcity run start <job-id>
 ```
 
 **Start with specific branch:**
 ```bash
-tc run start <job-id> --branch feature/my-branch
+teamcity run start <job-id> --branch feature/my-branch
 ```
 
 **Start with parameters:**
 ```bash
-tc run start <job-id> -P "param1=value1" -P "param2=value2"
+teamcity run start <job-id> -P "param1=value1" -P "param2=value2"
 ```
 
 **Start with env vars and system properties:**
 ```bash
-tc run start <job-id> -P version=1.0 -S build.number=123 -E CI=true
+teamcity run start <job-id> -P version=1.0 -S build.number=123 -E CI=true
 ```
 
 **Start and watch:**
 ```bash
-tc run start <job-id> --watch
+teamcity run start <job-id> --watch
 ```
 
 **Start with comment and tags:**
 ```bash
-tc run start <job-id> --comment "Release build" --tag release --tag v1.0
+teamcity run start <job-id> --comment "Release build" --tag release --tag v1.0
 ```
 
 **Start with clean checkout and rebuild deps:**
 ```bash
-tc run start <job-id> --clean --rebuild-deps --top
+teamcity run start <job-id> --clean --rebuild-deps --top
 ```
 
 **Dry run (see what would be triggered):**
 ```bash
-tc run start <job-id> --dry-run
+teamcity run start <job-id> --dry-run
 ```
 
 **Watch an existing build:**
 ```bash
-tc run watch <run-id>
+teamcity run watch <run-id>
 ```
 
 **Stream logs while watching:**
 ```bash
-tc run watch <run-id> --logs
+teamcity run watch <run-id> --logs
 ```
 
 **Watch with timeout:**
 ```bash
-tc run watch <run-id> --timeout 30m --quiet
+teamcity run watch <run-id> --timeout 30m --quiet
 ```
 
 ## Personal Builds (Local Changes)
 
 **Run build with uncommitted git changes:**
 ```bash
-tc run start <job-id> --local-changes
+teamcity run start <job-id> --local-changes
 ```
 
 **Run build from a patch file:**
 ```bash
-tc run start <job-id> --local-changes changes.patch
+teamcity run start <job-id> --local-changes changes.patch
 ```
 
 **Personal build with specific branch:**
 ```bash
-tc run start <job-id> --personal --branch my-feature --watch
+teamcity run start <job-id> --personal --branch my-feature --watch
 ```
 
 **Skip auto-push:**
 ```bash
-tc run start <job-id> --local-changes --no-push
+teamcity run start <job-id> --local-changes --no-push
 ```
 
 ## Finding Jobs and Projects
 
 **List all projects:**
 ```bash
-tc project list
+teamcity project list
 ```
 
 **List sub-projects:**
 ```bash
-tc project list --parent <project-id>
+teamcity project list --parent <project-id>
 ```
 
 **List jobs in a project:**
 ```bash
-tc job list --project <project-id>
+teamcity job list --project <project-id>
 ```
 
 **View job details:**
 ```bash
-tc job view <job-id>
+teamcity job view <job-id>
 ```
 
 **Search for a job by name:**
 ```bash
-tc job list --json | jq '.[] | select(.name | contains("deploy"))'
+teamcity job list --json | jq '.[] | select(.name | contains("deploy"))'
 ```
 
 ## Working with Build Artifacts
 
 **List artifacts from a build:**
 ```bash
-tc run artifacts <run-id>
+teamcity run artifacts <run-id>
 ```
 
 **List artifacts from latest build of a job:**
 ```bash
-tc run artifacts --job <job-id>
+teamcity run artifacts --job <job-id>
 ```
 
 **Download all artifacts:**
 ```bash
-tc run download <run-id>
+teamcity run download <run-id>
 ```
 
 **Download to specific directory:**
 ```bash
-tc run download <run-id> --dir ./artifacts
+teamcity run download <run-id> --dir ./artifacts
 ```
 
 **Download specific artifact:**
 ```bash
-tc run download <run-id> --artifact "*.jar"
+teamcity run download <run-id> --artifact "*.jar"
 ```
 
 **Browse artifact subdirectory:**
 ```bash
-tc api /app/rest/builds/id:<run-id>/artifacts/children/html_reports
+teamcity api /app/rest/builds/id:<run-id>/artifacts/children/html_reports
 ```
 
 ## Build Metadata
 
 **Pin a build (prevent cleanup):**
 ```bash
-tc run pin <run-id> --comment "Release candidate"
+teamcity run pin <run-id> --comment "Release candidate"
 ```
 
 **Unpin a build:**
 ```bash
-tc run unpin <run-id>
+teamcity run unpin <run-id>
 ```
 
 **Tag a build:**
 ```bash
-tc run tag <run-id> deployed production
+teamcity run tag <run-id> deployed production
 ```
 
 **Remove tags:**
 ```bash
-tc run untag <run-id> deployed
+teamcity run untag <run-id> deployed
 ```
 
 **Add a comment:**
 ```bash
-tc run comment <run-id> "Verified by QA"
+teamcity run comment <run-id> "Verified by QA"
 ```
 
 **View existing comment:**
 ```bash
-tc run comment <run-id>
+teamcity run comment <run-id>
 ```
 
 **Delete a comment:**
 ```bash
-tc run comment <run-id> --delete
+teamcity run comment <run-id> --delete
 ```
 
 ## Managing the Build Queue
 
 **View queued builds:**
 ```bash
-tc queue list
+teamcity queue list
 ```
 
 **Filter queue by job:**
 ```bash
-tc queue list --job <job-id>
+teamcity queue list --job <job-id>
 ```
 
 **Move a build to top of queue:**
 ```bash
-tc queue top <run-id>
+teamcity queue top <run-id>
 ```
 
 **Remove from queue:**
 ```bash
-tc queue remove <run-id>
+teamcity queue remove <run-id>
 ```
 
 **Approve a build waiting for approval:**
 ```bash
-tc queue approve <run-id>
+teamcity queue approve <run-id>
 ```
 
 ## Managing Job and Project Parameters
 
 **List job parameters:**
 ```bash
-tc job param list <job-id>
+teamcity job param list <job-id>
 ```
 
 **Set a parameter:**
 ```bash
-tc job param set <job-id> MY_PARAM "my value"
+teamcity job param set <job-id> MY_PARAM "my value"
 ```
 
 **Set a secure parameter:**
 ```bash
-tc job param set <job-id> SECRET_KEY "****" --secure
+teamcity job param set <job-id> SECRET_KEY "****" --secure
 ```
 
 **Get a parameter:**
 ```bash
-tc job param get <job-id> MY_PARAM
+teamcity job param get <job-id> MY_PARAM
 ```
 
 **Delete a parameter:**
 ```bash
-tc job param delete <job-id> MY_PARAM
+teamcity job param delete <job-id> MY_PARAM
 ```
 
-Project parameters work the same way with `tc project param`.
+Project parameters work the same way with `teamcity project param`.
 
 ## Project Settings (Versioned/DSL)
 
 **Validate Kotlin DSL configuration:**
 ```bash
-tc project settings validate
+teamcity project settings validate
 ```
 
 **Validate with verbose Maven output:**
 ```bash
-tc project settings validate --verbose
+teamcity project settings validate --verbose
 ```
 
 **Check versioned settings sync status:**
 ```bash
-tc project settings status <project-id>
+teamcity project settings status <project-id>
 ```
 
 **Export project settings as Kotlin DSL:**
 ```bash
-tc project settings export <project-id>
+teamcity project settings export <project-id>
 ```
 
 **Export as XML:**
 ```bash
-tc project settings export <project-id> --xml -o settings.zip
+teamcity project settings export <project-id> --xml -o settings.zip
 ```
 
 ## Secure Tokens
 
 **Store a secret and get a token reference:**
 ```bash
-tc project token put <project-id> "my-secret-password"
+teamcity project token put <project-id> "my-secret-password"
 ```
 
 **Store from stdin (for piping):**
 ```bash
-echo -n "my-secret" | tc project token put <project-id> --stdin
+echo -n "my-secret" | teamcity project token put <project-id> --stdin
 ```
 
 **Retrieve a token value (requires System Admin):**
 ```bash
-tc project token get <project-id> "credentialsJSON:abc123..."
+teamcity project token get <project-id> "credentialsJSON:abc123..."
 ```
 
 ## Managing Agents
 
 **List all agents:**
 ```bash
-tc agent list
+teamcity agent list
 ```
 
 **List connected agents only:**
 ```bash
-tc agent list --connected
+teamcity agent list --connected
 ```
 
 **Filter agents by pool:**
 ```bash
-tc agent list --pool Default
+teamcity agent list --pool Default
 ```
 
 **View agent details:**
 ```bash
-tc agent view <agent-id>
+teamcity agent view <agent-id>
 ```
 
 **See what jobs an agent can run:**
 ```bash
-tc agent jobs <agent-id>
+teamcity agent jobs <agent-id>
 ```
 
 **See why jobs are incompatible with an agent:**
 ```bash
-tc agent jobs <agent-id> --incompatible
+teamcity agent jobs <agent-id> --incompatible
 ```
 
 **Enable/disable an agent:**
 ```bash
-tc agent enable <agent-id>
-tc agent disable <agent-id>
+teamcity agent enable <agent-id>
+teamcity agent disable <agent-id>
 ```
 
 **Authorize/deauthorize an agent:**
 ```bash
-tc agent authorize <agent-id>
-tc agent deauthorize <agent-id>
+teamcity agent authorize <agent-id>
+teamcity agent deauthorize <agent-id>
 ```
 
 **Move agent to a different pool:**
 ```bash
-tc agent move <agent-id> <pool-id>
+teamcity agent move <agent-id> <pool-id>
 ```
 
 **Reboot an agent:**
 ```bash
-tc agent reboot <agent-id>
+teamcity agent reboot <agent-id>
 ```
 
 **Reboot after current build finishes:**
 ```bash
-tc agent reboot <agent-id> --after-build
+teamcity agent reboot <agent-id> --after-build
 ```
 
 ## Remote Agent Access
 
 **Open interactive shell on an agent:**
 ```bash
-tc agent term <agent-id>
+teamcity agent term <agent-id>
 ```
 
 **Execute a command on an agent:**
 ```bash
-tc agent exec <agent-id> "ls -la"
+teamcity agent exec <agent-id> "ls -la"
 ```
 
 **Execute with timeout:**
 ```bash
-tc agent exec <agent-id> --timeout 10m -- long-running-script.sh
+teamcity agent exec <agent-id> --timeout 10m -- long-running-script.sh
 ```
 
 ## Managing Agent Pools
 
 **List all pools:**
 ```bash
-tc pool list
+teamcity pool list
 ```
 
 **View pool details:**
 ```bash
-tc pool view <pool-id>
+teamcity pool view <pool-id>
 ```
 
 **Link a project to a pool:**
 ```bash
-tc pool link <pool-id> <project-id>
+teamcity pool link <pool-id> <project-id>
 ```
 
 **Unlink a project from a pool:**
 ```bash
-tc pool unlink <pool-id> <project-id>
+teamcity pool unlink <pool-id> <project-id>
 ```
 
 ## Tips
 
 1. **Use `--json` for programmatic access** - Parse with `jq` for complex queries
 
-2. **Use `tc run log` interactively** - It has built-in search (`/`), navigation (`n`, `N`, `g`, `G`), and filtering (`&pattern`)
+2. **Use `teamcity run log` interactively** - It has built-in search (`/`), navigation (`n`, `N`, `g`, `G`), and filtering (`&pattern`)
 
-3. **Use `tc api` as escape hatch** - When a specific command doesn't exist, use raw API access
+3. **Use `teamcity api` as escape hatch** - When a specific command doesn't exist, use raw API access
 
 4. **Environment variables** - Set `TEAMCITY_URL` and `TEAMCITY_TOKEN` for non-interactive use
 
@@ -455,14 +455,14 @@ tc pool unlink <pool-id> <project-id>
 
 6. **Auto-detection from DSL** – When working in a project with Kotlin DSL config, the server URL is auto-detected from `.teamcity/pom.xml`
 
-7. **Multiple servers** - Use `TEAMCITY_URL` env var to switch between servers, or `tc auth login --server <url>` to add servers
+7. **Multiple servers** - Use `TEAMCITY_URL` env var to switch between servers, or `teamcity auth login --server <url>` to add servers
 
 ## Troubleshooting
 
 | Symptom | Likely Cause | Action |
 |---------|--------------|--------|
-| `401 Unauthorized` | Invalid or expired token | Run `tc auth status` to check; re-login with `tc auth login` |
+| `401 Unauthorized` | Invalid or expired token | Run `teamcity auth status` to check; re-login with `teamcity auth login` |
 | `403 Forbidden` | Insufficient permissions | Build config may require different access rights; check with TeamCity admin |
 | `404 Not Found` | Build deleted or wrong ID | Verify the build ID/URL; the build may have been cleaned up |
-| Connection refused / timeout | Server unreachable | Check if TeamCity instance is accessible; verify server URL with `tc auth status` |
-| `No server configured` | Missing auth config | Run `tc auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars |
+| Connection refused / timeout | Server unreachable | Check if TeamCity instance is accessible; verify server URL with `teamcity auth status` |
+| `No server configured` | Missing auth config | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars |

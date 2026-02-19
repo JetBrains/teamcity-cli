@@ -699,10 +699,10 @@ func TestBuildLevelAuth(T *testing.T) {
 	// properties file contains localhost which isn't reachable from the container.
 	// Setting TEAMCITY_URL (without TEAMCITY_TOKEN) makes CLI use that URL with build credentials.
 	script := `set -e
-which tc || { echo "tc binary not found"; exit 1; }
+which teamcity || { echo "teamcity binary not found"; exit 1; }
 export TEAMCITY_URL=http://teamcity-server:8111
 unset TEAMCITY_TOKEN
-tc auth status
+teamcity auth status
 `
 
 	if !client.BuildTypeExists(configID) {

@@ -2,24 +2,24 @@
 name: teamcity-cli
 version: "0.5.0"
 author: JetBrains
-description: Use when working with TeamCity CI/CD or when user provides a TeamCity build URL. Use `tc` CLI for builds, logs, jobs, queues, agents, and pipelines.
+description: Use when working with TeamCity CI/CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, agents, and pipelines.
 ---
 
-# TeamCity CLI (`tc`)
+# TeamCity CLI (`teamcity`)
 
 ## Quick Start
 
 ```bash
-tc auth status                    # Check authentication
-tc run list --status failure      # Find failed builds
-tc run log <id> --failed          # View failed build log
+teamcity auth status                    # Check authentication
+teamcity run list --status failure      # Find failed builds
+teamcity run log <id> --failed          # View failed build log
 ```
 
 ## Before Running Commands
 
-**Do not guess subcommands, flags, or syntax.** Only use commands and flags documented in the [Command Reference](references/commands.md) or shown by `tc <command> --help`. If a command doesn't support what you need, fall back to `tc api /app/rest/...`.
+**Do not guess subcommands, flags, or syntax.** Only use commands and flags documented in the [Command Reference](references/commands.md) or shown by `teamcity <command> --help`. If a command doesn't support what you need, fall back to `teamcity api /app/rest/...`.
 
-**Terminology:** There is no `build`, `pipeline`, or `config` subcommand. Builds are **runs** (`tc run`). Build configurations are **jobs** (`tc job`).
+**Terminology:** There is no `build`, `pipeline`, or `config` subcommand. Builds are **runs** (`teamcity run`). Build configurations are **jobs** (`teamcity job`).
 
 ## Core Commands
 
@@ -33,14 +33,14 @@ tc run log <id> --failed          # View failed build log
 | Queue     | `queue list`, `approve`, `remove`, `top`                                              |
 | Agents    | `agent list`, `view`, `enable/disable`, `authorize`, `exec`, `term`, `reboot`, `move` |
 | Pools     | `pool list`, `view`, `link/unlink`                                                    |
-| API       | `tc api <endpoint>` — raw REST API access                                             |
+| API       | `teamcity api <endpoint>` — raw REST API access                                             |
 
 ## Quick Workflows
 
-**Investigate failure:** `tc run list --status failure` → `tc run log <id> --failed` → `tc run tests <id> --failed`
-**From a URL:** Extract build ID from `https://host/buildConfiguration/ConfigId/12345` → `tc run view 12345`
-**Start build:** `tc run start <job-id> --branch <branch> --watch`
-**Find jobs:** `tc project list` → `tc job list --project <id>`
+**Investigate failure:** `teamcity run list --status failure` → `teamcity run log <id> --failed` → `teamcity run tests <id> --failed`
+**From a URL:** Extract build ID from `https://host/buildConfiguration/ConfigId/12345` → `teamcity run view 12345`
+**Start build:** `teamcity run start <job-id> --branch <branch> --watch`
+**Find jobs:** `teamcity project list` → `teamcity job list --project <id>`
 
 ## References
 

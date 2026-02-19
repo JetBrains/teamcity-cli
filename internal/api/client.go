@@ -300,15 +300,15 @@ func notFoundHint(message string) string {
 	msg := strings.ToLower(message)
 	switch {
 	case strings.Contains(msg, "agent pool"), strings.Contains(msg, "pool"):
-		return "Use 'tc pool list' to see available pools"
+		return "Use 'teamcity pool list' to see available pools"
 	case strings.Contains(msg, "agent"):
-		return "Use 'tc agent list' to see available agents"
+		return "Use 'teamcity agent list' to see available agents"
 	case strings.Contains(msg, "project"):
-		return "Use 'tc project list' to see available projects"
+		return "Use 'teamcity project list' to see available projects"
 	case strings.Contains(msg, "build type"), strings.Contains(msg, "job"):
-		return "Use 'tc job list' to see available jobs"
+		return "Use 'teamcity job list' to see available jobs"
 	default:
-		return "Use 'tc job list' or 'tc run list' to see available resources"
+		return "Use 'teamcity job list' or 'teamcity run list' to see available resources"
 	}
 }
 

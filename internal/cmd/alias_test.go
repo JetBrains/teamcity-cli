@@ -39,12 +39,12 @@ func TestAliasSetShellFlag(t *testing.T) {
 	setupAliasTest(t)
 
 	root := cmd.NewRootCmd()
-	root.SetArgs([]string{"alias", "set", "--shell", "failing", "tc run list | jq ."})
+	root.SetArgs([]string{"alias", "set", "--shell", "failing", "teamcity run list | jq ."})
 	require.NoError(t, root.Execute())
 
 	exp, ok := config.GetAlias("failing")
 	assert.True(t, ok)
-	assert.Equal(t, "!tc run list | jq .", exp)
+	assert.Equal(t, "!teamcity run list | jq .", exp)
 }
 
 func TestAliasSetBangPrefix(t *testing.T) {

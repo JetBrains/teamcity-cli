@@ -441,7 +441,7 @@ func (c *Client) PinBuild(buildID string, comment string) error {
 
 	body := comment
 	if body == "" {
-		body = "Pinned via tc CLI"
+		body = "Pinned via teamcity CLI"
 	}
 
 	return c.doNoContent("PUT", path, strings.NewReader(body), "text/plain")

@@ -19,7 +19,7 @@
 <!-- For CLI changes: show command + output. Delete if not applicable. -->
 
 ```bash
-tc <command>
+teamcity <command>
 ```
 
 ## Test Plan

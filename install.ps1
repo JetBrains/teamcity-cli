@@ -17,7 +17,7 @@
 $ErrorActionPreference = "Stop"
 
 $repo = "JetBrains/teamcity-cli"
-$binName = "tc.exe"
+$binName = "teamcity.exe"
 $installDir = "$HOME\.local\bin"
 
 if (-not (Test-Path $installDir)) {
@@ -43,7 +43,7 @@ $version = $tag.TrimStart('v')
 
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "x86_64" }
 $os = "windows"
-$assetName = "tc_$($version)_$($os)_$($arch).zip"
+$assetName = "teamcity_$($version)_$($os)_$($arch).zip"
 
 $asset = $release.assets | Where-Object { $_.name -eq $assetName }
 if (-not $asset) {
@@ -52,8 +52,8 @@ if (-not $asset) {
 }
 
 $downloadUrl = $asset.browser_download_url
-$tempZip = Join-Path $env:TEMP "tc.zip"
-$tempExtract = Join-Path $env:TEMP "tc_extract"
+$tempZip = Join-Path $env:TEMP "teamcity.zip"
+$tempExtract = Join-Path $env:TEMP "teamcity_extract"
 
 Write-Host "Downloading $assetName from $downloadUrl..."
 Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip
@@ -93,8 +93,8 @@ Remove-Item -Recurse -Force $tempExtract
 
 Write-Host "`nNext steps:"
 Write-Host "  Authenticate with TeamCity"
-Write-Host "  tc auth login`n"
+Write-Host "  teamcity auth login`n"
 Write-Host "  List recent builds"
-Write-Host "  tc run list`n"
+Write-Host "  teamcity run list`n"
 Write-Host "  Get help"
-Write-Host "  tc --help`n"
+Write-Host "  teamcity --help`n"
