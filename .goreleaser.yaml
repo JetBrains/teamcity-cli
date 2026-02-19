@@ -69,6 +69,9 @@ nfpms:
         dst: /usr/share/licenses/tc/LICENSE
       - src: README.md
         dst: /usr/share/doc/tc/README.md
+      - src: /usr/bin/tc
+        dst: /usr/bin/teamcity
+        type: symlink
 
 brews:
   - name: tc
@@ -85,6 +88,7 @@ brews:
     license: Apache-2.0
     install: |
       bin.install "tc"
+      bin.install_symlink "tc" => "teamcity"
 
 scoops:
   - repository:
