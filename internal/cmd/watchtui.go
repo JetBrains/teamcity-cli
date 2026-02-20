@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/acarl005/stripansi"
 	"github.com/charmbracelet/bubbles/spinner"

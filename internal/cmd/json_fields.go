@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/spf13/cobra"
 )
 

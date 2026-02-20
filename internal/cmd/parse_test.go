@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/stretchr/testify/assert"
 )
 
