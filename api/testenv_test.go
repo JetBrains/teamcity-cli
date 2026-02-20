@@ -404,7 +404,7 @@ func copyBinaryToAgent(env *testEnv) error {
 	defer os.RemoveAll(tmpDir)
 
 	binaryPath := tmpDir + "/tc"
-	cmd := exec.Command("go", "build", "-o", binaryPath, "../../tc")
+	cmd := exec.Command("go", "build", "-o", binaryPath, "../tc")
 	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64", "CGO_ENABLED=0")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
