@@ -52,15 +52,15 @@ func newRunStartCmd() *cobra.Command {
 		Use:   "start <job-id>",
 		Short: "Start a new run",
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run start Falcon_Build
-  tc run start Falcon_Build --branch feature/test
-  tc run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
-  tc run start Falcon_Build --comment "Release build" --tag release --tag v1.0
-  tc run start Falcon_Build --clean --rebuild-deps --top
-  tc run start Falcon_Build --local-changes # personal build with uncommitted Git changes
-  tc run start Falcon_Build --local-changes changes.patch  # from file
-  tc run start Falcon_Build --revision abc123def --branch main
-  tc run start Falcon_Build --dry-run`,
+		Example: `  teamcity run start Falcon_Build
+  teamcity run start Falcon_Build --branch feature/test
+  teamcity run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
+  teamcity run start Falcon_Build --comment "Release build" --tag release --tag v1.0
+  teamcity run start Falcon_Build --clean --rebuild-deps --top
+  teamcity run start Falcon_Build --local-changes # personal build with uncommitted Git changes
+  teamcity run start Falcon_Build --local-changes changes.patch  # from file
+  teamcity run start Falcon_Build --revision abc123def --branch main
+  teamcity run start Falcon_Build --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunStart(args[0], opts)
 		},
@@ -239,9 +239,9 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 
 	output.Info("  URL: %s", build.WebURL)
 	if opts.agent > 0 {
-		fmt.Printf("  %s tc agent term %d\n", output.Faint("Agent terminal:"), opts.agent)
+		fmt.Printf("  %s teamcity agent term %d\n", output.Faint("Agent terminal:"), opts.agent)
 	} else {
-		fmt.Printf("  %s tc agent term <agent-id>\n", output.Faint("Agent terminal:"))
+		fmt.Printf("  %s teamcity agent term <agent-id>\n", output.Faint("Agent terminal:"))
 	}
 
 	if opts.web {
@@ -269,9 +269,9 @@ func newRunCancelCmd() *cobra.Command {
 		Short: "Cancel a running build",
 		Long:  `Cancel a running or queued run.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run cancel 12345
-  tc run cancel 12345 --comment "Cancelling for hotfix"
-  tc run cancel 12345 --force`,
+		Example: `  teamcity run cancel 12345
+  teamcity run cancel 12345 --comment "Cancelling for hotfix"
+  teamcity run cancel 12345 --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunCancel(args[0], opts)
 		},
@@ -308,7 +308,7 @@ func runRunCancel(runID string, opts *runCancelOptions) error {
 
 	comment := opts.comment
 	if comment == "" {
-		comment = "Cancelled via tc CLI"
+		comment = "Cancelled via teamcity CLI"
 	}
 
 	if err := client.CancelBuild(runID, comment); err != nil {
@@ -334,9 +334,9 @@ func newRunWatchCmd() *cobra.Command {
 		Short: "Watch a run until it completes",
 		Long:  `Watch a run in real-time until it completes.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run watch 12345
-  tc run watch 12345 --interval 10
-  tc run watch 12345 --logs`,
+		Example: `  teamcity run watch 12345
+  teamcity run watch 12345 --interval 10
+  teamcity run watch 12345 --logs`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := doRunWatch(args[0], opts)
 			var exitErr *ExitError
@@ -390,7 +390,7 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 			if !opts.quiet {
 				fmt.Println()
 				fmt.Println(output.Faint("Interrupted. Run continues in background."))
-				fmt.Printf("%s Resume watching: tc run watch %s\n", output.Faint("Hint:"), runID)
+				fmt.Printf("%s Resume watching: teamcity run watch %s\n", output.Faint("Hint:"), runID)
 			}
 			cancel()
 		case <-ctx.Done():
@@ -527,8 +527,8 @@ func newRunRestartCmd() *cobra.Command {
 		Short: "Restart a run",
 		Long:  `Restart a run with the same configuration.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run restart 12345
-  tc run restart 12345 --watch`,
+		Example: `  teamcity run restart 12345
+  teamcity run restart 12345 --watch`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunRestart(args[0], opts)
 		},
@@ -629,7 +629,7 @@ func loadLocalChanges(source string) ([]byte, error) {
 		if len(patch) == 0 {
 			return nil, tcerrors.WithSuggestion(
 				"no changes provided via stdin",
-				"Pipe a diff file to stdin, e.g.: git diff | tc run start Job --local-changes -",
+				"Pipe a diff file to stdin, e.g.: git diff | teamcity run start Job --local-changes -",
 			)
 		}
 		return patch, nil

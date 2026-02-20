@@ -31,17 +31,17 @@ func newRunArtifactsCmd() *cobra.Command {
 		Short: "List run artifacts",
 		Long: `List artifacts from a run without downloading them.
 
-Shows artifact names and sizes. Use tc run download to download artifacts.`,
+Shows artifact names and sizes. Use teamcity run download to download artifacts.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.Flags().Changed("job") {
 				return tcerrors.MutuallyExclusive("run-id", "job")
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
-		Example: `  tc run artifacts 12345
-  tc run artifacts 12345 --json
-  tc run artifacts 12345 --path html_reports/coverage
-  tc run artifacts --job MyBuild`,
+		Example: `  teamcity run artifacts 12345
+  teamcity run artifacts 12345 --json
+  teamcity run artifacts 12345 --path html_reports/coverage
+  teamcity run artifacts --job MyBuild`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var runID string
 			if len(args) > 0 {
@@ -115,8 +115,8 @@ func runRunArtifacts(runID string, opts *runArtifactsOptions) error {
 		fmt.Printf("%-*s  %s\n", nameWidth, a.Name, output.Faint(fmt.Sprintf("%10s", size)))
 	}
 
-	fmt.Printf("\nDownload all: tc run download %s\n", runID)
-	fmt.Printf("Download one: tc run download %s -a \"<name>\"\n", runID)
+	fmt.Printf("\nDownload all: teamcity run download %s\n", runID)
+	fmt.Printf("Download one: teamcity run download %s -a \"<name>\"\n", runID)
 	return nil
 }
 
@@ -153,9 +153,9 @@ func newRunDownloadCmd() *cobra.Command {
 		Short: "Download run artifacts",
 		Long:  `Download artifacts from a completed run.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run download 12345
-  tc run download 12345 --dir ./artifacts
-  tc run download 12345 --artifact "*.jar"`,
+		Example: `  teamcity run download 12345
+  teamcity run download 12345 --dir ./artifacts
+  teamcity run download 12345 --artifact "*.jar"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunDownload(args[0], opts)
 		},
@@ -332,9 +332,9 @@ Use --raw to bypass the pager.`,
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
-		Example: `  tc run log 12345
-  tc run log 12345 --failed
-  tc run log --job Falcon_Build`,
+		Example: `  teamcity run log 12345
+  teamcity run log 12345 --failed
+  teamcity run log --job Falcon_Build`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var runID string
 			if len(args) > 0 {

@@ -38,7 +38,7 @@ body:
       description: How do you think this should work?
       placeholder: |
         ```bash
-        tc <command> --flag
+        teamcity <command> --flag
         ```
     validations:
       required: true

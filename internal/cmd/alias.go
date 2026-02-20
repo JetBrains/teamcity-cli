@@ -34,26 +34,26 @@ func newAliasSetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set <name> <expansion>",
 		Short: "Create a command alias",
-		Long: `Create a shortcut that expands into a full tc command.
+		Long: `Create a shortcut that expands into a full teamcity command.
 
 Use $1, $2, ... for positional arguments. Extra arguments are appended.
 Use --shell for aliases that need pipes, redirection, or other shell features.`,
 		Example: `  # Quick shortcuts
-  tc alias set rl  'run list'
-  tc alias set rw  'run view $1 --web'
+  teamcity alias set rl  'run list'
+  teamcity alias set rw  'run view $1 --web'
 
   # Filtered views
-  tc alias set mine    'run list --user=@me'
-  tc alias set fails   'run list --status=failure --since=24h'
-  tc alias set running 'run list --status=running'
+  teamcity alias set mine    'run list --user=@me'
+  teamcity alias set fails   'run list --status=failure --since=24h'
+  teamcity alias set running 'run list --status=running'
 
   # Trigger-and-watch workflows
-  tc alias set go    'run start $1 --watch'
-  tc alias set hotfix 'run start $1 --top --clean --watch'
+  teamcity alias set go    'run start $1 --watch'
+  teamcity alias set hotfix 'run start $1 --top --clean --watch'
 
   # Shell aliases for pipes and external tools
-  tc alias set watchnotify '!tc run watch $1 && notify-send "Build $1 done"'
-  tc alias set faillog '!tc run list --status=failure --json | jq ".[].id"'`,
+  teamcity alias set watchnotify '!teamcity run watch $1 && notify-send "Build $1 done"'
+  teamcity alias set faillog '!teamcity run list --status=failure --json | jq ".[].id"'`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, expansion := args[0], args[1]
@@ -102,7 +102,7 @@ func newAliasListCmd() *cobra.Command {
 			aliases := config.GetAllAliases()
 
 			if len(aliases) == 0 {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "No aliases configured. Use \"tc alias set\" to create one.")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "No aliases configured. Use \"teamcity alias set\" to create one.")
 				return nil
 			}
 

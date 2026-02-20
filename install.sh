@@ -31,7 +31,7 @@ echo -e '
 '
 
 echo -e "
-This script will download TeamCity CLI to \033[4m$OUT_DIR/tc\033[0m
+This script will download TeamCity CLI to \033[4m$OUT_DIR/teamcity\033[0m
 
 If you get 'permission denied' error:
   - Specify other dir: \033[4mcurl -fsSL https://jb.gg/tc/install | bash -s -- \"\" \$HOME/.local/bin\033[0m
@@ -67,7 +67,7 @@ function install {
         RELEASE=$LATEST
     fi
     USER="JetBrains"
-    PROG="tc"
+    PROG="teamcity"
     INSECURE="false"
     #bash check
     [ ! "$BASH_VERSION" ] && fail "Please use bash instead"
@@ -104,7 +104,7 @@ function install {
     else
         fail "unknown arch: $(uname -m)"
     fi
-    URL="https://github.com/JetBrains/teamcity-cli/releases/download/$RELEASE/tc_${RELEASE#v}_${OS}_${ARCH}.tar.gz"
+    URL="https://github.com/JetBrains/teamcity-cli/releases/download/$RELEASE/teamcity_${RELEASE#v}_${OS}_${ARCH}.tar.gz"
     FTYPE=".tar.gz"
 
     echo -e "\033[0;90m\nInstalling $PROG ($RELEASE) from $URL\033[0m\n"
@@ -119,9 +119,9 @@ function install {
     else
         fail "unknown file type: $FTYPE"
     fi
-    TMP_BIN=$(find . -name "tc" -type f | head -1)
+    TMP_BIN=$(find . -name "teamcity" -type f | head -1)
     if [ ! -f "$TMP_BIN" ]; then
-        fail "could not find tc binary"
+        fail "could not find teamcity binary"
     fi
     chmod +x "$TMP_BIN" || fail "chmod +x failed"
     mv "$TMP_BIN" "$OUT_DIR"/$PROG || fail "mv failed"
@@ -131,11 +131,11 @@ function install {
     header "Next steps"
     echo -e ""
     echo -e "  \033[1mAuthenticate with TeamCity\033[0m"
-    echo -e "  \033[0;90mtc auth login\033[0m\n"
+    echo -e "  \033[0;90mteamcity auth login\033[0m\n"
     echo -e "  \033[1mList recent builds\033[0m"
-    echo -e "  \033[0;90mtc run list\033[0m\n"
+    echo -e "  \033[0;90mteamcity run list\033[0m\n"
     echo -e "  \033[1mGet help\033[0m"
-    echo -e "  \033[0;90mtc --help\033[0m\n"
+    echo -e "  \033[0;90mteamcity --help\033[0m\n"
 }
 
 install

@@ -624,12 +624,12 @@ func TestNotFoundHint(T *testing.T) {
 		message string
 		want    string
 	}{
-		{"pool message", "Agent pool 'MyPool' not found", "Use 'tc pool list' to see available pools"},
-		{"agent message", "Agent 'MyAgent' not found", "Use 'tc agent list' to see available agents"},
-		{"project message", "Project 'Foo' not found", "Use 'tc project list' to see available projects"},
-		{"build type message", "Build type 'Foo_Bar' not found", "Use 'tc job list' to see available jobs"},
-		{"job message", "job 'Foo' not found", "Use 'tc job list' to see available jobs"},
-		{"default message", "Something else went wrong", "Use 'tc job list' or 'tc run list' to see available resources"},
+		{"pool message", "Agent pool 'MyPool' not found", "Use 'teamcity pool list' to see available pools"},
+		{"agent message", "Agent 'MyAgent' not found", "Use 'teamcity agent list' to see available agents"},
+		{"project message", "Project 'Foo' not found", "Use 'teamcity project list' to see available projects"},
+		{"build type message", "Build type 'Foo_Bar' not found", "Use 'teamcity job list' to see available jobs"},
+		{"job message", "job 'Foo' not found", "Use 'teamcity job list' to see available jobs"},
+		{"default message", "Something else went wrong", "Use 'teamcity job list' or 'teamcity run list' to see available resources"},
 	}
 
 	for _, tc := range tests {

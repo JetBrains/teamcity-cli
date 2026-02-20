@@ -272,7 +272,7 @@ func runWatchTUI(client api.ClientInterface, runID string, interval int) error {
 			}
 		} else {
 			fmt.Println(output.Faint("Build still running in background"))
-			fmt.Printf("Resume: tc run watch %s --logs\n", fm.runID)
+			fmt.Printf("Resume: teamcity run watch %s --logs\n", fm.runID)
 		}
 		fmt.Printf("View details: %s\n", fm.build.WebURL)
 	}

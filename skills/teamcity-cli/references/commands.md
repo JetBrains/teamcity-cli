@@ -1,39 +1,39 @@
 # Command Reference
 
-## Authentication (`tc auth`)
+## Authentication (`teamcity auth`)
 
 | Command                  | Description                       |
 |--------------------------|-----------------------------------|
-| `tc auth login -s <url>` | Authenticate with TeamCity server |
-| `tc auth logout`         | Log out from current server       |
-| `tc auth status`         | Show auth status and server info  |
+| `teamcity auth login -s <url>` | Authenticate with TeamCity server |
+| `teamcity auth logout`         | Log out from current server       |
+| `teamcity auth status`         | Show auth status and server info  |
 
 Login options:
 - `-s, --server <url>` - TeamCity server URL
 - `-t, --token <token>` - Access token
 
-## Builds/Runs (`tc run`)
+## Builds/Runs (`teamcity run`)
 
 | Command                    | Description                |
 |----------------------------|----------------------------|
-| `tc run list`              | List recent builds         |
-| `tc run view <id>`         | View build details         |
-| `tc run start <job-id>`    | Start a new build          |
-| `tc run cancel <id>`       | Cancel a build             |
-| `tc run restart <id>`      | Restart a build            |
-| `tc run watch <id>`        | Watch build in real-time   |
-| `tc run log <id>`          | View build log             |
-| `tc run tests <id>`        | View test results          |
-| `tc run changes <id>`      | View VCS changes           |
-| `tc run artifacts <id>`    | List artifacts             |
-| `tc run download <id>`     | Download artifacts         |
-| `tc run pin <id>`          | Pin build                  |
-| `tc run unpin <id>`        | Unpin build                |
-| `tc run tag <id> <tags>`   | Add tags                   |
-| `tc run untag <id> <tags>` | Remove tags                |
-| `tc run comment <id>`      | Manage comments            |
+| `teamcity run list`              | List recent builds         |
+| `teamcity run view <id>`         | View build details         |
+| `teamcity run start <job-id>`    | Start a new build          |
+| `teamcity run cancel <id>`       | Cancel a build             |
+| `teamcity run restart <id>`      | Restart a build            |
+| `teamcity run watch <id>`        | Watch build in real-time   |
+| `teamcity run log <id>`          | View build log             |
+| `teamcity run tests <id>`        | View test results          |
+| `teamcity run changes <id>`      | View VCS changes           |
+| `teamcity run artifacts <id>`    | List artifacts             |
+| `teamcity run download <id>`     | Download artifacts         |
+| `teamcity run pin <id>`          | Pin build                  |
+| `teamcity run unpin <id>`        | Unpin build                |
+| `teamcity run tag <id> <tags>`   | Add tags                   |
+| `teamcity run untag <id> <tags>` | Remove tags                |
+| `teamcity run comment <id>`      | Manage comments            |
 
-### Flags for `tc run list`
+### Flags for `teamcity run list`
 
 Shows all branches and all build states (including canceled, personal, composite sub-builds) by default — matching the TeamCity UI. Use `--branch` to narrow to a specific branch.
 
@@ -50,7 +50,7 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--no-header` - Omit header row (use with --plain)
 - `-w, --web` - Open in browser
 
-### Flags for `tc run start`
+### Flags for `teamcity run start`
 
 - `-b, --branch <name>` - Branch to build
 - `-P, --param <k=v>` - Build parameter (repeatable)
@@ -71,186 +71,186 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--json` - Output as JSON (for scripting)
 - `-w, --web` - Open run in browser
 
-### Flags for `tc run log`
+### Flags for `teamcity run log`
 
 - `--failed` - Show failure summary (problems and failed tests)
 - `-j, --job <id>` - Get log for latest run of this job
 - `--raw` - Show raw log without formatting
 
-### Flags for `tc run watch`
+### Flags for `teamcity run watch`
 
 - `-i, --interval <s>` - Refresh interval in seconds
 - `--logs` - Stream build logs while watching
 - `-Q, --quiet` - Minimal output, show only state changes and result
 - `--timeout <duration>` - Timeout duration (e.g., 30m, 1h)
 
-### Flags for `tc run view`
+### Flags for `teamcity run view`
 
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
-### Flags for `tc run tests`
+### Flags for `teamcity run tests`
 
 - `--failed` - Show only failed tests
 - `-j, --job <id>` - Get tests for latest run of this job
 - `--json` - Output as JSON
 - `-n, --limit <n>` - Maximum number of tests to show
 
-### Flags for `tc run changes`
+### Flags for `teamcity run changes`
 
 - `--json` - Output as JSON
 - `--no-files` - Hide file list, show commits only
 
-### Flags for `tc run artifacts`
+### Flags for `teamcity run artifacts`
 
 - `-j, --job <id>` - List artifacts from latest run of this job
 - `--json` - Output as JSON
 
-### Flags for `tc run download`
+### Flags for `teamcity run download`
 
 - `-a, --artifact <pattern>` - Artifact name pattern to download
 - `-d, --dir <path>` - Directory to download artifacts to
 
-### Flags for `tc run cancel`
+### Flags for `teamcity run cancel`
 
 - `--comment <text>` - Comment for cancellation
 - `-f, --force` - Skip confirmation prompt
 
-### Flags for `tc run restart`
+### Flags for `teamcity run restart`
 
 - `--watch` - Watch the new run after restarting
 - `-w, --web` - Open run in browser
 
-### Flags for `tc run pin`
+### Flags for `teamcity run pin`
 
 - `-m, --comment <text>` - Comment explaining why the run is pinned
 
-### Flags for `tc run comment`
+### Flags for `teamcity run comment`
 
 - `--delete` - Delete the comment
 
-## Jobs (`tc job`)
+## Jobs (`teamcity job`)
 
 | Command                              | Description               |
 |--------------------------------------|---------------------------|
-| `tc job list`                        | List build configurations |
-| `tc job view <id>`                   | View job details          |
-| `tc job pause <id>`                  | Pause job                 |
-| `tc job resume <id>`                 | Resume job                |
-| `tc job param list <id>`             | List parameters           |
-| `tc job param get <id> <name>`       | Get parameter             |
-| `tc job param set <id> <name> <val>` | Set parameter             |
-| `tc job param delete <id> <name>`    | Delete parameter          |
+| `teamcity job list`                        | List build configurations |
+| `teamcity job view <id>`                   | View job details          |
+| `teamcity job pause <id>`                  | Pause job                 |
+| `teamcity job resume <id>`                 | Resume job                |
+| `teamcity job param list <id>`             | List parameters           |
+| `teamcity job param get <id> <name>`       | Get parameter             |
+| `teamcity job param set <id> <name> <val>` | Set parameter             |
+| `teamcity job param delete <id> <name>`    | Delete parameter          |
 
-### Flags for `tc job list`
+### Flags for `teamcity job list`
 
 - `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
 - `-n, --limit <n>` - Maximum number of jobs
 - `-p, --project <id>` - Filter by project ID
 
-### Flags for `tc job view`
+### Flags for `teamcity job view`
 
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
-### Flags for `tc job param list`
+### Flags for `teamcity job param list`
 
 - `--json` - Output as JSON
 
-### Flags for `tc job param set`
+### Flags for `teamcity job param set`
 
 - `--secure` - Mark as secure/password parameter
 
-## Projects (`tc project`)
+## Projects (`teamcity project`)
 
 | Command                                  | Description                  |
 |------------------------------------------|------------------------------|
-| `tc project list`                        | List projects                |
-| `tc project view <id>`                   | View project details         |
-| `tc project param list <id>`             | List parameters              |
-| `tc project param get <id> <name>`       | Get parameter                |
-| `tc project param set <id> <name> <val>` | Set parameter                |
-| `tc project param delete <id> <name>`    | Delete parameter             |
-| `tc project token put <id>`              | Store secret, get token      |
-| `tc project token get <id> <token>`      | Retrieve secret              |
-| `tc project settings export <id>`        | Export settings as ZIP       |
-| `tc project settings status <id>`        | Show versioned settings sync |
-| `tc project settings validate`           | Validate Kotlin DSL config   |
+| `teamcity project list`                        | List projects                |
+| `teamcity project view <id>`                   | View project details         |
+| `teamcity project param list <id>`             | List parameters              |
+| `teamcity project param get <id> <name>`       | Get parameter                |
+| `teamcity project param set <id> <name> <val>` | Set parameter                |
+| `teamcity project param delete <id> <name>`    | Delete parameter             |
+| `teamcity project token put <id>`              | Store secret, get token      |
+| `teamcity project token get <id> <token>`      | Retrieve secret              |
+| `teamcity project settings export <id>`        | Export settings as ZIP       |
+| `teamcity project settings status <id>`        | Show versioned settings sync |
+| `teamcity project settings validate`           | Validate Kotlin DSL config   |
 
-### Flags for `tc project list`
+### Flags for `teamcity project list`
 
 - `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
 - `-n, --limit <n>` - Maximum number of projects
 - `-p, --parent <id>` - Filter by parent project ID
 
-### Flags for `tc project view`
+### Flags for `teamcity project view`
 
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
-### Flags for `tc project param list`
+### Flags for `teamcity project param list`
 
 - `--json` - Output as JSON
 
-### Flags for `tc project param set`
+### Flags for `teamcity project param set`
 
 - `--secure` - Mark as secure/password parameter
 
-### Flags for `tc project settings export`
+### Flags for `teamcity project settings export`
 
 - `--kotlin` - Export as Kotlin DSL (default)
 - `--xml` - Export as XML
 - `-o, --output <path>` - Output file path (default: projectSettings.zip)
 - `--relative-ids` - Use relative IDs in exported settings
 
-### Flags for `tc project settings status`
+### Flags for `teamcity project settings status`
 
 - `--json` - Output as JSON
 
-### Flags for `tc project settings validate`
+### Flags for `teamcity project settings validate`
 
 - `-v, --verbose` - Show full Maven output
 
-### Flags for `tc project token put`
+### Flags for `teamcity project token put`
 
 - `--stdin` - Read value from stdin
 
-## Queue (`tc queue`)
+## Queue (`teamcity queue`)
 
 | Command                 | Description           |
 |-------------------------|-----------------------|
-| `tc queue list`         | List queued builds    |
-| `tc queue remove <id>`  | Remove from queue     |
-| `tc queue top <id>`     | Move to top of queue  |
-| `tc queue approve <id>` | Approve waiting build |
+| `teamcity queue list`         | List queued builds    |
+| `teamcity queue remove <id>`  | Remove from queue     |
+| `teamcity queue top <id>`     | Move to top of queue  |
+| `teamcity queue approve <id>` | Approve waiting build |
 
-### Flags for `tc queue list`
+### Flags for `teamcity queue list`
 
 - `-j, --job <id>` - Filter by job ID
 - `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
 - `-n, --limit <n>` - Maximum number of queued runs
 
-### Flags for `tc queue remove`
+### Flags for `teamcity queue remove`
 
 - `-f, --force` - Skip confirmation prompt
 
-## Agents (`tc agent`)
+## Agents (`teamcity agent`)
 
 | Command                     | Description                       |
 |-----------------------------|-----------------------------------|
-| `tc agent list`             | List build agents                 |
-| `tc agent view <id>`        | View agent details                |
-| `tc agent authorize <id>`   | Authorize agent to run builds     |
-| `tc agent deauthorize <id>` | Revoke agent authorization        |
-| `tc agent enable <id>`      | Enable agent                      |
-| `tc agent disable <id>`     | Disable agent                     |
-| `tc agent move <id> <pool>` | Move agent to different pool      |
-| `tc agent jobs <id>`        | List compatible/incompatible jobs |
-| `tc agent exec <id> <cmd>`  | Execute command on agent          |
-| `tc agent term <id>`        | Open interactive shell on agent   |
-| `tc agent reboot <id>`      | Reboot a build agent              |
+| `teamcity agent list`             | List build agents                 |
+| `teamcity agent view <id>`        | View agent details                |
+| `teamcity agent authorize <id>`   | Authorize agent to run builds     |
+| `teamcity agent deauthorize <id>` | Revoke agent authorization        |
+| `teamcity agent enable <id>`      | Enable agent                      |
+| `teamcity agent disable <id>`     | Disable agent                     |
+| `teamcity agent move <id> <pool>` | Move agent to different pool      |
+| `teamcity agent jobs <id>`        | List compatible/incompatible jobs |
+| `teamcity agent exec <id> <cmd>`  | Execute command on agent          |
+| `teamcity agent term <id>`        | Open interactive shell on agent   |
+| `teamcity agent reboot <id>`      | Reboot a build agent              |
 
-### Flags for `tc agent list`
+### Flags for `teamcity agent list`
 
 - `-p, --pool <name>` - Filter by agent pool
 - `--connected` - Show only connected agents
@@ -259,59 +259,59 @@ Shows all branches and all build states (including canceled, personal, composite
 - `-n, --limit <n>` - Limit results
 - `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
 
-### Flags for `tc agent view`
+### Flags for `teamcity agent view`
 
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
-### Flags for `tc agent jobs`
+### Flags for `teamcity agent jobs`
 
 - `--incompatible` - Show incompatible jobs with reasons
 - `--json` - Output as JSON
 
-### Flags for `tc agent exec`
+### Flags for `teamcity agent exec`
 
 - `--timeout <duration>` - Command timeout
 
-### Flags for `tc agent reboot`
+### Flags for `teamcity agent reboot`
 
 - `--after-build` - Wait for current build to finish before rebooting
 - `-y, --yes` - Skip confirmation prompt
 
-## Agent Pools (`tc pool`)
+## Agent Pools (`teamcity pool`)
 
 | Command                          | Description              |
 |----------------------------------|--------------------------|
-| `tc pool list`                   | List agent pools         |
-| `tc pool view <id>`              | View pool details        |
-| `tc pool link <id> <project>`    | Link project to pool     |
-| `tc pool unlink <id> <project>`  | Unlink project from pool |
+| `teamcity pool list`                   | List agent pools         |
+| `teamcity pool view <id>`              | View pool details        |
+| `teamcity pool link <id> <project>`    | Link project to pool     |
+| `teamcity pool unlink <id> <project>`  | Unlink project from pool |
 
-### Flags for `tc pool list`
+### Flags for `teamcity pool list`
 
 - `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
 
-### Flags for `tc pool view`
+### Flags for `teamcity pool view`
 
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
-## Direct API (`tc api`)
+## Direct API (`teamcity api`)
 
 For features not covered by specific commands. Endpoints always start with `/app/rest/`.
 
 ```bash
 # GET request
-tc api /app/rest/server
+teamcity api /app/rest/server
 
 # POST request
-tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
+teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
 
 # With pagination
-tc api /app/rest/builds --paginate --slurp
+teamcity api /app/rest/builds --paginate --slurp
 
 # Browse artifact subdirectory
-tc api /app/rest/builds/id:BUILD_ID/artifacts/children/SUBPATH
+teamcity api /app/rest/builds/id:BUILD_ID/artifacts/children/SUBPATH
 ```
 
 ### Flags

@@ -413,11 +413,11 @@ func copyBinaryToAgent(env *testEnv) error {
 	}
 
 	log.Println("Copying binary to agent container...")
-	err = env.agent.CopyFileToContainer(env.ctx, binaryPath, "/usr/local/bin/tc", 0755)
+	err = env.agent.CopyFileToContainer(env.ctx, binaryPath, "/usr/local/bin/teamcity", 0755)
 	if err != nil {
 		return fmt.Errorf("copy to container: %w", err)
 	}
 
-	log.Println("CLI binary installed on agent at /usr/local/bin/tc")
+	log.Println("CLI binary installed on agent at /usr/local/bin/teamcity")
 	return nil
 }

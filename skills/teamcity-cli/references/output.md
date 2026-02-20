@@ -16,22 +16,22 @@ Most commands support multiple output formats for different use cases.
 
 **Default JSON (all fields):**
 ```bash
-tc run list --json
+teamcity run list --json
 ```
 
 **List available fields:**
 ```bash
-tc run list --json=
+teamcity run list --json=
 ```
 
 **Select specific fields:**
 ```bash
-tc run list --json=id,status,webUrl
+teamcity run list --json=id,status,webUrl
 ```
 
 **Nested fields (dot notation):**
 ```bash
-tc run list --json=id,buildType.name,triggered.user.username
+teamcity run list --json=id,buildType.name,triggered.user.username
 ```
 
 ## Available JSON Fields by Command
@@ -45,43 +45,43 @@ tc run list --json=id,buildType.name,triggered.user.username
 | `agent list`   | `id`, `name`, `connected`, `enabled`, `authorized`                                                                                                                                                    |
 | `pool list`    | `id`, `name`, `maxAgents`                                                                                                                                                                             |
 
-Run `tc <command> --json=` to see all available fields for that command.
+Run `teamcity <command> --json=` to see all available fields for that command.
 
 ## Scripting Examples
 
 **Get build IDs of failed builds:**
 ```bash
-tc run list --status failure --plain --no-header | awk '{print $1}'
+teamcity run list --status failure --plain --no-header | awk '{print $1}'
 ```
 
 **JSON with jq:**
 ```bash
-tc run list --json | jq '.[] | {id, status, branch}'
+teamcity run list --json | jq '.[] | {id, status, branch}'
 ```
 
 **Get build IDs that failed (JSON):**
 ```bash
-tc run list --status failure --json=id | jq -r '.[].id'
+teamcity run list --status failure --json=id | jq -r '.[].id'
 ```
 
 **Export runs to CSV:**
 ```bash
-tc run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branchName] | @csv'
+teamcity run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branchName] | @csv'
 ```
 
 **Filter builds by pattern:**
 ```bash
-tc run list --json | jq '.[] | select(.branch | contains("feature"))'
+teamcity run list --json | jq '.[] | select(.branch | contains("feature"))'
 ```
 
 **Count builds by status:**
 ```bash
-tc run list --json | jq 'group_by(.status) | map({status: .[0].status, count: length})'
+teamcity run list --json | jq 'group_by(.status) | map({status: .[0].status, count: length})'
 ```
 
 **Get web URLs for queued builds:**
 ```bash
-tc queue list --json=webUrl | jq -r '.[].webUrl'
+teamcity queue list --json=webUrl | jq -r '.[].webUrl'
 ```
 
 ## Environment Variables
@@ -93,7 +93,7 @@ export TEAMCITY_URL="https://teamcity.example.com"
 export TEAMCITY_TOKEN="your-api-token"
 
 # Commands will use these automatically
-tc run list
+teamcity run list
 ```
 
 Environment variables always take precedence over config file settings.
@@ -102,15 +102,15 @@ Environment variables always take precedence over config file settings.
 
 **Open in browser:**
 ```bash
-tc run view <id> -w
+teamcity run view <id> -w
 ```
 
 **Pipe to less with color:**
 ```bash
-tc run list | less -R
+teamcity run list | less -R
 ```
 
 **Watch and notify:**
 ```bash
-tc run watch <id> && notify-send "Build complete"
+teamcity run watch <id> && notify-send "Build complete"
 ```

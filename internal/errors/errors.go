@@ -36,7 +36,7 @@ func WithSuggestion(message, suggestion string) *UserError {
 func NotAuthenticated() *UserError {
 	return &UserError{
 		Message:    "Not authenticated",
-		Suggestion: "Run 'tc auth login' to authenticate with TeamCity",
+		Suggestion: "Run 'teamcity auth login' to authenticate with TeamCity",
 	}
 }
 
@@ -44,7 +44,7 @@ func NotAuthenticated() *UserError {
 func NotFound(resource, id string) *UserError {
 	return &UserError{
 		Message:    fmt.Sprintf("%s '%s' not found", resource, id),
-		Suggestion: fmt.Sprintf("Run 'tc %s list' to see available %ss", resource, resource),
+		Suggestion: fmt.Sprintf("Run 'teamcity %s list' to see available %ss", resource, resource),
 	}
 }
 
@@ -52,7 +52,7 @@ func NotFound(resource, id string) *UserError {
 func AuthenticationFailed() *UserError {
 	return &UserError{
 		Message:    "Authentication failed: invalid or expired token",
-		Suggestion: "Run 'tc auth login' to re-authenticate",
+		Suggestion: "Run 'teamcity auth login' to re-authenticate",
 	}
 }
 

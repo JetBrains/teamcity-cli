@@ -39,10 +39,10 @@ func newJobListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List jobs",
-		Example: `  tc job list
-  tc job list --project Falcon
-  tc job list --json
-  tc job list --json=id,name,webUrl`,
+		Example: `  teamcity job list
+  teamcity job list --project Falcon
+  teamcity job list --json
+  teamcity job list --json=id,name,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runJobList(cmd, opts)
 		},
@@ -118,8 +118,8 @@ func newJobViewCmd() *cobra.Command {
 		Use:   "view <job-id>",
 		Short: "View job details",
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc job view Falcon_Build
-  tc job view Falcon_Build --web`,
+		Example: `  teamcity job view Falcon_Build
+  teamcity job view Falcon_Build --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runJobView(args[0], opts)
 		},
@@ -181,7 +181,7 @@ func newJobStateCmd(a jobStateAction) *cobra.Command {
 		Short:   a.short,
 		Long:    a.long,
 		Args:    cobra.ExactArgs(1),
-		Example: fmt.Sprintf("  tc job %s Falcon_Build", a.use),
+		Example: fmt.Sprintf("  teamcity job %s Falcon_Build", a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := getClient()
 			if err != nil {

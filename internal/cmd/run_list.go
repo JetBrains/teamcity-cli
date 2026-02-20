@@ -34,14 +34,14 @@ func newRunListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List recent runs",
-		Example: `  tc run list
-  tc run list --job Falcon_Build
-  tc run list --status failure --limit 10
-  tc run list --project Falcon --branch main
-  tc run list --since 24h
-  tc run list --json
-  tc run list --json=id,status,webUrl
-  tc run list --plain | grep failure`,
+		Example: `  teamcity run list
+  teamcity run list --job Falcon_Build
+  teamcity run list --status failure --limit 10
+  teamcity run list --project Falcon --branch main
+  teamcity run list --since 24h
+  teamcity run list --json
+  teamcity run list --json=id,status,webUrl
+  teamcity run list --plain | grep failure`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunList(cmd, opts)
 		},
@@ -227,9 +227,9 @@ func newRunViewCmd() *cobra.Command {
 		Use:   "view <run-id>",
 		Short: "View run details",
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc run view 12345
-  tc run view 12345 --web
-  tc run view 12345 --json`,
+		Example: `  teamcity run view 12345
+  teamcity run view 12345 --web
+  teamcity run view 12345 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunView(args[0], opts)
 		},
@@ -300,7 +300,7 @@ func runRunView(runID string, opts *viewOptions) error {
 	if build.Agent != nil {
 		fmt.Printf("\nAgent: %s", output.Faint(build.Agent.Name))
 		if build.State == "running" {
-			fmt.Printf("  %s tc agent term %d", output.Faint("·"), build.Agent.ID)
+			fmt.Printf("  %s teamcity agent term %d", output.Faint("·"), build.Agent.ID)
 		}
 		fmt.Println()
 	}

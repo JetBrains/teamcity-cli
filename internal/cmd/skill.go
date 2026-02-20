@@ -36,13 +36,13 @@ func newSkillInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Install the teamcity-cli skill for AI coding agents",
-		Long: `Install the teamcity-cli skill so AI coding agents can use tc commands.
+		Long: `Install the teamcity-cli skill so AI coding agents can use teamcity commands.
 
 Installs globally by default. Use --project to install to the current project only.
 Auto-detects installed agents when --agent is not specified.`,
-		Example: `  tc skill install
-  tc skill install --agent claude-code --agent cursor
-  tc skill install --project`,
+		Example: `  teamcity skill install
+  teamcity skill install --agent claude-code --agent cursor
+  teamcity skill install --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSkillInstall(opts, false)
 		},
@@ -58,13 +58,13 @@ func newSkillUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update the teamcity-cli skill for AI coding agents",
-		Long: `Update the teamcity-cli skill to the latest version bundled with this tc release.
+		Long: `Update the teamcity-cli skill to the latest version bundled with this teamcity release.
 
 Skips if the installed version already matches.
 Auto-detects installed agents when --agent is not specified.`,
-		Example: `  tc skill update
-  tc skill update --agent claude-code
-  tc skill update --project`,
+		Example: `  teamcity skill update
+  teamcity skill update --agent claude-code
+  teamcity skill update --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSkillInstall(opts, true)
 		},
@@ -130,9 +130,9 @@ func newSkillRemoveCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",
 		Short: "Remove the teamcity-cli skill from AI coding agents",
-		Example: `  tc skill remove
-  tc skill remove --agent claude-code
-  tc skill remove --project`,
+		Example: `  teamcity skill remove
+  teamcity skill remove --agent claude-code
+  teamcity skill remove --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSkillRemove(opts)
 		},

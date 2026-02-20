@@ -52,10 +52,10 @@ func newProjectListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List projects",
 		Long:  `List all TeamCity projects.`,
-		Example: `  tc project list
-  tc project list --parent Falcon
-  tc project list --json
-  tc project list --json=id,name,webUrl`,
+		Example: `  teamcity project list
+  teamcity project list --parent Falcon
+  teamcity project list --json
+  teamcity project list --json=id,name,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runProjectList(cmd, opts)
 		},
@@ -131,8 +131,8 @@ func newProjectViewCmd() *cobra.Command {
 		Short: "View project details",
 		Long:  `View details of a TeamCity project.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc project view Falcon
-  tc project view Falcon --web`,
+		Example: `  teamcity project view Falcon
+  teamcity project view Falcon --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runProjectView(args[0], opts)
 		},
@@ -216,13 +216,13 @@ and is not committed to version control.
 
 Requires EDIT_PROJECT permission (Project Administrator role).`,
 		Example: `  # Store a secret interactively (prompts for value)
-  tc project token put Falcon
+  teamcity project token put Falcon
 
   # Store a secret from a value
-  tc project token put Falcon "my-secret-password"
+  teamcity project token put Falcon "my-secret-password"
 
   # Store a secret from stdin (useful for piping)
-  echo -n "my-secret" | tc project token put Falcon --stdin
+  echo -n "my-secret" | teamcity project token put Falcon --stdin
 
   # Use the token in versioned settings
   # password: credentialsJSON:<returned-token>`,
@@ -291,8 +291,8 @@ func newProjectTokenGetCmd() *cobra.Command {
 
 This operation requires CHANGE_SERVER_SETTINGS permission,
 which is only available to System Administrators.`,
-		Example: `  tc project token get Falcon "credentialsJSON:abc123..."
-  tc project token get Falcon "abc123..."`,
+		Example: `  teamcity project token get Falcon "credentialsJSON:abc123..."
+  teamcity project token get Falcon "abc123..."`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runProjectTokenGet(args[0], args[1])
@@ -359,8 +359,8 @@ Displays:
 - Last successful sync timestamp
 - VCS root and format information
 - Any warnings or errors from the last sync attempt`,
-		Example: `  tc project settings status MyProject
-  tc project settings status MyProject --json`,
+		Example: `  teamcity project settings status MyProject
+  teamcity project settings status MyProject --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runProjectSettingsStatus(args[0], opts)
@@ -494,16 +494,16 @@ The exported archive can be used to:
 
 By default, exports in Kotlin DSL format.`,
 		Example: `  # Export as Kotlin DSL (default)
-  tc project settings export MyProject
+  teamcity project settings export MyProject
 
   # Export as Kotlin DSL explicitly
-  tc project settings export MyProject --kotlin
+  teamcity project settings export MyProject --kotlin
 
   # Export as XML
-  tc project settings export MyProject --xml
+  teamcity project settings export MyProject --xml
 
   # Save to specific file
-  tc project settings export MyProject -o settings.zip`,
+  teamcity project settings export MyProject -o settings.zip`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runProjectSettingsExport(args[0], opts)
@@ -619,9 +619,9 @@ func newProjectSettingsValidateCmd() *cobra.Command {
 
 Auto-detects .teamcity directory in the current directory or parents.
 Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.`,
-		Example: `  tc project settings validate
-  tc project settings validate ./path/to/.teamcity
-  tc project settings validate --verbose`,
+		Example: `  teamcity project settings validate
+  teamcity project settings validate ./path/to/.teamcity
+  teamcity project settings validate --verbose`,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -650,7 +650,7 @@ func runProjectSettingsValidate(opts *projectSettingsValidateOptions) error {
 	}
 
 	if dslDir == "" {
-		return fmt.Errorf("no TeamCity DSL directory found\n\nLooking for .teamcity in current directory and parents.\nSpecify path explicitly: tc project settings validate ./path/to/settings")
+		return fmt.Errorf("no TeamCity DSL directory found\n\nLooking for .teamcity in current directory and parents.\nSpecify path explicitly: teamcity project settings validate ./path/to/settings")
 	}
 
 	pomPath := filepath.Join(dslDir, "pom.xml")

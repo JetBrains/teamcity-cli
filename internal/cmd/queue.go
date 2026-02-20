@@ -39,10 +39,10 @@ func newQueueListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List queued runs",
 		Long:  `List all runs in the TeamCity queue.`,
-		Example: `  tc queue list
-  tc queue list --job Falcon_Build
-  tc queue list --json
-  tc queue list --json=id,state,webUrl`,
+		Example: `  teamcity queue list
+  teamcity queue list --job Falcon_Build
+  teamcity queue list --json
+  teamcity queue list --json=id,state,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runQueueList(cmd, opts)
 		},
@@ -124,8 +124,8 @@ func newQueueRemoveCmd() *cobra.Command {
 		Short: "Remove a run from the queue",
 		Long:  `Remove a queued run from the TeamCity queue.`,
 		Args:  cobra.ExactArgs(1),
-		Example: `  tc queue remove 12345
-  tc queue remove 12345 --force`,
+		Example: `  teamcity queue remove 12345
+  teamcity queue remove 12345 --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runQueueRemove(args[0], opts)
 		},
@@ -192,7 +192,7 @@ func newQueueActionCmd(a queueAction) *cobra.Command {
 		Short:   a.short,
 		Long:    a.long,
 		Args:    cobra.ExactArgs(1),
-		Example: fmt.Sprintf("  tc queue %s 12345", a.use),
+		Example: fmt.Sprintf("  teamcity queue %s 12345", a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := getClient()
 			if err != nil {

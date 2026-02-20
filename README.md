@@ -11,7 +11,7 @@ A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail lo
 
 <!-- TOC -->
 * [TeamCity CLI](#teamcity-cli)
-  * [Why tc?](#why-tc)
+  * [Why teamcity?](#why-teamcity)
   * [Installation](#installation)
     * [macOS & Linux](#macos--linux)
     * [Windows](#windows)
@@ -104,13 +104,13 @@ A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail lo
 
 </details>
 
-## Why tc?
+## Why teamcity?
 
 - **[Stay in your terminal](#quick-start)** – Start builds, view logs, manage queues — no browser needed
-- **[Remote agent access](#agent-term)** – Shell into any build agent with [`tc agent term`](#agent-term), or run commands with [`tc agent exec`](#agent-exec)
-- **[Real-time logs](#run-watch)** – Stream build output as it happens with [`tc run watch --logs`](#run-watch)
-- **[Scriptable](#json-output)** – `--json` and `--plain` output for pipelines, plus direct REST API access via [`tc api`](#api)
-- **[AI agent ready](#for-ai-agents)** – Built-in [skill](https://agentskills.io) for Claude Code, Cursor, and other AI coding agents — just run `tc skill install`
+- **[Remote agent access](#agent-term)** – Shell into any build agent with [`teamcity agent term`](#agent-term), or run commands with [`teamcity agent exec`](#agent-exec)
+- **[Real-time logs](#run-watch)** – Stream build output as it happens with [`teamcity run watch --logs`](#run-watch)
+- **[Scriptable](#json-output)** – `--json` and `--plain` output for pipelines, plus direct REST API access via [`teamcity api`](#api)
+- **[AI agent ready](#for-ai-agents)** – Built-in [skill](https://agentskills.io) for Claude Code, Cursor, and other AI coding agents — just run `teamcity skill install`
 
 ## Installation
 
@@ -118,7 +118,7 @@ A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail lo
 
 **Homebrew (recommended):**
 ```bash
-brew install jetbrains/utils/tc
+brew install jetbrains/utils/teamcity
 ```
 
 **Install script:**
@@ -128,26 +128,26 @@ curl -fsSL https://jb.gg/tc/install | bash
 
 **Debian/Ubuntu:**
 ```bash
-curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.deb
-sudo dpkg -i tc_linux_amd64.deb
+curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/teamcity_linux_amd64.deb
+sudo dpkg -i teamcity_linux_amd64.deb
 ```
 
 **RHEL/Fedora:**
 ```bash
-sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.rpm
+sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/latest/download/teamcity_linux_amd64.rpm
 ```
 
 **Arch Linux:**
 ```bash
-curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/tc_linux_amd64.pkg.tar.zst
-sudo pacman -U tc_linux_amd64.pkg.tar.zst
+curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/teamcity_linux_amd64.pkg.tar.zst
+sudo pacman -U teamcity_linux_amd64.pkg.tar.zst
 ```
 
 ### Windows
 
 **Winget (recommended):**
 ```powershell
-winget install JetBrains.tc
+winget install JetBrains.teamcity
 ```
 
 **PowerShell:**
@@ -162,13 +162,13 @@ curl -fsSL https://jb.gg/tc/install.cmd -o install.cmd && install.cmd && del ins
 
 **Chocolatey:**
 ```powershell
-choco install tc
+choco install teamcity
 ```
 
 **Scoop:**
 ```powershell
 scoop bucket add jetbrains https://github.com/JetBrains/scoop-utils
-scoop install tc
+scoop install teamcity
 ```
 
 ### Go
@@ -182,37 +182,37 @@ go install github.com/JetBrains/teamcity-cli/tc@latest
 ```bash
 git clone https://github.com/JetBrains/teamcity-cli.git
 cd teamcity-cli
-go build -o tc ./tc
+go build -o teamcity ./tc
 ```
 
 ## Quick Start
 
 ```bash
 # Authenticate with your TeamCity server
-tc auth login
+teamcity auth login
 
 # List recent builds
-tc run list --limit 10
+teamcity run list --limit 10
 
 # Start a build and watch it run
-tc run start MyProject_Build --branch main --watch
+teamcity run start MyProject_Build --branch main --watch
 
 # View logs from the latest build of a job
-tc run log --job MyProject_Build
+teamcity run log --job MyProject_Build
 
 # Check what's in the queue
-tc queue list
+teamcity queue list
 ```
 
 ## For AI Agents
 
-An [Agent Skill](https://agentskills.io) is included with `tc`. It teaches AI coding agents how to use `tc` for common TeamCity workflows.
+An [Agent Skill](https://agentskills.io) is included with `teamcity`. It teaches AI coding agents how to use `teamcity` for common TeamCity workflows.
 
 ```bash
-tc skill install           # auto-detects installed agents (Claude Code, Cursor, etc.)
-tc skill install --project # install to current project only
-tc skill update            # update to latest version bundled with tc
-tc skill remove            # uninstall
+teamcity skill install           # auto-detects installed agents (Claude Code, Cursor, etc.)
+teamcity skill install --project # install to current project only
+teamcity skill update            # update to latest version bundled with teamcity
+teamcity skill remove            # uninstall
 ```
 
 or specifically for **Claude Code:**
@@ -225,43 +225,43 @@ The skill is located in [`skills/teamcity-cli/`](skills/teamcity-cli/) and follo
 
 ## Commands
 
-| Command               | Description                         |
-|-----------------------|-------------------------------------|
-| **auth**              |                                     |
-| `tc auth login`       | Authenticate with a TeamCity server |
-| `tc auth logout`      | Log out from the current server     |
-| `tc auth status`      | Show authentication status          |
-| **run**               |                                     |
-| `tc run list`         | List recent builds                  |
-| `tc run start`        | Start a new build                   |
-| `tc run view`         | View build details                  |
-| `tc run watch`        | Watch a build in real-time          |
-| `tc run log`          | View build log output               |
-| `tc run changes`      | Show commits included in a build    |
-| `tc run tests`        | Show test results                   |
-| `tc run cancel`       | Cancel a running or queued build    |
-| `tc run download`     | Download artifacts                  |
-| `tc run restart`      | Restart with same configuration     |
-| `tc run pin/unpin`    | Pin or unpin a build                |
-| `tc run tag/untag`    | Add or remove tags                  |
-| `tc run comment`      | Set or view build comment           |
-| **job**               |                                     |
-| `tc job list`         | List build configurations           |
-| `tc job view`         | View job details                    |
-| `tc job pause/resume` | Pause or resume a job               |
-| `tc job param`        | Manage job parameters               |
-| **project**           |                                     |
-| `tc project list`     | List projects                       |
-| `tc project view`     | View project details                |
-| `tc project param`    | Manage project parameters           |
-| `tc project token`    | Manage secure tokens                |
-| **queue**             |                                     |
-| `tc queue list`       | List queued builds                  |
-| `tc queue approve`    | Approve a queued build              |
-| `tc queue remove`     | Remove from queue                   |
-| `tc queue top`        | Move to top of queue                |
-| **api**               |                                     |
-| `tc api`              | Make raw API requests               |
+| Command                    | Description                         |
+|----------------------------|-------------------------------------|
+| **auth**                   |                                     |
+| `teamcity auth login`      | Authenticate with a TeamCity server |
+| `teamcity auth logout`     | Log out from the current server     |
+| `teamcity auth status`     | Show authentication status          |
+| **run**                    |                                     |
+| `teamcity run list`        | List recent builds                  |
+| `teamcity run start`       | Start a new build                   |
+| `teamcity run view`        | View build details                  |
+| `teamcity run watch`       | Watch a build in real-time          |
+| `teamcity run log`         | View build log output               |
+| `teamcity run changes`     | Show commits included in a build    |
+| `teamcity run tests`       | Show test results                   |
+| `teamcity run cancel`      | Cancel a running or queued build    |
+| `teamcity run download`    | Download artifacts                  |
+| `teamcity run restart`     | Restart with same configuration     |
+| `teamcity run pin/unpin`   | Pin or unpin a build                |
+| `teamcity run tag/untag`   | Add or remove tags                  |
+| `teamcity run comment`     | Set or view build comment           |
+| **job**                    |                                     |
+| `teamcity job list`        | List build configurations           |
+| `teamcity job view`        | View job details                    |
+| `teamcity job pause/resume`| Pause or resume a job               |
+| `teamcity job param`       | Manage job parameters               |
+| **project**                |                                     |
+| `teamcity project list`    | List projects                       |
+| `teamcity project view`    | View project details                |
+| `teamcity project param`   | Manage project parameters           |
+| `teamcity project token`   | Manage secure tokens                |
+| **queue**                  |                                     |
+| `teamcity queue list`      | List queued builds                  |
+| `teamcity queue approve`   | Approve a queued build              |
+| `teamcity queue remove`    | Remove from queue                   |
+| `teamcity queue top`       | Move to top of queue                |
+| **api**                    |                                     |
+| `teamcity api`             | Make raw API requests               |
 
 ## Configuration
 
@@ -284,25 +284,25 @@ You can authenticate with multiple TeamCity servers. Each server's credentials a
 
 ```bash
 # Log in to your first server
-tc auth login --server https://teamcity1.example.com
+teamcity auth login --server https://teamcity1.example.com
 
 # Log in to additional servers (becomes the new default)
-tc auth login --server https://teamcity2.example.com
+teamcity auth login --server https://teamcity2.example.com
 ```
 
 **Switching between servers:**
 
 ```bash
 # Option 1: Use environment variable (recommended for scripts)
-TEAMCITY_URL=https://teamcity1.example.com tc run list
+TEAMCITY_URL=https://teamcity1.example.com teamcity run list
 
 # Option 2: Export for your session
 export TEAMCITY_URL=https://teamcity1.example.com
-tc run list  # uses teamcity1
-tc auth status  # shows teamcity1
+teamcity run list  # uses teamcity1
+teamcity auth status  # shows teamcity1
 
 # Option 3: Log in again to change the default
-tc auth login --server https://teamcity1.example.com
+teamcity auth login --server https://teamcity1.example.com
 ```
 
 **Example multi-server config:**
@@ -325,7 +325,7 @@ Environment variables always take precedence over config file settings:
 ```bash
 export TEAMCITY_URL="https://teamcity.example.com"
 export TEAMCITY_TOKEN="your-access-token"
-tc run start MyProject_Build  # uses env vars, ignores config file
+teamcity run start MyProject_Build  # uses env vars, ignores config file
 ```
 
 **Auto-detection from DSL:**
@@ -336,16 +336,16 @@ When working in a project with TeamCity Kotlin DSL configuration, the server URL
 
 ```bash
 # Bash
-tc completion bash > /etc/bash_completion.d/tc
+teamcity completion bash > /etc/bash_completion.d/teamcity
 
 # Zsh
-tc completion zsh > "${fpath[1]}/_tc"
+teamcity completion zsh > "${fpath[1]}/_teamcity"
 
 # Fish
-tc completion fish > ~/.config/fish/completions/tc.fish
+teamcity completion fish > ~/.config/fish/completions/teamcity.fish
 
 # PowerShell
-tc completion powershell > tc.ps1
+teamcity completion powershell > teamcity.ps1
 ```
 
 ## Global Flags
@@ -363,16 +363,16 @@ Commands that list resources (`run list`, `job list`, `project list`, `queue lis
 
 ```bash
 # Default fields (default selection covering most use cases)
-tc run list --json
+teamcity run list --json
 
 # List available fields for a command
-tc run list --json=
+teamcity run list --json=
 
 # Select specific fields
-tc run list --json=id,status,webUrl
+teamcity run list --json=id,status,webUrl
 
 # Use dot notation for nested fields
-tc run list --json=id,status,buildType.name,triggered.user.username
+teamcity run list --json=id,status,buildType.name,triggered.user.username
 ```
 
 **Field notation:**
@@ -388,19 +388,19 @@ Use dot notation to access nested fields. For example, `buildType.name` retrieve
 | `project list` | `id`, `name`, `description`, `parentProjectId`, `href`, `webUrl`                                                                                                                                      |
 | `queue list`   | `id`, `buildTypeId`, `state`, `branchName`, `queuedDate`, `buildType.name`, `triggered.user.name`, `webUrl`                                                                                           |
 
-Run `tc <command> --json=` to see all available fields for that command.
+Run `teamcity <command> --json=` to see all available fields for that command.
 
 **Scripting examples:**
 
 ```bash
 # Get build IDs that failed
-tc run list --status failure --json=id | jq -r '.[].id'
+teamcity run list --status failure --json=id | jq -r '.[].id'
 
 # Export runs to CSV
-tc run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branchName] | @csv'
+teamcity run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branchName] | @csv'
 
 # Get web URLs for queued builds
-tc queue list --json=webUrl | jq -r '.[].webUrl'
+teamcity queue list --json=webUrl | jq -r '.[].webUrl'
 ```
 
 <!-- COMMANDS_START -->
@@ -448,13 +448,13 @@ Show authentication status
 
 List artifacts from a run without downloading them.
 
-Shows artifact names and sizes. Use tc run download to download artifacts.
+Shows artifact names and sizes. Use teamcity run download to download artifacts.
 
 ```bash
-tc run artifacts 12345
-tc run artifacts 12345 --json
-tc run artifacts 12345 --path html_reports/coverage
-tc run artifacts --job MyBuild
+teamcity run artifacts 12345
+teamcity run artifacts 12345 --json
+teamcity run artifacts 12345 --path html_reports/coverage
+teamcity run artifacts --job MyBuild
 ```
 
 **Options:**
@@ -467,9 +467,9 @@ tc run artifacts --job MyBuild
 Cancel a running or queued run.
 
 ```bash
-tc run cancel 12345
-tc run cancel 12345 --comment "Cancelling for hotfix"
-tc run cancel 12345 --force
+teamcity run cancel 12345
+teamcity run cancel 12345 --comment "Cancelling for hotfix"
+teamcity run cancel 12345 --force
 ```
 
 **Options:**
@@ -481,9 +481,9 @@ tc run cancel 12345 --force
 Show the VCS changes (commits) included in a run.
 
 ```bash
-tc run changes 12345
-tc run changes 12345 --no-files
-tc run changes 12345 --json
+teamcity run changes 12345
+teamcity run changes 12345 --no-files
+teamcity run changes 12345 --json
 ```
 
 **Options:**
@@ -499,9 +499,9 @@ With a comment argument, sets the comment.
 Use --delete to remove the comment.
 
 ```bash
-tc run comment 12345
-tc run comment 12345 "Deployed to production"
-tc run comment 12345 --delete
+teamcity run comment 12345
+teamcity run comment 12345 "Deployed to production"
+teamcity run comment 12345 --delete
 ```
 
 **Options:**
@@ -512,9 +512,9 @@ tc run comment 12345 --delete
 Download artifacts from a completed run.
 
 ```bash
-tc run download 12345
-tc run download 12345 --dir ./artifacts
-tc run download 12345 --artifact "*.jar"
+teamcity run download 12345
+teamcity run download 12345 --dir ./artifacts
+teamcity run download 12345 --artifact "*.jar"
 ```
 
 **Options:**
@@ -526,14 +526,14 @@ tc run download 12345 --artifact "*.jar"
 List recent runs
 
 ```bash
-tc run list
-tc run list --job Falcon_Build
-tc run list --status failure --limit 10
-tc run list --project Falcon --branch main
-tc run list --since 24h
-tc run list --json
-tc run list --json=id,status,webUrl
-tc run list --plain | grep failure
+teamcity run list
+teamcity run list --job Falcon_Build
+teamcity run list --status failure --limit 10
+teamcity run list --project Falcon --branch main
+teamcity run list --since 24h
+teamcity run list --json
+teamcity run list --json=id,status,webUrl
+teamcity run list --plain | grep failure
 ```
 
 **Options:**
@@ -560,9 +560,9 @@ Pager: / search, n/N next/prev, g/G top/bottom, q quit.
 Use --raw to bypass the pager.
 
 ```bash
-tc run log 12345
-tc run log 12345 --failed
-tc run log --job Falcon_Build
+teamcity run log 12345
+teamcity run log 12345 --failed
+teamcity run log --job Falcon_Build
 ```
 
 **Options:**
@@ -575,8 +575,8 @@ tc run log --job Falcon_Build
 Pin a run to prevent it from being automatically cleaned up by retention policies.
 
 ```bash
-tc run pin 12345
-tc run pin 12345 --comment "Release candidate"
+teamcity run pin 12345
+teamcity run pin 12345 --comment "Release candidate"
 ```
 
 **Options:**
@@ -587,8 +587,8 @@ tc run pin 12345 --comment "Release candidate"
 Restart a run with the same configuration.
 
 ```bash
-tc run restart 12345
-tc run restart 12345 --watch
+teamcity run restart 12345
+teamcity run restart 12345 --watch
 ```
 
 **Options:**
@@ -600,15 +600,15 @@ tc run restart 12345 --watch
 Start a new run
 
 ```bash
-tc run start Falcon_Build
-tc run start Falcon_Build --branch feature/test
-tc run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
-tc run start Falcon_Build --comment "Release build" --tag release --tag v1.0
-tc run start Falcon_Build --clean --rebuild-deps --top
-tc run start Falcon_Build --local-changes # personal build with uncommitted Git changes
-tc run start Falcon_Build --local-changes changes.patch  # from file
-tc run start Falcon_Build --revision abc123def --branch main
-tc run start Falcon_Build --dry-run
+teamcity run start Falcon_Build
+teamcity run start Falcon_Build --branch feature/test
+teamcity run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
+teamcity run start Falcon_Build --comment "Release build" --tag release --tag v1.0
+teamcity run start Falcon_Build --clean --rebuild-deps --top
+teamcity run start Falcon_Build --local-changes # personal build with uncommitted Git changes
+teamcity run start Falcon_Build --local-changes changes.patch  # from file
+teamcity run start Falcon_Build --revision abc123def --branch main
+teamcity run start Falcon_Build --dry-run
 ```
 
 **Options:**
@@ -637,8 +637,8 @@ tc run start Falcon_Build --dry-run
 Add one or more tags to a run for categorization and filtering.
 
 ```bash
-tc run tag 12345 release
-tc run tag 12345 release v1.0 production
+teamcity run tag 12345 release
+teamcity run tag 12345 release v1.0 production
 ```
 
 ### run tests
@@ -648,9 +648,9 @@ Show test results from a run.
 You can specify a run ID directly, or use --job to get the latest run's tests.
 
 ```bash
-tc run tests 12345
-tc run tests 12345 --failed
-tc run tests --job Falcon_Build
+teamcity run tests 12345
+teamcity run tests 12345 --failed
+teamcity run tests --job Falcon_Build
 ```
 
 **Options:**
@@ -664,7 +664,7 @@ tc run tests --job Falcon_Build
 Remove the pin from a run, allowing it to be cleaned up by retention policies.
 
 ```bash
-tc run unpin 12345
+teamcity run unpin 12345
 ```
 
 ### run untag
@@ -672,8 +672,8 @@ tc run unpin 12345
 Remove one or more tags from a run.
 
 ```bash
-tc run untag 12345 release
-tc run untag 12345 release v1.0
+teamcity run untag 12345 release
+teamcity run untag 12345 release v1.0
 ```
 
 ### run view
@@ -681,9 +681,9 @@ tc run untag 12345 release v1.0
 View run details
 
 ```bash
-tc run view 12345
-tc run view 12345 --web
-tc run view 12345 --json
+teamcity run view 12345
+teamcity run view 12345 --web
+teamcity run view 12345 --json
 ```
 
 **Options:**
@@ -695,9 +695,9 @@ tc run view 12345 --json
 Watch a run in real-time until it completes.
 
 ```bash
-tc run watch 12345
-tc run watch 12345 --interval 10
-tc run watch 12345 --logs
+teamcity run watch 12345
+teamcity run watch 12345 --interval 10
+teamcity run watch 12345 --logs
 ```
 
 **Options:**
@@ -715,10 +715,10 @@ tc run watch 12345 --logs
 List jobs
 
 ```bash
-tc job list
-tc job list --project Falcon
-tc job list --json
-tc job list --json=id,name,webUrl
+teamcity job list
+teamcity job list --project Falcon
+teamcity job list --json
+teamcity job list --json=id,name,webUrl
 ```
 
 **Options:**
@@ -731,7 +731,7 @@ tc job list --json=id,name,webUrl
 Delete a parameter from a job.
 
 ```bash
-tc job param delete MyID MY_PARAM
+teamcity job param delete MyID MY_PARAM
 ```
 
 ### job param get
@@ -739,8 +739,8 @@ tc job param delete MyID MY_PARAM
 Get the value of a specific job parameter.
 
 ```bash
-tc job param get MyID MY_PARAM
-tc job param get MyID VERSION
+teamcity job param get MyID MY_PARAM
+teamcity job param get MyID VERSION
 ```
 
 ### job param list
@@ -748,8 +748,8 @@ tc job param get MyID VERSION
 List all parameters for a job.
 
 ```bash
-tc job param list MyID
-tc job param list MyID --json
+teamcity job param list MyID
+teamcity job param list MyID --json
 ```
 
 **Options:**
@@ -760,8 +760,8 @@ tc job param list MyID --json
 Set or update a job parameter value.
 
 ```bash
-tc job param set MyID MY_PARAM "my value"
-tc job param set MyID SECRET_KEY "****" --secure
+teamcity job param set MyID MY_PARAM "my value"
+teamcity job param set MyID SECRET_KEY "****" --secure
 ```
 
 **Options:**
@@ -772,7 +772,7 @@ tc job param set MyID SECRET_KEY "****" --secure
 Pause a job to prevent new runs from being triggered.
 
 ```bash
-tc job pause Falcon_Build
+teamcity job pause Falcon_Build
 ```
 
 ### job resume
@@ -780,7 +780,7 @@ tc job pause Falcon_Build
 Resume a paused job to allow new runs.
 
 ```bash
-tc job resume Falcon_Build
+teamcity job resume Falcon_Build
 ```
 
 ### job view
@@ -788,8 +788,8 @@ tc job resume Falcon_Build
 View job details
 
 ```bash
-tc job view Falcon_Build
-tc job view Falcon_Build --web
+teamcity job view Falcon_Build
+teamcity job view Falcon_Build --web
 ```
 
 **Options:**
@@ -805,10 +805,10 @@ tc job view Falcon_Build --web
 List all TeamCity projects.
 
 ```bash
-tc project list
-tc project list --parent Falcon
-tc project list --json
-tc project list --json=id,name,webUrl
+teamcity project list
+teamcity project list --parent Falcon
+teamcity project list --json
+teamcity project list --json=id,name,webUrl
 ```
 
 **Options:**
@@ -821,7 +821,7 @@ tc project list --json=id,name,webUrl
 Delete a parameter from a project.
 
 ```bash
-tc project param delete MyID MY_PARAM
+teamcity project param delete MyID MY_PARAM
 ```
 
 ### project param get
@@ -829,8 +829,8 @@ tc project param delete MyID MY_PARAM
 Get the value of a specific project parameter.
 
 ```bash
-tc project param get MyID MY_PARAM
-tc project param get MyID VERSION
+teamcity project param get MyID MY_PARAM
+teamcity project param get MyID VERSION
 ```
 
 ### project param list
@@ -838,8 +838,8 @@ tc project param get MyID VERSION
 List all parameters for a project.
 
 ```bash
-tc project param list MyID
-tc project param list MyID --json
+teamcity project param list MyID
+teamcity project param list MyID --json
 ```
 
 **Options:**
@@ -850,8 +850,8 @@ tc project param list MyID --json
 Set or update a project parameter value.
 
 ```bash
-tc project param set MyID MY_PARAM "my value"
-tc project param set MyID SECRET_KEY "****" --secure
+teamcity project param set MyID MY_PARAM "my value"
+teamcity project param set MyID SECRET_KEY "****" --secure
 ```
 
 **Options:**
@@ -870,16 +870,16 @@ By default, exports in Kotlin DSL format.
 
 ```bash
 # Export as Kotlin DSL (default)
-tc project settings export MyProject
+teamcity project settings export MyProject
 
 # Export as Kotlin DSL explicitly
-tc project settings export MyProject --kotlin
+teamcity project settings export MyProject --kotlin
 
 # Export as XML
-tc project settings export MyProject --xml
+teamcity project settings export MyProject --xml
 
 # Save to specific file
-tc project settings export MyProject -o settings.zip
+teamcity project settings export MyProject -o settings.zip
 ```
 
 **Options:**
@@ -900,8 +900,8 @@ Displays:
 - Any warnings or errors from the last sync attempt
 
 ```bash
-tc project settings status MyProject
-tc project settings status MyProject --json
+teamcity project settings status MyProject
+teamcity project settings status MyProject --json
 ```
 
 **Options:**
@@ -915,9 +915,9 @@ Auto-detects .teamcity directory in the current directory or parents.
 Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.
 
 ```bash
-tc project settings validate
-tc project settings validate ./path/to/.teamcity
-tc project settings validate --verbose
+teamcity project settings validate
+teamcity project settings validate ./path/to/.teamcity
+teamcity project settings validate --verbose
 ```
 
 **Options:**
@@ -931,8 +931,8 @@ This operation requires CHANGE_SERVER_SETTINGS permission,
 which is only available to System Administrators.
 
 ```bash
-tc project token get Falcon "credentialsJSON:abc123..."
-tc project token get Falcon "abc123..."
+teamcity project token get Falcon "credentialsJSON:abc123..."
+teamcity project token get Falcon "abc123..."
 ```
 
 ### project token put
@@ -947,13 +947,13 @@ Requires EDIT_PROJECT permission (Project Administrator role).
 
 ```bash
 # Store a secret interactively (prompts for value)
-tc project token put Falcon
+teamcity project token put Falcon
 
 # Store a secret from a value
-tc project token put Falcon "my-secret-password"
+teamcity project token put Falcon "my-secret-password"
 
 # Store a secret from stdin (useful for piping)
-echo -n "my-secret" | tc project token put Falcon --stdin
+echo -n "my-secret" | teamcity project token put Falcon --stdin
 
 # Use the token in versioned settings
 # password: credentialsJSON:<returned-token>
@@ -967,8 +967,8 @@ echo -n "my-secret" | tc project token put Falcon --stdin
 View details of a TeamCity project.
 
 ```bash
-tc project view Falcon
-tc project view Falcon --web
+teamcity project view Falcon
+teamcity project view Falcon --web
 ```
 
 **Options:**
@@ -984,7 +984,7 @@ tc project view Falcon --web
 Approve a queued run that requires manual approval before it can run.
 
 ```bash
-tc queue approve 12345
+teamcity queue approve 12345
 ```
 
 ### queue list
@@ -992,10 +992,10 @@ tc queue approve 12345
 List all runs in the TeamCity queue.
 
 ```bash
-tc queue list
-tc queue list --job Falcon_Build
-tc queue list --json
-tc queue list --json=id,state,webUrl
+teamcity queue list
+teamcity queue list --job Falcon_Build
+teamcity queue list --json
+teamcity queue list --json=id,state,webUrl
 ```
 
 **Options:**
@@ -1008,8 +1008,8 @@ tc queue list --json=id,state,webUrl
 Remove a queued run from the TeamCity queue.
 
 ```bash
-tc queue remove 12345
-tc queue remove 12345 --force
+teamcity queue remove 12345
+teamcity queue remove 12345 --force
 ```
 
 **Options:**
@@ -1020,7 +1020,7 @@ tc queue remove 12345 --force
 Move a queued run to the top of the queue, giving it highest priority.
 
 ```bash
-tc queue top 12345
+teamcity queue top 12345
 ```
 
 ---
@@ -1032,8 +1032,8 @@ tc queue top 12345
 Authorize an agent to allow it to connect and run builds.
 
 ```bash
-tc agent authorize 1
-tc agent authorize Agent-Linux-01
+teamcity agent authorize 1
+teamcity agent authorize Agent-Linux-01
 ```
 
 ### agent deauthorize
@@ -1041,8 +1041,8 @@ tc agent authorize Agent-Linux-01
 Deauthorize an agent to revoke its permission to connect.
 
 ```bash
-tc agent deauthorize 1
-tc agent deauthorize Agent-Linux-01
+teamcity agent deauthorize 1
+teamcity agent deauthorize Agent-Linux-01
 ```
 
 ### agent disable
@@ -1050,8 +1050,8 @@ tc agent deauthorize Agent-Linux-01
 Disable an agent to prevent it from running builds.
 
 ```bash
-tc agent disable 1
-tc agent disable Agent-Linux-01
+teamcity agent disable 1
+teamcity agent disable Agent-Linux-01
 ```
 
 ### agent enable
@@ -1059,8 +1059,8 @@ tc agent disable Agent-Linux-01
 Enable an agent to allow it to run builds.
 
 ```bash
-tc agent enable 1
-tc agent enable Agent-Linux-01
+teamcity agent enable 1
+teamcity agent enable Agent-Linux-01
 ```
 
 ### agent exec
@@ -1068,9 +1068,9 @@ tc agent enable Agent-Linux-01
 Execute a command on a TeamCity build agent and return the output.
 
 ```bash
-tc agent exec 1 "ls -la"
-tc agent exec Agent-Linux-01 "cat /etc/os-release"
-tc agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh
+teamcity agent exec 1 "ls -la"
+teamcity agent exec Agent-Linux-01 "cat /etc/os-release"
+teamcity agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh
 ```
 
 **Options:**
@@ -1081,10 +1081,10 @@ tc agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh
 List build configurations (jobs) that are compatible or incompatible with an agent.
 
 ```bash
-tc agent jobs 1
-tc agent jobs Agent-Linux-01
-tc agent jobs Agent-Linux-01 --incompatible
-tc agent jobs 1 --json
+teamcity agent jobs 1
+teamcity agent jobs Agent-Linux-01
+teamcity agent jobs Agent-Linux-01 --incompatible
+teamcity agent jobs 1 --json
 ```
 
 **Options:**
@@ -1096,11 +1096,11 @@ tc agent jobs 1 --json
 List build agents
 
 ```bash
-tc agent list
-tc agent list --pool Default
-tc agent list --connected
-tc agent list --json
-tc agent list --json=id,name,connected,enabled
+teamcity agent list
+teamcity agent list --pool Default
+teamcity agent list --connected
+teamcity agent list --json
+teamcity agent list --json=id,name,connected,enabled
 ```
 
 **Options:**
@@ -1116,8 +1116,8 @@ tc agent list --json=id,name,connected,enabled
 Move an agent to a different agent pool.
 
 ```bash
-tc agent move 1 0
-tc agent move Agent-Linux-01 2
+teamcity agent move 1 0
+teamcity agent move Agent-Linux-01 2
 ```
 
 ### agent reboot
@@ -1130,10 +1130,10 @@ Use --after-build to wait for the current build to finish before rebooting.
 Note: Local agents (running on the same machine as the server) cannot be rebooted.
 
 ```bash
-tc agent reboot 1
-tc agent reboot Agent-Linux-01
-tc agent reboot Agent-Linux-01 --after-build
-tc agent reboot Agent-Linux-01 --yes
+teamcity agent reboot 1
+teamcity agent reboot Agent-Linux-01
+teamcity agent reboot Agent-Linux-01 --after-build
+teamcity agent reboot Agent-Linux-01 --yes
 ```
 
 **Options:**
@@ -1145,8 +1145,8 @@ tc agent reboot Agent-Linux-01 --yes
 Open an interactive shell session to a TeamCity build agent.
 
 ```bash
-tc agent term 1
-tc agent term Agent-Linux-01
+teamcity agent term 1
+teamcity agent term Agent-Linux-01
 ```
 
 ### agent view
@@ -1154,10 +1154,10 @@ tc agent term Agent-Linux-01
 View agent details
 
 ```bash
-tc agent view 1
-tc agent view Agent-Linux-01
-tc agent view Agent-Linux-01 --web
-tc agent view 1 --json
+teamcity agent view 1
+teamcity agent view Agent-Linux-01
+teamcity agent view Agent-Linux-01 --web
+teamcity agent view 1 --json
 ```
 
 **Options:**
@@ -1173,7 +1173,7 @@ tc agent view 1 --json
 Link a project to an agent pool, allowing the project's builds to run on agents in that pool.
 
 ```bash
-tc pool link 1 MyProject
+teamcity pool link 1 MyProject
 ```
 
 ### pool list
@@ -1181,9 +1181,9 @@ tc pool link 1 MyProject
 List agent pools
 
 ```bash
-tc pool list
-tc pool list --json
-tc pool list --json=id,name,maxAgents
+teamcity pool list
+teamcity pool list --json
+teamcity pool list --json=id,name,maxAgents
 ```
 
 **Options:**
@@ -1194,7 +1194,7 @@ tc pool list --json=id,name,maxAgents
 Unlink a project from an agent pool, removing the project's access to agents in that pool.
 
 ```bash
-tc pool unlink 1 MyProject
+teamcity pool unlink 1 MyProject
 ```
 
 ### pool view
@@ -1202,9 +1202,9 @@ tc pool unlink 1 MyProject
 View pool details
 
 ```bash
-tc pool view 0
-tc pool view 1 --web
-tc pool view 1 --json
+teamcity pool view 0
+teamcity pool view 1 --web
+teamcity pool view 1 --json
 ```
 
 **Options:**
@@ -1228,16 +1228,16 @@ This command is useful for:
 
 ```bash
 # Get server info
-tc api /app/rest/server
+teamcity api /app/rest/server
 
 # List projects
-tc api /app/rest/projects
+teamcity api /app/rest/projects
 
 # Create a resource with POST
-tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
+teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
 
 # Fetch all pages and combine into array
-tc api /app/rest/builds --paginate --slurp
+teamcity api /app/rest/builds --paginate --slurp
 ```
 
 **Options:**
@@ -1268,28 +1268,28 @@ List configured aliases
 
 ### alias set
 
-Create a shortcut that expands into a full tc command.
+Create a shortcut that expands into a full teamcity command.
 
 Use $1, $2, ... for positional arguments. Extra arguments are appended.
 Use --shell for aliases that need pipes, redirection, or other shell features.
 
 ```bash
 # Quick shortcuts
-tc alias set rl  'run list'
-tc alias set rw  'run view $1 --web'
+teamcity alias set rl  'run list'
+teamcity alias set rw  'run view $1 --web'
 
 # Filtered views
-tc alias set mine    'run list --user=@me'
-tc alias set fails   'run list --status=failure --since=24h'
-tc alias set running 'run list --status=running'
+teamcity alias set mine    'run list --user=@me'
+teamcity alias set fails   'run list --status=failure --since=24h'
+teamcity alias set running 'run list --status=running'
 
 # Trigger-and-watch workflows
-tc alias set go    'run start $1 --watch'
-tc alias set hotfix 'run start $1 --top --clean --watch'
+teamcity alias set go    'run start $1 --watch'
+teamcity alias set hotfix 'run start $1 --top --clean --watch'
 
 # Shell aliases for pipes and external tools
-tc alias set watchnotify '!tc run watch $1 && notify-send "Build $1 done"'
-tc alias set faillog '!tc run list --status=failure --json | jq ".[].id"'
+teamcity alias set watchnotify '!teamcity run watch $1 && notify-send "Build $1 done"'
+teamcity alias set faillog '!teamcity run list --status=failure --json | jq ".[].id"'
 ```
 
 **Options:**
@@ -1301,15 +1301,15 @@ tc alias set faillog '!tc run list --status=failure --json | jq ".[].id"'
 
 ### skill install
 
-Install the teamcity-cli skill so AI coding agents can use tc commands.
+Install the teamcity-cli skill so AI coding agents can use teamcity commands.
 
 Installs globally by default. Use --project to install to the current project only.
 Auto-detects installed agents when --agent is not specified.
 
 ```bash
-tc skill install
-tc skill install --agent claude-code --agent cursor
-tc skill install --project
+teamcity skill install
+teamcity skill install --agent claude-code --agent cursor
+teamcity skill install --project
 ```
 
 **Options:**
@@ -1321,9 +1321,9 @@ tc skill install --project
 Remove the teamcity-cli skill from AI coding agents
 
 ```bash
-tc skill remove
-tc skill remove --agent claude-code
-tc skill remove --project
+teamcity skill remove
+teamcity skill remove --agent claude-code
+teamcity skill remove --project
 ```
 
 **Options:**
@@ -1332,15 +1332,15 @@ tc skill remove --project
 
 ### skill update
 
-Update the teamcity-cli skill to the latest version bundled with this tc release.
+Update the teamcity-cli skill to the latest version bundled with this teamcity release.
 
 Skips if the installed version already matches.
 Auto-detects installed agents when --agent is not specified.
 
 ```bash
-tc skill update
-tc skill update --agent claude-code
-tc skill update --project
+teamcity skill update
+teamcity skill update --agent claude-code
+teamcity skill update --project
 ```
 
 **Options:**
@@ -1355,38 +1355,38 @@ A collection of useful aliases to get started with:
 
 ```bash
 # ── Quick shortcuts ─────────────────────────────────────────────
-tc alias set rl       'run list'                        # List recent runs
-tc alias set rv       'run view $1'                     # View a run
-tc alias set rw       'run view $1 --web'               # Open run in browser
-tc alias set jl       'job list'                        # List jobs
-tc alias set ql       'queue list'                      # List queued runs
+teamcity alias set rl       'run list'                        # List recent runs
+teamcity alias set rv       'run view $1'                     # View a run
+teamcity alias set rw       'run view $1 --web'               # Open run in browser
+teamcity alias set jl       'job list'                        # List jobs
+teamcity alias set ql       'queue list'                      # List queued runs
 
 # ── Filtered views ──────────────────────────────────────────────
-tc alias set mine     'run list --user=@me'             # My runs
-tc alias set fails    'run list --status=failure --since=24h'  # Recent failures
-tc alias set running  'run list --status=running'       # What's running now
-tc alias set morning  'run list --status=failure --since=12h'  # Overnight failures
+teamcity alias set mine     'run list --user=@me'             # My runs
+teamcity alias set fails    'run list --status=failure --since=24h'  # Recent failures
+teamcity alias set running  'run list --status=running'       # What's running now
+teamcity alias set morning  'run list --status=failure --since=12h'  # Overnight failures
 
 # ── Trigger-and-watch ──────────────────────────────────────────
-tc alias set go       'run start $1 --watch'            # Start and watch
-tc alias set try      'run start $1 --local-changes --watch'  # Test local changes
-tc alias set hotfix   'run start $1 --top --clean --watch'    # Priority build
-tc alias set retry    'run restart $1 --watch'          # Re-run a build
+teamcity alias set go       'run start $1 --watch'            # Start and watch
+teamcity alias set try      'run start $1 --local-changes --watch'  # Test local changes
+teamcity alias set hotfix   'run start $1 --top --clean --watch'    # Priority build
+teamcity alias set retry    'run restart $1 --watch'          # Re-run a build
 
 # ── Queue management ───────────────────────────────────────────
-tc alias set rush     'queue top $1'                    # Prioritize a build
-tc alias set ok       'queue approve $1'                # Approve a queued run
+teamcity alias set rush     'queue top $1'                    # Prioritize a build
+teamcity alias set ok       'queue approve $1'                # Approve a queued run
 
 # ── Agent operations ───────────────────────────────────────────
-tc alias set maint    'agent disable $1'                # Put agent in maintenance
-tc alias set unmaint  'agent enable $1'                 # Bring agent back
+teamcity alias set maint    'agent disable $1'                # Put agent in maintenance
+teamcity alias set unmaint  'agent enable $1'                 # Bring agent back
 
 # ── API shortcuts ──────────────────────────────────────────────
-tc alias set whoami   'api /app/rest/users/current'     # Who am I?
+teamcity alias set whoami   'api /app/rest/users/current'     # Who am I?
 
 # ── Shell aliases (pipes & external tools) ─────────────────────
-tc alias set watchnotify '!tc run watch $1 && notify-send "Build $1 done"'
-tc alias set faillog     '!tc run list --status=failure --json | jq ".[].id"'
+teamcity alias set watchnotify '!teamcity run watch $1 && notify-send "Build $1 done"'
+teamcity alias set faillog     '!teamcity run list --status=failure --json | jq ".[].id"'
 ```
 
 ## Contributing

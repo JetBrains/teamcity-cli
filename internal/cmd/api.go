@@ -51,16 +51,16 @@ This command is useful for:
 - Debugging and exploration`,
 		Args: cobra.ExactArgs(1),
 		Example: `  # Get server info
-  tc api /app/rest/server
+  teamcity api /app/rest/server
 
   # List projects
-  tc api /app/rest/projects
+  teamcity api /app/rest/projects
 
   # Create a resource with POST
-  tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
+  teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
 
   # Fetch all pages and combine into array
-  tc api /app/rest/builds --paginate --slurp`,
+  teamcity api /app/rest/builds --paginate --slurp`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAPI(args[0], opts)
 		},

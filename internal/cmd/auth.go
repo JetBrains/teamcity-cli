@@ -202,7 +202,7 @@ func runAuthStatus() error {
 	}
 
 	fmt.Println(output.Red("✗"), "Not logged in to any TeamCity server")
-	fmt.Println("\nRun", output.Cyan("tc auth login"), "to authenticate")
+	fmt.Println("\nRun", output.Cyan("teamcity auth login"), "to authenticate")
 	if config.IsBuildEnvironment() {
 		fmt.Println("\n" + output.Yellow("!") + " Build environment detected but credentials not found in properties file")
 	}
