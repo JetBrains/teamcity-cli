@@ -40,6 +40,9 @@ type Client struct {
 	basicUser string
 	basicPass string
 
+	// Guest auth (no credentials, uses /guestAuth/ URL prefix)
+	guestAuth bool
+
 	// Cached server info
 	serverInfo     *Server
 	serverInfoOnce sync.Once
@@ -151,15 +154,41 @@ func NewClientWithBasicAuth(baseURL, username, password string, opts ...ClientOp
 	return c
 }
 
+// NewGuestClient creates a new TeamCity API client with guest authentication.
+// Guest auth uses the /guestAuth/ URL prefix and sends no credentials.
+func NewGuestClient(baseURL string, opts ...ClientOption) *Client {
+	baseURL = strings.TrimSuffix(baseURL, "/")
+
+	c := &Client{
+		BaseURL:   baseURL,
+		guestAuth: true,
+		HTTPClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
+}
+
 // apiPath returns the API path, optionally with version prefix
 func (c *Client) apiPath(path string) string {
 	if c.APIVersion != "" && strings.HasPrefix(path, "/app/rest/") {
-		return strings.Replace(path, "/app/rest/", "/app/rest/"+c.APIVersion+"/", 1)
+		path = strings.Replace(path, "/app/rest/", "/app/rest/"+c.APIVersion+"/", 1)
+	}
+	if c.guestAuth && !strings.HasPrefix(path, "/guestAuth/") {
+		path = "/guestAuth" + path
 	}
 	return path
 }
 
 func (c *Client) setAuth(req *http.Request) {
+	if c.guestAuth {
+		return
+	}
 	if c.basicPass != "" || c.basicUser != "" {
 		req.SetBasicAuth(c.basicUser, c.basicPass)
 	} else {

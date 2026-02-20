@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
@@ -32,6 +31,7 @@ func newAuthCmd() *cobra.Command {
 func newAuthLoginCmd() *cobra.Command {
 	var serverURL string
 	var token string
+	var guest bool
 	var insecureStorage bool
 
 	cmd := &cobra.Command{
@@ -48,19 +48,29 @@ The token is stored in your system keyring (macOS Keychain, GNOME Keyring,
 Windows Credential Manager) when available. Use --insecure-storage to store
 the token in plain text in the config file instead.
 
+For guest access (read-only, no token needed; must be enabled on the server):
+  teamcity auth login -s https://teamcity.example.com --guest
+
 For CI/CD, use environment variables instead:
   export TEAMCITY_URL="https://teamcity.example.com"
   export TEAMCITY_TOKEN="your-access-token"
+  # Or for guest access:
+  export TEAMCITY_URL="https://teamcity.example.com"
+  export TEAMCITY_GUEST=1
 
 When running inside a TeamCity build, authentication is automatic using
 build-level credentials from the build properties file.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if guest {
+				return runAuthLoginGuest(serverURL, token)
+			}
 			return runAuthLogin(serverURL, token, insecureStorage)
 		},
 	}
 
 	cmd.Flags().StringVarP(&serverURL, "server", "s", "", "TeamCity server URL")
 	cmd.Flags().StringVarP(&token, "token", "t", "", "Access token")
+	cmd.Flags().BoolVar(&guest, "guest", false, "Use guest authentication (no token needed, must be enabled on the server)")
 	cmd.Flags().BoolVar(&insecureStorage, "insecure-storage", false, "Store token in plain text config file instead of system keyring")
 
 	return cmd
@@ -82,10 +92,7 @@ func runAuthLogin(serverURL, token string, insecureStorage bool) error {
 		}
 	}
 
-	serverURL = strings.TrimSuffix(serverURL, "/")
-	if !strings.HasPrefix(serverURL, "http://") && !strings.HasPrefix(serverURL, "https://") {
-		serverURL = "https://" + serverURL
-	}
+	serverURL = config.NormalizeURL(serverURL)
 
 	if token == "" {
 		if !isInteractive {
@@ -152,6 +159,56 @@ func runAuthLogin(serverURL, token string, insecureStorage bool) error {
 	return nil
 }
 
+func runAuthLoginGuest(serverURL, token string) error {
+	if token != "" {
+		return tcerrors.WithSuggestion(
+			"cannot use --guest with --token",
+			"Use either --guest for guest access or --token for token authentication",
+		)
+	}
+
+	isInteractive := !NoInput && output.IsStdinTerminal()
+
+	if serverURL == "" {
+		if !isInteractive {
+			return tcerrors.RequiredFlag("server")
+		}
+		prompt := &survey.Input{
+			Message: "TeamCity server URL:",
+			Help:    "e.g., https://teamcity.example.com",
+		}
+		if err := survey.AskOne(prompt, &serverURL, survey.WithValidator(survey.Required)); err != nil {
+			return err
+		}
+	}
+
+	serverURL = config.NormalizeURL(serverURL)
+
+	warnInsecureHTTP(serverURL, "guest access")
+	output.Infof("Validating guest access... ")
+
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
+	server, err := client.GetServer()
+	if err != nil {
+		output.Info("%s", output.Red("✗"))
+		return tcerrors.WithSuggestion(
+			"Guest access validation failed",
+			"Verify the server URL and that guest access is enabled on the server",
+		)
+	}
+
+	output.Info("%s", output.Green("✓"))
+
+	if err := config.SetGuestServer(serverURL); err != nil {
+		return fmt.Errorf("failed to save configuration: %w", err)
+	}
+
+	output.Success("Guest access to %s", output.Cyan(serverURL))
+	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
+
+	return nil
+}
+
 func newAuthLogoutCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "logout",
@@ -192,6 +249,11 @@ func newAuthStatusCmd() *cobra.Command {
 
 func runAuthStatus() error {
 	serverURL := config.GetServerURL()
+
+	if config.IsGuestAuth() && serverURL != "" {
+		return showGuestAuthStatus(serverURL)
+	}
+
 	token, tokenSource := config.GetTokenWithSource()
 
 	if serverURL != "" && token != "" {
@@ -245,6 +307,27 @@ func showExplicitAuthStatus(serverURL, token, tokenSource string) error {
 		} else {
 			fmt.Printf("  %s API compatible\n", output.Green("✓"))
 		}
+	}
+
+	return nil
+}
+
+func showGuestAuthStatus(serverURL string) error {
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
+	server, err := client.GetServer()
+	if err != nil {
+		fmt.Printf("%s Server: %s\n", output.Red("✗"), serverURL)
+		fmt.Println("  Guest access is not available")
+		return nil
+	}
+
+	fmt.Printf("%s Guest access to %s\n", output.Green("✓"), output.Cyan(serverURL))
+	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
+
+	if err := client.CheckVersion(); err != nil {
+		fmt.Printf("  %s %s\n", output.Yellow("!"), err.Error())
+	} else {
+		fmt.Printf("  %s API compatible\n", output.Green("✓"))
 	}
 
 	return nil

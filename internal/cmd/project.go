@@ -797,6 +797,17 @@ func defaultGetClient() (api.ClientInterface, error) {
 
 	debugOpt := api.WithDebugFunc(output.Debug)
 
+	if config.IsGuestAuth() {
+		if serverURL == "" {
+			return nil, tcerrors.WithSuggestion(
+				"TEAMCITY_GUEST is set but no server URL configured",
+				fmt.Sprintf("Set %s environment variable or run 'teamcity auth login --guest -s <url>'", config.EnvServerURL),
+			)
+		}
+		output.Debug("Using guest authentication")
+		return api.NewGuestClient(serverURL, debugOpt), nil
+	}
+
 	if serverURL != "" && token != "" {
 		warnInsecureHTTP(serverURL, "authentication token")
 		return api.NewClient(serverURL, token, debugOpt), nil

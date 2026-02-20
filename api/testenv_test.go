@@ -1,4 +1,4 @@
-//go:build integration
+//go:build integration || guest
 
 package api_test
 
@@ -37,6 +37,7 @@ type testEnv struct {
 	ConfigID  string
 	Build     *api.Build
 
+	guestAuth      bool
 	ownsContainers bool
 	network        *testcontainers.DockerNetwork
 	server         testcontainers.Container
@@ -65,6 +66,26 @@ func setupTestEnv() (*testEnv, error) {
 	url := os.Getenv("TEAMCITY_URL")
 	token := os.Getenv("TEAMCITY_TOKEN")
 
+	if guest := os.Getenv("TEAMCITY_GUEST"); guest == "1" || guest == "true" || guest == "yes" {
+		if url == "" {
+			url = "https://cli.teamcity.com"
+		}
+		client := api.NewGuestClient(url)
+		if _, err := client.GetServer(); err != nil {
+			return nil, fmt.Errorf("guest auth failed for %s: %w", url, err)
+		}
+		log.Printf("Using guest auth against %s", url)
+		env := &testEnv{
+			Client:    client,
+			URL:       url,
+			guestAuth: true,
+		}
+		if err := env.discoverTestData(); err != nil {
+			log.Println("Warning: could not discover test data:", err.Error())
+		}
+		return env, nil
+	}
+
 	if url != "" && token != "" {
 		client := api.NewClient(url, token)
 		if _, err := client.GetCurrentUser(); err == nil {
@@ -84,6 +105,35 @@ func setupTestEnv() (*testEnv, error) {
 	}
 
 	return startContainers()
+}
+
+func (e *testEnv) discoverTestData() error {
+	projects, err := e.Client.GetProjects(api.ProjectsOptions{Parent: "_Root", Limit: 5})
+	if err != nil {
+		return fmt.Errorf("list projects: %w", err)
+	}
+	for _, p := range projects.Projects {
+		if p.ID != "_Root" {
+			e.ProjectID = p.ID
+			break
+		}
+	}
+
+	if e.ProjectID != "" {
+		configs, err := e.Client.GetBuildTypes(api.BuildTypesOptions{Project: e.ProjectID, Limit: 5})
+		if err == nil && len(configs.BuildTypes) > 0 {
+			e.ConfigID = configs.BuildTypes[0].ID
+		}
+	}
+
+	if e.ConfigID != "" {
+		if err := e.ensureBuild(); err != nil {
+			log.Println("Warning: could not ensure test build:", err.Error())
+		}
+	}
+
+	log.Printf("Discovered: project=%s config=%s build=%v", e.ProjectID, e.ConfigID, e.Build != nil)
+	return nil
 }
 
 func startContainers() (*testEnv, error) {
