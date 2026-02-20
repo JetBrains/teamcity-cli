@@ -17,19 +17,29 @@ jobs:
     runs-on: Ubuntu-22.04-Medium
     steps:
       - type: script
-        script-content: >-
+        name: Install Go
+        script-content: |
           sudo add-apt-repository ppa:longsleep/golang-backports
-
           sudo apt update
-
           sudo apt install -y golang-go
-
-          export GOPROXY=https://proxy.golang.org,direct
-
-          export GOROOT=/usr/lib/go-1.25 
-
-          /usr/lib/go-1.25/bin/go test -v ./... -tags=integration -timeout 15m
-          -coverpkg=./... -coverprofile=coverage.out
+      - type: script
+        name: Integration Tests
+        script-content: |
+          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
+          /usr/lib/go-1.25/bin/go test -v ./... -tags=integration -timeout 15m \
+            -coverpkg=./... -coverprofile=coverage-integration.out
+      - type: script
+        name: Guest Auth Tests
+        script-content: |
+          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
+          TEAMCITY_GUEST=1 /usr/lib/go-1.25/bin/go test -v ./api/... -tags=guest -timeout 15m \
+            -coverpkg=./... -coverprofile=coverage-guest.out
+      - type: script
+        name: Merge Coverage
+        script-content: |
+          head -1 coverage-integration.out > coverage.out
+          tail -n +2 coverage-integration.out >> coverage.out
+          tail -n +2 coverage-guest.out >> coverage.out
   Lint:
     name: Lint
     steps:
