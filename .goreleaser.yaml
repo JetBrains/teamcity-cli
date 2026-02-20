@@ -98,33 +98,6 @@ scoops:
     description: A command-line interface for TeamCity CI/CD server
     license: Apache-2.0
 
-chocolateys:
-  - name: teamcity
-    title: TeamCity CLI
-    authors: JetBrains
-    owners: JetBrains
-    summary: A command-line interface for TeamCity CI/CD server
-    description: |
-      {{ .ProjectName }} is a command-line interface for interacting with TeamCity CI/CD server.
-
-      Features:
-      - Manage builds, jobs, and projects from terminal
-      - Stream build logs in real-time
-      - JSON output for scripting
-      - Multi-server support
-    project_url: https://github.com/JetBrains/teamcity-cli
-    icon_url: https://resources.jetbrains.com/storage/products/company/brand/logos/TeamCity_icon.png
-    copyright: JetBrains s.r.o.
-    license_url: https://github.com/JetBrains/teamcity-cli/blob/main/LICENSE
-    require_license_acceptance: false
-    project_source_url: https://github.com/JetBrains/teamcity-cli
-    docs_url: https://jb.gg/tc/docs
-    bug_tracker_url: https://jb.gg/tc/issues
-    tags: teamcity ci cd cli jetbrains devops build automation
-    release_notes: https://github.com/JetBrains/teamcity-cli/releases/tag/v{{ .Version }}
-    api_key: '{{ .Env.CHOCOLATEY_API_KEY }}'
-    source_repo: https://push.chocolatey.org/
-
 winget:
   - name: teamcity
     publisher: JetBrains
@@ -228,11 +201,6 @@ release:
     **Winget (recommended):**
     ```powershell
     winget install JetBrains.teamcity
-    ```
-
-    **Chocolatey:**
-    ```powershell
-    choco install teamcity
     ```
 
     **Scoop:**

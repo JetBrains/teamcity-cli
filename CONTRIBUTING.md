@@ -68,7 +68,7 @@ Before submitting, make sure:
 
 > This section is for maintainers.
 
-Releases are handled by [goreleaser](https://goreleaser.com/) and publish to Homebrew, Scoop, Chocolatey, Winget, and GitHub Releases.
+Releases are handled by [goreleaser](https://goreleaser.com/) and publish to Homebrew, Scoop, Winget, and GitHub Releases.
 
 Dry-run locally:
 

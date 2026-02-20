@@ -161,11 +161,6 @@ irm https://jb.gg/tc/install.ps1 | iex
 curl -fsSL https://jb.gg/tc/install.cmd -o install.cmd && install.cmd && del install.cmd
 ```
 
-**Chocolatey:**
-```powershell
-choco install teamcity
-```
-
 **Scoop:**
 ```powershell
 scoop bucket add jetbrains https://github.com/JetBrains/scoop-utils
