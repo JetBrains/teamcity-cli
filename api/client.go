@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
@@ -255,7 +255,7 @@ func (c *Client) getWithRetry(path string, result any, retry RetryConfig) error 
 		return c.doRequest("GET", path, nil)
 	})
 	if err != nil {
-		return tcerrors.NetworkError(c.BaseURL, err)
+		return &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -279,36 +279,19 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
-		return tcerrors.AuthenticationFailed()
+		return ErrAuthentication
 	case http.StatusForbidden:
-		return tcerrors.PermissionDenied("perform this action")
+		return &PermissionError{Action: "perform this action"}
 	case http.StatusNotFound:
 		if message != "" {
-			return tcerrors.WithSuggestion(message, notFoundHint(message))
+			return &NotFoundError{Message: message}
 		}
-		return tcerrors.WithSuggestion("Resource not found", "Check the ID and try again")
+		return &NotFoundError{Message: "resource not found"}
 	default:
 		if message != "" {
-			return tcerrors.New(message)
+			return errors.New(message)
 		}
 		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(bodyBytes))
-	}
-}
-
-// notFoundHint returns a context-aware hint based on the error message
-func notFoundHint(message string) string {
-	msg := strings.ToLower(message)
-	switch {
-	case strings.Contains(msg, "agent pool"), strings.Contains(msg, "pool"):
-		return "Use 'teamcity pool list' to see available pools"
-	case strings.Contains(msg, "agent"):
-		return "Use 'teamcity agent list' to see available agents"
-	case strings.Contains(msg, "project"):
-		return "Use 'teamcity project list' to see available projects"
-	case strings.Contains(msg, "build type"), strings.Contains(msg, "job"):
-		return "Use 'teamcity job list' to see available jobs"
-	default:
-		return "Use 'teamcity job list' or 'teamcity run list' to see available resources"
 	}
 }
 
@@ -421,7 +404,7 @@ func (c *Client) postWithRetry(path string, body io.Reader, result any, retry Re
 		return c.doRequest("POST", path, body)
 	})
 	if err != nil {
-		return tcerrors.NetworkError(c.BaseURL, err)
+		return &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -496,7 +479,7 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, tcerrors.NetworkError(c.BaseURL, err)
+		return nil, &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 

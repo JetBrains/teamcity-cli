@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 )
 
 // AgentsOptions represents options for listing agents
@@ -159,7 +157,7 @@ func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return tcerrors.NetworkError(c.BaseURL, err)
+		return &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -169,11 +167,11 @@ func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error
 	case http.StatusOK, http.StatusNoContent, http.StatusFound:
 		return nil
 	case http.StatusUnauthorized:
-		return tcerrors.AuthenticationFailed()
+		return ErrAuthentication
 	case http.StatusForbidden:
-		return tcerrors.PermissionDenied("reboot agent")
+		return &PermissionError{Action: "reboot agent"}
 	case http.StatusNotFound:
-		return tcerrors.NotFound("agent", fmt.Sprintf("%d", id))
+		return &NotFoundError{Resource: "agent", ID: fmt.Sprintf("%d", id)}
 	default:
 		return fmt.Errorf("server returned status %d", resp.StatusCode)
 	}

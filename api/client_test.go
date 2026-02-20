@@ -616,32 +616,6 @@ func TestDownloadArtifactTo(T *testing.T) {
 	})
 }
 
-func TestNotFoundHint(T *testing.T) {
-	T.Parallel()
-
-	tests := []struct {
-		name    string
-		message string
-		want    string
-	}{
-		{"pool message", "Agent pool 'MyPool' not found", "Use 'teamcity pool list' to see available pools"},
-		{"agent message", "Agent 'MyAgent' not found", "Use 'teamcity agent list' to see available agents"},
-		{"project message", "Project 'Foo' not found", "Use 'teamcity project list' to see available projects"},
-		{"build type message", "Build type 'Foo_Bar' not found", "Use 'teamcity job list' to see available jobs"},
-		{"job message", "job 'Foo' not found", "Use 'teamcity job list' to see available jobs"},
-		{"default message", "Something else went wrong", "Use 'teamcity job list' or 'teamcity run list' to see available resources"},
-	}
-
-	for _, tc := range tests {
-		T.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := notFoundHint(tc.message)
-			assert.Equal(t, tc.want, got)
-		})
-	}
-}
-
 func TestVerboseLogging(T *testing.T) {
 	// Not parallel - modifies global output.Verbose
 
@@ -743,12 +717,12 @@ func TestRebootAgentHTTPErrors(T *testing.T) {
 		{
 			name:       "401 Unauthorized",
 			statusCode: http.StatusUnauthorized,
-			wantErr:    "Authentication failed",
+			wantErr:    "authentication failed",
 		},
 		{
 			name:       "403 Forbidden",
 			statusCode: http.StatusForbidden,
-			wantErr:    "Permission denied",
+			wantErr:    "permission denied",
 		},
 		{
 			name:       "404 Not Found",
