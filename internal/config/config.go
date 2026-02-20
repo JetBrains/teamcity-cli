@@ -15,6 +15,7 @@ import (
 const (
 	EnvServerURL = "TEAMCITY_URL"
 	EnvToken     = "TEAMCITY_TOKEN"
+	EnvGuestAuth = "TEAMCITY_GUEST"
 	EnvDSLDir    = "TEAMCITY_DSL_DIR"
 
 	DefaultDSLDirTeamCity = ".teamcity"
@@ -26,6 +27,7 @@ const (
 type ServerConfig struct {
 	Token string `mapstructure:"token"`
 	User  string `mapstructure:"user"`
+	Guest bool   `mapstructure:"guest,omitempty"`
 }
 
 type Config struct {
@@ -93,8 +95,10 @@ func Get() *Config {
 	return cfg
 }
 
+// NormalizeURL trims trailing slashes and ensures an http(s) scheme prefix.
+//
 //goland:noinspection HttpUrlsUsage
-func normalizeURL(u string) string {
+func NormalizeURL(u string) string {
 	u = strings.TrimSuffix(u, "/")
 	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
 		u = "https://" + u
@@ -108,7 +112,7 @@ func keyringService(serverURL string) string {
 
 func GetServerURL() string {
 	if url := os.Getenv(EnvServerURL); url != "" {
-		return normalizeURL(url)
+		return NormalizeURL(url)
 	}
 
 	if url := DetectServerFromDSL(); url != "" {
@@ -214,8 +218,33 @@ func ConfigPath() string {
 	return configPath
 }
 
-// IsConfigured returns true if both server URL and token are set
+// IsGuestAuth returns true if guest authentication is enabled via env var or server config
+func IsGuestAuth() bool {
+	if v := os.Getenv(EnvGuestAuth); v == "1" || v == "true" || v == "yes" {
+		return true
+	}
+	serverURL := GetServerURL()
+	if serverURL == "" || cfg == nil {
+		return false
+	}
+	if server, ok := cfg.Servers[serverURL]; ok {
+		return server.Guest
+	}
+	return false
+}
+
+// SetGuestServer saves a server with guest auth enabled and no token
+func SetGuestServer(serverURL string) error {
+	cfg.DefaultServer = serverURL
+	cfg.Servers[serverURL] = ServerConfig{Guest: true}
+	return writeConfig()
+}
+
+// IsConfigured returns true if server URL and token are set, or guest auth is active
 func IsConfigured() bool {
+	if IsGuestAuth() && GetServerURL() != "" {
+		return true
+	}
 	return GetServerURL() != "" && GetToken() != ""
 }
 

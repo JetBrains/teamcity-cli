@@ -1,10 +1,13 @@
-//go:build integration
+//go:build integration || guest
 
 // Integration tests for the TeamCity API client.
 // Uses a real TeamCity server: either from TEAMCITY_URL/TEAMCITY_TOKEN env vars,
-// or spins up a server via testcontainers (requires Docker).
+// spins up a server via testcontainers (requires Docker), or uses guest auth.
 //
-// Run with: go test -tags=integration ./api/...
+// Run with:
+//
+//	go test -tags=integration ./api/...                    # Full suite (Docker or token)
+//	TEAMCITY_GUEST=1 go test -tags=guest ./api/...         # Read-only tests via guest auth
 package api_test
 
 import (
@@ -29,6 +32,13 @@ var (
 	testBuild   *api.Build
 	testEnvRef  *testEnv
 )
+
+func skipIfGuest(t *testing.T) {
+	t.Helper()
+	if testEnvRef != nil && testEnvRef.guestAuth {
+		t.Skip("requires write access (skipped in guest mode)")
+	}
+}
 
 func TestMain(m *testing.M) {
 	env, err := setupTestEnv()
@@ -55,6 +65,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetCurrentUser(T *testing.T) {
+	skipIfGuest(T)
 	T.Parallel()
 
 	user, err := client.GetCurrentUser()
@@ -177,6 +188,7 @@ func TestResolveBuildID_Integration(T *testing.T) {
 }
 
 func TestRunBuildAndCancel(T *testing.T) {
+	skipIfGuest(T)
 	// Run with various options
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{
 		Comment:      "Integration test build",
@@ -220,6 +232,7 @@ func TestGetBuildQueue(T *testing.T) {
 }
 
 func TestBuildConfigPauseResume(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel: modifies shared config state
 	err := client.SetBuildTypePaused(testConfig, true)
 	require.NoError(T, err)
@@ -229,6 +242,7 @@ func TestBuildConfigPauseResume(T *testing.T) {
 }
 
 func TestProjectParameters(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel: creates/deletes shared project parameters
 	paramName := "TC_CLI_TEST_PARAM"
 
@@ -264,6 +278,7 @@ func TestProjectParameters(T *testing.T) {
 }
 
 func TestBuildTypeParameters(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel: creates/deletes shared config parameters
 	paramName := "TC_CLI_CONFIG_PARAM"
 
@@ -321,6 +336,7 @@ func TestBuildLog(T *testing.T) {
 }
 
 func TestBuildPinUnpin(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel: modifies testBuild pin state
 	if testBuild == nil {
 		T.Skip("no test build available")
@@ -340,6 +356,7 @@ func TestBuildPinUnpin(T *testing.T) {
 }
 
 func TestBuildTags(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel: modifies testBuild tags
 	if testBuild == nil {
 		T.Skip("no test build available")
@@ -362,6 +379,7 @@ func TestBuildTags(T *testing.T) {
 }
 
 func TestBuildComment(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel: modifies testBuild comment
 	if testBuild == nil {
 		T.Skip("no test build available")
@@ -387,6 +405,7 @@ func TestBuildComment(T *testing.T) {
 }
 
 func TestQueueOperations(T *testing.T) {
+	skipIfGuest(T)
 	// Queue a build
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{Comment: "Queue ops test"})
 	require.NoError(T, err)
@@ -407,6 +426,7 @@ func TestQueueOperations(T *testing.T) {
 }
 
 func TestRemoveFromQueue(T *testing.T) {
+	skipIfGuest(T)
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{Comment: "Queue remove test"})
 	require.NoError(T, err)
 
@@ -604,6 +624,7 @@ func TestSupportsFeature(T *testing.T) {
 }
 
 func TestUploadDiffChanges(T *testing.T) {
+	skipIfGuest(T)
 	T.Parallel()
 
 	patch := []byte(`--- a/test.txt
@@ -620,6 +641,7 @@ func TestUploadDiffChanges(T *testing.T) {
 }
 
 func TestPersonalBuildWithLocalChanges(T *testing.T) {
+	skipIfGuest(T)
 	patch := []byte(`--- a/test.txt
 +++ b/test.txt
 @@ -1 +1 @@
@@ -662,6 +684,7 @@ func TestPersonalBuildWithLocalChanges(T *testing.T) {
 }
 
 func TestBasicAuth(T *testing.T) {
+	skipIfGuest(T)
 	serverURL := os.Getenv("TEAMCITY_URL")
 	require.NotEmpty(T, serverURL, "TEAMCITY_URL must be set")
 
@@ -688,6 +711,7 @@ func TestBasicAuth(T *testing.T) {
 // when running inside a TeamCity build. The build runs our actual CLI binary which
 // uses GetBuildAuth() to read credentials from the properties file.
 func TestBuildLevelAuth(T *testing.T) {
+	skipIfGuest(T)
 	if testEnvRef == nil || testEnvRef.agent == nil {
 		T.Skip("test requires testcontainers agent")
 	}
@@ -751,6 +775,7 @@ teamcity auth status
 }
 
 func TestExportProjectSettings(T *testing.T) {
+	skipIfGuest(T)
 	T.Run("kotlin format", func(t *testing.T) {
 		t.Parallel()
 
@@ -811,6 +836,7 @@ func TestExportProjectSettings(T *testing.T) {
 }
 
 func TestPoolOperations(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel - modifies pool state
 
 	T.Run("list pools", func(t *testing.T) {
@@ -876,6 +902,7 @@ func TestPoolOperations(T *testing.T) {
 }
 
 func TestGetAgentIncompatibleBuildTypes(T *testing.T) {
+	skipIfGuest(T)
 	T.Parallel()
 
 	agents, err := client.GetAgents(api.AgentsOptions{})
@@ -888,6 +915,7 @@ func TestGetAgentIncompatibleBuildTypes(T *testing.T) {
 }
 
 func TestGetParameterValue(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel - creates and deletes a parameter
 	paramName := "TC_CLI_RAW_PARAM"
 	paramValue := "raw_test_value"
@@ -908,6 +936,7 @@ func TestGetParameterValue(T *testing.T) {
 }
 
 func TestRunBuildAdvancedOptions(T *testing.T) {
+	skipIfGuest(T)
 	T.Run("rebuild dependencies and queue at top", func(t *testing.T) {
 		build, err := client.RunBuild(testConfig, api.RunBuildOptions{
 			Comment:             "Test rebuild deps + queue at top",
@@ -951,6 +980,7 @@ func TestRunBuildAdvancedOptions(T *testing.T) {
 }
 
 func TestGetAgentsPoolFilter(T *testing.T) {
+	skipIfGuest(T)
 	T.Parallel()
 
 	T.Run("filter by pool name", func(t *testing.T) {
@@ -974,6 +1004,7 @@ func TestGetAgentsPoolFilter(T *testing.T) {
 }
 
 func TestCancelBuildNonExistent(T *testing.T) {
+	skipIfGuest(T)
 	T.Parallel()
 
 	err := client.CancelBuild("999999999", "Test cancel non-existent")
@@ -981,6 +1012,7 @@ func TestCancelBuildNonExistent(T *testing.T) {
 }
 
 func TestGetBuildLogEmpty(T *testing.T) {
+	skipIfGuest(T)
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{Comment: "Empty log test"})
 	require.NoError(T, err)
 
@@ -1011,6 +1043,7 @@ func TestGetBuildInvalidRef(T *testing.T) {
 }
 
 func TestRebootAgentCancelledContext(T *testing.T) {
+	skipIfGuest(T)
 	T.Parallel()
 
 	agents, err := client.GetAgents(api.AgentsOptions{})
@@ -1037,6 +1070,7 @@ func TestGetBuildQueueWithFilter(T *testing.T) {
 // TestZAgentOperations runs last (Z prefix) since reboot affects agent availability.
 // This test exercises the full agent API, including operations that modify the agent state.
 func TestZAgentOperations(T *testing.T) {
+	skipIfGuest(T)
 	// Not parallel - modifies agent state
 
 	T.Run("list agents", func(t *testing.T) {

@@ -796,3 +796,80 @@ func TestGetServerError(T *testing.T) {
 	_, err := client.GetServer()
 	assert.Error(T, err)
 }
+
+func TestNewGuestClient(T *testing.T) {
+	T.Parallel()
+
+	client := NewGuestClient("https://example.com/")
+	assert.Equal(T, "https://example.com", client.BaseURL)
+	assert.Empty(T, client.Token)
+	assert.True(T, client.guestAuth)
+}
+
+func TestGuestClientNoAuthHeader(T *testing.T) {
+	T.Parallel()
+
+	var authHeader string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(Server{VersionMajor: 2024, VersionMinor: 12, BuildNumber: "176523"})
+	}))
+	T.Cleanup(server.Close)
+
+	client := NewGuestClient(server.URL)
+	_, err := client.GetServer()
+
+	require.NoError(T, err)
+	assert.Empty(T, authHeader, "guest client should not send Authorization header")
+}
+
+func TestGuestClientAPIPath(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{"rest path", "/app/rest/server", "/guestAuth/app/rest/server"},
+		{"rest path with version", "/app/rest/builds", "/guestAuth/app/rest/builds"},
+		{"non-rest path", "/downloadBuildLog.html", "/guestAuth/downloadBuildLog.html"},
+		{"already prefixed", "/guestAuth/app/rest/server", "/guestAuth/app/rest/server"},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client := NewGuestClient("https://example.com")
+			got := client.apiPath(tc.path)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestGuestClientAPIPathWithVersion(T *testing.T) {
+	T.Parallel()
+
+	client := NewGuestClient("https://example.com", WithAPIVersion("2023.1"))
+	got := client.apiPath("/app/rest/builds")
+	assert.Equal(T, "/guestAuth/app/rest/2023.1/builds", got)
+}
+
+func TestGuestClientUsesGuestAuthPrefix(T *testing.T) {
+	T.Parallel()
+
+	var requestPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(Server{VersionMajor: 2024, VersionMinor: 12})
+	}))
+	T.Cleanup(server.Close)
+
+	client := NewGuestClient(server.URL)
+	_, _ = client.GetServer()
+
+	assert.Equal(T, "/guestAuth/app/rest/server", requestPath)
+}

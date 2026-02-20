@@ -406,14 +406,21 @@ The token is stored in your system keyring (macOS Keychain, GNOME Keyring,
 Windows Credential Manager) when available. Use --insecure-storage to store
 the token in plain text in the config file instead.
 
+For guest access (read-only, no token needed; must be enabled on the server):
+  teamcity auth login -s https://teamcity.example.com --guest
+
 For CI/CD, use environment variables instead:
   export TEAMCITY_URL="https://teamcity.example.com"
   export TEAMCITY_TOKEN="your-access-token"
+  # Or for guest access:
+  export TEAMCITY_URL="https://teamcity.example.com"
+  export TEAMCITY_GUEST=1
 
 When running inside a TeamCity build, authentication is automatic using
 build-level credentials from the build properties file.
 
 **Options:**
+- `--guest` – Use guest authentication (no token needed, must be enabled on the server)
 - `--insecure-storage` – Store token in plain text config file instead of system keyring
 - `-s, --server` – TeamCity server URL
 - `-t, --token` – Access token

@@ -155,3 +155,86 @@ func TestIsBuildEnvironment(T *testing.T) {
 	T.Setenv("TEAMCITY_BUILD_PROPERTIES_FILE", "")
 	assert.False(T, config.IsBuildEnvironment())
 }
+
+func TestGuestAuthEnvVar(T *testing.T) {
+	T.Setenv("TEAMCITY_GUEST", "1")
+	T.Setenv("TEAMCITY_URL", "https://example.com")
+	T.Setenv("TEAMCITY_TOKEN", "")
+	config.ResetForTest()
+	config.Init()
+
+	assert.True(T, config.IsGuestAuth())
+	assert.True(T, config.IsConfigured())
+}
+
+func TestGuestAuthEnvVarValues(T *testing.T) {
+	for _, val := range []string{"1", "true", "yes"} {
+		T.Run(val, func(t *testing.T) {
+			t.Setenv("TEAMCITY_GUEST", val)
+			t.Setenv("TEAMCITY_URL", "https://example.com")
+			config.ResetForTest()
+			config.Init()
+
+			assert.True(t, config.IsGuestAuth())
+		})
+	}
+
+	for _, val := range []string{"0", "false", "no", ""} {
+		T.Run("not_"+val, func(t *testing.T) {
+			t.Setenv("TEAMCITY_GUEST", val)
+			t.Setenv("TEAMCITY_URL", "https://example.com")
+			config.ResetForTest()
+			config.Init()
+
+			assert.False(t, config.IsGuestAuth())
+		})
+	}
+}
+
+func TestGuestAuthStatus(T *testing.T) {
+	ts := NewTestServer(T)
+
+	ts.Handle("GET /guestAuth/app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		assert.Empty(T, auth, "guest request should not have Authorization header")
+		JSON(w, api.Server{VersionMajor: 2024, VersionMinor: 12, BuildNumber: "176523"})
+	})
+
+	T.Setenv("TEAMCITY_TOKEN", "")
+	T.Setenv("TEAMCITY_GUEST", "1")
+	config.ResetForTest()
+	config.Init()
+
+	original := cmd.GetClientFunc
+	cmd.GetClientFunc = func() (api.ClientInterface, error) {
+		return api.NewGuestClient(ts.URL), nil
+	}
+	T.Cleanup(func() {
+		cmd.GetClientFunc = original
+	})
+
+	runCmd(T, "auth", "status")
+}
+
+func TestGuestAuthTakesPriorityOverToken(T *testing.T) {
+	ts := NewTestServer(T)
+
+	var usedGuestPath bool
+	ts.Handle("GET /guestAuth/app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		usedGuestPath = true
+		JSON(w, api.Server{VersionMajor: 2024, VersionMinor: 12})
+	})
+
+	T.Setenv("TEAMCITY_URL", ts.URL)
+	T.Setenv("TEAMCITY_TOKEN", "some-token")
+	T.Setenv("TEAMCITY_GUEST", "1")
+	config.ResetForTest()
+	config.Init()
+
+	assert.True(T, config.IsGuestAuth(), "guest auth should be active")
+
+	client := api.NewGuestClient(ts.URL)
+	_, err := client.GetServer()
+	require.NoError(T, err)
+	assert.True(T, usedGuestPath, "guest auth should use /guestAuth/ path")
+}
