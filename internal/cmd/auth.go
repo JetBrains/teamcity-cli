@@ -125,6 +125,7 @@ func runAuthLogin(serverURL, token string, insecureStorage bool) error {
 		}
 	}
 
+	warnInsecureHTTP(serverURL, "authentication token")
 	output.Infof("Validating... ")
 
 	client := api.NewClient(serverURL, token, api.WithDebugFunc(output.Debug))
@@ -223,6 +224,7 @@ func tokenSourceLabel(source string) string {
 }
 
 func showExplicitAuthStatus(serverURL, token, tokenSource string) error {
+	warnInsecureHTTP(serverURL, "authentication token")
 	client := api.NewClient(serverURL, token, api.WithDebugFunc(output.Debug))
 	user, err := client.GetCurrentUser()
 	if err != nil {
@@ -249,6 +251,7 @@ func showExplicitAuthStatus(serverURL, token, tokenSource string) error {
 }
 
 func showBuildAuthStatus(buildAuth *config.BuildAuth) error {
+	warnInsecureHTTP(buildAuth.ServerURL, "credentials")
 	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(output.Debug))
 	server, err := client.GetServer()
 	if err != nil {
