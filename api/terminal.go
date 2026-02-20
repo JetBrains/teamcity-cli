@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/gorilla/websocket"
 	"github.com/moby/term"
@@ -70,24 +70,21 @@ func (c *TerminalClient) OpenSession(agentID int) (*TerminalSession, error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, tcerrors.NetworkError(c.baseURL, err)
+		return nil, &NetworkError{URL: c.baseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	output.Debug("< %s", resp.Status)
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, tcerrors.AuthenticationFailed()
+		return nil, ErrAuthentication
 	}
 	if resp.StatusCode == http.StatusForbidden {
-		return nil, tcerrors.PermissionDenied("open terminal session")
+		return nil, &PermissionError{Action: "open terminal session"}
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, tcerrors.WithSuggestion(
-			fmt.Sprintf("Failed to open terminal session: %s", strings.TrimSpace(string(body))),
-			"Check if the agent-terminal plugin is installed on the server",
-		)
+		return nil, fmt.Errorf("failed to open terminal session: %s", strings.TrimSpace(string(body)))
 	}
 
 	var session TerminalSession
@@ -160,7 +157,7 @@ func (tc *TerminalConn) RunInteractive(ctx context.Context) error {
 	stdin, stdout, _ := term.StdStreams()
 	fd, isTerminal := term.GetFdInfo(stdin)
 	if !isTerminal {
-		return tcerrors.New("terminal command requires an interactive terminal")
+		return errors.New("terminal command requires an interactive terminal")
 	}
 
 	defer tc.Close()
@@ -248,7 +245,7 @@ func (tc *TerminalConn) Exec(ctx context.Context, command string) error {
 
 	select {
 	case <-ctx.Done():
-		return tcerrors.New("command timed out")
+		return errors.New("command timed out")
 	case <-readyCh:
 	case <-time.After(500 * time.Millisecond):
 	}
@@ -267,7 +264,7 @@ func (tc *TerminalConn) Exec(ctx context.Context, command string) error {
 
 	select {
 	case <-ctx.Done():
-		return tcerrors.New("command timed out")
+		return errors.New("command timed out")
 	case res := <-resultCh:
 		if res.err != nil {
 			return res.err

@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/JetBrains/teamcity-cli/api"
+	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
@@ -95,10 +98,53 @@ func Execute() error {
 	if err != nil {
 		var exitErr *ExitError
 		if !errors.As(err, &exitErr) {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: %v\n", enrichAPIError(err))
 		}
 	}
 	return err
+}
+
+// enrichAPIError converts typed API errors into UserErrors with CLI-specific hints.
+func enrichAPIError(err error) error {
+	if errors.Is(err, api.ErrAuthentication) {
+		return tcerrors.WithSuggestion(
+			"Authentication failed: invalid or expired token",
+			"Run 'teamcity auth login' to re-authenticate",
+		)
+	}
+
+	var permErr *api.PermissionError
+	if errors.As(err, &permErr) {
+		return tcerrors.WithSuggestion(err.Error(), "Check your TeamCity permissions or contact your administrator")
+	}
+
+	var notFoundErr *api.NotFoundError
+	if errors.As(err, &notFoundErr) {
+		return tcerrors.WithSuggestion(err.Error(), notFoundHint(err.Error()))
+	}
+
+	var netErr *api.NetworkError
+	if errors.As(err, &netErr) {
+		return tcerrors.WithSuggestion(err.Error(), "Check your network connection and verify the server URL")
+	}
+
+	return err
+}
+
+func notFoundHint(message string) string {
+	msg := strings.ToLower(message)
+	switch {
+	case strings.Contains(msg, "agent pool"), strings.Contains(msg, "pool"):
+		return "Use 'teamcity pool list' to see available pools"
+	case strings.Contains(msg, "agent"):
+		return "Use 'teamcity agent list' to see available agents"
+	case strings.Contains(msg, "project"):
+		return "Use 'teamcity project list' to see available projects"
+	case strings.Contains(msg, "build type"), strings.Contains(msg, "job"):
+		return "Use 'teamcity job list' to see available jobs"
+	default:
+		return "Use 'teamcity job list' or 'teamcity run list' to see available resources"
+	}
 }
 
 // subcommandRequired is a RunE function for parent commands that require a subcommand.
