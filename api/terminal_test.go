@@ -9,16 +9,17 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/terminal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func getTerminalClient() *api.TerminalClient {
+func getTerminalClient() *terminal.Client {
 	user, pass := os.Getenv("TEAMCITY_USER"), os.Getenv("TEAMCITY_PASSWORD")
 	if user == "" {
 		user, pass = "admin", "admin123"
 	}
-	return api.NewTerminalClient(client.BaseURL, user, pass)
+	return terminal.NewClient(client.BaseURL, user, pass)
 }
 
 func getTerminalAgent(t *testing.T) api.Agent {

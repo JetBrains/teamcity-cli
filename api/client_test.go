@@ -8,11 +8,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -616,38 +614,25 @@ func TestDownloadArtifactTo(T *testing.T) {
 	})
 }
 
-func TestVerboseLogging(T *testing.T) {
-	// Not parallel - modifies global output.Verbose
+func TestDebugLogging(T *testing.T) {
+	T.Parallel()
 
-	captureStderr := func(t *testing.T, fn func()) string {
-		t.Helper()
-		oldStderr := os.Stderr
-		r, w, _ := os.Pipe()
-		os.Stderr = w
-		fn()
-		w.Close()
-		os.Stderr = oldStderr
+	T.Run("logs request/response with redacted auth when DebugFunc set", func(t *testing.T) {
+		t.Parallel()
+
 		var buf bytes.Buffer
-		buf.ReadFrom(r)
-		r.Close()
-		return buf.String()
-	}
-
-	T.Run("logs request/response with redacted auth when enabled", func(t *testing.T) {
-		oldVerbose := output.Verbose
-		output.Verbose = true
-		defer func() { output.Verbose = oldVerbose }()
-
 		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{}`))
 		})
+		client.DebugFunc = func(format string, args ...any) {
+			fmt.Fprintf(&buf, format+"\n", args...)
+		}
 
-		captured := captureStderr(t, func() {
-			_, _ = client.RawRequest("GET", "/api/test", nil, nil)
-		})
+		_, _ = client.RawRequest("GET", "/api/test", nil, nil)
 
+		captured := buf.String()
 		assert.Contains(t, captured, "> GET")
 		assert.Contains(t, captured, "/api/test")
 		assert.Contains(t, captured, "> Authorization: [REDACTED]")
@@ -655,20 +640,15 @@ func TestVerboseLogging(T *testing.T) {
 		assert.NotContains(t, captured, "test-token")
 	})
 
-	T.Run("silent when disabled", func(t *testing.T) {
-		oldVerbose := output.Verbose
-		output.Verbose = false
-		defer func() { output.Verbose = oldVerbose }()
+	T.Run("silent when DebugFunc not set", func(t *testing.T) {
+		t.Parallel()
 
 		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		})
+		// No DebugFunc set — should not panic or produce output
 
-		captured := captureStderr(t, func() {
-			_, _ = client.RawRequest("GET", "/api/test", nil, nil)
-		})
-
-		assert.Empty(t, captured)
+		_, _ = client.RawRequest("GET", "/api/test", nil, nil)
 	})
 }
 

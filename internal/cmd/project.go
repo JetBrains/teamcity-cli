@@ -795,8 +795,10 @@ func defaultGetClient() (api.ClientInterface, error) {
 	serverURL := config.GetServerURL()
 	token := config.GetToken()
 
+	debugOpt := api.WithDebugFunc(output.Debug)
+
 	if serverURL != "" && token != "" {
-		return api.NewClient(serverURL, token), nil
+		return api.NewClient(serverURL, token, debugOpt), nil
 	}
 
 	if buildAuth, ok := config.GetBuildAuth(); ok {
@@ -804,7 +806,7 @@ func defaultGetClient() (api.ClientInterface, error) {
 			serverURL = buildAuth.ServerURL
 		}
 		output.Debug("Using build-level authentication")
-		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password), nil
+		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, debugOpt), nil
 	}
 
 	return nil, tcerrors.NotAuthenticated()
