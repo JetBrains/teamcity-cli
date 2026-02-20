@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -116,12 +115,6 @@ func WithDebugFunc(f func(format string, args ...any)) ClientOption {
 func NewClient(baseURL, token string, opts ...ClientOption) *Client {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 
-	// Security: Warn about insecure HTTP connections (suppress with TC_INSECURE_SKIP_WARN=1)
-	if strings.HasPrefix(baseURL, "http://") && os.Getenv("TC_INSECURE_SKIP_WARN") == "" {
-		fmt.Fprintln(os.Stderr, "WARNING: Using insecure HTTP connection. Your authentication token will be transmitted in plaintext.")
-		fmt.Fprintln(os.Stderr, "         Consider using HTTPS for secure communication.")
-	}
-
 	c := &Client{
 		BaseURL: baseURL,
 		Token:   token,
@@ -141,11 +134,6 @@ func NewClient(baseURL, token string, opts ...ClientOption) *Client {
 // Use empty username with superuser token, or username/password for regular users.
 func NewClientWithBasicAuth(baseURL, username, password string, opts ...ClientOption) *Client {
 	baseURL = strings.TrimSuffix(baseURL, "/")
-
-	if strings.HasPrefix(baseURL, "http://") && os.Getenv("TC_INSECURE_SKIP_WARN") == "" {
-		fmt.Fprintln(os.Stderr, "WARNING: Using insecure HTTP connection. Your credentials will be transmitted in plaintext.")
-		fmt.Fprintln(os.Stderr, "         Consider using HTTPS for secure communication.")
-	}
 
 	c := &Client{
 		BaseURL:   baseURL,
@@ -296,7 +284,8 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 		return &PermissionError{Action: "perform this action"}
 	case http.StatusNotFound:
 		if message != "" {
-			return &NotFoundError{Message: message}
+			resource, id := parseNotFoundMessage(message)
+			return &NotFoundError{Resource: resource, ID: id, Message: message}
 		}
 		return &NotFoundError{Message: "resource not found"}
 	default:
@@ -403,6 +392,20 @@ func extractIDFromLocator(msg, prefix string) string {
 
 	// Fallback: return the whole locator if no "id:" found
 	return locator
+}
+
+// parseNotFoundMessage extracts the resource type and ID from a humanized not-found message.
+// Matches patterns like "job 'Foo_Bar' not found" or "project 'MyProject' not found".
+func parseNotFoundMessage(msg string) (resource, id string) {
+	quote1 := strings.Index(msg, "'")
+	if quote1 == -1 {
+		return "", ""
+	}
+	quote2 := strings.Index(msg[quote1+1:], "'")
+	if quote2 == -1 {
+		return "", ""
+	}
+	return strings.TrimSpace(msg[:quote1]), msg[quote1+1 : quote1+1+quote2]
 }
 
 // post performs a POST request without retry (non-idempotent by default).

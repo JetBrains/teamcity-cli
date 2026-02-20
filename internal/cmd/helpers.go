@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -58,4 +61,14 @@ func resolveAgentID(client api.ClientInterface, nameOrID string) (int, string, e
 		return 0, "", err
 	}
 	return agent.ID, agent.Name, nil
+}
+
+// warnInsecureHTTP prints a warning to stderr when connecting over plain HTTP.
+// Suppressed by setting TC_INSECURE_SKIP_WARN=1.
+func warnInsecureHTTP(serverURL, credentialType string) {
+	if !strings.HasPrefix(serverURL, "http://") || os.Getenv("TC_INSECURE_SKIP_WARN") != "" {
+		return
+	}
+	output.Warn("Using insecure HTTP connection. Your %s will be transmitted in plaintext.", credentialType)
+	output.Warn("Consider using HTTPS for secure communication.")
 }

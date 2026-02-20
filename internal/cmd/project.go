@@ -798,6 +798,7 @@ func defaultGetClient() (api.ClientInterface, error) {
 	debugOpt := api.WithDebugFunc(output.Debug)
 
 	if serverURL != "" && token != "" {
+		warnInsecureHTTP(serverURL, "authentication token")
 		return api.NewClient(serverURL, token, debugOpt), nil
 	}
 
@@ -806,6 +807,7 @@ func defaultGetClient() (api.ClientInterface, error) {
 			serverURL = buildAuth.ServerURL
 		}
 		output.Debug("Using build-level authentication")
+		warnInsecureHTTP(serverURL, "credentials")
 		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, debugOpt), nil
 	}
 
