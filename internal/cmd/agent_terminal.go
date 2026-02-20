@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/JetBrains/teamcity-cli/internal/terminal"
 	"github.com/spf13/cobra"
 )
 
@@ -61,7 +61,7 @@ func newAgentExecCmd() *cobra.Command {
 	return cmd
 }
 
-func connectToAgent(ctx context.Context, nameOrID string, showProgress bool) (*api.TerminalConn, error) {
+func connectToAgent(ctx context.Context, nameOrID string, showProgress bool) (*terminal.Conn, error) {
 	serverURL := config.GetServerURL()
 	token := config.GetToken()
 	if serverURL == "" || token == "" {
@@ -103,7 +103,7 @@ func connectToAgent(ctx context.Context, nameOrID string, showProgress bool) (*a
 		fmt.Printf("Connecting to %s...\n", output.Cyan(agent.Name))
 	}
 
-	termClient := api.NewTerminalClient(serverURL, config.GetCurrentUser(), token)
+	termClient := terminal.NewClient(serverURL, config.GetCurrentUser(), token)
 	session, err := termClient.OpenSession(agent.ID)
 	if err != nil {
 		return nil, err

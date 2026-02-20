@@ -1,9 +1,8 @@
-package api
+package terminal
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/gorilla/websocket"
 	"github.com/moby/term"
@@ -29,16 +29,22 @@ const (
 	writeTimeout = 10 * time.Second
 )
 
-type TerminalClient struct {
+// Session holds the session token and node ID from TeamCity's agent terminal plugin
+type Session struct {
+	Token  string `json:"token"`
+	NodeID string `json:"nodeId"`
+}
+
+type Client struct {
 	baseURL    string
 	username   string
 	token      string
 	httpClient *http.Client
 }
 
-func NewTerminalClient(baseURL, username, token string) *TerminalClient {
+func NewClient(baseURL, username, token string) *Client {
 	jar, _ := cookiejar.New(nil)
-	return &TerminalClient{
+	return &Client{
 		baseURL:  strings.TrimSuffix(baseURL, "/"),
 		username: username,
 		token:    token,
@@ -49,7 +55,7 @@ func NewTerminalClient(baseURL, username, token string) *TerminalClient {
 	}
 }
 
-func (c *TerminalClient) OpenSession(agentID int) (*TerminalSession, error) {
+func (c *Client) OpenSession(agentID int) (*Session, error) {
 	endpoint := fmt.Sprintf("%s/httpAuth/plugins/teamcity-agent-terminal/agentTerminal.html?id=%d", c.baseURL, agentID)
 
 	req, err := http.NewRequest("POST", endpoint, strings.NewReader(""))
@@ -70,24 +76,27 @@ func (c *TerminalClient) OpenSession(agentID int) (*TerminalSession, error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, &NetworkError{URL: c.baseURL, Cause: err}
+		return nil, tcerrors.NetworkError(c.baseURL, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	output.Debug("< %s", resp.Status)
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, ErrAuthentication
+		return nil, tcerrors.AuthenticationFailed()
 	}
 	if resp.StatusCode == http.StatusForbidden {
-		return nil, &PermissionError{Action: "open terminal session"}
+		return nil, tcerrors.PermissionDenied("open terminal session")
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to open terminal session: %s", strings.TrimSpace(string(body)))
+		return nil, tcerrors.WithSuggestion(
+			fmt.Sprintf("Failed to open terminal session: %s", strings.TrimSpace(string(body))),
+			"Check if the agent-terminal plugin is installed on the server",
+		)
 	}
 
-	var session TerminalSession
+	var session Session
 	if err := json.NewDecoder(resp.Body).Decode(&session); err != nil {
 		return nil, fmt.Errorf("invalid response from server: %w", err)
 	}
@@ -99,7 +108,7 @@ func (c *TerminalClient) OpenSession(agentID int) (*TerminalSession, error) {
 	return &session, nil
 }
 
-func (c *TerminalClient) Connect(session *TerminalSession, cols, rows int) (*TerminalConn, error) {
+func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 	u, err := url.Parse(c.baseURL)
 	if err != nil {
 		return nil, err
@@ -139,10 +148,10 @@ func (c *TerminalClient) Connect(session *TerminalSession, cols, rows int) (*Ter
 		return nil, fmt.Errorf("WebSocket connection failed: %w", err)
 	}
 
-	return &TerminalConn{conn: conn, done: make(chan struct{})}, nil
+	return &Conn{conn: conn, done: make(chan struct{})}, nil
 }
 
-type TerminalConn struct {
+type Conn struct {
 	conn      *websocket.Conn
 	closeOnce sync.Once
 	done      chan struct{}
@@ -153,11 +162,11 @@ type TerminalConn struct {
 
 const execMarker = "__TC_EXEC_7f3a9e2b__"
 
-func (tc *TerminalConn) RunInteractive(ctx context.Context) error {
+func (tc *Conn) RunInteractive(ctx context.Context) error {
 	stdin, stdout, _ := term.StdStreams()
 	fd, isTerminal := term.GetFdInfo(stdin)
 	if !isTerminal {
-		return errors.New("terminal command requires an interactive terminal")
+		return tcerrors.New("terminal command requires an interactive terminal")
 	}
 
 	defer tc.Close()
@@ -197,7 +206,7 @@ func (tc *TerminalConn) RunInteractive(ctx context.Context) error {
 	}
 }
 
-func (tc *TerminalConn) Exec(ctx context.Context, command string) error {
+func (tc *Conn) Exec(ctx context.Context, command string) error {
 	_, stdout, _ := term.StdStreams()
 	defer tc.Close()
 
@@ -245,7 +254,7 @@ func (tc *TerminalConn) Exec(ctx context.Context, command string) error {
 
 	select {
 	case <-ctx.Done():
-		return errors.New("command timed out")
+		return tcerrors.New("command timed out")
 	case <-readyCh:
 	case <-time.After(500 * time.Millisecond):
 	}
@@ -264,7 +273,7 @@ func (tc *TerminalConn) Exec(ctx context.Context, command string) error {
 
 	select {
 	case <-ctx.Done():
-		return errors.New("command timed out")
+		return tcerrors.New("command timed out")
 	case res := <-resultCh:
 		if res.err != nil {
 			return res.err
@@ -298,7 +307,7 @@ func extractExecOutput(raw string) string {
 	return strings.TrimSpace(raw)
 }
 
-func (tc *TerminalConn) Close() {
+func (tc *Conn) Close() {
 	tc.closeOnce.Do(func() {
 		close(tc.done)
 		_ = tc.conn.Close()
@@ -306,18 +315,18 @@ func (tc *TerminalConn) Close() {
 }
 
 // writeMessage writes a message to the WebSocket with proper serialization and deadline.
-func (tc *TerminalConn) writeMessage(messageType int, data []byte) error {
+func (tc *Conn) writeMessage(messageType int, data []byte) error {
 	tc.writeMu.Lock()
 	defer tc.writeMu.Unlock()
 	_ = tc.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 	return tc.conn.WriteMessage(messageType, data)
 }
 
-func (tc *TerminalConn) copyToWriter(w io.Writer, errChan chan<- error) {
+func (tc *Conn) copyToWriter(w io.Writer, errChan chan<- error) {
 	tc.copyToWriterWithReady(w, errChan, nil)
 }
 
-func (tc *TerminalConn) copyToWriterWithReady(w io.Writer, errChan chan<- error, readyCh chan<- struct{}) {
+func (tc *Conn) copyToWriterWithReady(w io.Writer, errChan chan<- error, readyCh chan<- struct{}) {
 	defer tc.Close()
 	signalledReady := false
 	for {
@@ -349,7 +358,7 @@ func (tc *TerminalConn) copyToWriterWithReady(w io.Writer, errChan chan<- error,
 	}
 }
 
-func (tc *TerminalConn) copyFromReader(r io.Reader, errChan chan<- error) {
+func (tc *Conn) copyFromReader(r io.Reader, errChan chan<- error) {
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := r.Read(buf)
@@ -377,7 +386,7 @@ func (tc *TerminalConn) copyFromReader(r io.Reader, errChan chan<- error) {
 	}
 }
 
-func (tc *TerminalConn) sendResize() {
+func (tc *Conn) sendResize() {
 	cols, rows := output.TerminalSize()
 	tc.sendJSON("resize", map[string]string{
 		"cols": strconv.Itoa(cols),
@@ -385,13 +394,13 @@ func (tc *TerminalConn) sendResize() {
 	})
 }
 
-func (tc *TerminalConn) sendPing() {
+func (tc *Conn) sendPing() {
 	tc.sendJSON("ping", map[string]string{
 		"ts": strconv.FormatInt(time.Now().UnixMilli(), 10),
 	})
 }
 
-func (tc *TerminalConn) sendJSON(cmd string, details map[string]string) {
+func (tc *Conn) sendJSON(cmd string, details map[string]string) {
 	data, err := json.Marshal(map[string]any{
 		"agent-terminal-command": cmd,
 		"details":                details,

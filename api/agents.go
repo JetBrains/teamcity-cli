@@ -153,7 +153,7 @@ func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	c.setAuth(req)
 
-	debugLogRequest(req)
+	c.debugLogRequest(req)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -161,7 +161,7 @@ func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	debugLogResponse(resp)
+	c.debugLogResponse(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusNoContent, http.StatusFound:

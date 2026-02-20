@@ -1,6 +1,6 @@
 //go:build unix
 
-package api
+package terminal
 
 import (
 	"os"

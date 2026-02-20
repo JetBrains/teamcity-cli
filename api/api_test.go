@@ -4,7 +4,7 @@
 // Uses a real TeamCity server: either from TEAMCITY_URL/TEAMCITY_TOKEN env vars,
 // or spins up a server via testcontainers (requires Docker).
 //
-// Run with: go test -tags=integration ./internal/api/...
+// Run with: go test -tags=integration ./api/...
 package api_test
 
 import (

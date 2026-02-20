@@ -2,7 +2,7 @@
 
 // Drift detection tests validate that Go types match TeamCity's swagger spec.
 // Runs as part of integration tests using testcontainers.
-// Run with: go test -tags=integration ./internal/api -v -run TestAPIDrift
+// Run with: go test -tags=integration ./api -v -run TestAPIDrift
 package api_test
 
 import (

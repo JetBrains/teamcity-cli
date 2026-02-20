@@ -11,8 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
 // Minimum supported TeamCity version
@@ -28,50 +26,16 @@ var sensitiveHeaders = map[string]bool{
 	"Set-Cookie":    true,
 }
 
-// debugLogRequest logs HTTP request details when verbose mode is enabled
-func debugLogRequest(req *http.Request) {
-	if !output.Verbose {
-		return
-	}
-	output.Debug("> %s %s", req.Method, req.URL.String())
-	debugLogHeaders(">", req.Header)
-}
-
-// debugLogResponse logs HTTP response details when verbose mode is enabled
-func debugLogResponse(resp *http.Response) {
-	if !output.Verbose {
-		return
-	}
-	output.Debug("< %s %s", resp.Proto, resp.Status)
-	debugLogHeaders("<", resp.Header)
-}
-
-// debugLogHeaders logs HTTP headers with sensitive values redacted
-func debugLogHeaders(prefix string, headers http.Header) {
-	names := make([]string, 0, len(headers))
-	for name := range headers {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		values := headers[name]
-		if sensitiveHeaders[name] {
-			output.Debug("%s %s: [REDACTED]", prefix, name)
-		} else {
-			for _, value := range values {
-				output.Debug("%s %s: %s", prefix, name, value)
-			}
-		}
-	}
-}
-
 // Client represents a TeamCity API client
 type Client struct {
 	BaseURL    string
 	Token      string
 	APIVersion string // Optional: pin to a specific API version (e.g., "2020.1")
 	HTTPClient *http.Client
+
+	// DebugFunc, when set, receives debug log messages for HTTP requests/responses.
+	// Use WithDebugFunc to configure.
+	DebugFunc func(format string, args ...any)
 
 	// Basic auth credentials (used instead of Token if set)
 	basicUser string
@@ -81,6 +45,47 @@ type Client struct {
 	serverInfo     *Server
 	serverInfoOnce sync.Once
 	serverInfoErr  error
+}
+
+func (c *Client) debugLog(format string, args ...any) {
+	if c.DebugFunc != nil {
+		c.DebugFunc(format, args...)
+	}
+}
+
+func (c *Client) debugLogRequest(req *http.Request) {
+	if c.DebugFunc == nil {
+		return
+	}
+	c.debugLog("> %s %s", req.Method, req.URL.String())
+	c.debugLogHeaders(">", req.Header)
+}
+
+func (c *Client) debugLogResponse(resp *http.Response) {
+	if c.DebugFunc == nil {
+		return
+	}
+	c.debugLog("< %s %s", resp.Proto, resp.Status)
+	c.debugLogHeaders("<", resp.Header)
+}
+
+func (c *Client) debugLogHeaders(prefix string, headers http.Header) {
+	names := make([]string, 0, len(headers))
+	for name := range headers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		values := headers[name]
+		if sensitiveHeaders[name] {
+			c.debugLog("%s %s: [REDACTED]", prefix, name)
+		} else {
+			for _, value := range values {
+				c.debugLog("%s %s: %s", prefix, name, value)
+			}
+		}
+	}
 }
 
 // ClientOption allows configuring the client
@@ -97,6 +102,13 @@ func WithAPIVersion(version string) ClientOption {
 func WithTimeout(timeout time.Duration) ClientOption {
 	return func(c *Client) {
 		c.HTTPClient.Timeout = timeout
+	}
+}
+
+// WithDebugFunc sets a function to receive debug log messages for HTTP requests/responses.
+func WithDebugFunc(f func(format string, args ...any)) ClientOption {
+	return func(c *Client) {
+		c.DebugFunc = f
 	}
 }
 
@@ -234,14 +246,14 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 		req.Header.Set("Content-Type", contentType)
 	}
 
-	debugLogRequest(req)
+	c.debugLogRequest(req)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
-	debugLogResponse(resp)
+	c.debugLogResponse(resp)
 
 	return resp, nil
 }
@@ -475,7 +487,7 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 		req.Header.Set(k, v)
 	}
 
-	debugLogRequest(req)
+	c.debugLogRequest(req)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -483,7 +495,7 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	debugLogResponse(resp)
+	c.debugLogResponse(resp)
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
