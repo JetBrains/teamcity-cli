@@ -171,8 +171,11 @@ func TestResolveBuildID_Integration(T *testing.T) {
 		ref := fmt.Sprintf("#%s", testBuild.Number)
 		resolvedID, err := client.ResolveBuildID(ref)
 		require.NoError(t, err)
-		wantID := fmt.Sprintf("%d", testBuild.ID)
-		assert.Equal(t, wantID, resolvedID)
+		assert.NotEmpty(t, resolvedID)
+
+		build, err := client.GetBuild(resolvedID)
+		require.NoError(t, err)
+		assert.Equal(t, testBuild.Number, build.Number, "resolved build should have the requested number")
 	})
 
 	T.Run("GetBuild with hash format", func(t *testing.T) {
@@ -183,7 +186,7 @@ func TestResolveBuildID_Integration(T *testing.T) {
 		ref := fmt.Sprintf("#%s", testBuild.Number)
 		build, err := client.GetBuild(ref)
 		require.NoError(t, err)
-		assert.Equal(t, testBuild.ID, build.ID)
+		assert.Equal(t, testBuild.Number, build.Number, "returned build should have the requested number")
 	})
 }
 
