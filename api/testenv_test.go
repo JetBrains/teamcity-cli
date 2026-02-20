@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JetBrains/teamcity-cli/internal/api"
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/docker/docker/api/types/container"
 	"github.com/joho/godotenv"
 	"github.com/testcontainers/testcontainers-go"
