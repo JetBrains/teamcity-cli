@@ -386,6 +386,9 @@ teamcity run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branc
 teamcity queue list --json=webUrl | jq -r '.[].webUrl'
 ```
 
+<details>
+<summary><b>Command Reference</b> (click to expand)</summary>
+
 <!-- COMMANDS_START -->
 
 ## Authentication
@@ -1331,6 +1334,8 @@ teamcity skill update --project
 - `--project` – Install to current project instead of globally
 
 <!-- COMMANDS_END -->
+
+</details>
 
 ## Awesome Aliases
 
