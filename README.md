@@ -98,6 +98,7 @@ A CLI for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail lo
     * [skill install](#skill-install)
     * [skill remove](#skill-remove)
     * [skill update](#skill-update)
+  * [Awesome Aliases](#awesome-aliases)
   * [Contributing](#contributing)
   * [License](#license)
 <!-- TOC -->
@@ -225,43 +226,25 @@ The skill is located in [`skills/teamcity-cli/`](skills/teamcity-cli/) and follo
 
 ## Commands
 
-| Command                    | Description                         |
-|----------------------------|-------------------------------------|
-| **auth**                   |                                     |
-| `teamcity auth login`      | Authenticate with a TeamCity server |
-| `teamcity auth logout`     | Log out from the current server     |
-| `teamcity auth status`     | Show authentication status          |
-| **run**                    |                                     |
-| `teamcity run list`        | List recent builds                  |
-| `teamcity run start`       | Start a new build                   |
-| `teamcity run view`        | View build details                  |
-| `teamcity run watch`       | Watch a build in real-time          |
-| `teamcity run log`         | View build log output               |
-| `teamcity run changes`     | Show commits included in a build    |
-| `teamcity run tests`       | Show test results                   |
-| `teamcity run cancel`      | Cancel a running or queued build    |
-| `teamcity run download`    | Download artifacts                  |
-| `teamcity run restart`     | Restart with same configuration     |
-| `teamcity run pin/unpin`   | Pin or unpin a build                |
-| `teamcity run tag/untag`   | Add or remove tags                  |
-| `teamcity run comment`     | Set or view build comment           |
-| **job**                    |                                     |
-| `teamcity job list`        | List build configurations           |
-| `teamcity job view`        | View job details                    |
-| `teamcity job pause/resume`| Pause or resume a job               |
-| `teamcity job param`       | Manage job parameters               |
-| **project**                |                                     |
-| `teamcity project list`    | List projects                       |
-| `teamcity project view`    | View project details                |
-| `teamcity project param`   | Manage project parameters           |
-| `teamcity project token`   | Manage secure tokens                |
-| **queue**                  |                                     |
-| `teamcity queue list`      | List queued builds                  |
-| `teamcity queue approve`   | Approve a queued build              |
-| `teamcity queue remove`    | Remove from queue                   |
-| `teamcity queue top`       | Move to top of queue                |
-| **api**                    |                                     |
-| `teamcity api`             | Make raw API requests               |
+[**auth**](#authentication) · [login](#auth-login) · [logout](#auth-logout) · [status](#auth-status)
+
+[**run**](#runs) · [list](#run-list) · [start](#run-start) · [view](#run-view) · [watch](#run-watch) · [log](#run-log) · [changes](#run-changes) · [tests](#run-tests) · [cancel](#run-cancel) · [download](#run-download) · [artifacts](#run-artifacts) · [restart](#run-restart) · [pin](#run-pin)/[unpin](#run-unpin) · [tag](#run-tag)/[untag](#run-untag) · [comment](#run-comment)
+
+[**job**](#jobs) · [list](#job-list) · [view](#job-view) · [pause](#job-pause)/[resume](#job-resume) · [param](#job-param-list)
+
+[**project**](#projects) · [list](#project-list) · [view](#project-view) · [param](#project-param-list) · [token](#project-token-get) · [settings](#project-settings-export)
+
+[**queue**](#queues) · [list](#queue-list) · [approve](#queue-approve) · [remove](#queue-remove) · [top](#queue-top)
+
+[**agent**](#agents) · [list](#agent-list) · [view](#agent-view) · [term](#agent-term) · [exec](#agent-exec) · [jobs](#agent-jobs) · [authorize](#agent-authorize)/[deauthorize](#agent-deauthorize) · [enable](#agent-enable)/[disable](#agent-disable) · [move](#agent-move) · [reboot](#agent-reboot)
+
+[**pool**](#agent-pools) · [list](#pool-list) · [view](#pool-view) · [link](#pool-link)/[unlink](#pool-unlink)
+
+[**api**](#api)
+
+[**alias**](#aliases) · [set](#alias-set) · [list](#alias-list) · [delete](#alias-delete)
+
+[**skill**](#skills) · [install](#skill-install) · [remove](#skill-remove) · [update](#skill-update)
 
 ## Configuration
 
