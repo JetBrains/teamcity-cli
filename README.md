@@ -148,7 +148,7 @@ sudo pacman -U teamcity_linux_amd64.pkg.tar.zst
 
 **Winget (recommended):**
 ```powershell
-winget install JetBrains.teamcity
+winget install JetBrains.TeamCityCLI
 ```
 
 **PowerShell:**
@@ -159,6 +159,11 @@ irm https://jb.gg/tc/install.ps1 | iex
 **CMD:**
 ```cmd
 curl -fsSL https://jb.gg/tc/install.cmd -o install.cmd && install.cmd && del install.cmd
+```
+
+**Chocolatey:**
+```powershell
+choco install TeamCityCLI
 ```
 
 **Scoop:**
