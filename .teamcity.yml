@@ -40,32 +40,18 @@ jobs:
           head -1 coverage-integration.out > coverage.out
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
-  goreleaser:
-    name: GoReleaser
+  acceptance:
+    name: Acceptance Tests
     steps:
       - type: script
         docker-image: goreleaser/goreleaser:latest
-        name: Build Snapshot
-        script-content: goreleaser release --snapshot --clean --skip=publish,chocolatey
-  acceptance:
-    name: Acceptance Tests
-    runs-on: Ubuntu-22.04-Medium
-    depends-on:
-      - goreleaser
-    steps:
-      - type: script
-        name: Install Go
+        name: Build & Test
         script-content: |
-          sudo add-apt-repository ppa:longsleep/golang-backports
-          sudo apt update
-          sudo apt install -y golang-go
-      - type: script
-        name: E2E Tests (Guest Auth)
-        script-content: |
-          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
+          goreleaser release --snapshot --clean --skip=publish,chocolatey
           BINARY=$(find dist -name 'teamcity' -path '*/linux_amd64*' -type f | head -1)
+          chmod +x "$BINARY"
           TC_ACCEPTANCE_BINARY="$BINARY" \
-            /usr/lib/go-1.25/bin/go test -v -tags=acceptance ./acceptance -timeout 10m
+            go test -v -tags=acceptance ./acceptance -timeout 10m
   Lint:
     name: Lint
     steps:
