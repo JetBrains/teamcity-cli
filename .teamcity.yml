@@ -47,7 +47,8 @@ jobs:
         docker-image: goreleaser/goreleaser:latest
         name: Build & Test
         script-content: |
-          BRANCH="${BRANCH_NAME:-${teamcity_build_branch:-}}"
+          BRANCH="${BRANCH_NAME:-${teamcity_build_branch:-<default>}}"
+          echo "Detected branch: '$BRANCH'"
           if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "refs/heads/main" ] && [ "$BRANCH" != "<default>" ] \
              && [ "$BRANCH" != "claude/setup-goreleaser-teamcity-c0cpu" ]; then
             echo "Skipping acceptance tests on branch '$BRANCH' (only runs on main)"
@@ -69,3 +70,4 @@ jobs:
 parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
   env.GOFLAGS: '-buildvcs=false'
+  env.BRANCH_NAME: '%teamcity.build.branch%'
