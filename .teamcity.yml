@@ -47,6 +47,11 @@ jobs:
         docker-image: goreleaser/goreleaser:latest
         name: Build & Test
         script-content: |
+          BRANCH="${BRANCH_NAME:-${teamcity_build_branch:-}}"
+          if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "refs/heads/main" ] && [ "$BRANCH" != "<default>" ]; then
+            echo "Skipping acceptance tests on branch '$BRANCH' (only runs on main)"
+            exit 0
+          fi
           export GOTOOLCHAIN=auto
           goreleaser release --snapshot --clean --skip=publish,chocolatey
           BINARY=$(find dist -name 'teamcity' -path '*/linux_amd64*' -type f | head -1)
