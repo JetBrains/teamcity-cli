@@ -1,0 +1,25 @@
+# Test project view subcommand.
+
+exec teamcity project view _Root --no-input
+stdout 'ID: _Root'
+stdout 'View in browser:'
+! stderr 'Error'
+
+# --json
+exec teamcity project view _Root --json --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+# nonexistent
+! exec teamcity project view NonExistentProject12345 --no-input
+stderr '.'
+
+# discovered via API
+exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+extract '"id":"([^"]+)"' PROJECT_ID
+
+exec teamcity project view $PROJECT_ID --no-input
+stdout 'ID:'
+stdout 'View in browser:'
+! stderr 'Error'

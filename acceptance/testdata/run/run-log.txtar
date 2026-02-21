@@ -1,0 +1,25 @@
+# Test run log subcommand.
+
+exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+exec teamcity run log $BUILD_ID --no-input
+stdout '.'
+! stderr 'Error'
+
+# --raw
+exec teamcity run log $BUILD_ID --raw --no-input
+stdout '.'
+! stderr 'Error'
+
+# --failed
+exec teamcity run log $BUILD_ID --failed --no-input
+! stderr 'Error'
+
+# --job (by job ID)
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+exec teamcity run log --job $JOB_ID --no-input
+stdout '.'
+! stderr 'Error'

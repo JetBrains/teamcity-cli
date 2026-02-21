@@ -1,0 +1,39 @@
+# Test run start subcommand.
+[!has_token] skip 'requires authentication token'
+
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+# Start and cancel
+exec teamcity run start $JOB_ID --json --no-input
+extract '"id":\s*(\d+)' BUILD_ID
+
+exec teamcity run cancel $BUILD_ID --force --no-input
+stdout 'Cancelled'
+
+# --json output fields
+exec teamcity run start $JOB_ID --json --no-input
+stdout '"id"'
+stdout '"state"'
+
+extract '"id":\s*(\d+)' BUILD_ID
+exec teamcity run cancel $BUILD_ID --force --no-input
+
+# --branch
+exec teamcity run start $JOB_ID --branch main --json --no-input
+stdout '"branchName"'
+
+extract '"id":\s*(\d+)' BUILD_ID
+exec teamcity run cancel $BUILD_ID --force --no-input
+
+# --dry-run (no cleanup needed)
+exec teamcity run start $JOB_ID --dry-run --no-input
+stdout 'dry-run'
+! stderr 'Error'
+
+# --comment and --tag
+exec teamcity run start $JOB_ID --comment 'acceptance test' --tag acceptance-$RANDOM_STRING --json --no-input
+stdout '"id"'
+
+extract '"id":\s*(\d+)' BUILD_ID
+exec teamcity run cancel $BUILD_ID --force --no-input

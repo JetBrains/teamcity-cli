@@ -1,0 +1,16 @@
+# Test run changes subcommand.
+
+exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+exec teamcity run changes $BUILD_ID --no-input
+! stderr 'Error'
+
+# --json
+exec teamcity run changes $BUILD_ID --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --no-files
+exec teamcity run changes $BUILD_ID --no-files --no-input
+! stderr 'Error'

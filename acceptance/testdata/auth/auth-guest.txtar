@@ -1,0 +1,23 @@
+# Test auth commands in guest mode.
+
+# Status shows server and guest access
+exec teamcity auth status --no-input
+stdout 'cli.teamcity.com'
+stdout 'Guest access'
+stdout 'TeamCity'
+! stderr 'Error'
+
+# No credentials → not logged in
+env TEAMCITY_URL=
+env TEAMCITY_TOKEN=
+env TEAMCITY_GUEST=
+
+exec teamcity auth status --no-input
+stdout 'Not logged in'
+
+# Logout succeeds even with env-based auth
+env TEAMCITY_URL=https://cli.teamcity.com
+env TEAMCITY_GUEST=1
+exec teamcity auth logout --no-input
+stdout 'Logged out'
+! stderr 'Error'

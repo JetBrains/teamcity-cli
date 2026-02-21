@@ -1,0 +1,67 @@
+# Agent commands requiring authentication.
+[!has_token] skip 'requires authentication token'
+
+# JSON fields
+exec teamcity agent list --limit 1 --json --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+# --pool filter
+exec teamcity agent list --pool Default --no-input
+stdout 'ID'
+stdout 'NAME'
+! stderr 'Error'
+
+# --json=f1,f2 field selection with visible data
+exec teamcity agent list --limit 1 --json=id,name,connected --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+# nonexistent agent
+! exec teamcity agent view 999999999 --no-input
+stderr '.'
+
+# --- Cloud agent tests (spawn agent via builds) ---
+
+# Start two different builds to keep the agent alive longer
+exec teamcity run start Sandbox_Build --json --no-input
+extract '"id":\s*(\d+)' BUILD_ID_1
+
+exec teamcity run start Sandbox_Test --json --no-input
+extract '"id":\s*(\d+)' BUILD_ID_2
+
+# Wait for an agent to be assigned (polls up to 120s)
+wait_for_agent $BUILD_ID_1 AGENT_ID
+
+# Test agent exec first (while build is still running and agent is connected)
+exec teamcity agent exec $AGENT_ID 'echo hello-from-agent' --no-input
+stdout 'hello-from-agent'
+! stderr 'Error'
+
+# Test agent view
+exec teamcity agent view $AGENT_ID --no-input
+stdout 'ID:'
+stdout 'Connected:'
+! stderr 'Error'
+
+# Test agent view --json
+exec teamcity agent view $AGENT_ID --json --no-input
+stdout '"name"'
+! stderr 'Error'
+
+# Test agent jobs
+exec teamcity agent jobs $AGENT_ID --no-input
+stdout '(Compatible|Incompatible|Jobs)'
+! stderr 'Error'
+
+# Test agent list shows the agent
+exec teamcity agent list --no-input
+stdout 'ID'
+stdout 'NAME'
+! stderr 'Error'
+
+# Cleanup: cancel both builds
+exec teamcity run cancel $BUILD_ID_1 --force --no-input
+exec teamcity run cancel $BUILD_ID_2 --force --no-input

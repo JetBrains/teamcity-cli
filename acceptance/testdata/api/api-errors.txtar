@@ -1,0 +1,9 @@
+# Test API error handling.
+
+# Nonexistent endpoint
+! exec teamcity api /app/rest/nonexistent_endpoint_12345 --no-input
+stderr '.'
+
+# --slurp without --paginate
+! exec teamcity api /app/rest/server --slurp --no-input
+stderr 'requires --paginate'

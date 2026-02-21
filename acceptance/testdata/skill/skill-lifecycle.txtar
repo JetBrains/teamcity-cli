@@ -1,0 +1,21 @@
+# Test skill install, update, and remove lifecycle.
+
+# Install skill to project directory for claude-code agent
+exec teamcity skill install --agent claude-code --project --no-input
+stdout 'Installed'
+! stderr 'Error'
+
+# Update should report already up to date
+exec teamcity skill update --agent claude-code --project --no-input
+stdout 'up to date'
+! stderr 'Error'
+
+# Remove the skill
+exec teamcity skill remove --agent claude-code --project --no-input
+stdout 'Removed'
+! stderr 'Error'
+
+# Remove again should say not installed
+exec teamcity skill remove --agent claude-code --project --no-input
+stdout 'Not installed'
+! stderr 'Error'

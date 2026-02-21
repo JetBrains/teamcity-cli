@@ -1,0 +1,34 @@
+# Test project list subcommand.
+
+exec teamcity project list --limit 5 --no-input
+stdout 'ID'
+stdout 'NAME'
+stdout 'PARENT'
+! stderr 'Error'
+
+# --json
+exec teamcity project list --limit 2 --json --no-input
+stdout '"count"'
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+# --json=f1,f2 field selection
+exec teamcity project list --limit 1 --json=id,name --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+# --limit validation
+exec teamcity project list --limit 1 --no-input
+! stderr 'Error'
+
+! exec teamcity project list --limit 0 --no-input
+stderr 'must be a positive number'
+
+! exec teamcity project list --limit -1 --no-input
+stderr 'must be a positive number'
+
+# --parent
+exec teamcity project list --parent _Root --limit 5 --no-input
+! stderr 'Error'

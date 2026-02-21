@@ -1,0 +1,9 @@
+# Test API with --input - reading body from stdin.
+
+stdin body.json
+exec teamcity api /app/rest/server --input - --raw --no-input
+stdout '"version"'
+! stderr 'Error'
+
+-- body.json --
+{}

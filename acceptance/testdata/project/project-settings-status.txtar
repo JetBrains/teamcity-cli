@@ -1,0 +1,8 @@
+# View versioned settings status of a project.
+
+exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+extract '"id":"([^"]+)"' PROJECT_ID
+
+exec teamcity project settings status $PROJECT_ID --no-input
+stdout '(Format|permission denied|not configured)'
+! stderr 'Error'

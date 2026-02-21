@@ -24,6 +24,10 @@ unit:
 test:
     TC_INSECURE_SKIP_WARN=1 go test -v ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
 
+# Run acceptance tests against cli.teamcity.com (guest auth)
+acceptance:
+    TC_INSECURE_SKIP_WARN=1 go test -v -tags=acceptance ./acceptance -timeout 10m
+
 # Remove build artifacts
 [confirm]
 clean:

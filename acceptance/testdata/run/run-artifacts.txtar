@@ -1,0 +1,30 @@
+# Test run artifacts and download subcommands.
+
+exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+exec teamcity run artifacts $BUILD_ID --no-input
+stdout '(ARTIFACTS|No artifacts)'
+! stderr 'Error'
+
+# --json
+exec teamcity run artifacts $BUILD_ID --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --path subdirectory filter
+exec teamcity run artifacts $BUILD_ID --path . --no-input
+! stderr 'Error'
+
+# download to temp dir
+exec teamcity run download $BUILD_ID --dir $WORK/artifacts --no-input
+stdout '(downloaded|No artifacts)'
+! stderr 'Error'
+
+# --job (by job ID)
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+exec teamcity run artifacts --job $JOB_ID --no-input
+stdout '(ARTIFACTS|No artifacts)'
+! stderr 'Error'

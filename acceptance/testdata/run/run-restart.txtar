@@ -1,0 +1,13 @@
+# Restart a completed run.
+[!has_token] skip 'requires authentication token'
+
+# Find a completed build
+exec teamcity api /app/rest/builds?locator=count:1,status:SUCCESS&fields=build(id) --raw --no-input
+extract '"id":\s*(\d+)' BUILD_ID
+
+exec teamcity run restart $BUILD_ID --no-input
+stdout 'Queued run'
+
+# Clean up: cancel the restarted run
+extract 'run (\d+)' NEW_BUILD_ID
+exec teamcity run cancel $NEW_BUILD_ID --force --no-input

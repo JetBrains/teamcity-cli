@@ -1,0 +1,24 @@
+# Test run subcommand input validation and error handling.
+
+# start without args
+! exec teamcity run start --no-input
+stderr 'accepts 1 arg'
+
+# cancel without args
+! exec teamcity run cancel --no-input
+stderr 'accepts 1 arg'
+
+# list --limit validation
+! exec teamcity run list --limit 0 --no-input
+stderr 'must be a positive number'
+
+! exec teamcity run list --limit -1 --no-input
+stderr 'must be a positive number'
+
+# invalid status
+! exec teamcity run list --status bogus --no-input
+stderr 'invalid status'
+
+# backwards date range
+! exec teamcity run list --since 2026-01-01 --until 2025-01-01 --no-input
+stderr 'is more recent than'

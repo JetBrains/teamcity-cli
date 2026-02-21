@@ -1,0 +1,14 @@
+# Watch a completed run (should return immediately since already finished).
+
+exec teamcity api /app/rest/builds?locator=count:1,status:SUCCESS,state:finished&fields=build(id) --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+# Watching a finished successful build should return quickly
+exec teamcity run watch $BUILD_ID --quiet --timeout 30s --no-input
+stdout 'succeeded'
+! stderr 'Error'
+
+# --interval flag
+exec teamcity run watch $BUILD_ID --interval 1 --timeout 30s --no-input
+stdout 'succeeded'
+! stderr 'Error'

@@ -1,0 +1,15 @@
+# Auth commands requiring authentication.
+[!has_token] skip 'requires authentication token'
+
+# Status shows token-based auth
+exec teamcity auth status --no-input
+stdout 'cli.teamcity.com'
+! stderr 'Error'
+
+# Non-interactive login with --server + --token + --insecure-storage
+exec teamcity auth login --server $TC_HOST --token $TEAMCITY_TOKEN --insecure-storage --no-input
+! stderr 'Error'
+
+exec teamcity auth status --no-input
+stdout 'cli.teamcity.com'
+! stderr 'Error'

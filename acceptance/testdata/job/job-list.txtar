@@ -1,0 +1,36 @@
+# Test job list subcommand.
+
+exec teamcity job list --limit 5 --no-input
+stdout 'ID'
+stdout 'NAME'
+stdout 'PROJECT'
+! stderr 'Error'
+
+# --json
+exec teamcity job list --limit 2 --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# JSON fields
+exec teamcity job list --limit 1 --json --no-input
+stdout '"id"'
+stdout '"name"'
+stdout '"projectId"'
+! stderr 'Error'
+
+# --json=f1,f2 field selection
+exec teamcity job list --limit 1 --json=id,name,projectId --no-input
+stdout '"id"'
+stdout '"name"'
+stdout '"projectId"'
+! stderr 'Error'
+
+! exec teamcity job list --limit 0 --no-input
+stderr 'must be a positive number'
+
+# --project filter
+exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+extract '"id":"([^"]+)"' PROJECT_ID
+
+exec teamcity job list --project $PROJECT_ID --limit 3 --no-input
+! stderr 'Error'

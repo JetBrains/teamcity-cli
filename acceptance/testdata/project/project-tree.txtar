@@ -1,0 +1,15 @@
+# Display project hierarchy as a tree.
+
+exec teamcity project tree _Root --no-input
+stdout '_Root'
+! stderr 'Error'
+
+# --depth limits tree depth
+exec teamcity project tree _Root --depth 1 --no-input
+stdout '_Root'
+! stderr 'Error'
+
+# --no-jobs hides build configurations
+exec teamcity project tree _Root --no-jobs --no-input
+stdout '_Root'
+! stderr 'Error'

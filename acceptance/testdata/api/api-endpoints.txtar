@@ -1,0 +1,27 @@
+# Test various REST API endpoints.
+
+# Builds with field selection
+exec teamcity api /app/rest/builds?locator=count:2&fields=build(id,status,state) --raw --no-input
+stdout '"id"'
+stdout '"status"'
+! stderr 'Error'
+
+# Projects
+exec teamcity api /app/rest/projects --no-input
+stdout '"project"'
+! stderr 'Error'
+
+# Build types
+exec teamcity api /app/rest/buildTypes --no-input
+stdout '"buildType"'
+! stderr 'Error'
+
+# Agents
+exec teamcity api /app/rest/agents --no-input
+stdout '"agent"'
+! stderr 'Error'
+
+# Agent pools
+exec teamcity api /app/rest/agentPools --no-input
+stdout '"agentPool"'
+! stderr 'Error'

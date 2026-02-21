@@ -1,0 +1,25 @@
+# Test alias create, use, list, and delete lifecycle.
+
+# Create and expand with arguments
+exec teamcity alias set rl 'run list --limit $1' --no-input
+stdout 'Added alias'
+
+exec teamcity rl 3 --no-input
+! stderr 'Error'
+
+# List as JSON
+exec teamcity alias list --json --no-input
+stdout '"name"'
+stdout '"expansion"'
+stdout 'rl'
+
+# Delete
+exec teamcity alias delete rl --no-input
+stdout 'Deleted alias'
+
+exec teamcity alias list --no-input
+! stdout 'rl'
+
+# Delete nonexistent alias
+! exec teamcity alias delete nonexistent_alias_12345 --no-input
+stderr 'no such alias'
