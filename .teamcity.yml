@@ -47,6 +47,7 @@ jobs:
         docker-image: goreleaser/goreleaser:latest
         name: Build & Test
         script-content: |
+          export GOTOOLCHAIN=auto
           goreleaser release --snapshot --clean --skip=publish,chocolatey
           BINARY=$(find dist -name 'teamcity' -path '*/linux_amd64*' -type f | head -1)
           chmod +x "$BINARY"
