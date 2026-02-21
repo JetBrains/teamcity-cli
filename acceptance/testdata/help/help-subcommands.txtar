@@ -1,0 +1,29 @@
+# Verify help output for each top-level subcommand.
+
+exec teamcity run --help
+stdout 'list'
+stdout 'start'
+
+exec teamcity project --help
+stdout 'list'
+stdout 'view'
+
+exec teamcity job --help
+stdout 'list'
+stdout 'view'
+
+exec teamcity agent --help
+stdout 'list'
+stdout 'view'
+
+exec teamcity pool --help
+stdout 'list'
+
+exec teamcity queue --help
+stdout 'list'
+
+exec teamcity auth --help
+stdout 'login'
+
+exec teamcity api --help
+stdout 'endpoint'

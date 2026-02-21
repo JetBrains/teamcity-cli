@@ -1,0 +1,5 @@
+# Verify we can retrieve just the server version via the API command.
+
+exec teamcity api /app/rest/server/version --raw --no-input
+stdout '\d+\.\d+'
+! stderr .

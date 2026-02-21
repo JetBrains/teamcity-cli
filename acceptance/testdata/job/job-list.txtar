@@ -1,0 +1,4 @@
+# List jobs (build configurations) from the public server.
+
+exec teamcity job list --limit 5 --no-input
+! stderr 'Error'

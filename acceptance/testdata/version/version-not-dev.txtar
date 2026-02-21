@@ -1,0 +1,6 @@
+# When built with goreleaser, the version should not be "dev".
+# This test is only meaningful when run against a goreleaser snapshot binary.
+# With go test -built binary, the version will be "dev" — that's expected.
+
+exec teamcity --version
+stdout 'teamcity version'

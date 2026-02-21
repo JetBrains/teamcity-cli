@@ -26,6 +26,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/tiulpin/instill v0.0.0-20260213180125-bfc25c314930
+	github.com/rogpeppe/go-internal v1.14.1
 	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/term v0.39.0
 )

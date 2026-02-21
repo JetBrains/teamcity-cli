@@ -1,0 +1,4 @@
+# Invalid status filter should produce an error.
+
+! exec teamcity run list --status bogus --no-input
+stderr 'invalid status'

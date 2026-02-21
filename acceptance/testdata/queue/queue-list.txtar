@@ -1,0 +1,4 @@
+# List queued builds. May be empty but should not error.
+
+exec teamcity queue list --no-input
+! stderr 'Error'

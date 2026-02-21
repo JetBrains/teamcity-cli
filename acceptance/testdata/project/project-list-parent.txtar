@@ -1,0 +1,4 @@
+# List projects under the root project.
+
+exec teamcity project list --parent _Root --limit 5 --no-input
+! stderr 'Error'

@@ -1,0 +1,4 @@
+# Verify job list JSON output.
+
+exec teamcity job list --limit 2 --json --no-input
+stdout '^\['

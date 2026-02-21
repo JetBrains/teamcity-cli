@@ -1,0 +1,6 @@
+# Verify that the binary reports a version string.
+# This is a basic smoke test for the built binary.
+
+exec teamcity --version
+stdout 'teamcity version'
+! stderr .

@@ -1,0 +1,4 @@
+# Verify queue list JSON output.
+
+exec teamcity queue list --json --no-input
+stdout '^\['

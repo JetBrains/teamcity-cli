@@ -1,0 +1,4 @@
+# Verify pool list JSON output.
+
+exec teamcity pool list --json --no-input
+stdout '^\['

@@ -1,0 +1,19 @@
+# Parent commands without subcommands should show an error.
+
+! exec teamcity run
+stderr 'requires a subcommand'
+
+! exec teamcity project
+stderr 'requires a subcommand'
+
+! exec teamcity job
+stderr 'requires a subcommand'
+
+! exec teamcity agent
+stderr 'requires a subcommand'
+
+! exec teamcity pool
+stderr 'requires a subcommand'
+
+! exec teamcity auth
+stderr 'requires a subcommand'

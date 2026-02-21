@@ -1,0 +1,6 @@
+# Verify project list JSON output.
+
+exec teamcity project list --limit 2 --json --no-input
+stdout '^\['
+stdout '"id"'
+stdout '"name"'

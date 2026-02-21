@@ -1,0 +1,10 @@
+# Test agent list with various filters.
+
+exec teamcity agent list --connected --no-input
+! stderr 'Error'
+
+exec teamcity agent list --authorized --no-input
+! stderr 'Error'
+
+exec teamcity agent list --enabled --no-input
+! stderr 'Error'

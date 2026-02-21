@@ -1,0 +1,4 @@
+# Verify run list JSON output structure.
+
+exec teamcity run list --limit 2 --json --no-input
+stdout '^\['
