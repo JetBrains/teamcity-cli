@@ -1,0 +1,76 @@
+# Test help output, version, and error handling.
+
+# Root help contains all commands and global flags
+exec teamcity --help
+stdout 'TeamCity CLI'
+stdout 'auth'
+stdout 'project'
+stdout 'run'
+stdout 'job'
+stdout 'agent'
+stdout 'pool'
+stdout 'queue'
+stdout 'api'
+stdout '--no-color'
+stdout '--quiet'
+stdout '--verbose'
+stdout '--no-input'
+stdout '--version'
+! stderr .
+
+# --version
+exec teamcity --version
+stdout 'teamcity version'
+! stderr 'Error'
+
+# Subcommand help shows expected children
+exec teamcity run --help
+stdout 'list'
+stdout 'start'
+
+exec teamcity project --help
+stdout 'list'
+stdout 'view'
+
+exec teamcity job --help
+stdout 'list'
+stdout 'view'
+
+exec teamcity agent --help
+stdout 'list'
+stdout 'view'
+
+exec teamcity pool --help
+stdout 'list'
+
+exec teamcity queue --help
+stdout 'list'
+
+exec teamcity auth --help
+stdout 'login'
+
+exec teamcity api --help
+stdout 'endpoint'
+
+# Parent commands without subcommand require one
+! exec teamcity run
+stderr 'requires a subcommand'
+
+! exec teamcity project
+stderr 'requires a subcommand'
+
+! exec teamcity job
+stderr 'requires a subcommand'
+
+! exec teamcity agent
+stderr 'requires a subcommand'
+
+! exec teamcity pool
+stderr 'requires a subcommand'
+
+! exec teamcity auth
+stderr 'requires a subcommand'
+
+# Unknown command
+! exec teamcity nonexistent-command
+stderr 'unknown command'

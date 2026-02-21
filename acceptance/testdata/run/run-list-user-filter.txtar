@@ -1,0 +1,5 @@
+# Filter runs by current user with @me alias.
+[!has_token] skip 'requires authentication token'
+
+exec teamcity run list --user @me --limit 5 --no-input
+! stderr 'Error'

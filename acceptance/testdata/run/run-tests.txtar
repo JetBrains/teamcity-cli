@@ -1,0 +1,29 @@
+# Test run tests subcommand.
+
+exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+exec teamcity run tests $BUILD_ID --no-input
+stdout '(TESTS:|No tests)'
+! stderr 'Error'
+
+# --json
+exec teamcity run tests $BUILD_ID --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --failed
+exec teamcity run tests $BUILD_ID --failed --no-input
+! stderr 'Error'
+
+# --limit
+exec teamcity run tests $BUILD_ID --limit 5 --no-input
+! stderr 'Error'
+
+# --job (by job ID instead of build ID)
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+exec teamcity run tests --job $JOB_ID --no-input
+stdout '(TESTS:|No tests)'
+! stderr 'Error'

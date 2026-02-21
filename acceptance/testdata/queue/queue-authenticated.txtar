@@ -1,0 +1,25 @@
+# Queue commands requiring authentication.
+[!has_token] skip 'requires authentication token'
+
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+# top: start a build and move to top of queue
+exec teamcity run start $JOB_ID --json --no-input
+extract '"id":\s*(\d+)' BUILD_ID
+
+exec teamcity queue top $BUILD_ID --no-input
+! stderr 'Error'
+
+exec teamcity run cancel $BUILD_ID --force --no-input
+
+# remove: start a build and remove from queue
+exec teamcity run start $JOB_ID --json --no-input
+extract '"id":\s*(\d+)' BUILD_ID
+
+exec teamcity queue remove $BUILD_ID --force --no-input
+! stderr 'Error'
+
+# approve nonexistent build
+! exec teamcity queue approve 999999999 --no-input
+stderr '.'

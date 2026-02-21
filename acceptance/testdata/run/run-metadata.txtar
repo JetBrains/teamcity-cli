@@ -1,0 +1,31 @@
+# Test run metadata commands: pin/unpin, tag/untag, comment.
+[!has_token] skip 'requires authentication token'
+
+exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+# Pin and unpin
+exec teamcity run pin $BUILD_ID --comment 'acceptance test pin' --no-input
+stdout -count=1 'Pinned'
+
+exec teamcity run unpin $BUILD_ID --no-input
+stdout -count=1 'Unpinned'
+
+# Tag and untag
+exec teamcity run tag $BUILD_ID acceptance-$RANDOM_STRING --no-input
+stdout -count=1 'Added'
+
+exec teamcity run untag $BUILD_ID acceptance-$RANDOM_STRING --no-input
+stdout -count=1 'Removed'
+
+# Comment: set, view, delete
+exec teamcity run comment $BUILD_ID 'acceptance test comment' --no-input
+stdout 'Set comment'
+! stderr 'Error'
+
+exec teamcity run comment $BUILD_ID --no-input
+stdout 'acceptance test comment'
+
+exec teamcity run comment $BUILD_ID --delete --no-input
+stdout 'Deleted comment'
+! stderr 'Error'

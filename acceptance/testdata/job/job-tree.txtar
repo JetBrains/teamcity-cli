@@ -1,0 +1,24 @@
+# Display snapshot dependency tree for a job.
+
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+exec teamcity job tree $JOB_ID --no-input
+stdout '.'
+! stderr 'Error'
+
+# --depth limits tree depth
+exec teamcity job tree $JOB_ID --depth 1 --no-input
+! stderr 'Error'
+
+# --only dependents
+exec teamcity job tree $JOB_ID --only dependents --no-input
+! stderr 'Error'
+
+# --only dependencies
+exec teamcity job tree $JOB_ID --only dependencies --no-input
+! stderr 'Error'
+
+# --only with invalid value
+! exec teamcity job tree $JOB_ID --only bogus --no-input
+stderr '.'

@@ -1,0 +1,32 @@
+# Test agent list subcommand.
+
+exec teamcity agent list --no-input
+stdout '(ID.*NAME|No agents found)'
+! stderr 'Error'
+
+# --json
+exec teamcity agent list --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --limit
+exec teamcity agent list --limit 5 --no-input
+! stderr 'Error'
+
+! exec teamcity agent list --limit 0 --no-input
+stderr 'must be a positive number'
+
+# --json=f1,f2 field selection accepts valid fields
+exec teamcity agent list --limit 1 --json=id,name --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --connected / --authorized / --enabled filters
+exec teamcity agent list --connected --no-input
+! stderr 'Error'
+
+exec teamcity agent list --authorized --no-input
+! stderr 'Error'
+
+exec teamcity agent list --enabled --no-input
+! stderr 'Error'

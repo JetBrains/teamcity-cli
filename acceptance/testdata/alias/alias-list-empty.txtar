@@ -1,0 +1,4 @@
+# With no aliases configured, list should indicate none exist.
+
+exec teamcity alias list --no-input
+stdout 'No aliases configured'

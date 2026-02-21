@@ -1,0 +1,21 @@
+# Test job view subcommand.
+
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+exec teamcity job view $JOB_ID --no-input
+stdout 'ID:'
+stdout 'Project:'
+stdout 'View in browser:'
+! stderr 'Error'
+
+# --json
+exec teamcity job view $JOB_ID --json --no-input
+stdout '"id"'
+stdout '"name"'
+stdout '"projectId"'
+! stderr 'Error'
+
+# nonexistent
+! exec teamcity job view nonexistent_job_id_12345 --no-input
+stderr '.'

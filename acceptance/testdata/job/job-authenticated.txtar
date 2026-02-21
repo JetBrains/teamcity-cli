@@ -1,0 +1,35 @@
+# Job commands requiring authentication.
+[!has_token] skip 'requires authentication token'
+
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+# param list
+exec teamcity job param list $JOB_ID --no-input
+stdout 'NAME'
+stdout 'VALUE'
+! stderr 'Error'
+
+# param list --json
+exec teamcity job param list $JOB_ID --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# param set → get → delete
+exec teamcity job param set $JOB_ID acceptance.test.param 'test-value-$RANDOM_STRING' --no-input
+stdout 'Set parameter'
+! stderr 'Error'
+
+exec teamcity job param get $JOB_ID acceptance.test.param --no-input
+stdout 'test-value'
+
+exec teamcity job param delete $JOB_ID acceptance.test.param --no-input
+stdout 'Deleted parameter'
+! stderr 'Error'
+
+# pause and resume
+exec teamcity job pause $JOB_ID --no-input
+stdout -count=1 'Paused'
+
+exec teamcity job resume $JOB_ID --no-input
+stdout -count=1 'Resumed'

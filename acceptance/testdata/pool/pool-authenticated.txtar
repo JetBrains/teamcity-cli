@@ -1,0 +1,24 @@
+# Pool commands requiring authentication.
+[!has_token] skip 'pools not visible in guest mode'
+
+# JSON fields
+exec teamcity pool list --json --no-input
+stdout '"name"'
+! stderr 'Error'
+
+# view default pool
+exec teamcity pool view 0 --no-input
+stdout 'Default'
+stdout 'ID: 0'
+stdout 'Max Agents:'
+! stderr 'Error'
+
+# view --json
+exec teamcity pool view 0 --json --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+# nonexistent pool
+! exec teamcity pool view 999999999 --no-input
+stderr '.'

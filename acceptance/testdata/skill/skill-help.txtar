@@ -1,0 +1,11 @@
+# Verify skill command and subcommand help text.
+
+exec teamcity skill --help --no-input
+stdout 'install'
+stdout 'update'
+stdout 'remove'
+
+# install subcommand help
+exec teamcity skill install --help --no-input
+stdout 'agent'
+! stderr 'Error'

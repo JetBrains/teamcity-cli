@@ -1,0 +1,21 @@
+# Test API server endpoint with various output flags.
+
+exec teamcity api /app/rest/server --no-input
+stdout 'version'
+stdout 'buildNumber'
+! stderr .
+
+# --raw: unformatted JSON
+exec teamcity api /app/rest/server --raw --no-input
+stdout '"version"'
+! stderr .
+
+# -X HEAD: no body
+exec teamcity api /app/rest/server -X HEAD --no-input
+! stdout .
+! stderr 'Error'
+
+# --silent: suppress output
+exec teamcity api /app/rest/server --silent --no-input
+! stdout .
+! stderr 'Error'

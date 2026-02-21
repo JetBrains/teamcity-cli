@@ -1,0 +1,12 @@
+# Test HTTP header flags.
+
+# --include shows response headers
+exec teamcity api /app/rest/server --include --no-input
+stdout 'HTTP/'
+stdout 'Content-Type'
+! stderr 'Error'
+
+# --header sets custom request header
+exec teamcity api /app/rest/server --header Accept:application/json --no-input
+stdout 'version'
+! stderr 'Error'

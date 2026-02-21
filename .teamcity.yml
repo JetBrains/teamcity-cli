@@ -4,6 +4,10 @@ jobs:
     steps:
       - type: script
         script-content: go test -v ./... -timeout 15m
+      - type: script
+        name: Acceptance Tests
+        script-content: |
+          TC_INSECURE_SKIP_WARN=1 go test -v -tags=acceptance ./acceptance -timeout 10m
     runs-on: macOS-14-Sonoma-Medium-Arm64
   test_windows:
     name: Test Windows
@@ -12,6 +16,10 @@ jobs:
       - type: script
         script-content: >-
           go test -v ./... -timeout 15m
+      - type: script
+        name: Acceptance Tests
+        script-content: >-
+          set TC_INSECURE_SKIP_WARN=1 && go test -v -tags=acceptance ./acceptance -timeout 10m
   test_linux:
     name: Test Linux
     runs-on: Ubuntu-22.04-Medium
@@ -35,11 +43,25 @@ jobs:
           TEAMCITY_GUEST=1 /usr/lib/go-1.25/bin/go test -v ./api/... -tags=guest -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
+        name: Acceptance Tests
+        script-content: |
+          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
+          TC_INSECURE_SKIP_WARN=1 /usr/lib/go-1.25/bin/go test -v -tags=acceptance ./acceptance -timeout 10m
+      - type: script
         name: Merge Coverage
         script-content: |
           head -1 coverage-integration.out > coverage.out
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
+  acceptance:
+    name: GoReleaser
+    steps:
+      - type: script
+        docker-image: goreleaser/goreleaser-pro:latest
+        name: Build & Test
+        script-content: |
+          export GOTOOLCHAIN=auto
+          goreleaser release --snapshot --clean --skip=publish,chocolatey
   Lint:
     name: Lint
     steps:
@@ -49,3 +71,5 @@ jobs:
         script-content: go fmt ./... && golangci-lint run --tests=false ./...
 parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
+  env.GOFLAGS: '-buildvcs=false'
+  env.BRANCH_NAME: '%teamcity.build.branch%'

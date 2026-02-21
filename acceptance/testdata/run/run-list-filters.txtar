@@ -1,0 +1,27 @@
+# Test run list filters.
+
+# --branch
+exec teamcity run list --branch main --limit 3 --no-input
+! stderr 'Error'
+
+# --status
+exec teamcity run list --status success --limit 3 --no-input
+! stderr 'Error'
+
+exec teamcity run list --status failure --limit 3 --no-input
+! stderr 'Error'
+
+# combined filters
+exec teamcity run list --status success --branch main --limit 3 --no-input
+! stderr 'Error'
+
+# --since/--until
+exec teamcity run list --since 2024-01-01 --until 2025-12-31 --limit 5 --no-input
+! stderr 'Error'
+
+# --project (discover first)
+exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+extract '"id":"([^"]+)"' PROJECT_ID
+
+exec teamcity run list --project $PROJECT_ID --limit 3 --no-input
+! stderr 'Error'

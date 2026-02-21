@@ -1,0 +1,26 @@
+# Test queue list subcommand.
+
+exec teamcity queue list --no-input
+stdout '.'
+! stderr 'Error'
+
+# --json
+exec teamcity queue list --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --json=f1,f2 field selection
+exec teamcity queue list --json=id,state --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --limit
+exec teamcity queue list --limit 10 --no-input
+! stderr 'Error'
+
+# --job filter (discover job first)
+exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+exec teamcity queue list --job $JOB_ID --limit 5 --no-input
+! stderr 'Error'
