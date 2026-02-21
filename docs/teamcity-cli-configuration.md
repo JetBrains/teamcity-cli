@@ -6,7 +6,7 @@ This page describes the configuration file format, environment variables, and sh
 
 ## Configuration file
 
-TeamCity CLI stores its configuration in a YAML file at `~/.config/tc/config.yml`. This file is created automatically when you run `tc auth login`.
+TeamCity CLI stores its configuration in a YAML file at `~/.config/tc/config.yml`. This file is created automatically when you run `teamcity auth login`.
 
 A typical configuration file looks like this:
 
@@ -17,6 +17,7 @@ servers:
     user: alice
   https://teamcity-staging.example.com:
     user: alice
+    guest: true
 aliases:
   rl: 'run list'
   rw: 'run view $1 --web'
@@ -46,7 +47,7 @@ Description
 </td>
 <td>
 
-The server URL used when no `TEAMCITY_URL` environment variable is set. Updated automatically when you run `tc auth login`.
+The server URL used when no `TEAMCITY_URL` environment variable is set. Updated automatically when you run `teamcity auth login`.
 
 </td>
 </tr>
@@ -58,7 +59,7 @@ The server URL used when no `TEAMCITY_URL` environment variable is set. Updated 
 </td>
 <td>
 
-A map of server URLs to their settings. Each entry stores the `user` field (username on that server). Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
+A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access. Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
 
 </td>
 </tr>
@@ -120,6 +121,18 @@ Access token for authentication. Takes precedence over the keyring and config fi
 <tr>
 <td>
 
+`TEAMCITY_GUEST`
+
+</td>
+<td>
+
+Set to `1` to use guest authentication (read-only, no token needed). Must be used with `TEAMCITY_URL`.
+
+</td>
+</tr>
+<tr>
+<td>
+
 `TEAMCITY_DSL_DIR`
 
 </td>
@@ -149,7 +162,7 @@ Disable colored output. Follows the [NO_COLOR standard](https://no-color.org/).
 </td>
 <td>
 
-Pager program to use for commands that produce long output (for example, `tc run log`). Defaults to the system pager.
+Pager program to use for commands that produce long output (for example, `teamcity run log`). Defaults to the system pager.
 
 </td>
 </tr>
@@ -255,20 +268,20 @@ TeamCity CLI supports tab completion for Bash, Zsh, Fish, and PowerShell. Comple
 ### Bash
 
 ```Shell
-tc completion bash > /etc/bash_completion.d/tc
+teamcity completion bash > /etc/bash_completion.d/teamcity
 ```
 
 If you do not have write access to `/etc/bash_completion.d/`, write to a user-level location and source it from your `.bashrc`:
 
 ```Shell
-tc completion bash > ~/.tc-completion.bash
-echo 'source ~/.tc-completion.bash' >> ~/.bashrc
+teamcity completion bash > ~/.teamcity-completion.bash
+echo 'source ~/.teamcity-completion.bash' >> ~/.bashrc
 ```
 
 ### Zsh
 
 ```Shell
-tc completion zsh > "${fpath[1]}/_tc"
+teamcity completion zsh > "${fpath[1]}/_teamcity"
 ```
 
 Ensure your `~/.zshrc` includes `compinit`:
@@ -280,14 +293,14 @@ autoload -Uz compinit && compinit
 ### Fish
 
 ```Shell
-tc completion fish > ~/.config/fish/completions/tc.fish
+teamcity completion fish > ~/.config/fish/completions/teamcity.fish
 ```
 
 ### PowerShell
 
 ```Shell
-tc completion powershell > tc.ps1
-. ./tc.ps1
+teamcity completion powershell > teamcity.ps1
+. ./teamcity.ps1
 ```
 
 To load completion automatically, add the output to your PowerShell profile.

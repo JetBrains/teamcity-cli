@@ -2,16 +2,16 @@
 
 <show-structure for="chapter" depth="2"/>
 
-Runs represent build executions in TeamCity. The `tc run` command group lets you start builds, monitor them in real time, view logs and test results, manage artifacts, and organize runs with tags, comments, and pins.
+Runs represent build executions in TeamCity. The `teamcity run` command group lets you start builds, monitor them in real time, view logs and test results, manage artifacts, and organize runs with tags, comments, and pins.
 
 > In TeamCity CLI, "run" is equivalent to "build" in the TeamCity web interface. See [TeamCity CLI](teamcity-cli.md#terminology-mapping) for the full terminology mapping.
 
 ## Listing runs
 
-View recent builds with `tc run list`:
+View recent builds with `teamcity run list`:
 
 ```Shell
-tc run list
+teamcity run list
 ```
 
 ### Filtering
@@ -20,23 +20,23 @@ Use flags to narrow results:
 
 ```Shell
 # Builds for a specific job
-tc run list --job MyProject_Build
+teamcity run list --job MyProject_Build
 
 # Filter by project
-tc run list --project MyProject
+teamcity run list --project MyProject
 
 # Filter by branch
-tc run list --branch main
+teamcity run list --branch main
 
 # Filter by status
-tc run list --status failure
+teamcity run list --status failure
 
 # Filter by user who triggered the build
-tc run list --user alice
-tc run list --user @me
+teamcity run list --user alice
+teamcity run list --user @me
 
 # Combine filters
-tc run list --job MyProject_Build --status failure --branch main
+teamcity run list --job MyProject_Build --status failure --branch main
 ```
 
 > The `@me` shortcut substitutes the currently authenticated username.
@@ -47,31 +47,31 @@ Use `--since` and `--until` to filter by time:
 
 ```Shell
 # Builds from the last 24 hours
-tc run list --since 24h
+teamcity run list --since 24h
 
 # Builds from a specific date onward
-tc run list --since 2026-01-15
+teamcity run list --since 2026-01-15
 
 # Builds in a time range
-tc run list --since 2026-01-15 --until 2026-01-20
+teamcity run list --since 2026-01-15 --until 2026-01-20
 ```
 
 ### Limiting results
 
 ```Shell
-tc run list --limit 20
+teamcity run list --limit 20
 ```
 
 ### Output options
 
 ```Shell
 # JSON output (see Scripting and automation for details)
-tc run list --json
-tc run list --json=id,status,webUrl
+teamcity run list --json
+teamcity run list --json=id,status,webUrl
 
 # Plain text for scripting
-tc run list --plain
-tc run list --plain --no-header
+teamcity run list --plain
+teamcity run list --plain --no-header
 ```
 
 ### run list flags
@@ -237,20 +237,20 @@ Open the list in the browser
 
 ## Starting a run
 
-Trigger a new build with `tc run start`:
+Trigger a new build with `teamcity run start`:
 
 ```Shell
-tc run start MyProject_Build
+teamcity run start MyProject_Build
 ```
 
 ### Specifying a branch and revision
 
 ```Shell
 # Build a specific branch
-tc run start MyProject_Build --branch feature/login
+teamcity run start MyProject_Build --branch feature/login
 
 # Pin to a specific Git commit
-tc run start MyProject_Build --branch main --revision abc123def
+teamcity run start MyProject_Build --branch main --revision abc123def
 ```
 
 ### Build parameters
@@ -258,7 +258,7 @@ tc run start MyProject_Build --branch main --revision abc123def
 Pass custom parameters, system properties, and environment variables:
 
 ```Shell
-tc run start MyProject_Build \
+teamcity run start MyProject_Build \
   -P version=1.0 \
   -S build.number=123 \
   -E CI=true
@@ -268,25 +268,25 @@ tc run start MyProject_Build \
 
 ```Shell
 # Clean all source files before building
-tc run start MyProject_Build --clean
+teamcity run start MyProject_Build --clean
 
 # Rebuild all dependencies
-tc run start MyProject_Build --rebuild-deps
+teamcity run start MyProject_Build --rebuild-deps
 
 # Rebuild only failed dependencies
-tc run start MyProject_Build --rebuild-failed-deps
+teamcity run start MyProject_Build --rebuild-failed-deps
 
 # Add to the top of the queue
-tc run start MyProject_Build --top
+teamcity run start MyProject_Build --top
 
 # Run on a specific agent
-tc run start MyProject_Build --agent 5
+teamcity run start MyProject_Build --agent 5
 ```
 
 ### Tags and comments
 
 ```Shell
-tc run start MyProject_Build --tag release --tag v2.0 --comment "Release build"
+teamcity run start MyProject_Build --tag release --tag v2.0 --comment "Release build"
 ```
 
 ### Start and watch
@@ -294,7 +294,7 @@ tc run start MyProject_Build --tag release --tag v2.0 --comment "Release build"
 Add `--watch` to follow the build after starting it:
 
 ```Shell
-tc run start MyProject_Build --branch main --watch
+teamcity run start MyProject_Build --branch main --watch
 ```
 
 ### Personal builds
@@ -303,19 +303,19 @@ Include uncommitted local changes in a personal build:
 
 ```Shell
 # Auto-detect changes from Git working directory
-tc run start MyProject_Build --local-changes
+teamcity run start MyProject_Build --local-changes
 
 # From a patch file
-tc run start MyProject_Build --local-changes changes.patch
+teamcity run start MyProject_Build --local-changes changes.patch
 
 # From stdin
-git diff | tc run start MyProject_Build --local-changes -
+git diff | teamcity run start MyProject_Build --local-changes -
 ```
 
 By default, the CLI pushes your branch to the remote before starting a personal build. Use `--no-push` to skip this:
 
 ```Shell
-tc run start MyProject_Build --local-changes --no-push
+teamcity run start MyProject_Build --local-changes --no-push
 ```
 
 ### Dry run
@@ -323,7 +323,7 @@ tc run start MyProject_Build --local-changes --no-push
 Preview what would be triggered without actually starting a build:
 
 ```Shell
-tc run start MyProject_Build --dry-run
+teamcity run start MyProject_Build --dry-run
 ```
 
 ### run start flags
@@ -574,9 +574,9 @@ Open run in browser
 ## Viewing run details
 
 ```Shell
-tc run view 12345
-tc run view 12345 --web
-tc run view 12345 --json
+teamcity run view 12345
+teamcity run view 12345 --web
+teamcity run view 12345 --json
 ```
 
 ## Watching a run
@@ -584,26 +584,26 @@ tc run view 12345 --json
 Monitor a running build with live updates:
 
 ```Shell
-tc run watch 12345
+teamcity run watch 12345
 ```
 
 Stream build logs while watching:
 
 ```Shell
-tc run watch 12345 --logs
+teamcity run watch 12345 --logs
 ```
 
 Set a custom refresh interval or timeout:
 
 ```Shell
-tc run watch 12345 --interval 10
-tc run watch 12345 --timeout 30m
+teamcity run watch 12345 --interval 10
+teamcity run watch 12345 --timeout 30m
 ```
 
 Use `--quiet` for minimal output that shows only state changes and the final result:
 
 ```Shell
-tc run watch 12345 --quiet
+teamcity run watch 12345 --quiet
 ```
 
 ### run watch flags
@@ -676,25 +676,25 @@ Stop watching after this duration (for example, `30m`, `1h`)
 View the log output from a run:
 
 ```Shell
-tc run log 12345
+teamcity run log 12345
 ```
 
 View the log for the latest run of a specific job:
 
 ```Shell
-tc run log --job MyProject_Build
+teamcity run log --job MyProject_Build
 ```
 
 Show only the failure summary (problems and failed tests):
 
 ```Shell
-tc run log 12345 --failed
+teamcity run log 12345 --failed
 ```
 
 Bypass the pager and output raw text:
 
 ```Shell
-tc run log 12345 --raw
+teamcity run log 12345 --raw
 ```
 
 > The log viewer uses a pager by default. Use `/` to search, `n`/`N` to navigate matches, `g`/`G` to jump to the top or bottom, and `q` to quit.
@@ -706,14 +706,14 @@ tc run log 12345 --raw
 Cancel a running or queued build:
 
 ```Shell
-tc run cancel 12345
-tc run cancel 12345 --comment "Cancelling for hotfix"
+teamcity run cancel 12345
+teamcity run cancel 12345 --comment "Cancelling for hotfix"
 ```
 
 Use `--force` to skip the confirmation prompt:
 
 ```Shell
-tc run cancel 12345 --force
+teamcity run cancel 12345 --force
 ```
 
 ## Restarting a run
@@ -721,9 +721,9 @@ tc run cancel 12345 --force
 Restart a run with the same configuration:
 
 ```Shell
-tc run restart 12345
-tc run restart 12345 --watch
-tc run restart 12345 --web
+teamcity run restart 12345
+teamcity run restart 12345 --watch
+teamcity run restart 12345 --web
 ```
 
 ## Artifacts
@@ -733,10 +733,10 @@ tc run restart 12345 --web
 List artifacts from a run without downloading them:
 
 ```Shell
-tc run artifacts 12345
-tc run artifacts --job MyProject_Build
-tc run artifacts 12345 --path html_reports/coverage
-tc run artifacts 12345 --json
+teamcity run artifacts 12345
+teamcity run artifacts --job MyProject_Build
+teamcity run artifacts 12345 --path html_reports/coverage
+teamcity run artifacts 12345 --json
 ```
 
 ### Downloading artifacts
@@ -744,9 +744,9 @@ tc run artifacts 12345 --json
 Download artifacts from a completed run:
 
 ```Shell
-tc run download 12345
-tc run download 12345 --dir ./artifacts
-tc run download 12345 --artifact "*.jar"
+teamcity run download 12345
+teamcity run download 12345 --dir ./artifacts
+teamcity run download 12345 --artifact "*.jar"
 ```
 
 ## Test results
@@ -754,21 +754,21 @@ tc run download 12345 --artifact "*.jar"
 Show test results from a run:
 
 ```Shell
-tc run tests 12345
-tc run tests --job MyProject_Build
+teamcity run tests 12345
+teamcity run tests --job MyProject_Build
 ```
 
 Show only failed tests:
 
 ```Shell
-tc run tests 12345 --failed
+teamcity run tests 12345 --failed
 ```
 
 Limit the number of results:
 
 ```Shell
-tc run tests 12345 --limit 50
-tc run tests 12345 --json
+teamcity run tests 12345 --limit 50
+teamcity run tests 12345 --json
 ```
 
 ## VCS changes
@@ -776,14 +776,14 @@ tc run tests 12345 --json
 Show the VCS commits included in a run:
 
 ```Shell
-tc run changes 12345
+teamcity run changes 12345
 ```
 
 Show commits only (without file listings):
 
 ```Shell
-tc run changes 12345 --no-files
-tc run changes 12345 --json
+teamcity run changes 12345 --no-files
+teamcity run changes 12345 --json
 ```
 
 ## Pinning runs
@@ -791,14 +791,14 @@ tc run changes 12345 --json
 Pin a run to prevent it from being cleaned up by retention policies:
 
 ```Shell
-tc run pin 12345
-tc run pin 12345 --comment "Release candidate"
+teamcity run pin 12345
+teamcity run pin 12345 --comment "Release candidate"
 ```
 
 Remove the pin:
 
 ```Shell
-tc run unpin 12345
+teamcity run unpin 12345
 ```
 
 ## Tagging runs
@@ -806,15 +806,15 @@ tc run unpin 12345
 Add tags to a run for categorization and filtering:
 
 ```Shell
-tc run tag 12345 release
-tc run tag 12345 release v2.0 production
+teamcity run tag 12345 release
+teamcity run tag 12345 release v2.0 production
 ```
 
 Remove tags:
 
 ```Shell
-tc run untag 12345 release
-tc run untag 12345 release v2.0
+teamcity run untag 12345 release
+teamcity run untag 12345 release v2.0
 ```
 
 ## Comments
@@ -822,19 +822,19 @@ tc run untag 12345 release v2.0
 Set a comment on a run:
 
 ```Shell
-tc run comment 12345 "Deployed to production"
+teamcity run comment 12345 "Deployed to production"
 ```
 
 View the current comment:
 
 ```Shell
-tc run comment 12345
+teamcity run comment 12345
 ```
 
 Delete the comment:
 
 ```Shell
-tc run comment 12345 --delete
+teamcity run comment 12345 --delete
 ```
 
 <seealso>

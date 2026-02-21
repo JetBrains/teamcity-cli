@@ -2,14 +2,14 @@
 
 <show-structure for="chapter" depth="2"/>
 
-The `tc api` command lets you make authenticated HTTP requests to the [TeamCity REST API](https://www.jetbrains.com/help/teamcity/rest-api.html) directly from the command line. This is useful for accessing API endpoints not yet covered by dedicated CLI commands, building custom scripts, and debugging.
+The `teamcity api` command lets you make authenticated HTTP requests to the [TeamCity REST API](https://www.jetbrains.com/help/teamcity/rest-api.html) directly from the command line. This is useful for accessing API endpoints not yet covered by dedicated CLI commands, building custom scripts, and debugging.
 
 ## Basic usage
 
 The endpoint argument is the path portion of the URL, starting with `/app/rest/`:
 
 ```Shell
-tc api /app/rest/server
+teamcity api /app/rest/server
 ```
 
 The CLI automatically adds the base URL and authentication headers based on your current authentication context.
@@ -20,16 +20,16 @@ By default, requests use the GET method. Specify a different method with `-X`:
 
 ```Shell
 # GET (default)
-tc api /app/rest/projects
+teamcity api /app/rest/projects
 
 # POST
-tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
+teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
 
 # PUT
-tc api /app/rest/builds/12345/comment -X PUT --input comment.txt
+teamcity api /app/rest/builds/12345/comment -X PUT --input comment.txt
 
 # DELETE
-tc api /app/rest/builds/12345/tags/obsolete -X DELETE
+teamcity api /app/rest/builds/12345/tags/obsolete -X DELETE
 ```
 
 ## Sending data
@@ -39,8 +39,8 @@ tc api /app/rest/builds/12345/tags/obsolete -X DELETE
 Use `-f` to build a JSON request body from key-value pairs:
 
 ```Shell
-tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
-tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild' -f 'branchName=main'
+teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild'
+teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild' -f 'branchName=main'
 ```
 
 ### Request body from a file
@@ -48,13 +48,13 @@ tc api /app/rest/buildQueue -X POST -f 'buildType=id:MyBuild' -f 'branchName=mai
 Use `--input` to read the request body from a file:
 
 ```Shell
-tc api /app/rest/projects -X POST --input project.json
+teamcity api /app/rest/projects -X POST --input project.json
 ```
 
 Read from stdin with `--input -`:
 
 ```Shell
-echo '{"name": "New Project"}' | tc api /app/rest/projects -X POST --input -
+echo '{"name": "New Project"}' | teamcity api /app/rest/projects -X POST --input -
 ```
 
 ## Custom headers
@@ -62,7 +62,7 @@ echo '{"name": "New Project"}' | tc api /app/rest/projects -X POST --input -
 Add custom headers with `-H`:
 
 ```Shell
-tc api /app/rest/builds -H "Accept: application/xml"
+teamcity api /app/rest/builds -H "Accept: application/xml"
 ```
 
 ## Response handling
@@ -70,7 +70,7 @@ tc api /app/rest/builds -H "Accept: application/xml"
 ### Include response headers
 
 ```Shell
-tc api /app/rest/server -i
+teamcity api /app/rest/server -i
 ```
 
 ### Raw output
@@ -78,7 +78,7 @@ tc api /app/rest/server -i
 Output the response without formatting:
 
 ```Shell
-tc api /app/rest/server --raw
+teamcity api /app/rest/server --raw
 ```
 
 ### Silent mode
@@ -86,7 +86,7 @@ tc api /app/rest/server --raw
 Suppress output on success (useful in scripts where you only care about the exit code):
 
 ```Shell
-tc api /app/rest/builds/12345/tags/release -X POST --silent
+teamcity api /app/rest/builds/12345/tags/release -X POST --silent
 ```
 
 ## Pagination
@@ -94,13 +94,13 @@ tc api /app/rest/builds/12345/tags/release -X POST --silent
 The TeamCity REST API returns paginated results for large collections. Use `--paginate` to automatically fetch all pages:
 
 ```Shell
-tc api /app/rest/builds --paginate
+teamcity api /app/rest/builds --paginate
 ```
 
 Combine paginated results into a single JSON array with `--slurp`:
 
 ```Shell
-tc api /app/rest/builds --paginate --slurp
+teamcity api /app/rest/builds --paginate --slurp
 ```
 
 > The `--slurp` flag requires `--paginate`. It collects items from all pages and outputs them as a single JSON array.
@@ -111,20 +111,20 @@ tc api /app/rest/builds --paginate --slurp
 
 ```Shell
 # Get current user info
-tc api /app/rest/users/current
+teamcity api /app/rest/users/current
 
 # List all VCS roots
-tc api /app/rest/vcs-roots
+teamcity api /app/rest/vcs-roots
 
 # Get build statistics
-tc api /app/rest/builds/12345/statistics
+teamcity api /app/rest/builds/12345/statistics
 
 # Trigger a build with parameters
-tc api /app/rest/buildQueue -X POST \
+teamcity api /app/rest/buildQueue -X POST \
   --input <(echo '{"buildType":{"id":"MyBuild"},"properties":{"property":[{"name":"version","value":"1.0"}]}}')
 
 # Download a specific artifact
-tc api /app/rest/builds/12345/artifacts/content/report.html --raw > report.html
+teamcity api /app/rest/builds/12345/artifacts/content/report.html --raw > report.html
 ```
 
 ## api flags

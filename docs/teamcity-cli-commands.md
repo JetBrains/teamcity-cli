@@ -24,7 +24,7 @@ Description
 <tr>
 <td>
 
-`tc auth login`
+`teamcity auth login`
 
 </td>
 <td>
@@ -36,7 +36,7 @@ Authenticate with a TeamCity server
 <tr>
 <td>
 
-`tc auth logout`
+`teamcity auth logout`
 
 </td>
 <td>
@@ -48,7 +48,7 @@ Log out from the current server
 <tr>
 <td>
 
-`tc auth status`
+`teamcity auth status`
 
 </td>
 <td>
@@ -79,7 +79,7 @@ Description
 <tr>
 <td>
 
-`tc run list`
+`teamcity run list`
 
 </td>
 <td>
@@ -91,7 +91,7 @@ List recent builds
 <tr>
 <td>
 
-`tc run start`
+`teamcity run start`
 
 </td>
 <td>
@@ -103,7 +103,7 @@ Start a new build
 <tr>
 <td>
 
-`tc run view`
+`teamcity run view`
 
 </td>
 <td>
@@ -115,7 +115,7 @@ View build details
 <tr>
 <td>
 
-`tc run watch`
+`teamcity run watch`
 
 </td>
 <td>
@@ -127,7 +127,7 @@ Watch a build in real time
 <tr>
 <td>
 
-`tc run log`
+`teamcity run log`
 
 </td>
 <td>
@@ -139,7 +139,7 @@ View build log output
 <tr>
 <td>
 
-`tc run cancel`
+`teamcity run cancel`
 
 </td>
 <td>
@@ -151,7 +151,7 @@ Cancel a running or queued build
 <tr>
 <td>
 
-`tc run restart`
+`teamcity run restart`
 
 </td>
 <td>
@@ -163,7 +163,7 @@ Restart a build with the same configuration
 <tr>
 <td>
 
-`tc run download`
+`teamcity run download`
 
 </td>
 <td>
@@ -175,7 +175,7 @@ Download build artifacts
 <tr>
 <td>
 
-`tc run artifacts`
+`teamcity run artifacts`
 
 </td>
 <td>
@@ -187,7 +187,7 @@ List artifacts without downloading
 <tr>
 <td>
 
-`tc run tests`
+`teamcity run tests`
 
 </td>
 <td>
@@ -199,7 +199,7 @@ Show test results
 <tr>
 <td>
 
-`tc run changes`
+`teamcity run changes`
 
 </td>
 <td>
@@ -211,7 +211,7 @@ Show VCS commits included in a build
 <tr>
 <td>
 
-`tc run pin`
+`teamcity run pin`
 
 </td>
 <td>
@@ -223,7 +223,7 @@ Pin a build to prevent cleanup
 <tr>
 <td>
 
-`tc run unpin`
+`teamcity run unpin`
 
 </td>
 <td>
@@ -235,7 +235,7 @@ Unpin a build
 <tr>
 <td>
 
-`tc run tag`
+`teamcity run tag`
 
 </td>
 <td>
@@ -247,7 +247,7 @@ Add tags to a build
 <tr>
 <td>
 
-`tc run untag`
+`teamcity run untag`
 
 </td>
 <td>
@@ -259,7 +259,7 @@ Remove tags from a build
 <tr>
 <td>
 
-`tc run comment`
+`teamcity run comment`
 
 </td>
 <td>
@@ -290,7 +290,7 @@ Description
 <tr>
 <td>
 
-`tc job list`
+`teamcity job list`
 
 </td>
 <td>
@@ -302,7 +302,7 @@ List build configurations
 <tr>
 <td>
 
-`tc job view`
+`teamcity job view`
 
 </td>
 <td>
@@ -314,7 +314,7 @@ View job details
 <tr>
 <td>
 
-`tc job pause`
+`teamcity job pause`
 
 </td>
 <td>
@@ -326,7 +326,7 @@ Pause a job (prevent new builds)
 <tr>
 <td>
 
-`tc job resume`
+`teamcity job resume`
 
 </td>
 <td>
@@ -338,7 +338,7 @@ Resume a paused job
 <tr>
 <td>
 
-`tc job param list`
+`teamcity job param list`
 
 </td>
 <td>
@@ -350,7 +350,7 @@ List job parameters
 <tr>
 <td>
 
-`tc job param get`
+`teamcity job param get`
 
 </td>
 <td>
@@ -362,7 +362,7 @@ Get a specific parameter value
 <tr>
 <td>
 
-`tc job param set`
+`teamcity job param set`
 
 </td>
 <td>
@@ -374,7 +374,7 @@ Set a parameter value
 <tr>
 <td>
 
-`tc job param delete`
+`teamcity job param delete`
 
 </td>
 <td>
@@ -405,7 +405,7 @@ Description
 <tr>
 <td>
 
-`tc project list`
+`teamcity project list`
 
 </td>
 <td>
@@ -417,7 +417,7 @@ List projects
 <tr>
 <td>
 
-`tc project view`
+`teamcity project view`
 
 </td>
 <td>
@@ -429,7 +429,7 @@ View project details
 <tr>
 <td>
 
-`tc project param list`
+`teamcity project param list`
 
 </td>
 <td>
@@ -441,7 +441,7 @@ List project parameters
 <tr>
 <td>
 
-`tc project param get`
+`teamcity project param get`
 
 </td>
 <td>
@@ -453,7 +453,7 @@ Get a specific parameter value
 <tr>
 <td>
 
-`tc project param set`
+`teamcity project param set`
 
 </td>
 <td>
@@ -465,7 +465,7 @@ Set a parameter value
 <tr>
 <td>
 
-`tc project param delete`
+`teamcity project param delete`
 
 </td>
 <td>
@@ -477,7 +477,7 @@ Delete a parameter
 <tr>
 <td>
 
-`tc project token put`
+`teamcity project token put`
 
 </td>
 <td>
@@ -489,7 +489,7 @@ Store a secure token for versioned settings
 <tr>
 <td>
 
-`tc project token get`
+`teamcity project token get`
 
 </td>
 <td>
@@ -501,7 +501,7 @@ Retrieve a secure token value
 <tr>
 <td>
 
-`tc project settings export`
+`teamcity project settings export`
 
 </td>
 <td>
@@ -513,7 +513,7 @@ Export project settings as a ZIP archive
 <tr>
 <td>
 
-`tc project settings status`
+`teamcity project settings status`
 
 </td>
 <td>
@@ -525,7 +525,7 @@ Show versioned settings sync status
 <tr>
 <td>
 
-`tc project settings validate`
+`teamcity project settings validate`
 
 </td>
 <td>
@@ -556,7 +556,7 @@ Description
 <tr>
 <td>
 
-`tc queue list`
+`teamcity queue list`
 
 </td>
 <td>
@@ -568,7 +568,7 @@ List queued builds
 <tr>
 <td>
 
-`tc queue approve`
+`teamcity queue approve`
 
 </td>
 <td>
@@ -580,7 +580,7 @@ Approve a build that requires manual approval
 <tr>
 <td>
 
-`tc queue remove`
+`teamcity queue remove`
 
 </td>
 <td>
@@ -592,7 +592,7 @@ Remove a build from the queue
 <tr>
 <td>
 
-`tc queue top`
+`teamcity queue top`
 
 </td>
 <td>
@@ -623,7 +623,7 @@ Description
 <tr>
 <td>
 
-`tc agent list`
+`teamcity agent list`
 
 </td>
 <td>
@@ -635,7 +635,7 @@ List build agents
 <tr>
 <td>
 
-`tc agent view`
+`teamcity agent view`
 
 </td>
 <td>
@@ -647,7 +647,7 @@ View agent details
 <tr>
 <td>
 
-`tc agent enable`
+`teamcity agent enable`
 
 </td>
 <td>
@@ -659,7 +659,7 @@ Enable an agent for builds
 <tr>
 <td>
 
-`tc agent disable`
+`teamcity agent disable`
 
 </td>
 <td>
@@ -671,7 +671,7 @@ Disable an agent
 <tr>
 <td>
 
-`tc agent authorize`
+`teamcity agent authorize`
 
 </td>
 <td>
@@ -683,7 +683,7 @@ Authorize an agent to connect
 <tr>
 <td>
 
-`tc agent deauthorize`
+`teamcity agent deauthorize`
 
 </td>
 <td>
@@ -695,7 +695,7 @@ Revoke agent authorization
 <tr>
 <td>
 
-`tc agent move`
+`teamcity agent move`
 
 </td>
 <td>
@@ -707,7 +707,7 @@ Move an agent to a different pool
 <tr>
 <td>
 
-`tc agent jobs`
+`teamcity agent jobs`
 
 </td>
 <td>
@@ -719,7 +719,7 @@ List compatible or incompatible jobs
 <tr>
 <td>
 
-`tc agent exec`
+`teamcity agent exec`
 
 </td>
 <td>
@@ -731,7 +731,7 @@ Execute a command on an agent
 <tr>
 <td>
 
-`tc agent term`
+`teamcity agent term`
 
 </td>
 <td>
@@ -743,7 +743,7 @@ Open an interactive shell to an agent
 <tr>
 <td>
 
-`tc agent reboot`
+`teamcity agent reboot`
 
 </td>
 <td>
@@ -774,7 +774,7 @@ Description
 <tr>
 <td>
 
-`tc pool list`
+`teamcity pool list`
 
 </td>
 <td>
@@ -786,7 +786,7 @@ List agent pools
 <tr>
 <td>
 
-`tc pool view`
+`teamcity pool view`
 
 </td>
 <td>
@@ -798,7 +798,7 @@ View pool details
 <tr>
 <td>
 
-`tc pool link`
+`teamcity pool link`
 
 </td>
 <td>
@@ -810,7 +810,7 @@ Link a project to a pool
 <tr>
 <td>
 
-`tc pool unlink`
+`teamcity pool unlink`
 
 </td>
 <td>
@@ -841,7 +841,7 @@ Description
 <tr>
 <td>
 
-`tc api <endpoint>`
+`teamcity api <endpoint>`
 
 </td>
 <td>
@@ -872,7 +872,7 @@ Description
 <tr>
 <td>
 
-`tc alias set`
+`teamcity alias set`
 
 </td>
 <td>
@@ -884,7 +884,7 @@ Create a command alias
 <tr>
 <td>
 
-`tc alias list`
+`teamcity alias list`
 
 </td>
 <td>
@@ -896,7 +896,7 @@ List configured aliases
 <tr>
 <td>
 
-`tc alias delete`
+`teamcity alias delete`
 
 </td>
 <td>
@@ -927,7 +927,7 @@ Description
 <tr>
 <td>
 
-`tc skill install`
+`teamcity skill install`
 
 </td>
 <td>
@@ -939,7 +939,7 @@ Install the TeamCity skill for AI coding agents
 <tr>
 <td>
 
-`tc skill update`
+`teamcity skill update`
 
 </td>
 <td>
@@ -951,7 +951,7 @@ Update the skill to the latest version
 <tr>
 <td>
 
-`tc skill remove`
+`teamcity skill remove`
 
 </td>
 <td>
