@@ -2,27 +2,27 @@
 
 <show-structure for="chapter" depth="2"/>
 
-Aliases let you create custom shortcuts for frequently used `tc` commands. They are stored in the [configuration file](teamcity-cli-configuration.md) and expand automatically when you run them.
+Aliases let you create custom shortcuts for frequently used `teamcity` commands. They are stored in the [configuration file](teamcity-cli-configuration.md) and expand automatically when you run them.
 
 ## Creating aliases
 
-Create an alias with `tc alias set`:
+Create an alias with `teamcity alias set`:
 
 ```Shell
-tc alias set rl 'run list'
+teamcity alias set rl 'run list'
 ```
 
-Now `tc rl` expands to `tc run list`.
+Now `teamcity rl` expands to `teamcity run list`.
 
 ### Positional arguments
 
 Use `$1`, `$2`, and so on for positional arguments:
 
 ```Shell
-tc alias set rw 'run view $1 --web'
+teamcity alias set rw 'run view $1 --web'
 ```
 
-Now `tc rw 12345` expands to `tc run view 12345 --web`.
+Now `teamcity rw 12345` expands to `teamcity run view 12345 --web`.
 
 Extra arguments that do not match a placeholder are appended to the end of the expanded command.
 
@@ -31,8 +31,8 @@ Extra arguments that do not match a placeholder are appended to the end of the e
 For aliases that need pipes, redirection, or other shell features, prefix the expansion with `!` or use the `--shell` flag:
 
 ```Shell
-tc alias set watchnotify '!tc run watch $1 && notify-send "Build $1 done"'
-tc alias set faillog '!tc run list --status=failure --json | jq ".[].id"'
+teamcity alias set watchnotify '!teamcity run watch $1 && notify-send "Build $1 done"'
+teamcity alias set faillog '!teamcity run list --status=failure --json | jq ".[].id"'
 ```
 
 Shell aliases are evaluated through `sh` instead of being expanded directly.
@@ -42,8 +42,8 @@ Shell aliases are evaluated through `sh` instead of being expanded directly.
 View all configured aliases:
 
 ```Shell
-tc alias list
-tc alias list --json
+teamcity alias list
+teamcity alias list --json
 ```
 
 ## Deleting aliases
@@ -51,7 +51,7 @@ tc alias list --json
 Remove an alias:
 
 ```Shell
-tc alias delete rl
+teamcity alias delete rl
 ```
 
 ## Useful alias examples
@@ -61,56 +61,56 @@ Here is a collection of commonly useful aliases:
 ### Quick shortcuts
 
 ```Shell
-tc alias set rl       'run list'
-tc alias set rv       'run view $1'
-tc alias set rw       'run view $1 --web'
-tc alias set jl       'job list'
-tc alias set ql       'queue list'
+teamcity alias set rl       'run list'
+teamcity alias set rv       'run view $1'
+teamcity alias set rw       'run view $1 --web'
+teamcity alias set jl       'job list'
+teamcity alias set ql       'queue list'
 ```
 
 ### Filtered views
 
 ```Shell
-tc alias set mine     'run list --user=@me'
-tc alias set fails    'run list --status=failure --since=24h'
-tc alias set running  'run list --status=running'
-tc alias set morning  'run list --status=failure --since=12h'
+teamcity alias set mine     'run list --user=@me'
+teamcity alias set fails    'run list --status=failure --since=24h'
+teamcity alias set running  'run list --status=running'
+teamcity alias set morning  'run list --status=failure --since=12h'
 ```
 
 ### Build workflows
 
 ```Shell
-tc alias set go       'run start $1 --watch'
-tc alias set try      'run start $1 --local-changes --watch'
-tc alias set hotfix   'run start $1 --top --clean --watch'
-tc alias set retry    'run restart $1 --watch'
+teamcity alias set go       'run start $1 --watch'
+teamcity alias set try      'run start $1 --local-changes --watch'
+teamcity alias set hotfix   'run start $1 --top --clean --watch'
+teamcity alias set retry    'run restart $1 --watch'
 ```
 
 ### Queue management
 
 ```Shell
-tc alias set rush     'queue top $1'
-tc alias set ok       'queue approve $1'
+teamcity alias set rush     'queue top $1'
+teamcity alias set ok       'queue approve $1'
 ```
 
 ### Agent operations
 
 ```Shell
-tc alias set maint    'agent disable $1'
-tc alias set unmaint  'agent enable $1'
+teamcity alias set maint    'agent disable $1'
+teamcity alias set unmaint  'agent enable $1'
 ```
 
 ### API shortcuts
 
 ```Shell
-tc alias set whoami   'api /app/rest/users/current'
+teamcity alias set whoami   'api /app/rest/users/current'
 ```
 
 ### Shell aliases with external tools
 
 ```Shell
-tc alias set watchnotify '!tc run watch $1 && notify-send "Build $1 done"'
-tc alias set faillog     '!tc run list --status=failure --json | jq ".[].id"'
+teamcity alias set watchnotify '!teamcity run watch $1 && notify-send "Build $1 done"'
+teamcity alias set faillog     '!teamcity run list --status=failure --json | jq ".[].id"'
 ```
 
 ## Storage

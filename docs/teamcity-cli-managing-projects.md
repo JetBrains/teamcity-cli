@@ -2,28 +2,28 @@
 
 <show-structure for="chapter" depth="2"/>
 
-Projects organize build configurations and subprojects in TeamCity. The `tc project` command group lets you browse projects, manage parameters, handle secure tokens for versioned settings, and export or validate project configuration.
+Projects organize build configurations and subprojects in TeamCity. The `teamcity project` command group lets you browse projects, manage parameters, handle secure tokens for versioned settings, and export or validate project configuration.
 
 ## Listing projects
 
 View all TeamCity projects:
 
 ```Shell
-tc project list
+teamcity project list
 ```
 
 Filter by parent project:
 
 ```Shell
-tc project list --parent MyProject
+teamcity project list --parent MyProject
 ```
 
 Limit results and output as JSON:
 
 ```Shell
-tc project list --limit 20
-tc project list --json
-tc project list --json=id,name,parentProjectId,webUrl
+teamcity project list --limit 20
+teamcity project list --json
+teamcity project list --json=id,name,parentProjectId,webUrl
 ```
 
 ### project list flags
@@ -84,19 +84,19 @@ Output as JSON. Use `--json=` to list available fields, `--json=f1,f2` for speci
 View details of a project:
 
 ```Shell
-tc project view MyProject
+teamcity project view MyProject
 ```
 
 Open the project page in your browser:
 
 ```Shell
-tc project view MyProject --web
+teamcity project view MyProject --web
 ```
 
 Output as JSON:
 
 ```Shell
-tc project view MyProject --json
+teamcity project view MyProject --json
 ```
 
 ## Managing project parameters
@@ -106,27 +106,27 @@ Project parameters are inherited by all build configurations within the project.
 ### Listing parameters
 
 ```Shell
-tc project param list MyProject
-tc project param list MyProject --json
+teamcity project param list MyProject
+teamcity project param list MyProject --json
 ```
 
 ### Getting a parameter value
 
 ```Shell
-tc project param get MyProject VERSION
+teamcity project param get MyProject VERSION
 ```
 
 ### Setting a parameter
 
 ```Shell
-tc project param set MyProject VERSION "2.0.0"
-tc project param set MyProject SECRET_KEY "my-secret-value" --secure
+teamcity project param set MyProject VERSION "2.0.0"
+teamcity project param set MyProject SECRET_KEY "my-secret-value" --secure
 ```
 
 ### Deleting a parameter
 
 ```Shell
-tc project param delete MyProject MY_PARAM
+teamcity project param delete MyProject MY_PARAM
 ```
 
 ## Secure tokens
@@ -139,13 +139,13 @@ Store a sensitive value and receive a token reference:
 
 ```Shell
 # Interactive prompt for the value
-tc project token put MyProject
+teamcity project token put MyProject
 
 # Pass the value directly
-tc project token put MyProject "my-secret-password"
+teamcity project token put MyProject "my-secret-password"
 
 # Read from stdin (useful for piping)
-echo -n "my-secret" | tc project token put MyProject --stdin
+echo -n "my-secret" | teamcity project token put MyProject --stdin
 ```
 
 The command returns a token in the format `credentialsJSON:<uuid>`. Use this token in your versioned settings configuration files.
@@ -159,8 +159,8 @@ The command returns a token in the format `credentialsJSON:<uuid>`. Use this tok
 Retrieve the original value for a secure token:
 
 ```Shell
-tc project token get MyProject "credentialsJSON:abc123-def456..."
-tc project token get MyProject "abc123-def456..."
+teamcity project token get MyProject "credentialsJSON:abc123-def456..."
+teamcity project token get MyProject "abc123-def456..."
 ```
 
 > Retrieving secure token values requires the __Change Server Settings__ permission, which is only available to System Administrators.
@@ -175,19 +175,19 @@ Export project settings as a ZIP archive containing Kotlin DSL or XML configurat
 
 ```Shell
 # Export as Kotlin DSL (default)
-tc project settings export MyProject
+teamcity project settings export MyProject
 
 # Export as Kotlin DSL explicitly
-tc project settings export MyProject --kotlin
+teamcity project settings export MyProject --kotlin
 
 # Export as XML
-tc project settings export MyProject --xml
+teamcity project settings export MyProject --xml
 
 # Save to a specific file
-tc project settings export MyProject -o settings.zip
+teamcity project settings export MyProject -o settings.zip
 
 # Use relative IDs in the export
-tc project settings export MyProject --relative-ids
+teamcity project settings export MyProject --relative-ids
 ```
 
 The exported archive can be used to version control your CI/CD configuration, migrate settings between TeamCity instances, or review settings as code.
@@ -262,8 +262,8 @@ Use relative IDs in the exported settings
 Check the synchronization status of versioned settings for a project:
 
 ```Shell
-tc project settings status MyProject
-tc project settings status MyProject --json
+teamcity project settings status MyProject
+teamcity project settings status MyProject --json
 ```
 
 This displays whether versioned settings are enabled, the current sync state, last successful sync timestamp, VCS root and format information, and any errors from the last sync attempt.
@@ -273,9 +273,9 @@ This displays whether versioned settings are enabled, the current sync state, la
 Validate Kotlin DSL configuration by running the TeamCity configuration generator:
 
 ```Shell
-tc project settings validate
-tc project settings validate ./path/to/.teamcity
-tc project settings validate --verbose
+teamcity project settings validate
+teamcity project settings validate ./path/to/.teamcity
+teamcity project settings validate --verbose
 ```
 
 The command auto-detects the `.teamcity` directory in the current directory or its parents. It requires Maven (`mvn`) or uses the Maven wrapper (`mvnw`) if present in the DSL directory.

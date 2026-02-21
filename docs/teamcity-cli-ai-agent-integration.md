@@ -2,14 +2,14 @@
 
 <show-structure for="chapter" depth="2"/>
 
-TeamCity CLI includes a built-in skill that teaches AI coding agents (such as Claude Code and Cursor) how to use `tc` commands for common TeamCity workflows. The skill follows the [Agent Skills specification](https://agentskills.io).
+TeamCity CLI includes a built-in skill that teaches AI coding agents (such as Claude Code and Cursor) how to use `teamcity` commands for common TeamCity workflows. The skill follows the [Agent Skills specification](https://agentskills.io).
 
 ## Installing the skill
 
 Install the skill for all detected AI agents:
 
 ```Shell
-tc skill install
+teamcity skill install
 ```
 
 The command auto-detects which AI coding agents are installed on your system and configures the skill for each one.
@@ -19,8 +19,8 @@ The command auto-detects which AI coding agents are installed on your system and
 Target one or more specific agents:
 
 ```Shell
-tc skill install --agent claude-code
-tc skill install --agent claude-code --agent cursor
+teamcity skill install --agent claude-code
+teamcity skill install --agent claude-code --agent cursor
 ```
 
 ### Project-level installation
@@ -28,15 +28,15 @@ tc skill install --agent claude-code --agent cursor
 Install the skill for the current project only, rather than globally:
 
 ```Shell
-tc skill install --project
+teamcity skill install --project
 ```
 
 ## Updating the skill
 
-Update the skill to the latest version bundled with your current `tc` release:
+Update the skill to the latest version bundled with your current `teamcity` release:
 
 ```Shell
-tc skill update
+teamcity skill update
 ```
 
 The command skips the update if the installed version already matches the bundled version.
@@ -44,8 +44,8 @@ The command skips the update if the installed version already matches the bundle
 Target specific agents or install at the project level:
 
 ```Shell
-tc skill update --agent claude-code
-tc skill update --project
+teamcity skill update --agent claude-code
+teamcity skill update --project
 ```
 
 ## Removing the skill
@@ -53,14 +53,14 @@ tc skill update --project
 Remove the skill from AI coding agents:
 
 ```Shell
-tc skill remove
+teamcity skill remove
 ```
 
 Target specific agents or remove from the project level:
 
 ```Shell
-tc skill remove --agent claude-code
-tc skill remove --project
+teamcity skill remove --agent claude-code
+teamcity skill remove --project
 ```
 
 ## skill flags

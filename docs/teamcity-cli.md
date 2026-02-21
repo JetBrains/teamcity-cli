@@ -1,6 +1,6 @@
 [//]: # (title: TeamCity CLI)
 
-TeamCity CLI (`tc`) is a command-line interface for [TeamCity](https://www.jetbrains.com/teamcity/) that allows you to start builds, view logs, manage agents, and control build queues directly from your terminal.
+TeamCity CLI (`teamcity`) is a command-line interface for [TeamCity](https://www.jetbrains.com/teamcity/) that allows you to start builds, view logs, manage agents, and control build queues directly from your terminal.
 
 The CLI provides a comprehensive set of commands organized by domain:
 

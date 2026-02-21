@@ -9,7 +9,7 @@ This guide walks you through authenticating with a TeamCity server and running y
 Run the login command to connect to your TeamCity instance:
 
 ```Shell
-tc auth login
+teamcity auth login
 ```
 
 The CLI will:
@@ -24,10 +24,22 @@ Tokens are stored in your system keyring (macOS Keychain, GNOME Keyring, or Wind
 >
 {style="note"}
 
+### Guest access
+
+If the server has guest access enabled, you can log in without a token:
+
+```Shell
+teamcity auth login --guest
+```
+
+Guest access provides read-only access to the server.
+
+### Verify authentication
+
 To verify that authentication succeeded:
 
 ```Shell
-tc auth status
+teamcity auth status
 ```
 
 ## List recent builds
@@ -35,20 +47,20 @@ tc auth status
 View the most recent builds across all projects:
 
 ```Shell
-tc run list
+teamcity run list
 ```
 
 Filter by project, job, branch, or status:
 
 ```Shell
 # Builds from a specific job
-tc run list --job MyProject_Build
+teamcity run list --job MyProject_Build
 
 # Only failures from the last 24 hours
-tc run list --status failure --since 24h
+teamcity run list --status failure --since 24h
 
 # Builds on a specific branch
-tc run list --branch main --limit 10
+teamcity run list --branch main --limit 10
 ```
 
 ## Start a build
@@ -56,13 +68,13 @@ tc run list --branch main --limit 10
 Trigger a new build by specifying a job ID:
 
 ```Shell
-tc run start MyProject_Build
+teamcity run start MyProject_Build
 ```
 
 Add `--watch` to follow the build in real time:
 
 ```Shell
-tc run start MyProject_Build --branch main --watch
+teamcity run start MyProject_Build --branch main --watch
 ```
 
 The `--watch` flag displays a live progress view that updates until the build completes.
@@ -72,13 +84,13 @@ The `--watch` flag displays a live progress view that updates until the build co
 View the log output from a specific build:
 
 ```Shell
-tc run log 12345
+teamcity run log 12345
 ```
 
 Or get the latest log for a job:
 
 ```Shell
-tc run log --job MyProject_Build
+teamcity run log --job MyProject_Build
 ```
 
 The log output opens in a pager by default. Use `/` to search, `n`/`N` to navigate matches, and `q` to quit. Pass `--raw` to bypass the pager.
@@ -88,7 +100,7 @@ The log output opens in a pager by default. Use `/` to search, `n`/`N` to naviga
 See what builds are waiting to run:
 
 ```Shell
-tc queue list
+teamcity queue list
 ```
 
 ## View build agents
@@ -96,13 +108,13 @@ tc queue list
 List all registered build agents and their status:
 
 ```Shell
-tc agent list
+teamcity agent list
 ```
 
 Filter to show only connected agents:
 
 ```Shell
-tc agent list --connected
+teamcity agent list --connected
 ```
 
 ## Open a build in the browser
@@ -110,9 +122,9 @@ tc agent list --connected
 Most view commands support a `--web` flag that opens the corresponding page in your browser:
 
 ```Shell
-tc run view 12345 --web
-tc job view MyProject_Build --web
-tc project view MyProject --web
+teamcity run view 12345 --web
+teamcity job view MyProject_Build --web
+teamcity project view MyProject --web
 ```
 
 ## Enable shell completion
@@ -121,21 +133,21 @@ Set up tab completion for your shell:
 
 ```Shell
 # Bash
-tc completion bash > /etc/bash_completion.d/tc
+teamcity completion bash > /etc/bash_completion.d/teamcity
 
 # Zsh
-tc completion zsh > "${fpath[1]}/_tc"
+teamcity completion zsh > "${fpath[1]}/_teamcity"
 
 # Fish
-tc completion fish > ~/.config/fish/completions/tc.fish
+teamcity completion fish > ~/.config/fish/completions/teamcity.fish
 
 # PowerShell
-tc completion powershell > tc.ps1
+teamcity completion powershell > teamcity.ps1
 ```
 
 ## Next steps
 
-- Learn about [authentication methods](teamcity-cli-authentication.md) including multi-server setup and CI/CD usage.
+- Learn about [authentication methods](teamcity-cli-authentication.md) including guest access, multi-server setup, and CI/CD usage.
 - Explore the full [command reference](teamcity-cli-commands.md).
 - Set up [aliases](teamcity-cli-aliases.md) for frequently used commands.
 - Configure [JSON output](teamcity-cli-scripting.md) for scripting and automation.

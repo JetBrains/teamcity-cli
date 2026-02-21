@@ -11,9 +11,9 @@ Commands that list or view resources support a `--json` flag for machine-readabl
 ### Basic usage
 
 ```Shell
-tc run list --json
-tc job list --json
-tc project list --json
+teamcity run list --json
+teamcity job list --json
+teamcity project list --json
 ```
 
 ### Discovering available fields
@@ -21,7 +21,7 @@ tc project list --json
 Pass `--json=` (with an empty value) to see all available fields for a command:
 
 ```Shell
-tc run list --json=
+teamcity run list --json=
 ```
 
 ### Selecting specific fields
@@ -29,7 +29,7 @@ tc run list --json=
 Specify a comma-separated list of fields:
 
 ```Shell
-tc run list --json=id,status,webUrl
+teamcity run list --json=id,status,webUrl
 ```
 
 ### Nested fields
@@ -37,7 +37,7 @@ tc run list --json=id,status,webUrl
 Use dot notation to access nested fields:
 
 ```Shell
-tc run list --json=id,status,buildType.name,triggered.user.username
+teamcity run list --json=id,status,buildType.name,triggered.user.username
 ```
 
 ### Available fields by command
@@ -58,7 +58,7 @@ Example fields
 <tr>
 <td>
 
-`tc run list`
+`teamcity run list`
 
 </td>
 <td>
@@ -70,7 +70,7 @@ Example fields
 <tr>
 <td>
 
-`tc job list`
+`teamcity job list`
 
 </td>
 <td>
@@ -82,7 +82,7 @@ Example fields
 <tr>
 <td>
 
-`tc project list`
+`teamcity project list`
 
 </td>
 <td>
@@ -94,7 +94,7 @@ Example fields
 <tr>
 <td>
 
-`tc queue list`
+`teamcity queue list`
 
 </td>
 <td>
@@ -106,7 +106,7 @@ Example fields
 <tr>
 <td>
 
-`tc agent list`
+`teamcity agent list`
 
 </td>
 <td>
@@ -118,7 +118,7 @@ Example fields
 <tr>
 <td>
 
-`tc pool list`
+`teamcity pool list`
 
 </td>
 <td>
@@ -134,13 +134,13 @@ Example fields
 Use `--plain` for tab-separated output that is easy to parse with standard Unix tools:
 
 ```Shell
-tc run list --plain
+teamcity run list --plain
 ```
 
 Omit the header row for cleaner piping:
 
 ```Shell
-tc run list --plain --no-header
+teamcity run list --plain --no-header
 ```
 
 ## Scripting examples
@@ -148,37 +148,37 @@ tc run list --plain --no-header
 ### Get IDs of failed builds
 
 ```Shell
-tc run list --status failure --json=id | jq -r '.[].id'
+teamcity run list --status failure --json=id | jq -r '.[].id'
 ```
 
 ### Export build data to CSV
 
 ```Shell
-tc run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branchName] | @csv'
+teamcity run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branchName] | @csv'
 ```
 
 ### Get web URLs for queued builds
 
 ```Shell
-tc queue list --json=webUrl | jq -r '.[].webUrl'
+teamcity queue list --json=webUrl | jq -r '.[].webUrl'
 ```
 
 ### Count builds by status
 
 ```Shell
-tc run list --since 24h --json=status | jq 'group_by(.status) | map({status: .[0].status, count: length})'
+teamcity run list --since 24h --json=status | jq 'group_by(.status) | map({status: .[0].status, count: length})'
 ```
 
 ### Wait for a build to finish
 
 ```Shell
-tc run start MyProject_Build --json | jq -r '.id' | xargs tc run watch --quiet
+teamcity run start MyProject_Build --json | jq -r '.id' | xargs teamcity run watch --quiet
 ```
 
 ### Cancel all queued builds for a job
 
 ```Shell
-tc queue list --job MyProject_Build --json=id | jq -r '.[].id' | xargs -I {} tc run cancel {} --force
+teamcity queue list --job MyProject_Build --json=id | jq -r '.[].id' | xargs -I {} teamcity run cancel {} --force
 ```
 
 ## CI/CD integration
@@ -199,13 +199,13 @@ See [Authentication](teamcity-cli-authentication.md#environment-variables) for d
 Use `--no-input` to disable interactive prompts in automated environments. The CLI uses sensible defaults when prompts are suppressed:
 
 ```Shell
-tc run cancel 12345 --no-input
+teamcity run cancel 12345 --no-input
 ```
 
 Alternatively, use `--force` on commands that support it:
 
 ```Shell
-tc queue remove 12345 --force
+teamcity queue remove 12345 --force
 ```
 
 ### Quiet mode
@@ -213,7 +213,7 @@ tc queue remove 12345 --force
 Use `--quiet` to suppress non-essential output:
 
 ```Shell
-tc run start MyProject_Build --quiet
+teamcity run start MyProject_Build --quiet
 ```
 
 ### Exit codes
@@ -221,7 +221,7 @@ tc run start MyProject_Build --quiet
 The CLI returns exit code `0` on success and `1` on failure. Use this in scripts to detect errors:
 
 ```Shell
-if tc run start MyProject_Build --watch --quiet; then
+if teamcity run start MyProject_Build --watch --quiet; then
   echo "Build succeeded"
 else
   echo "Build failed"
@@ -244,18 +244,18 @@ jobs:
           TEAMCITY_URL: ${{ secrets.TEAMCITY_URL }}
           TEAMCITY_TOKEN: ${{ secrets.TEAMCITY_TOKEN }}
         run: |
-          tc run start MyProject_Build \
+          teamcity run start MyProject_Build \
             --branch "${{ github.ref_name }}" \
             --watch --quiet
 ```
 
 ## Raw API access
 
-For operations not covered by dedicated commands, use `tc api` to make direct REST API requests:
+For operations not covered by dedicated commands, use `teamcity api` to make direct REST API requests:
 
 ```Shell
-tc api /app/rest/server
-tc api /app/rest/builds --paginate --slurp
+teamcity api /app/rest/server
+teamcity api /app/rest/builds --paginate --slurp
 ```
 
 See [REST API access](teamcity-cli-rest-api-access.md) for details.
