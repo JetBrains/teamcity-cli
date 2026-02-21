@@ -24,6 +24,18 @@ unit:
 test:
     TC_INSECURE_SKIP_WARN=1 go test -v ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
 
+# Run acceptance tests against cli.teamcity.com (guest auth)
+acceptance:
+    TC_INSECURE_SKIP_WARN=1 go test -v -tags=acceptance ./acceptance -timeout 10m
+
+# Run acceptance tests against a goreleaser snapshot binary
+acceptance-snapshot: snapshot
+    TC_INSECURE_SKIP_WARN=1 TC_ACCEPTANCE_BINARY=dist/teamcity_linux_amd64_v1/teamcity go test -v -tags=acceptance ./acceptance -timeout 10m
+
+# Run acceptance tests with a specific binary
+acceptance-binary binary:
+    TC_INSECURE_SKIP_WARN=1 TC_ACCEPTANCE_BINARY={{binary}} go test -v -tags=acceptance ./acceptance -timeout 10m
+
 # Remove build artifacts
 [confirm]
 clean:

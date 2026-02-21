@@ -1,0 +1,5 @@
+# List recent runs from the public server.
+# There should be at least some build history on cli.teamcity.com.
+
+exec teamcity run list --limit 5 --no-input
+! stderr 'Error'

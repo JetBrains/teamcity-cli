@@ -1,0 +1,4 @@
+# List agent pools from the public server.
+
+exec teamcity pool list --no-input
+! stderr 'Error'

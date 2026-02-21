@@ -1,0 +1,5 @@
+# Verify API command returns valid JSON.
+
+exec teamcity api /app/rest/server --silent --no-input
+stdout '^\{'
+stdout '"versionMajor"'

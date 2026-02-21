@@ -1,0 +1,4 @@
+# Verify that backwards date ranges are rejected.
+
+! exec teamcity run list --since 2026-01-01 --until 2025-01-01 --no-input
+stderr 'is more recent than'

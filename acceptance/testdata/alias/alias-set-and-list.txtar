@@ -1,0 +1,8 @@
+# Verify alias set creates an alias and alias list shows it.
+
+exec teamcity alias set rl 'run list' --no-input
+stdout 'Added alias'
+
+exec teamcity alias list --no-input
+stdout 'rl'
+stdout 'run list'

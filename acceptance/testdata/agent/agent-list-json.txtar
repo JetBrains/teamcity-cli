@@ -1,0 +1,4 @@
+# Verify agent list JSON output.
+
+exec teamcity agent list --json --no-input
+stdout '^\['

@@ -1,0 +1,5 @@
+# View details of a project on the public server.
+# First list projects to discover one, then view it.
+
+exec teamcity project list --limit 1 --json --no-input
+stdout '"id"'

@@ -1,0 +1,7 @@
+# Verify raw API requests work against the server.
+# This tests the 'teamcity api' command with a basic server endpoint.
+
+exec teamcity api /app/rest/server --no-input
+stdout 'version'
+stdout 'buildNumber'
+! stderr .

@@ -1,0 +1,6 @@
+# Verify JSON output contains expected fields.
+
+exec teamcity run list --limit 1 --json --no-input
+stdout '"id"'
+stdout '"status"'
+stdout '"state"'

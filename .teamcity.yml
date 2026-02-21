@@ -40,6 +40,26 @@ jobs:
           head -1 coverage-integration.out > coverage.out
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
+  acceptance:
+    name: Acceptance Tests
+    steps:
+      - type: script
+        docker-image: goreleaser/goreleaser:latest
+        name: Build & Test
+        script-content: |
+          BRANCH="${BRANCH_NAME:-${teamcity_build_branch:-<default>}}"
+          echo "Detected branch: '$BRANCH'"
+          if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "refs/heads/main" ] && [ "$BRANCH" != "<default>" ] \
+             && [ "$BRANCH" != "claude/setup-goreleaser-teamcity-c0cpu" ]; then
+            echo "Skipping acceptance tests on branch '$BRANCH' (only runs on main)"
+            exit 0
+          fi
+          export GOTOOLCHAIN=auto
+          goreleaser release --snapshot --clean --skip=publish,chocolatey
+          BINARY=$(find dist -name 'teamcity' -path '*/linux_amd64*' -type f | head -1)
+          chmod +x "$BINARY"
+          TC_ACCEPTANCE_BINARY="$BINARY" \
+            go test -v -tags=acceptance ./acceptance -timeout 10m
   Lint:
     name: Lint
     steps:
@@ -49,3 +69,5 @@ jobs:
         script-content: go fmt ./... && golangci-lint run --tests=false ./...
 parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
+  env.GOFLAGS: '-buildvcs=false'
+  env.BRANCH_NAME: '%teamcity.build.branch%'

@@ -1,0 +1,5 @@
+# Verify --include flag shows HTTP response headers.
+
+exec teamcity api /app/rest/server --include --no-input
+stdout 'HTTP/'
+stdout 'Content-Type'

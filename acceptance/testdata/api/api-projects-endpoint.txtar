@@ -1,0 +1,17 @@
+# Test various REST API endpoints.
+
+# Projects endpoint
+exec teamcity api /app/rest/projects --no-input
+stdout '"project"'
+
+# Build types endpoint
+exec teamcity api /app/rest/buildTypes --no-input
+stdout '"buildType"'
+
+# Agents endpoint
+exec teamcity api /app/rest/agents --no-input
+stdout '"agent"'
+
+# Agent pools endpoint
+exec teamcity api /app/rest/agentPools --no-input
+stdout '"agentPool"'

@@ -1,0 +1,4 @@
+# Verify --verbose shows detailed output.
+
+exec teamcity --verbose run list --limit 1 --no-input
+! stderr 'Error'

@@ -1,0 +1,5 @@
+# View the default pool in JSON format.
+
+exec teamcity pool view 0 --json --no-input
+stdout '"id"'
+stdout '"name"'

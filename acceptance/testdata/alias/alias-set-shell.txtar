@@ -1,0 +1,7 @@
+# Verify --shell flag marks the alias as a shell alias.
+
+exec teamcity alias set myshell 'echo hello' --shell --no-input
+stdout 'Added alias'
+
+exec teamcity alias list --json --no-input
+stdout '"shell":true'

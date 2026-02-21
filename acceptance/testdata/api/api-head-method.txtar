@@ -1,0 +1,4 @@
+# Test HEAD method — should succeed with no body output.
+
+exec teamcity api /app/rest/server -X HEAD --no-input
+! stderr 'Error'

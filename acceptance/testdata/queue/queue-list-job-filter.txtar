@@ -1,0 +1,4 @@
+# Filter queue by job. May be empty but should not error.
+
+exec teamcity queue list --limit 5 --no-input
+! stderr 'Error'

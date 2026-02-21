@@ -1,0 +1,10 @@
+# Verify api help shows all key flags.
+
+exec teamcity api --help
+stdout -- '--method'
+stdout -- '--header'
+stdout -- '--field'
+stdout -- '--include'
+stdout -- '--silent'
+stdout -- '--raw'
+stdout -- '--paginate'

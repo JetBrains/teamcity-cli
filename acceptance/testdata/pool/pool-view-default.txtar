@@ -1,0 +1,5 @@
+# View the default agent pool (ID 0).
+
+exec teamcity pool view 0 --no-input
+stdout 'Default'
+! stderr 'Error'

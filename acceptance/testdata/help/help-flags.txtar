@@ -1,0 +1,8 @@
+# Verify global flags appear in help output.
+
+exec teamcity --help
+stdout '--no-color'
+stdout '--quiet'
+stdout '--verbose'
+stdout '--no-input'
+stdout '--version'

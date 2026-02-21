@@ -1,0 +1,4 @@
+# Unknown commands should fail gracefully with a helpful error.
+
+! exec teamcity nonexistent-command
+stderr 'unknown command'

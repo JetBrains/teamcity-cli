@@ -1,0 +1,5 @@
+# Verify pool list JSON has expected fields.
+
+exec teamcity pool list --json --no-input
+stdout '"id"'
+stdout '"name"'

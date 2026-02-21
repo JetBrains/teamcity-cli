@@ -1,0 +1,15 @@
+# Verify --limit flag constrains output.
+
+exec teamcity project list --limit 1 --no-input
+! stderr 'Error'
+
+exec teamcity project list --limit 2 --no-input
+! stderr 'Error'
+
+# Zero limit should error
+! exec teamcity project list --limit 0 --no-input
+stderr 'must be a positive number'
+
+# Negative limit should error
+! exec teamcity project list --limit -1 --no-input
+stderr 'must be a positive number'

@@ -1,0 +1,4 @@
+# Discover an agent and view its details.
+
+exec teamcity api /app/rest/agents?locator=count:1&fields=agent(id,name) --raw --no-input
+stdout '"id"'

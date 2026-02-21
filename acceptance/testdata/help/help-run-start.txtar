@@ -1,0 +1,11 @@
+# Verify run start help shows all key flags.
+
+exec teamcity run start --help
+stdout -- '--branch'
+stdout -- '--param'
+stdout -- '--comment'
+stdout -- '--tag'
+stdout -- '--watch'
+stdout -- '--clean'
+stdout -- '--dry-run'
+stdout -- '--json'

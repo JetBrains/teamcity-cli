@@ -1,0 +1,12 @@
+# Verify root help output contains expected commands.
+
+exec teamcity --help
+stdout 'TeamCity CLI'
+stdout 'auth'
+stdout 'project'
+stdout 'run'
+stdout 'job'
+stdout 'agent'
+stdout 'pool'
+stdout 'api'
+! stderr .

@@ -1,0 +1,4 @@
+# List agents from the public server.
+
+exec teamcity agent list --no-input
+! stderr 'Error'

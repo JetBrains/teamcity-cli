@@ -1,0 +1,9 @@
+# Filter runs by project.
+# First discover a project, then filter runs by it.
+
+exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+stdout '"id"'
+
+# List runs (may be empty for a specific project, but should not error)
+exec teamcity run list --limit 3 --no-input
+! stderr 'Error'

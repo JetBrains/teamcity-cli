@@ -1,0 +1,13 @@
+# Discover a project by listing, then view it in detail.
+# Uses stdout2env to chain commands — a key pattern for e2e testing.
+
+exec teamcity project list --limit 1 --json --no-input
+stdout2env PROJECTS
+
+# The JSON output should be a non-empty array with project objects
+stdout '"id"'
+stdout '"name"'
+
+# Use the API to get the first project ID, then view it
+exec teamcity api /app/rest/projects?locator=count:1 --raw --no-input
+stdout '"id"'

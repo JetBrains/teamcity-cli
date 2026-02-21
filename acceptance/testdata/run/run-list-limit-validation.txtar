@@ -1,0 +1,7 @@
+# Verify that invalid --limit values are rejected.
+
+! exec teamcity run list --limit 0 --no-input
+stderr 'must be a positive number'
+
+! exec teamcity run list --limit -1 --no-input
+stderr 'must be a positive number'

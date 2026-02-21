@@ -1,0 +1,4 @@
+# Deleting a non-existent alias should produce an error.
+
+! exec teamcity alias delete nonexistent_alias_12345 --no-input
+stderr 'no such alias'

@@ -1,0 +1,8 @@
+# Verify alias list --json outputs valid JSON.
+
+exec teamcity alias set myjsonalias 'run list' --no-input
+
+exec teamcity alias list --json --no-input
+stdout '"name"'
+stdout '"expansion"'
+stdout 'myjsonalias'

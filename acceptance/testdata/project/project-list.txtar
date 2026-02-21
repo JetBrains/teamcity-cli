@@ -1,0 +1,6 @@
+# List projects from the public server.
+# cli.teamcity.com should have at least one project visible.
+
+exec teamcity project list --limit 5 --no-input
+stdout '.'
+! stderr 'Error'
