@@ -1,0 +1,5 @@
+# Verify --silent suppresses output.
+
+exec teamcity api /app/rest/server --silent --no-input
+! stdout .
+! stderr 'Error'

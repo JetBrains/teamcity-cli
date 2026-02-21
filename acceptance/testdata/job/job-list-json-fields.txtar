@@ -1,0 +1,6 @@
+# Verify JSON output contains expected build type fields.
+
+exec teamcity job list --limit 1 --json --no-input
+stdout '"id"'
+stdout '"name"'
+stdout '"projectId"'

@@ -1,0 +1,9 @@
+# Verify agent list help shows all filter flags.
+
+exec teamcity agent list --help
+stdout -- '--pool'
+stdout -- '--connected'
+stdout -- '--enabled'
+stdout -- '--authorized'
+stdout -- '--limit'
+stdout -- '--json'

@@ -1,0 +1,11 @@
+# Verify alias delete removes an alias.
+
+exec teamcity alias set todelete 'run list' --no-input
+stdout 'Added alias'
+
+exec teamcity alias delete todelete --no-input
+stdout 'Deleted alias'
+
+# Listing should no longer show the deleted alias.
+exec teamcity alias list --no-input
+! stdout 'todelete'

@@ -1,0 +1,4 @@
+# Test API command with custom Accept header.
+
+exec teamcity api /app/rest/server -H "Accept: application/json" --no-input
+stdout 'version'

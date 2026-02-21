@@ -1,0 +1,6 @@
+# Verify alias help output.
+
+exec teamcity alias --help
+stdout 'set'
+stdout 'list'
+stdout 'delete'

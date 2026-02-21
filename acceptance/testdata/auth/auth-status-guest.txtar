@@ -1,0 +1,5 @@
+# Verify auth status reports guest authentication.
+
+exec teamcity auth status --no-input
+stdout 'cli.teamcity.com'
+! stderr 'Error'

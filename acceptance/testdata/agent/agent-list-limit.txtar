@@ -1,0 +1,7 @@
+# Verify --limit flag on agent list.
+
+exec teamcity agent list --limit 5 --no-input
+! stderr 'Error'
+
+! exec teamcity agent list --limit 0 --no-input
+stderr 'must be a positive number'

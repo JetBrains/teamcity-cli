@@ -1,0 +1,5 @@
+# Test builds endpoint with field selection.
+
+exec teamcity api /app/rest/builds?locator=count:2&fields=build(id,status,state) --raw --no-input
+stdout '"id"'
+stdout '"status"'

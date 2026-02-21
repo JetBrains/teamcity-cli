@@ -48,7 +48,8 @@ jobs:
         name: Build & Test
         script-content: |
           BRANCH="${BRANCH_NAME:-${teamcity_build_branch:-}}"
-          if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "refs/heads/main" ] && [ "$BRANCH" != "<default>" ]; then
+          if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "refs/heads/main" ] && [ "$BRANCH" != "<default>" ] \
+             && [ "$BRANCH" != "claude/setup-goreleaser-teamcity-c0cpu" ]; then
             echo "Skipping acceptance tests on branch '$BRANCH' (only runs on main)"
             exit 0
           fi

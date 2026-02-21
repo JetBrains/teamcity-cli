@@ -1,0 +1,5 @@
+# Verify queue list JSON structure.
+# Queue may be empty so we just check it's a valid JSON array.
+
+exec teamcity queue list --json --no-input
+stdout '^\['

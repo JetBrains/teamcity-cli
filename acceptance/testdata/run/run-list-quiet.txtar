@@ -1,0 +1,4 @@
+# Verify --quiet suppresses non-essential output.
+
+exec teamcity --quiet run list --limit 2 --no-input
+! stderr 'Error'

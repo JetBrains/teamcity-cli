@@ -1,0 +1,13 @@
+# Verify run list help shows all key flags.
+
+exec teamcity run list --help
+stdout -- '--job'
+stdout -- '--branch'
+stdout -- '--status'
+stdout -- '--project'
+stdout -- '--limit'
+stdout -- '--since'
+stdout -- '--until'
+stdout -- '--json'
+stdout -- '--plain'
+stdout -- '--no-header'

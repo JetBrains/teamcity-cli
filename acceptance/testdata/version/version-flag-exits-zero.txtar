@@ -1,0 +1,5 @@
+# --version should exit cleanly with exit code 0.
+
+exec teamcity --version
+stdout 'teamcity version'
+! stderr .

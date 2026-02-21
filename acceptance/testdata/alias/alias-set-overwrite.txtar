@@ -1,0 +1,10 @@
+# Verify overwriting an alias shows "Changed alias".
+
+exec teamcity alias set myalias 'run list' --no-input
+stdout 'Added alias'
+
+exec teamcity alias set myalias 'project list' --no-input
+stdout 'Changed alias'
+
+exec teamcity alias list --no-input
+stdout 'project list'

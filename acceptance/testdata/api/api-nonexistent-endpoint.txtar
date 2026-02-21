@@ -1,0 +1,3 @@
+# Accessing a non-existent endpoint should produce an error.
+
+! exec teamcity api /app/rest/nonexistent_endpoint_12345 --no-input

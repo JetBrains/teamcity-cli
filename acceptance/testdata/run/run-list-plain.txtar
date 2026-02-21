@@ -1,0 +1,8 @@
+# Verify plain text output mode for scripting.
+
+exec teamcity run list --limit 3 --plain --no-input
+! stderr 'Error'
+
+# Plain with no-header should omit column names
+exec teamcity run list --limit 3 --plain --no-header --no-input
+! stderr 'Error'

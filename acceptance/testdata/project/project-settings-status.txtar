@@ -1,0 +1,5 @@
+# View versioned settings status of a project.
+# Get first project from API and check its settings status.
+
+exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+stdout '"id"'

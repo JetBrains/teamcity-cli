@@ -1,0 +1,7 @@
+# Verify --limit flag on job list.
+
+exec teamcity job list --limit 1 --no-input
+! stderr 'Error'
+
+! exec teamcity job list --limit 0 --no-input
+stderr 'must be a positive number'

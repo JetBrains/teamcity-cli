@@ -1,0 +1,5 @@
+# Verify agent JSON output contains expected fields.
+
+exec teamcity agent list --limit 1 --json --no-input
+stdout '"id"'
+stdout '"name"'
