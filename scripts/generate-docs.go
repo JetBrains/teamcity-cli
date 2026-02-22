@@ -1,6 +1,6 @@
 //go:build ignore
 
-// Script to generate CLI documentation in README.md from cobra commands.
+// Script to generate CLI documentation in docs/topics/teamcity-cli-commands.md from cobra commands.
 package main
 
 import (
@@ -9,11 +9,9 @@ import (
 	"os"
 	"regexp"
 	"sort"
-	"strings"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -29,34 +27,68 @@ var displayNames = map[string]string{
 	"pool":  "Agent Pools",
 }
 
+// sectionDescriptions maps command groups to their description and detail page link for Writerside docs.
+var sectionDescriptions = map[string]struct {
+	desc string
+	page string
+}{
+	"auth":       {"Manage server authentication.", "teamcity-cli-authentication.md"},
+	"run":        {"Start, monitor, and manage builds.", "teamcity-cli-managing-runs.md"},
+	"job":        {"View and configure build configurations.", "teamcity-cli-managing-jobs.md"},
+	"project":    {"Browse projects and manage parameters and settings.", "teamcity-cli-managing-projects.md"},
+	"queue":      {"Manage the build queue.", "teamcity-cli-managing-build-queue.md"},
+	"agent":      {"Monitor and control build agents.", "teamcity-cli-managing-agents.md"},
+	"pool":       {"Manage agent pool assignments.", "teamcity-cli-managing-agent-pools.md"},
+	"api":        {"Make raw REST API requests.", "teamcity-cli-rest-api-access.md"},
+	"alias":      {"Create custom command shortcuts.", "teamcity-cli-aliases.md"},
+	"completion": {"Generate shell completion scripts.", "teamcity-cli-configuration.md#shell-completion"},
+	"skill":      {"Manage AI agent integration.", "teamcity-cli-ai-agent-integration.md"},
+}
+
+const commandsDocPath = "docs/topics/teamcity-cli-commands.md"
+
 func main() {
 	rootCmd := cmd.GetRootCmd()
 
-	var docs bytes.Buffer
-	generateDocs(&docs, rootCmd)
+	check := len(os.Args) > 1 && os.Args[1] == "--check"
+	ok := true
 
-	content, err := os.ReadFile("README.md")
+	ok = updateFile(commandsDocPath, func(rootCmd *cobra.Command) string {
+		var buf bytes.Buffer
+		generateWritersideDocs(&buf, rootCmd)
+		return buf.String()
+	}, rootCmd, check) && ok
+
+	if check && !ok {
+		os.Exit(1)
+	}
+}
+
+func updateFile(path string, generate func(*cobra.Command) string, rootCmd *cobra.Command, check bool) bool {
+	content, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading README.md: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error reading %s: %v\n", path, err)
 		os.Exit(1)
 	}
 
-	newContent := replaceBetweenMarkers(string(content), docs.String())
+	generated := generate(rootCmd)
+	newContent := replaceBetweenMarkers(string(content), generated)
 
-	if len(os.Args) > 1 && os.Args[1] == "--check" {
+	if check {
 		if string(content) != newContent {
-			fmt.Println("README.md is out of date. Run 'just docs' to update it.")
-			os.Exit(1)
+			fmt.Printf("%s is out of date. Run 'just docs' to update it.\n", path)
+			return false
 		}
-		fmt.Println("README.md is up to date.")
-		return
+		fmt.Printf("%s is up to date.\n", path)
+		return true
 	}
 
-	if err := os.WriteFile("README.md", []byte(newContent), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing README.md: %v\n", err)
+	if err := os.WriteFile(path, []byte(newContent), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", path, err)
 		os.Exit(1)
 	}
-	fmt.Println("README.md updated.")
+	fmt.Printf("%s updated.\n", path)
+	return true
 }
 
 func replaceBetweenMarkers(content, generated string) string {
@@ -64,16 +96,19 @@ func replaceBetweenMarkers(content, generated string) string {
 	return re.ReplaceAllLiteralString(content, "<!-- COMMANDS_START -->\n\n"+generated+"<!-- COMMANDS_END -->")
 }
 
-func generateDocs(buf *bytes.Buffer, rootCmd *cobra.Command) {
-	// Collect commands
+// orderedCommands returns command groups in preferred order, including completion.
+func orderedCommands(rootCmd *cobra.Command, includeCompletion bool) ([]string, map[string]*cobra.Command) {
 	cmds := make(map[string]*cobra.Command)
 	for _, c := range rootCmd.Commands() {
-		if c.Name() != "help" && c.Name() != "completion" {
-			cmds[c.Name()] = c
+		if c.Name() == "help" {
+			continue
 		}
+		if c.Name() == "completion" && !includeCompletion {
+			continue
+		}
+		cmds[c.Name()] = c
 	}
 
-	// Order: preferred first, then remaining alphabetically
 	seen := make(map[string]bool)
 	var names []string
 	for _, name := range preferredOrder {
@@ -90,14 +125,7 @@ func generateDocs(buf *bytes.Buffer, rootCmd *cobra.Command) {
 	}
 	sort.Strings(rest)
 	names = append(names, rest...)
-
-	for i, name := range names {
-		buf.WriteString(fmt.Sprintf("## %s\n\n", displayName(name)))
-		generateGroupDocs(buf, cmds[name])
-		if i < len(names)-1 {
-			buf.WriteString("---\n\n")
-		}
-	}
+	return names, cmds
 }
 
 func displayName(name string) string {
@@ -107,52 +135,85 @@ func displayName(name string) string {
 	return cases.Title(language.English).String(name) + "s"
 }
 
-func generateGroupDocs(buf *bytes.Buffer, c *cobra.Command) {
-	subCmds := sortedCommands(c)
-	if len(subCmds) == 0 {
-		writeCommandDoc(buf, "", c)
-		return
-	}
+// --- Writerside generation ---
 
-	for _, sub := range subCmds {
-		subSubs := sortedCommands(sub)
-		if len(subSubs) > 0 {
-			for _, subSub := range subSubs {
-				writeCommandDoc(buf, c.Name()+" "+sub.Name(), subSub)
+func generateWritersideDocs(buf *bytes.Buffer, rootCmd *cobra.Command) {
+	names, cmds := orderedCommands(rootCmd, true)
+
+	for _, name := range names {
+		c := cmds[name]
+		sectionName := displayName(name)
+		// completion is special: not pluralized by displayName
+		if name == "completion" {
+			sectionName = "Completion"
+		}
+
+		buf.WriteString(fmt.Sprintf("## %s\n\n", sectionName))
+
+		if sec, ok := sectionDescriptions[name]; ok {
+			buf.WriteString(fmt.Sprintf("%s See [%s](%s) for details.\n\n", sec.desc, pageLinkText(sec.page), sec.page))
+		}
+
+		buf.WriteString("<table>\n")
+		writeWritersideRow(buf, "Command", "Description")
+
+		subCmds := sortedCommands(c)
+		if len(subCmds) == 0 {
+			// Top-level command (e.g., api, completion)
+			cmdStr := fmt.Sprintf("`teamcity %s`", c.Name())
+			if name == "api" {
+				cmdStr = "`teamcity api <endpoint>`"
 			}
+			writeWritersideRow(buf, cmdStr, c.Short)
 		} else {
-			writeCommandDoc(buf, c.Name(), sub)
-		}
-	}
-}
-
-func writeCommandDoc(buf *bytes.Buffer, prefix string, c *cobra.Command) {
-	if prefix != "" {
-		buf.WriteString(fmt.Sprintf("### %s %s\n\n", prefix, c.Name()))
-	}
-
-	if c.Long != "" {
-		buf.WriteString(c.Long + "\n\n")
-	} else if c.Short != "" {
-		buf.WriteString(c.Short + "\n\n")
-	}
-
-	if c.Example != "" {
-		buf.WriteString("```bash\n" + cleanExample(c.Example) + "\n```\n\n")
-	}
-
-	if flags := getFlags(c); len(flags) > 0 {
-		buf.WriteString("**Options:**\n")
-		for _, f := range flags {
-			if f.Shorthand != "" {
-				buf.WriteString(fmt.Sprintf("- `-%s, --%s` – %s\n", f.Shorthand, f.Name, f.Usage))
-			} else {
-				buf.WriteString(fmt.Sprintf("- `--%s` – %s\n", f.Name, f.Usage))
+			for _, sub := range subCmds {
+				subSubs := sortedCommands(sub)
+				if len(subSubs) > 0 {
+					for _, subSub := range subSubs {
+						cmdStr := fmt.Sprintf("`teamcity %s %s %s`", c.Name(), sub.Name(), subSub.Name())
+						writeWritersideRow(buf, cmdStr, subSub.Short)
+					}
+				} else {
+					cmdStr := fmt.Sprintf("`teamcity %s %s`", c.Name(), sub.Name())
+					writeWritersideRow(buf, cmdStr, sub.Short)
+				}
 			}
 		}
-		buf.WriteString("\n")
+
+		buf.WriteString("</table>\n\n")
 	}
 }
+
+func writeWritersideRow(buf *bytes.Buffer, col1, col2 string) {
+	buf.WriteString("<tr>\n<td>\n\n")
+	buf.WriteString(col1)
+	buf.WriteString("\n\n</td>\n<td>\n\n")
+	buf.WriteString(col2)
+	buf.WriteString("\n\n</td>\n</tr>\n")
+}
+
+func pageLinkText(page string) string {
+	// Map page filenames to human-readable link text
+	links := map[string]string{
+		"teamcity-cli-authentication.md":            "Authentication",
+		"teamcity-cli-managing-runs.md":             "Managing runs",
+		"teamcity-cli-managing-jobs.md":             "Managing jobs",
+		"teamcity-cli-managing-projects.md":         "Managing projects",
+		"teamcity-cli-managing-build-queue.md":      "Managing the build queue",
+		"teamcity-cli-managing-agents.md":           "Managing agents",
+		"teamcity-cli-managing-agent-pools.md":      "Managing agent pools",
+		"teamcity-cli-rest-api-access.md":           "REST API access",
+		"teamcity-cli-aliases.md":                   "Aliases",
+		"teamcity-cli-configuration.md#shell-completion": "Configuration",
+		"teamcity-cli-ai-agent-integration.md":      "AI agent integration",
+	}
+	if text, ok := links[page]; ok {
+		return text
+	}
+	return page
+}
+
+// --- Shared helpers ---
 
 func sortedCommands(c *cobra.Command) []*cobra.Command {
 	cmds := c.Commands()
@@ -160,19 +221,3 @@ func sortedCommands(c *cobra.Command) []*cobra.Command {
 	return cmds
 }
 
-func getFlags(c *cobra.Command) (flags []*pflag.Flag) {
-	c.Flags().VisitAll(func(f *pflag.Flag) {
-		if f.Name != "help" {
-			flags = append(flags, f)
-		}
-	})
-	return
-}
-
-func cleanExample(s string) string {
-	var lines []string
-	for _, line := range strings.Split(strings.TrimSpace(s), "\n") {
-		lines = append(lines, strings.TrimPrefix(line, "  "))
-	}
-	return strings.Join(lines, "\n")
-}

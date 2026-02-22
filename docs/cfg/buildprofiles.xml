@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE buildprofiles SYSTEM "https://resources.jetbrains.com/writerside/1.0/build-profiles.dtd">
+<buildprofiles xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/build-profiles.xsd"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <variables></variables>
+    <build-profile instance="teamcity-cli">
+        <variables>
+            <noindex-content>true</noindex-content>
+            <enable-contribution>true</enable-contribution>
+            <contribute-url>https://github.com/JetBrains/teamcity-cli/edit/main/docs/</contribute-url>
+        </variables>
+    </build-profile>
+
+</buildprofiles>
