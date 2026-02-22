@@ -707,7 +707,7 @@ Cancel a running or queued build:
 
 ```Shell
 teamcity run cancel 12345
-teamcity run cancel 12345 --comment "Cancelling for hotfix"
+teamcity run cancel 12345 --comment "Canceling for hotfix"
 ```
 
 Use `--force` to skip the confirmation prompt:

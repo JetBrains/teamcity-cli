@@ -6,7 +6,7 @@ This page describes how to install TeamCity CLI on macOS, Linux, and Windows.
 
 ## Prerequisites
 
-TeamCity CLI requires a running TeamCity server (version 2024.04 or later) to connect to. No additional runtime dependencies are needed — the CLI is distributed as a standalone binary.
+TeamCity CLI requires a running TeamCity server (version 2020.1 or later) to connect to. Some features may require newer TeamCity versions (for example, 2024.04 or later). No additional runtime dependencies are needed — the CLI is distributed as a standalone binary.
 
 ## macOS and Linux
 
