@@ -9,9 +9,8 @@ Set Padding 20
 Set TypingSpeed 40ms
 Set CursorBlink false
 Env TEAMCITY_URL "https://cli.teamcity.com"
-Env TEAMCITY_GUEST "1"
 
 # Watch a running build with live log streaming
-Type "teamcity run watch 2016 --logs"
+Type "teamcity run watch {{RUN_ID}} --logs"
 Enter
 Sleep 20s

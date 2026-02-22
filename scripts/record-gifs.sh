@@ -81,7 +81,21 @@ record_tape() {
     fi
 
     echo "Recording: $name ($suffix)..."
-    sed -e "s|{{THEME}}|$theme|g" -e "s|{{OUTPUT}}|\"$output\"|g" "$tape_file" | vhs -
+    local sed_args=(-e "s|{{THEME}}|$theme|g" -e "s|{{OUTPUT}}|\"$output\"|g")
+
+    # If the tape uses {{RUN_ID}}, trigger a build and substitute the ID
+    if grep -q '{{RUN_ID}}' "$tape_file"; then
+        local run_id
+        run_id=$(TEAMCITY_URL="https://cli.teamcity.com" teamcity run start Sandbox_Build --branch main --json 2>/dev/null | jq -r '.id')
+        if [[ -z "$run_id" || "$run_id" == "null" ]]; then
+            echo "  !! Failed to trigger build for {{RUN_ID}} substitution"
+            return 1
+        fi
+        echo "  Triggered build $run_id for live recording"
+        sed_args+=(-e "s|{{RUN_ID}}|$run_id|g")
+    fi
+
+    sed "${sed_args[@]}" "$tape_file" | vhs -
 
     if [[ -f "$output" ]]; then
         local size

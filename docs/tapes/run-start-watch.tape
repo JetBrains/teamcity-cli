@@ -9,7 +9,6 @@ Set Padding 20
 Set TypingSpeed 40ms
 Set CursorBlink false
 Env TEAMCITY_URL "https://cli.teamcity.com"
-Env TEAMCITY_GUEST "1"
 
 Type "teamcity run start Sandbox_Build --branch main --watch"
 Enter
