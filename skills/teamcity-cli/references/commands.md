@@ -11,6 +11,7 @@
 Login options:
 - `-s, --server <url>` - TeamCity server URL
 - `-t, --token <token>` - Access token
+- `--insecure-storage` - Store token in plain text config file instead of system keyring
 
 ## Builds/Runs (`teamcity run`)
 
@@ -53,6 +54,7 @@ Shows all branches and all build states (including canceled, personal, composite
 ### Flags for `teamcity run start`
 
 - `-b, --branch <name>` - Branch to build
+- `--revision <sha>` - Pin build to a specific Git commit SHA
 - `-P, --param <k=v>` - Build parameter (repeatable)
 - `-S, --system <k=v>` - System property (repeatable)
 - `-E, --env <k=v>` - Environment variable (repeatable)
@@ -104,6 +106,7 @@ Shows all branches and all build states (including canceled, personal, composite
 ### Flags for `teamcity run artifacts`
 
 - `-j, --job <id>` - List artifacts from latest run of this job
+- `-p, --path <subdir>` - Browse artifacts under this subdirectory
 - `--json` - Output as JSON
 
 ### Flags for `teamcity run download`

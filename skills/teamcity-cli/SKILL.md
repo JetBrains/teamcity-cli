@@ -1,8 +1,8 @@
 ---
 name: teamcity-cli
-version: "0.5.0"
+version: "0.6.0"
 author: JetBrains
-description: Use when working with TeamCity CI/CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, agents, and pipelines.
+description: Use when working with TeamCity CI/CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, and agents.
 ---
 
 # TeamCity CLI (`teamcity`)
@@ -23,17 +23,17 @@ teamcity run log <id> --failed          # View failed build log
 
 ## Core Commands
 
-| Area      | Commands                                                                              |
-|-----------|---------------------------------------------------------------------------------------|
-| Builds    | `run list`, `view`, `start`, `watch`, `log`, `cancel`, `restart`, `tests`, `changes`  |
-| Artifacts | `run artifacts`, `run download`                                                       |
-| Metadata  | `run pin/unpin`, `run tag/untag`, `run comment`                                       |
-| Jobs      | `job list`, `view`, `pause/resume`, `param list/get/set/delete`                       |
-| Projects  | `project list`, `view`, `param`, `token put/get`, `settings export/status/validate`   |
-| Queue     | `queue list`, `approve`, `remove`, `top`                                              |
-| Agents    | `agent list`, `view`, `enable/disable`, `authorize`, `exec`, `term`, `reboot`, `move` |
-| Pools     | `pool list`, `view`, `link/unlink`                                                    |
-| API       | `teamcity api <endpoint>` — raw REST API access                                             |
+| Area      | Commands                                                                                          |
+|-----------|---------------------------------------------------------------------------------------------------|
+| Builds    | `run list`, `view`, `start`, `watch`, `log`, `cancel`, `restart`, `tests`, `changes`              |
+| Artifacts | `run artifacts`, `run download`                                                                   |
+| Metadata  | `run pin/unpin`, `run tag/untag`, `run comment`                                                   |
+| Jobs      | `job list`, `view`, `pause/resume`, `param list/get/set/delete`                                   |
+| Projects  | `project list`, `view`, `param`, `token put/get`, `settings export/status/validate`               |
+| Queue     | `queue list`, `approve`, `remove`, `top`                                                          |
+| Agents    | `agent list`, `view`, `enable/disable`, `authorize/deauthorize`, `exec`, `term`, `reboot`, `move` |
+| Pools     | `pool list`, `view`, `link/unlink`                                                                |
+| API       | `teamcity api <endpoint>` — raw REST API access                                                   |
 
 ## Quick Workflows
 
