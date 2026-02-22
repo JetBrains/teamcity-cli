@@ -35,6 +35,9 @@ func RegisterAliases(rootCmd *cobra.Command) {
 
 func isBuiltinCommand(rootCmd *cobra.Command, name string) bool {
 	for _, c := range rootCmd.Commands() {
+		if c.Annotations["is_alias"] == "true" {
+			continue
+		}
 		if c.Name() == name || c.HasAlias(name) {
 			return true
 		}
@@ -46,6 +49,7 @@ func newExpansionAliasCmd(name, expansion string) *cobra.Command {
 	return &cobra.Command{
 		Use:                name,
 		Short:              fmt.Sprintf("Alias for %q", expansion),
+		Annotations:        map[string]string{"is_alias": "true"},
 		DisableFlagParsing: true,
 		SilenceUsage:       true,
 		SilenceErrors:      true,
@@ -76,6 +80,7 @@ func newShellAliasCmd(name, expansion string) *cobra.Command {
 	return &cobra.Command{
 		Use:                name,
 		Short:              fmt.Sprintf("Shell alias for %q", expansion),
+		Annotations:        map[string]string{"is_alias": "true"},
 		DisableFlagParsing: true,
 		SilenceUsage:       true,
 		SilenceErrors:      true,

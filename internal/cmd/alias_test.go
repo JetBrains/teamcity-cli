@@ -85,6 +85,23 @@ func TestAliasSetOverwrite(t *testing.T) {
 	assert.Equal(t, "run list --status=success", exp)
 }
 
+func TestAliasSetOverwriteRegistered(t *testing.T) {
+	setupAliasE2E(t)
+	require.NoError(t, config.AddAlias("rl", "run list"))
+
+	root := cmd.NewRootCmd()
+	cmd.RegisterAliases(root)
+
+	root.SetArgs([]string{"alias", "set", "rl", "run list --limit=10"})
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetErr(&out)
+	require.NoError(t, root.Execute())
+
+	exp, _ := config.GetAlias("rl")
+	assert.Equal(t, "run list --limit=10", exp)
+}
+
 func TestAliasDeleteCmd(t *testing.T) {
 	setupAliasTest(t)
 
