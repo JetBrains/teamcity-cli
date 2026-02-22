@@ -97,7 +97,7 @@ Some build configurations require manual approval before they can run. Approve a
 teamcity queue approve 12345
 ```
 
-> Build approval is part of the TeamCity [deployment confirmation](configuring-build-triggers.md) workflow. Builds requiring approval remain in the queue until approved or removed.
+> Build approval is part of the TeamCity [deployment confirmation](https://www.jetbrains.com/help/teamcity/build-triggers.html) workflow. Builds requiring approval remain in the queue until approved or removed.
 >
 {style="note"}
 
