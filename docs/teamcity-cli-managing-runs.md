@@ -133,7 +133,7 @@ Filter by branch name
 </td>
 <td>
 
-Filter by status: `success`, `failure`, or `running`
+Filter by status: `success`, `failure`, `running`, `error`, or `unknown`
 
 </td>
 </tr>
