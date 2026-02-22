@@ -50,6 +50,72 @@ release-dry-run:
 release:
     SIGN=true FINGERPRINT=B46DC71E03FEEB7F89D1F2491F7A8F87B9D8F501 goreleaser release --clean
 
+# Record all documentation GIFs (both light and dark themes)
+record-gifs *args:
+    ./scripts/record-gifs.sh {{args}}
+
+# Record only dark theme GIFs
+record-gifs-dark *args:
+    ./scripts/record-gifs.sh --dark-only {{args}}
+
+# Record only light theme GIFs
+record-gifs-light *args:
+    ./scripts/record-gifs.sh --light-only {{args}}
+
+# List available tape files for GIF recording
+list-tapes:
+    ./scripts/record-gifs.sh --list
+
+# Build Writerside documentation using Docker (requires Rosetta enabled in Docker Desktop on Apple Silicon)
+docs-build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    rm -rf docs-out
+    mkdir -p docs-out
+    echo "Building Writerside docs..."
+    docker run --rm --platform linux/amd64 \
+        -v "$(pwd):/opt/sources" \
+        -v "$(pwd)/docs-out:/opt/wrs-output" \
+        -e SOURCE_DIR=/opt/sources \
+        -e OUTPUT_DIR=/opt/wrs-output \
+        -e MODULE_INSTANCE=docs/teamcity-cli \
+        -e RUNNER=other \
+        jetbrains/writerside-builder:latest
+    echo "Build complete. Output in docs-out/"
+
+# Deploy docs to gh-pages branch (run docs-build first, or build from Writerside IDE into docs-out/)
+docs-deploy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Find the webhelp zip from Docker build or IDE export
+    ZIP=$(find docs-out -name "webHelp*.zip" -print -quit 2>/dev/null || true)
+    if [[ -z "$ZIP" ]]; then
+        echo "Error: No build output found in docs-out/."
+        echo "Run 'just docs-build' or export from Writerside IDE into docs-out/."
+        exit 1
+    fi
+    SITE="docs-out/site"
+    rm -rf "$SITE"
+    mkdir -p "$SITE"
+    unzip -o "$ZIP" -d "$SITE"
+    echo "Extracted $(find "$SITE" -type f | wc -l | tr -d ' ') files."
+    # Deploy to gh-pages branch using a temporary worktree
+    ROOT="$(pwd)"
+    WORK=$(mktemp -d)
+    trap 'cd "$ROOT"; git worktree remove "$WORK" --force 2>/dev/null; rm -rf "$WORK"' EXIT
+    # Delete local gh-pages branch if it exists so we can create a fresh orphan
+    git branch -D gh-pages 2>/dev/null || true
+    git worktree add --detach "$WORK"
+    cd "$WORK"
+    git checkout --orphan gh-pages
+    git rm -rf . > /dev/null 2>&1 || true
+    cp -a "$ROOT/docs-out/site/." .
+    touch .nojekyll
+    git add -A
+    git commit -m "Deploy Writerside docs to GitHub Pages"
+    git push origin gh-pages --force
+    echo "Deployed to gh-pages branch."
+
 # Install JetBrains codesign client (requires JB employee VPN)
 install-codesign:
     #!/usr/bin/env sh
