@@ -49,7 +49,7 @@ func newRunListCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Filter by branch name")
-	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running)")
+	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running, error, unknown)")
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of runs")

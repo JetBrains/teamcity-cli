@@ -46,7 +46,7 @@ Report issues:  https://jb.gg/tc/issues`,
 		fmt.Println("Common commands:")
 		fmt.Println("  auth login              Authenticate with TeamCity")
 		fmt.Println("  run list                List recent runs")
-		fmt.Println("  run trigger <job>       Trigger a new run")
+		fmt.Println("  run start <job>         Trigger a new run")
 		fmt.Println("  run view <id>           View run details")
 		fmt.Println("  job list                List jobs")
 		fmt.Println()
