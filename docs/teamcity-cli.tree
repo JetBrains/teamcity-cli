@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE instance-profile
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+
+<instance-profile id="teamcity-cli"
+                 name="TeamCity CLI" start-page="teamcity-cli.md">
+
+    <toc-element topic="teamcity-cli.md">
+        <toc-element topic="teamcity-cli-get-started.md"/>
+        <toc-element topic="teamcity-cli-authentication.md"/>
+        <toc-element topic="teamcity-cli-configuration.md"/>
+        <toc-element toc-title="User guide">
+            <toc-element topic="teamcity-cli-managing-runs.md"/>
+            <toc-element topic="teamcity-cli-managing-jobs.md"/>
+            <toc-element topic="teamcity-cli-managing-projects.md"/>
+            <toc-element topic="teamcity-cli-managing-build-queue.md"/>
+            <toc-element topic="teamcity-cli-managing-agents.md"/>
+            <toc-element topic="teamcity-cli-managing-agent-pools.md"/>
+        </toc-element>
+        <toc-element toc-title="Advanced">
+            <toc-element topic="teamcity-cli-rest-api-access.md"/>
+            <toc-element topic="teamcity-cli-aliases.md"/>
+            <toc-element topic="teamcity-cli-scripting.md"/>
+            <toc-element topic="teamcity-cli-ai-agent-integration.md"/>
+        </toc-element>
+        <toc-element toc-title="Reference">
+            <toc-element topic="teamcity-cli-commands.md"/>
+            <toc-element topic="teamcity-cli-glossary.md"/>
+        </toc-element>
+    </toc-element>
+</instance-profile>

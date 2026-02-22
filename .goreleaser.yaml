@@ -263,7 +263,7 @@ release:
     teamcity run start MyProject_Build --branch main --watch
     ```
 
-    See the [README](https://jb.gg/tc/docs) for full documentation.
+    **[Full documentation](https://jb.gg/tc/docs)** — getting started, configuration, command reference, and more.
 
 report_sizes: true
 
