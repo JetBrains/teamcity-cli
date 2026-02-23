@@ -108,6 +108,70 @@ Output as JSON:
 teamcity job view MyProject_Build --json
 ```
 
+## Dependency tree
+
+Visualize the snapshot dependency chain for a job. By default, the tree shows both dependents (what gets triggered after this job) and dependencies (what must run before this job):
+
+```Shell
+teamcity job tree MyProject_DeployStaging
+```
+
+<img src="job-tree.gif" alt="Viewing job dependency trees" border-effect="rounded"/>
+
+Show only one direction:
+
+```Shell
+teamcity job tree MyProject_Build --only dependents
+teamcity job tree MyProject_Deploy --only dependencies
+```
+
+Limit the tree depth:
+
+```Shell
+teamcity job tree MyProject_Build --depth 2
+```
+
+### job tree flags
+
+<table>
+<tr>
+<td>
+
+Flag
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`-d`, `--depth`
+
+</td>
+<td>
+
+Limit tree depth (0 = unlimited)
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--only`
+
+</td>
+<td>
+
+Show only `dependents` or `dependencies`
+
+</td>
+</tr>
+</table>
+
 ## Pausing and resuming jobs
 
 Pause a job to prevent new builds from being triggered:
