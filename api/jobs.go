@@ -113,6 +113,30 @@ func (c *Client) CreateBuildStep(buildTypeID string, step BuildStep) error {
 	return c.doNoContent("POST", path, bytes.NewReader(body), "")
 }
 
+// GetSnapshotDependencies returns the snapshot dependencies for a build configuration
+func (c *Client) GetSnapshotDependencies(buildTypeID string) (*SnapshotDependencyList, error) {
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/snapshot-dependencies?fields=count,snapshot-dependency(id,source-buildType(id,name,projectId))", buildTypeID)
+
+	var result SnapshotDependencyList
+	if err := c.get(path, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetDependentBuildTypes returns build types that have a snapshot dependency on the given build type.
+func (c *Client) GetDependentBuildTypes(buildTypeID string) (*BuildTypeList, error) {
+	path := fmt.Sprintf("/app/rest/buildTypes?locator=snapshotDependency:(from:(id:%s),recursive:false)&fields=count,buildType(id,name,projectId)", buildTypeID)
+
+	var result BuildTypeList
+	if err := c.get(path, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 // GetVcsRootEntries returns the VCS root entries attached to a build configuration
 func (c *Client) GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error) {
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/vcs-root-entries", buildTypeID)
