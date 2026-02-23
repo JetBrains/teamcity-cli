@@ -12,6 +12,8 @@ View all TeamCity projects:
 teamcity project list
 ```
 
+<img src="project-list.gif" alt="Listing TeamCity projects" border-effect="rounded"/>
+
 Filter by parent project:
 
 ```Shell
