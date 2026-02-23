@@ -243,7 +243,7 @@ func TestIsPkceEnabled(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		enabled, err := IsPkceEnabled(context.Background(), server.URL)
+		enabled, err := IsPkceEnabled(t.Context(), server.URL)
 		assert.NoError(t, err)
 		assert.True(t, enabled)
 	})
@@ -256,7 +256,7 @@ func TestIsPkceEnabled(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		enabled, err := IsPkceEnabled(context.Background(), server.URL)
+		enabled, err := IsPkceEnabled(t.Context(), server.URL)
 		assert.NoError(t, err)
 		assert.False(t, enabled)
 	})
@@ -264,7 +264,7 @@ func TestIsPkceEnabled(T *testing.T) {
 	T.Run("returns error on network failure", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
 		defer cancel()
 		enabled, err := IsPkceEnabled(ctx, "http://localhost:1")
 		assert.Error(t, err)
@@ -343,7 +343,7 @@ func TestExchangeCodeForToken(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		token, err := ExchangeCodeForToken(context.Background(), server.URL, "testcode", "testverifier", "http://localhost:19000/callback")
+		token, err := ExchangeCodeForToken(t.Context(), server.URL, "testcode", "testverifier", "http://localhost:19000/callback")
 		require.NoError(t, err)
 		assert.Equal(t, "token123", token.AccessToken)
 		assert.Equal(t, "Bearer", token.TokenType)
@@ -359,7 +359,52 @@ func TestExchangeCodeForToken(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		_, err := ExchangeCodeForToken(context.Background(), server.URL, "invalidcode", "verifier", "http://localhost:19000/callback")
+		_, err := ExchangeCodeForToken(t.Context(), server.URL, "invalidcode", "verifier", "http://localhost:19000/callback")
+		assert.Error(t, err)
+	})
+}
+
+func TestFetchPkceScopes(T *testing.T) {
+	T.Parallel()
+
+	T.Run("returns scopes from server", func(t *testing.T) {
+		t.Parallel()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "GET", r.Method)
+			assert.Equal(t, "/pkce/scopes.html", r.URL.Path)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`["VIEW_PROJECT","RUN_BUILD"]`))
+		}))
+		t.Cleanup(server.Close)
+
+		scopes, err := FetchPkceScopes(t.Context(), server.URL)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"VIEW_PROJECT", "RUN_BUILD"}, scopes)
+	})
+
+	T.Run("returns error when endpoint not found", func(t *testing.T) {
+		t.Parallel()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		t.Cleanup(server.Close)
+
+		_, err := FetchPkceScopes(t.Context(), server.URL)
+		assert.Error(t, err)
+	})
+
+	T.Run("returns error on empty scopes", func(t *testing.T) {
+		t.Parallel()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`[]`))
+		}))
+		t.Cleanup(server.Close)
+
+		_, err := FetchPkceScopes(t.Context(), server.URL)
 		assert.Error(t, err)
 	})
 }
@@ -371,8 +416,8 @@ func TestDefaultScopes(T *testing.T) {
 		t.Parallel()
 
 		scopes := DefaultScopes()
-		assert.Equal(t, AvailableScopes, scopes)
+		assert.Equal(t, FallbackScopes, scopes)
 		scopes[0] = "MODIFIED"
-		assert.NotEqual(t, AvailableScopes[0], "MODIFIED")
+		assert.NotEqual(t, FallbackScopes[0], "MODIFIED")
 	})
 }
