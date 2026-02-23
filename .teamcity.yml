@@ -6,47 +6,35 @@ jobs:
         script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
       - type: script
         name: Acceptance Tests
-        script-content: |
-          TC_INSECURE_SKIP_WARN=1 go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+        script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
     runs-on: macOS-14-Sonoma-Medium-Arm64
   test_windows:
     name: Test Windows
     runs-on: Windows-Medium
     steps:
       - type: script
-        script-content: >-
-          go test -race -count=1 -shuffle=on -v ./... -timeout 15m
+        script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
       - type: script
         name: Acceptance Tests
-        script-content: >-
-          set TC_INSECURE_SKIP_WARN=1 && go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+        script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
   test_linux:
     name: Test Linux
     runs-on: Ubuntu-24.04-Large
     steps:
       - type: script
-        name: Install Go
-        script-content: |
-          sudo add-apt-repository ppa:longsleep/golang-backports
-          sudo apt update
-          sudo apt install -y golang-go
-      - type: script
         name: Integration Tests
         script-content: |
-          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          /usr/lib/go-1.25/bin/go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout 15m \
+          go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-integration.out
       - type: script
         name: Guest Auth Tests
         script-content: |
-          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          TEAMCITY_GUEST=1 /usr/lib/go-1.25/bin/go test -race -count=1 -shuffle=on -v ./api/... -tags=guest -timeout 15m \
+          TEAMCITY_GUEST=1 go test -race -count=1 -shuffle=on -v ./api/... -tags=guest -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
         script-content: |
-          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          TC_INSECURE_SKIP_WARN=1 /usr/lib/go-1.25/bin/go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Merge Coverage
         script-content: |
@@ -58,28 +46,19 @@ jobs:
     runs-on: Ubuntu-24.04-Large-Arm64
     steps:
       - type: script
-        name: Install Go
-        script-content: |
-          sudo add-apt-repository ppa:longsleep/golang-backports
-          sudo apt update
-          sudo apt install -y golang-go
-      - type: script
         name: Integration Tests
         script-content: |
-          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          /usr/lib/go-1.25/bin/go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout 15m \
+          go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-integration.out
       - type: script
         name: Guest Auth Tests
         script-content: |
-          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          TEAMCITY_GUEST=1 /usr/lib/go-1.25/bin/go test -race -count=1 -shuffle=on -v ./api/... -tags=guest -timeout 15m \
+          TEAMCITY_GUEST=1 go test -race -count=1 -shuffle=on -v ./api/... -tags=guest -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
         script-content: |
-          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          TC_INSECURE_SKIP_WARN=1 /usr/lib/go-1.25/bin/go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Merge Coverage
         script-content: |
@@ -92,9 +71,7 @@ jobs:
       - type: script
         docker-image: goreleaser/goreleaser-pro:latest
         name: Build & Test
-        script-content: |
-          export GOTOOLCHAIN=auto
-          goreleaser release --snapshot --clean --skip=publish,chocolatey
+        script-content: goreleaser release --snapshot --clean --skip=publish,chocolatey
   Lint:
     name: Lint
     steps:
@@ -104,6 +81,7 @@ jobs:
         script-content: go fmt ./... && golangci-lint run --tests=false ./...
 parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
+  env.GOTOOLCHAIN: 'auto'
   env.GOFLAGS: '-buildvcs=false'
   env.BRANCH_NAME: '%teamcity.build.branch%'
 secrets:
