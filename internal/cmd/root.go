@@ -98,8 +98,7 @@ func Execute() error {
 	rootCmd.SilenceErrors = true
 	err := rootCmd.Execute()
 	if err != nil {
-		var exitErr *ExitError
-		if !errors.As(err, &exitErr) {
+		if _, ok := errors.AsType[*ExitError](err); !ok {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", enrichAPIError(err))
 		}
 	}
@@ -122,18 +121,15 @@ func enrichAPIError(err error) error {
 		)
 	}
 
-	var permErr *api.PermissionError
-	if errors.As(err, &permErr) {
+	if _, ok := errors.AsType[*api.PermissionError](err); ok {
 		return tcerrors.WithSuggestion(err.Error(), "Check your TeamCity permissions or contact your administrator")
 	}
 
-	var notFoundErr *api.NotFoundError
-	if errors.As(err, &notFoundErr) {
+	if _, ok := errors.AsType[*api.NotFoundError](err); ok {
 		return tcerrors.WithSuggestion(err.Error(), notFoundHint(err.Error()))
 	}
 
-	var netErr *api.NetworkError
-	if errors.As(err, &netErr) {
+	if _, ok := errors.AsType[*api.NetworkError](err); ok {
 		return tcerrors.WithSuggestion(err.Error(), "Check your network connection and verify the server URL")
 	}
 

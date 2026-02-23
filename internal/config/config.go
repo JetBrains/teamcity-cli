@@ -71,8 +71,7 @@ func Init() error {
 	viper.SetDefault("servers", map[string]ServerConfig{})
 
 	if err := viper.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if !errors.As(err, &configFileNotFoundError) {
+		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); !ok {
 			if !os.IsNotExist(err) {
 				return fmt.Errorf("failed to read config: %w", err)
 			}

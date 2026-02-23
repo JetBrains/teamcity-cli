@@ -1149,7 +1149,7 @@ func TestZAgentOperations(T *testing.T) {
 		agentID := agents.Agents[0].ID
 		t.Logf("Requesting reboot for agent ID %d", agentID)
 
-		err = client.RebootAgent(context.Background(), agentID, true)
+		err = client.RebootAgent(t.Context(), agentID, true)
 		require.NoError(t, err)
 		t.Log("Reboot scheduled (after build completes)")
 	})

@@ -82,8 +82,7 @@ func withRetry(cfg RetryConfig, op func() (*http.Response, error)) (*http.Respon
 
 	if err != nil {
 		// Unwrap a retryable error to return the original
-		var re retryableError
-		if errors.As(err, &re) {
+		if re, ok := errors.AsType[retryableError](err); ok {
 			return lastResp, re.err
 		}
 		return lastResp, err
@@ -99,20 +98,18 @@ func isRetryableNetworkError(err error) bool {
 	}
 
 	// Check for timeout
-	var netErr net.Error
-	if errors.As(err, &netErr) && netErr.Timeout() {
+	if netErr, ok := errors.AsType[net.Error](err); ok && netErr.Timeout() {
 		return true
 	}
 
 	// Check for connection errors (refused, reset, DNS)
-	var opErr *net.OpError
-	if errors.As(err, &opErr) {
+	if _, ok := errors.AsType[*net.OpError](err); ok {
 		return true
 	}
 
 	// Check for DNS errors
-	var dnsErr *net.DNSError
-	return errors.As(err, &dnsErr)
+	_, ok := errors.AsType[*net.DNSError](err)
+	return ok
 }
 
 // isRetryableStatusCode returns true for server errors that may be transient.

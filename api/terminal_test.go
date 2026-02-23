@@ -55,7 +55,7 @@ func TestTerminalSession(T *testing.T) {
 		require.NoError(t, err)
 
 		// Properly terminate the shell to avoid leaving server-side zombie sessions
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 		defer cancel()
 		_ = conn.Exec(ctx, "true") // Run trivial command which sends exit
 
@@ -80,7 +80,7 @@ func TestTerminalExec(T *testing.T) {
 		conn, err := termClient.Connect(session, 80, 24)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		defer cancel()
 
 		err = conn.Exec(ctx, "echo hello-terminal")
@@ -94,7 +94,7 @@ func TestTerminalExec(T *testing.T) {
 		conn, err := termClient.Connect(session, 80, 24)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		defer cancel()
 
 		err = conn.Exec(ctx, "echo L1; echo L2; echo $HOME")
@@ -108,7 +108,7 @@ func TestTerminalExec(T *testing.T) {
 		conn, err := termClient.Connect(session, 80, 24)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		defer cancel()
 
 		err = conn.Exec(ctx, `echo "test" | tr 'a-z' 'A-Z'`)
@@ -122,7 +122,7 @@ func TestTerminalExec(T *testing.T) {
 		conn, err := termClient.Connect(session, 80, 24)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		defer cancel()
 
 		err = conn.Exec(ctx, "seq 1 50")
@@ -136,7 +136,7 @@ func TestTerminalExec(T *testing.T) {
 		conn, err := termClient.Connect(session, 80, 24)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
 		defer cancel()
 
 		err = conn.Exec(ctx, "sleep 10")
