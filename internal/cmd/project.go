@@ -3,12 +3,14 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -32,6 +34,7 @@ func newProjectCmd() *cobra.Command {
 
 	cmd.AddCommand(newProjectListCmd())
 	cmd.AddCommand(newProjectViewCmd())
+	cmd.AddCommand(newProjectTreeCmd())
 	cmd.AddCommand(newProjectTokenCmd())
 	cmd.AddCommand(newProjectSettingsCmd())
 	cmd.AddCommand(newParamCmd("project", projectParamAPI))
@@ -823,4 +826,118 @@ func defaultGetClient() (api.ClientInterface, error) {
 	}
 
 	return nil, tcerrors.NotAuthenticated()
+}
+
+func newProjectTreeCmd() *cobra.Command {
+	var noJobs bool
+	var depth int
+
+	cmd := &cobra.Command{
+		Use:   "tree [project-id]",
+		Short: "Display project hierarchy as a tree",
+		Example: `  teamcity project tree
+  teamcity project tree MyProject
+  teamcity project tree --no-jobs
+  teamcity project tree --depth 2`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rootID := "_Root"
+			if len(args) > 0 {
+				rootID = args[0]
+			}
+			return runProjectTree(rootID, noJobs, depth)
+		},
+	}
+
+	cmd.Flags().BoolVar(&noJobs, "no-jobs", false, "Hide build configurations")
+	cmd.Flags().IntVarP(&depth, "depth", "d", 0, "Limit tree depth (0 = unlimited)")
+
+	return cmd
+}
+
+func runProjectTree(rootID string, noJobs bool, depth int) error {
+	client, err := getClient()
+	if err != nil {
+		return err
+	}
+
+	projects, err := client.GetProjects(api.ProjectsOptions{Limit: 10000})
+	if err != nil {
+		return err
+	}
+
+	known := map[string]*api.Project{}
+	children := map[string][]api.Project{}
+	for i := range projects.Projects {
+		p := &projects.Projects[i]
+		known[p.ID] = p
+		if p.ParentProjectID != "" {
+			children[p.ParentProjectID] = append(children[p.ParentProjectID], *p)
+		}
+	}
+
+	root := known[rootID]
+	if root == nil {
+		root, err = client.GetProject(rootID)
+		if err != nil {
+			return fmt.Errorf("project %q not found", rootID)
+		}
+		known[root.ID] = root
+	}
+
+	var jobsByProject map[string][]api.BuildType
+	if !noJobs {
+		buildTypes, err := client.GetBuildTypes(api.BuildTypesOptions{Limit: 10000})
+		if err != nil {
+			return err
+		}
+		jobsByProject = map[string][]api.BuildType{}
+		for _, bt := range buildTypes.BuildTypes {
+			jobsByProject[bt.ProjectID] = append(jobsByProject[bt.ProjectID], bt)
+		}
+		resolveHiddenProjects(client, known, children, jobsByProject)
+	}
+
+	output.PrintTree(buildProjectTree(children, jobsByProject, rootID, root.Name, depth))
+	return nil
+}
+
+func buildProjectTree(children map[string][]api.Project, jobs map[string][]api.BuildType, id, name string, depth int) output.TreeNode {
+	node := output.TreeNode{Label: output.Cyan(name) + " " + output.Faint(id)}
+	if depth == 1 {
+		return node
+	}
+	next := max(depth-1, 0)
+	slices.SortFunc(children[id], func(a, b api.Project) int { return cmp.Compare(a.Name, b.Name) })
+	for _, p := range children[id] {
+		node.Children = append(node.Children, buildProjectTree(children, jobs, p.ID, p.Name, next))
+	}
+	slices.SortFunc(jobs[id], func(a, b api.BuildType) int { return cmp.Compare(a.Name, b.Name) })
+	for _, j := range jobs[id] {
+		node.Children = append(node.Children, output.TreeNode{Label: output.Faint(j.Name) + " " + output.Faint(j.ID)})
+	}
+	return node
+}
+
+// resolveHiddenProjects fetches projects that don't appear in the list API but referenced by build types (e.g. versioned-settings generated projects).
+func resolveHiddenProjects(client api.ClientInterface, known map[string]*api.Project, children map[string][]api.Project, jobsByProject map[string][]api.BuildType) {
+	var queue []string
+	for pid := range jobsByProject {
+		if _, ok := known[pid]; !ok {
+			queue = append(queue, pid)
+			known[pid] = nil
+		}
+	}
+	for i := 0; i < len(queue); i++ {
+		p, err := client.GetProject(queue[i])
+		if err != nil {
+			continue
+		}
+		known[p.ID] = p
+		children[p.ParentProjectID] = append(children[p.ParentProjectID], *p)
+		if _, ok := known[p.ParentProjectID]; p.ParentProjectID != "" && !ok {
+			queue = append(queue, p.ParentProjectID)
+			known[p.ParentProjectID] = nil
+		}
+	}
 }

@@ -355,6 +355,18 @@ type VersionedSettingsConfig struct {
 	ShowSettingsChanges bool   `json:"showSettingsChanges,omitempty"`
 }
 
+// SnapshotDependency represents a snapshot dependency between build configurations
+type SnapshotDependency struct {
+	ID              string     `json:"id"`
+	SourceBuildType *BuildType `json:"source-buildType,omitempty"`
+}
+
+// SnapshotDependencyList represents a list of snapshot dependencies
+type SnapshotDependencyList struct {
+	Count              int                  `json:"count"`
+	SnapshotDependency []SnapshotDependency `json:"snapshot-dependency"`
+}
+
 // APIError represents an error from TeamCity's REST API
 type APIError struct {
 	Message string `json:"message"`

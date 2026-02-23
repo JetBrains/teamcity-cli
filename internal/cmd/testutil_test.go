@@ -275,6 +275,12 @@ func setupMockClient(t *testing.T) *TestServer {
 			return
 		}
 
+		// Handle snapshot-dependencies subpath
+		if strings.Contains(r.URL.Path, "/snapshot-dependencies") {
+			JSON(w, api.SnapshotDependencyList{Count: 0, SnapshotDependency: []api.SnapshotDependency{}})
+			return
+		}
+
 		// Handle parameters subpath
 		if strings.Contains(r.URL.Path, "/parameters/") {
 			JSON(w, api.Parameter{Name: "param1", Value: "value1"})

@@ -173,6 +173,82 @@ func TestProjectSettingsStatusNotConfigured(T *testing.T) {
 	runCmd(T, "project", "settings", "status", "NoSettingsProject")
 }
 
+func TestProjectTree(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "project", "tree")
+	runCmd(T, "project", "tree", "_Root")
+	runCmd(T, "project", "tree", "--no-jobs")
+}
+
+func TestProjectTreeSubproject(T *testing.T) {
+	ts := setupMockClient(T)
+
+	ts.Handle("GET /app/rest/projects", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.ProjectList{
+			Count: 4,
+			Projects: []api.Project{
+				{ID: "_Root", Name: "Root"},
+				{ID: "Parent", Name: "Parent", ParentProjectID: "_Root"},
+				{ID: "Child1", Name: "Alpha", ParentProjectID: "Parent"},
+				{ID: "Child2", Name: "Beta", ParentProjectID: "Parent"},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/buildTypes", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.BuildTypeList{
+			Count: 2,
+			BuildTypes: []api.BuildType{
+				{ID: "Child1_Build", Name: "Build", ProjectID: "Child1"},
+				{ID: "Child2_Test", Name: "Test", ProjectID: "Child2"},
+			},
+		})
+	})
+
+	runCmd(T, "project", "tree", "Parent")
+}
+
+func TestProjectTreeNotFound(T *testing.T) {
+	setupMockClient(T)
+
+	runCmdExpectErr(T, "not found", "project", "tree", "NonExistentProject123456")
+}
+
+func TestJobTree(T *testing.T) {
+	setupMockClient(T)
+
+	runCmd(T, "job", "tree", testJob)
+}
+
+func TestJobTreeWithDeps(T *testing.T) {
+	ts := setupMockClient(T)
+
+	ts.Handle("GET /app/rest/buildTypes/id:Deploy/snapshot-dependencies", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.SnapshotDependencyList{
+			Count: 1,
+			SnapshotDependency: []api.SnapshotDependency{
+				{ID: "dep1", SourceBuildType: &api.BuildType{ID: "Build", Name: "Build", ProjectID: "MyProject"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/buildTypes/id:Build/snapshot-dependencies", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.SnapshotDependencyList{
+			Count: 1,
+			SnapshotDependency: []api.SnapshotDependency{
+				{ID: "dep2", SourceBuildType: &api.BuildType{ID: "Compile", Name: "Compile", ProjectID: "MyProject"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/buildTypes/id:Deploy", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.BuildType{ID: "Deploy", Name: "Deploy", ProjectID: "MyProject"})
+	})
+
+	runCmd(T, "job", "tree", "Deploy")
+}
+
 func TestJobList(T *testing.T) {
 	setupMockClient(T)
 
