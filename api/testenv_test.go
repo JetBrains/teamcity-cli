@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -26,7 +27,7 @@ const (
 	serverImage = "jetbrains/teamcity-server:latest"
 	agentImage  = "jetbrains/teamcity-agent:latest"
 	serverName  = "tc-test-server"
-	agentName   = "tc-test-agent"
+	numAgents   = 1
 )
 
 type testEnv struct {
@@ -41,7 +42,7 @@ type testEnv struct {
 	ownsContainers bool
 	network        *testcontainers.DockerNetwork
 	server         testcontainers.Container
-	agent          testcontainers.Container
+	agents         []testcontainers.Container
 	ctx            context.Context
 }
 
@@ -55,8 +56,8 @@ func (e *testEnv) Cleanup() {
 			_ = e.Client.RebootAgent(e.ctx, agents.Agents[0].ID, true)
 		}
 	}
-	if e.agent != nil {
-		_ = e.agent.Terminate(e.ctx)
+	for _, a := range e.agents {
+		_ = a.Terminate(e.ctx)
 	}
 	if e.server != nil {
 		_ = e.server.Terminate(e.ctx)
@@ -240,39 +241,49 @@ func startContainers() (*testEnv, error) {
 
 	env.Client = api.NewClient(env.URL, env.Token)
 
-	log.Println("Starting TeamCity agent...")
-	env.agent, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Name:     agentName,
-			Image:    agentImage,
-			Networks: []string{env.network.Name},
-			NetworkAliases: map[string][]string{
-				env.network.Name: {"teamcity-agent"},
-			},
-			Env:        map[string]string{"SERVER_URL": "http://teamcity-server:8111"},
-			Privileged: true,
-			ConfigModifier: func(c *container.Config) {
-				c.Tty = true
-				c.OpenStdin = true
-				// Run as root so iptables has permission to modify firewall rules.
-				// The default USER in the agent image is "buildagent" which silently
-				// fails to run iptables, leaving IMDS unblocked.
-				c.User = "root"
-				// Block EC2 IMDS before the agent JVM starts so the amazonEC2 plugin
-				// doesn't override SERVER_URL with a TeamCity Cloud placeholder.
-				c.Entrypoint = []string{"sh", "-c", "iptables -I OUTPUT -d 169.254.169.254 -j REJECT 2>/dev/null; exec /run-services.sh"}
-			},
-		},
-		Started: true,
-	})
-	if err != nil {
-		env.Cleanup()
-		return nil, fmt.Errorf("start agent: %w", err)
+	log.Printf("Starting %d TeamCity agent(s) in parallel...", numAgents)
+	type agentResult struct {
+		container testcontainers.Container
+		err       error
+	}
+	results := make([]agentResult, numAgents)
+	var wg sync.WaitGroup
+	for i := range numAgents {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			name := fmt.Sprintf("tc-test-agent-%d", idx+1)
+			c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+				ContainerRequest: testcontainers.ContainerRequest{
+					Name:       name,
+					Image:      agentImage,
+					Networks:   []string{env.network.Name},
+					Env:        map[string]string{"SERVER_URL": "http://teamcity-server:8111"},
+					Privileged: true,
+					ConfigModifier: func(cfg *container.Config) {
+						cfg.Tty = true
+						cfg.OpenStdin = true
+						cfg.User = "root"
+						cfg.Entrypoint = []string{"sh", "-c", "iptables -I OUTPUT -d 169.254.169.254 -j REJECT 2>/dev/null; exec /run-services.sh"}
+					},
+				},
+				Started: true,
+			})
+			results[idx] = agentResult{c, err}
+		}(i)
+	}
+	wg.Wait()
+	for i, r := range results {
+		if r.err != nil {
+			env.Cleanup()
+			return nil, fmt.Errorf("start agent tc-test-agent-%d: %w", i+1, r.err)
+		}
+		env.agents = append(env.agents, r.container)
 	}
 
-	if err := waitForAgent(env.Client); err != nil {
+	if err := waitForAgents(env.Client, numAgents); err != nil {
 		env.Cleanup()
-		return nil, fmt.Errorf("authorize agent: %w", err)
+		return nil, fmt.Errorf("authorize agents: %w", err)
 	}
 
 	if err := env.ensureBuild(); err != nil {
@@ -421,18 +432,31 @@ func setupServer(serverURL, superToken, projectID, configID string) (string, err
 	return token.Value, nil
 }
 
-func waitForAgent(client *api.Client) error {
-	log.Println("Waiting for agent...")
+func waitForAgents(client *api.Client, count int) error {
+	log.Printf("Waiting for %d agent(s)...", count)
+	authorized := map[int]bool{}
 	deadline := time.Now().Add(3 * time.Minute)
 	for time.Now().Before(deadline) {
 		agents, err := client.GetAgents(api.AgentsOptions{})
-		if err == nil && len(agents.Agents) > 0 {
-			log.Println("Authorizing agent...")
-			return client.AuthorizeAgent(agents.Agents[0].ID, true)
+		if err != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		for _, a := range agents.Agents {
+			if !authorized[a.ID] {
+				log.Printf("Authorizing agent %d...", a.ID)
+				if err := client.AuthorizeAgent(a.ID, true); err == nil {
+					authorized[a.ID] = true
+				}
+			}
+		}
+		if len(authorized) >= count {
+			log.Printf("All %d agents authorized", count)
+			return nil
 		}
 		time.Sleep(5 * time.Second)
 	}
-	return fmt.Errorf("agent timeout")
+	return fmt.Errorf("agent timeout: got %d of %d", len(authorized), count)
 }
 
 func setServerURL(serverURL, superToken, internalURL string) {
@@ -475,12 +499,13 @@ func copyBinaryToAgent(env *testEnv) error {
 		return fmt.Errorf("build binary: %w", err)
 	}
 
-	log.Println("Copying binary to agent container...")
-	err = env.agent.CopyFileToContainer(env.ctx, binaryPath, "/usr/local/bin/teamcity", 0755)
-	if err != nil {
-		return fmt.Errorf("copy to container: %w", err)
+	for i, agent := range env.agents {
+		log.Printf("Copying binary to agent container %d...", i+1)
+		if err := agent.CopyFileToContainer(env.ctx, binaryPath, "/usr/local/bin/teamcity", 0755); err != nil {
+			return fmt.Errorf("copy to agent %d: %w", i+1, err)
+		}
 	}
 
-	log.Println("CLI binary installed on agent at /usr/local/bin/teamcity")
+	log.Printf("CLI binary installed on %d agents", len(env.agents))
 	return nil
 }
