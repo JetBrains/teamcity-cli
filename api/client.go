@@ -36,6 +36,10 @@ type Client struct {
 	// Use WithDebugFunc to configure.
 	DebugFunc func(format string, args ...any)
 
+	// ReadOnly, when true, blocks all non-GET requests.
+	// Use WithReadOnly to configure.
+	ReadOnly bool
+
 	// Basic auth credentials (used instead of Token if set)
 	basicUser string
 	basicPass string
@@ -113,6 +117,16 @@ func WithDebugFunc(f func(format string, args ...any)) ClientOption {
 		c.DebugFunc = f
 	}
 }
+
+// WithReadOnly sets the client to read-only mode, blocking all non-GET requests.
+func WithReadOnly(readOnly bool) ClientOption {
+	return func(c *Client) {
+		c.ReadOnly = readOnly
+	}
+}
+
+// ErrReadOnly is returned when a non-GET request is attempted in read-only mode.
+var ErrReadOnly = errors.New("read-only mode: write operations are not allowed")
 
 // NewClient creates a new TeamCity API client with Bearer token authentication
 func NewClient(baseURL, token string, opts ...ClientOption) *Client {
@@ -250,6 +264,10 @@ func (c *Client) doRequestWithAccept(method, path string, body io.Reader, accept
 }
 
 func (c *Client) doRequestFull(method, path string, body io.Reader, contentType, accept string) (*http.Response, error) {
+	if c.ReadOnly && method != "GET" {
+		return nil, fmt.Errorf("%w: %s %s", ErrReadOnly, method, path)
+	}
+
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
 
 	req, err := http.NewRequest(method, reqURL, body)
@@ -501,6 +519,10 @@ type RawResponse struct {
 
 // RawRequest performs a raw HTTP request and returns the response without parsing
 func (c *Client) RawRequest(method, path string, body io.Reader, headers map[string]string) (*RawResponse, error) {
+	if c.ReadOnly && method != "GET" {
+		return nil, fmt.Errorf("%w: %s %s", ErrReadOnly, method, path)
+	}
+
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
 
 	req, err := http.NewRequest(method, reqURL, body)

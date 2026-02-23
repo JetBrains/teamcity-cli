@@ -748,3 +748,28 @@ func TestRemoveServerCleansKeyring(T *testing.T) {
 	_, err = keyringGet("tc:https://tc.example.com", "admin")
 	assert.ErrorIs(T, err, errKeyringNotFound)
 }
+
+func TestIsReadOnly(T *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+		want bool
+	}{
+		{"empty", "", false},
+		{"1", "1", true},
+		{"true", "true", true},
+		{"yes", "yes", true},
+		{"false", "false", false},
+		{"0", "0", false},
+		{"no", "no", false},
+		{"TRUE uppercase", "TRUE", false},
+		{"random string", "enabled", false},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Setenv(EnvReadOnly, tc.env)
+			assert.Equal(t, tc.want, IsReadOnly())
+		})
+	}
+}

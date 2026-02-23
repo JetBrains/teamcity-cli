@@ -16,6 +16,7 @@ const (
 	EnvServerURL = "TEAMCITY_URL"
 	EnvToken     = "TEAMCITY_TOKEN"
 	EnvGuestAuth = "TEAMCITY_GUEST"
+	EnvReadOnly  = "TEAMCITY_RO"
 	EnvDSLDir    = "TEAMCITY_DSL_DIR"
 
 	DefaultDSLDirTeamCity = ".teamcity"
@@ -231,6 +232,13 @@ func IsGuestAuth() bool {
 		return server.Guest
 	}
 	return false
+}
+
+// IsReadOnly returns true if read-only mode is enabled via env var.
+// When enabled, all non-GET API requests are blocked.
+func IsReadOnly() bool {
+	v := os.Getenv(EnvReadOnly)
+	return v == "1" || v == "true" || v == "yes"
 }
 
 // SetGuestServer saves a server with guest auth enabled and no token

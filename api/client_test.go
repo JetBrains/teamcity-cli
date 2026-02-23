@@ -873,3 +873,79 @@ func TestGuestClientUsesGuestAuthPrefix(T *testing.T) {
 
 	assert.Equal(T, "/guestAuth/app/rest/server", requestPath)
 }
+
+func TestReadOnlyBlocksNonGET(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		T.Fatal("request should not reach server in read-only mode")
+	})
+	client.ReadOnly = true
+
+	T.Run("POST blocked", func(t *testing.T) {
+		t.Parallel()
+		_, err := client.RunBuild("SomeJob", RunBuildOptions{})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrReadOnly)
+	})
+
+	T.Run("RawRequest POST blocked", func(t *testing.T) {
+		t.Parallel()
+		_, err := client.RawRequest("POST", "/app/rest/buildQueue", nil, nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrReadOnly)
+	})
+
+	T.Run("RawRequest PUT blocked", func(t *testing.T) {
+		t.Parallel()
+		_, err := client.RawRequest("PUT", "/app/rest/something", nil, nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrReadOnly)
+	})
+
+	T.Run("RawRequest DELETE blocked", func(t *testing.T) {
+		t.Parallel()
+		_, err := client.RawRequest("DELETE", "/app/rest/something", nil, nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrReadOnly)
+	})
+}
+
+func TestReadOnlyAllowsGET(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(Server{VersionMajor: 2024, VersionMinor: 12})
+	})
+	client.ReadOnly = true
+
+	server, err := client.GetServer()
+	require.NoError(T, err)
+	assert.Equal(T, 2024, server.VersionMajor)
+}
+
+func TestReadOnlyRawRequestAllowsGET(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "GET", r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"version":"2024.12"}`))
+	})
+	client.ReadOnly = true
+
+	resp, err := client.RawRequest("GET", "/app/rest/server", nil, nil)
+	require.NoError(T, err)
+	assert.Equal(T, 200, resp.StatusCode)
+}
+
+func TestWithReadOnlyOption(T *testing.T) {
+	T.Parallel()
+
+	client := NewClient("https://example.com", "token", WithReadOnly(true))
+	assert.True(T, client.ReadOnly)
+
+	client2 := NewClient("https://example.com", "token", WithReadOnly(false))
+	assert.False(T, client2.ReadOnly)
+}

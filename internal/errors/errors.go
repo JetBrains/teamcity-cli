@@ -84,6 +84,14 @@ func RequiredFlag(flag string) *UserError {
 	}
 }
 
+// ReadOnly returns an error when a write operation is attempted in read-only mode
+func ReadOnly(method string) *UserError {
+	return &UserError{
+		Message:    fmt.Sprintf("operation blocked: %s request not allowed in read-only mode", method),
+		Suggestion: "Unset the TEAMCITY_RO environment variable to allow write operations",
+	}
+}
+
 // MutuallyExclusive returns an error when mutually exclusive options are both provided
 func MutuallyExclusive(arg, flag string) *UserError {
 	return &UserError{
