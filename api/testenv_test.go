@@ -245,6 +245,9 @@ func startContainers() (*testEnv, error) {
 			},
 			Env:        map[string]string{"SERVER_URL": "http://teamcity-server:8111"},
 			Privileged: true,
+			// Block EC2 IMDS so the agent's amazonEC2 plugin doesn't override SERVER_URL
+			// with a TeamCity Cloud placeholder when running on EC2 instances.
+			ExtraHosts: []string{"169.254.169.254:127.0.0.1"},
 			ConfigModifier: func(c *container.Config) {
 				c.Tty = true
 				c.OpenStdin = true
