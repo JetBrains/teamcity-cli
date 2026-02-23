@@ -40,6 +40,21 @@ func skipIfGuest(t *testing.T) {
 	}
 }
 
+// cancelAndWait cancels a build and waits for it to reach a terminal state so the
+// single testcontainer agent is free for subsequent tests.
+func cancelAndWait(t *testing.T, buildID string) {
+	t.Helper()
+	_ = client.CancelBuild(buildID, "Test cleanup")
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		b, err := client.GetBuild(buildID)
+		if err == nil && b.State == "finished" {
+			return
+		}
+		time.Sleep(time.Second)
+	}
+}
+
 func TestMain(m *testing.M) {
 	env, err := setupTestEnv()
 	if err != nil {
@@ -53,7 +68,7 @@ func TestMain(m *testing.M) {
 	testBuild = env.Build
 	testEnvRef = env
 
-	if env.agent != nil {
+	if len(env.agents) > 0 {
 		if err := copyBinaryToAgent(env); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: could not copy binary to agent: %v\n", err)
 		}
@@ -203,16 +218,10 @@ func TestRunBuildAndCancel(T *testing.T) {
 	T.Logf("Started build #%d", build.ID)
 
 	// Verify build was created
-	fetched, err := client.GetBuild(fmt.Sprintf("%d", build.ID))
+	_, err = client.GetBuild(fmt.Sprintf("%d", build.ID))
 	require.NoError(T, err)
 
-	// Cancel if still in queue/running
-	if fetched.State == "queued" || fetched.State == "running" {
-		err = client.CancelBuild(fmt.Sprintf("%d", build.ID), "Integration test cleanup")
-		if err != nil {
-			T.Logf("CancelBuild warning (may have finished): %v", err)
-		}
-	}
+	cancelAndWait(T, fmt.Sprintf("%d", build.ID))
 }
 
 func TestGetBuildQueue(T *testing.T) {
@@ -424,8 +433,7 @@ func TestQueueOperations(T *testing.T) {
 		T.Logf("Approval status: %s", info.Status)
 	}
 
-	// Cleanup
-	client.CancelBuild(buildID, "Test cleanup")
+	cancelAndWait(T, buildID)
 }
 
 func TestRemoveFromQueue(T *testing.T) {
@@ -433,11 +441,12 @@ func TestRemoveFromQueue(T *testing.T) {
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{Comment: "Queue remove test"})
 	require.NoError(T, err)
 
+	buildID := fmt.Sprintf("%d", build.ID)
 	// Remove from queue (may fail if already started)
-	if err := client.RemoveFromQueue(fmt.Sprintf("%d", build.ID)); err != nil {
+	if err := client.RemoveFromQueue(buildID); err != nil {
 		T.Logf("RemoveFromQueue: %v (may have started)", err)
-		client.CancelBuild(fmt.Sprintf("%d", build.ID), "Test cleanup")
 	}
+	cancelAndWait(T, buildID)
 }
 
 func TestGetArtifacts(T *testing.T) {
@@ -678,12 +687,7 @@ func TestPersonalBuildWithLocalChanges(T *testing.T) {
 		assert.Equal(T, changeID, fmt.Sprintf("%d", fetched.LastChanges.Change[0].ID), "change ID should match")
 	}
 
-	if fetched.State == "queued" || fetched.State == "running" {
-		err = client.CancelBuild(fmt.Sprintf("%d", build.ID), "Integration test cleanup")
-		if err != nil {
-			T.Logf("CancelBuild warning (may have finished): %v", err)
-		}
-	}
+	cancelAndWait(T, fmt.Sprintf("%d", build.ID))
 }
 
 func TestBasicAuth(T *testing.T) {
@@ -715,7 +719,7 @@ func TestBasicAuth(T *testing.T) {
 // uses GetBuildAuth() to read credentials from the properties file.
 func TestBuildLevelAuth(T *testing.T) {
 	skipIfGuest(T)
-	if testEnvRef == nil || testEnvRef.agent == nil {
+	if testEnvRef == nil || len(testEnvRef.agents) == 0 {
 		T.Skip("test requires testcontainers agent")
 	}
 
@@ -948,8 +952,7 @@ func TestRunBuildAdvancedOptions(T *testing.T) {
 		})
 		require.NoError(t, err)
 		t.Logf("Started build #%d with rebuild deps + queue at top", build.ID)
-
-		client.CancelBuild(fmt.Sprintf("%d", build.ID), "Test cleanup")
+		cancelAndWait(t, fmt.Sprintf("%d", build.ID))
 	})
 
 	T.Run("with agent ID", func(t *testing.T) {
@@ -966,8 +969,7 @@ func TestRunBuildAdvancedOptions(T *testing.T) {
 		})
 		require.NoError(t, err)
 		t.Logf("Started build #%d on agent %d", build.ID, agentID)
-
-		client.CancelBuild(fmt.Sprintf("%d", build.ID), "Test cleanup")
+		cancelAndWait(t, fmt.Sprintf("%d", build.ID))
 	})
 
 	T.Run("with refs branch prefix", func(t *testing.T) {
@@ -977,8 +979,7 @@ func TestRunBuildAdvancedOptions(T *testing.T) {
 		})
 		require.NoError(t, err)
 		t.Logf("Started build #%d with refs/ branch", build.ID)
-
-		client.CancelBuild(fmt.Sprintf("%d", build.ID), "Test cleanup")
+		cancelAndWait(t, fmt.Sprintf("%d", build.ID))
 	})
 }
 
@@ -1020,7 +1021,7 @@ func TestGetBuildLogEmpty(T *testing.T) {
 	require.NoError(T, err)
 
 	buildID := fmt.Sprintf("%d", build.ID)
-	client.CancelBuild(buildID, "Empty log test cleanup")
+	cancelAndWait(T, buildID)
 
 	log, err := client.GetBuildLog(buildID)
 	if err != nil {
