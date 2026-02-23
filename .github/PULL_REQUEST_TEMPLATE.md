@@ -24,6 +24,8 @@ teamcity <command>
 
 ## Test Plan
 
-- [ ] Tests pass (`go test ./...`)
-- [ ] Linter passes (`golangci-lint run`)
-- [ ] Manually tested
+- [ ] Unit tests pass (`just unit`)
+- [ ] Linter passes (`just lint`)
+- [ ] Acceptance tests pass (`just acceptance`)
+- [ ] If adding a new command/flag: added `.txtar` test in `acceptance/testdata/`
+- [ ] If changing docs-visible behavior: updated `docs/`, `skills/`, and `README.md`
