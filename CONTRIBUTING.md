@@ -54,6 +54,22 @@ All new features and bug fixes must include tests. We have a solid integration t
 
 We're fine with AI tools — Junie, Claude Code, Copilot, whatever helps you move faster. But you must understand the code you're submitting. `teamcity` is a tool where we prioritize security and reliability. PRs with AI-generated code that the author can't explain or defend during review will not be merged.
 
+## Documentation
+
+Documentation lives in `docs/topics/` and is built with [Writerside](https://www.jetbrains.com/writerside/). The published site is at [jb.gg/tc/docs](https://jb.gg/tc/docs).
+
+When your change adds or modifies commands, flags, or user-facing behavior, update **all** of the following:
+
+| Location               | What to update                                                                   |
+|------------------------|----------------------------------------------------------------------------------|
+| `docs/topics/`         | Writerside topic files (`.md`) — the primary documentation                       |
+| `skills/teamcity-cli/` | AI agent skill — `SKILL.md`, `references/commands.md`, `references/workflows.md` |
+| `README.md`            | Commands table in the root readme                                                |
+
+**GIFs:** Terminal recordings (in `docs/images/`) illustrate key workflows. If your change visibly alters CLI output for an existing GIF, re-record it. Use [vhs](https://github.com/charmbracelet/vhs) with tape files in `docs/tapes/`.
+
+**Keep docs in sync:** It's easy to forget one of the locations above. A good check: grep for the flag or command name you changed across `docs/`, `skills/`, and `README.md` to make sure nothing is stale.
+
 ## Submit a pull request
 
 Push your branch and open a PR against `main`. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) will guide you through describing the change.

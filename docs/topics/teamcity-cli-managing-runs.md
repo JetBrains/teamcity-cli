@@ -693,7 +693,7 @@ teamcity run log --job MyProject_Build
 
 <img src="run-log.gif" alt="Viewing build logs" border-effect="rounded"/>
 
-Show only the failure summary (problems and failed tests):
+Show failure diagnostics — build problems, failed tests with full stack traces, and whether each failure is new or pre-existing:
 
 ```Shell
 teamcity run log 12345 --failed

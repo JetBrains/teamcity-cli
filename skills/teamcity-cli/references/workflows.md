@@ -459,10 +459,10 @@ teamcity pool unlink <pool-id> <project-id>
 
 ## Troubleshooting
 
-| Symptom | Likely Cause | Action |
-|---------|--------------|--------|
-| `401 Unauthorized` | Invalid or expired token | Run `teamcity auth status` to check; re-login with `teamcity auth login` |
-| `403 Forbidden` | Insufficient permissions | Build config may require different access rights; check with TeamCity admin |
-| `404 Not Found` | Build deleted or wrong ID | Verify the build ID/URL; the build may have been cleaned up |
-| Connection refused / timeout | Server unreachable | Check if TeamCity instance is accessible; verify server URL with `teamcity auth status` |
-| `No server configured` | Missing auth config | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars |
+| Symptom                      | Likely Cause              | Action                                                                                  |
+|------------------------------|---------------------------|-----------------------------------------------------------------------------------------|
+| `401 Unauthorized`           | Invalid or expired token  | Run `teamcity auth status` to check; re-login with `teamcity auth login`                |
+| `403 Forbidden`              | Insufficient permissions  | Build config may require different access rights; check with TeamCity admin             |
+| `404 Not Found`              | Build deleted or wrong ID | Verify the build ID/URL; the build may have been cleaned up                             |
+| Connection refused / timeout | Server unreachable        | Check if TeamCity instance is accessible; verify server URL with `teamcity auth status` |
+| `No server configured`       | Missing auth config       | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars  |

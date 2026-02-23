@@ -2,8 +2,8 @@
 
 ## Authentication (`teamcity auth`)
 
-| Command                  | Description                       |
-|--------------------------|-----------------------------------|
+| Command                        | Description                       |
+|--------------------------------|-----------------------------------|
 | `teamcity auth login -s <url>` | Authenticate with TeamCity server |
 | `teamcity auth logout`         | Log out from current server       |
 | `teamcity auth status`         | Show auth status and server info  |
@@ -15,24 +15,24 @@ Login options:
 
 ## Builds/Runs (`teamcity run`)
 
-| Command                    | Description                |
-|----------------------------|----------------------------|
-| `teamcity run list`              | List recent builds         |
-| `teamcity run view <id>`         | View build details         |
-| `teamcity run start <job-id>`    | Start a new build          |
-| `teamcity run cancel <id>`       | Cancel a build             |
-| `teamcity run restart <id>`      | Restart a build            |
-| `teamcity run watch <id>`        | Watch build in real-time   |
-| `teamcity run log <id>`          | View build log             |
-| `teamcity run tests <id>`        | View test results          |
-| `teamcity run changes <id>`      | View VCS changes           |
-| `teamcity run artifacts <id>`    | List artifacts             |
-| `teamcity run download <id>`     | Download artifacts         |
-| `teamcity run pin <id>`          | Pin build                  |
-| `teamcity run unpin <id>`        | Unpin build                |
-| `teamcity run tag <id> <tags>`   | Add tags                   |
-| `teamcity run untag <id> <tags>` | Remove tags                |
-| `teamcity run comment <id>`      | Manage comments            |
+| Command                          | Description              |
+|----------------------------------|--------------------------|
+| `teamcity run list`              | List recent builds       |
+| `teamcity run view <id>`         | View build details       |
+| `teamcity run start <job-id>`    | Start a new build        |
+| `teamcity run cancel <id>`       | Cancel a build           |
+| `teamcity run restart <id>`      | Restart a build          |
+| `teamcity run watch <id>`        | Watch build in real-time |
+| `teamcity run log <id>`          | View build log           |
+| `teamcity run tests <id>`        | View test results        |
+| `teamcity run changes <id>`      | View VCS changes         |
+| `teamcity run artifacts <id>`    | List artifacts           |
+| `teamcity run download <id>`     | Download artifacts       |
+| `teamcity run pin <id>`          | Pin build                |
+| `teamcity run unpin <id>`        | Unpin build              |
+| `teamcity run tag <id> <tags>`   | Add tags                 |
+| `teamcity run untag <id> <tags>` | Remove tags              |
+| `teamcity run comment <id>`      | Manage comments          |
 
 ### Flags for `teamcity run list`
 
@@ -136,14 +136,15 @@ Shows all branches and all build states (including canceled, personal, composite
 
 | Command                              | Description               |
 |--------------------------------------|---------------------------|
-| `teamcity job list`                        | List build configurations |
-| `teamcity job view <id>`                   | View job details          |
-| `teamcity job pause <id>`                  | Pause job                 |
-| `teamcity job resume <id>`                 | Resume job                |
-| `teamcity job param list <id>`             | List parameters           |
-| `teamcity job param get <id> <name>`       | Get parameter             |
-| `teamcity job param set <id> <name> <val>` | Set parameter             |
-| `teamcity job param delete <id> <name>`    | Delete parameter          |
+| `teamcity job list`                        | List build configurations      |
+| `teamcity job view <id>`                   | View job details               |
+| `teamcity job tree <id>`                   | Show snapshot dependency tree  |
+| `teamcity job pause <id>`                  | Pause job                      |
+| `teamcity job resume <id>`                 | Resume job                     |
+| `teamcity job param list <id>`             | List parameters                |
+| `teamcity job param get <id> <name>`       | Get parameter                  |
+| `teamcity job param set <id> <name> <val>` | Set parameter                  |
+| `teamcity job param delete <id> <name>`    | Delete parameter               |
 
 ### Flags for `teamcity job list`
 
@@ -156,6 +157,11 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
+### Flags for `teamcity job tree`
+
+- `-d, --depth <n>` - Limit tree depth (0 = unlimited)
+- `--only <type>` - Show only `dependents` or `dependencies`
+
 ### Flags for `teamcity job param list`
 
 - `--json` - Output as JSON
@@ -166,10 +172,11 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ## Projects (`teamcity project`)
 
-| Command                                  | Description                  |
-|------------------------------------------|------------------------------|
+| Command                                        | Description                  |
+|------------------------------------------------|------------------------------|
 | `teamcity project list`                        | List projects                |
 | `teamcity project view <id>`                   | View project details         |
+| `teamcity project tree [id]`                   | Show project hierarchy tree  |
 | `teamcity project param list <id>`             | List parameters              |
 | `teamcity project param get <id> <name>`       | Get parameter                |
 | `teamcity project param set <id> <name> <val>` | Set parameter                |
@@ -179,6 +186,11 @@ Shows all branches and all build states (including canceled, personal, composite
 | `teamcity project settings export <id>`        | Export settings as ZIP       |
 | `teamcity project settings status <id>`        | Show versioned settings sync |
 | `teamcity project settings validate`           | Validate Kotlin DSL config   |
+
+### Flags for `teamcity project tree`
+
+- `-d, --depth <n>` - Limit tree depth (0 = unlimited)
+- `--no-jobs` - Hide build configurations
 
 ### Flags for `teamcity project list`
 
@@ -220,8 +232,8 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ## Queue (`teamcity queue`)
 
-| Command                 | Description           |
-|-------------------------|-----------------------|
+| Command                       | Description           |
+|-------------------------------|-----------------------|
 | `teamcity queue list`         | List queued builds    |
 | `teamcity queue remove <id>`  | Remove from queue     |
 | `teamcity queue top <id>`     | Move to top of queue  |
@@ -239,8 +251,8 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ## Agents (`teamcity agent`)
 
-| Command                     | Description                       |
-|-----------------------------|-----------------------------------|
+| Command                           | Description                       |
+|-----------------------------------|-----------------------------------|
 | `teamcity agent list`             | List build agents                 |
 | `teamcity agent view <id>`        | View agent details                |
 | `teamcity agent authorize <id>`   | Authorize agent to run builds     |

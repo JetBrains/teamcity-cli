@@ -1,6 +1,6 @@
 ---
 name: teamcity-cli
-version: "0.6.0"
+version: "0.7.0"
 author: JetBrains
 description: Use when working with TeamCity CI/CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, and agents.
 ---
@@ -12,14 +12,10 @@ description: Use when working with TeamCity CI/CD or when user provides a TeamCi
 ```bash
 teamcity auth status                    # Check authentication
 teamcity run list --status failure      # Find failed builds
-teamcity run log <id> --failed          # View failed build log
+teamcity run log <id> --failed          # Full failure diagnostics
 ```
 
-## Before Running Commands
-
-**Do not guess subcommands, flags, or syntax.** Only use commands and flags documented in the [Command Reference](references/commands.md) or shown by `teamcity <command> --help`. If a command doesn't support what you need, fall back to `teamcity api /app/rest/...`.
-
-**Terminology:** There is no `build`, `pipeline`, or `config` subcommand. Builds are **runs** (`teamcity run`). Build configurations are **jobs** (`teamcity job`).
+**Do not guess flags or syntax.** Use the [Command Reference](references/commands.md) or `teamcity <command> --help`. Fall back to `teamcity api /app/rest/...` when needed. Builds are **runs** (`teamcity run`), build configurations are **jobs** (`teamcity job`).
 
 ## Core Commands
 
@@ -28,8 +24,8 @@ teamcity run log <id> --failed          # View failed build log
 | Builds    | `run list`, `view`, `start`, `watch`, `log`, `cancel`, `restart`, `tests`, `changes`              |
 | Artifacts | `run artifacts`, `run download`                                                                   |
 | Metadata  | `run pin/unpin`, `run tag/untag`, `run comment`                                                   |
-| Jobs      | `job list`, `view`, `pause/resume`, `param list/get/set/delete`                                   |
-| Projects  | `project list`, `view`, `param`, `token put/get`, `settings export/status/validate`               |
+| Jobs      | `job list`, `view`, `tree`, `pause/resume`, `param list/get/set/delete`                           |
+| Projects  | `project list`, `view`, `tree`, `param`, `token put/get`, `settings export/status/validate`       |
 | Queue     | `queue list`, `approve`, `remove`, `top`                                                          |
 | Agents    | `agent list`, `view`, `enable/disable`, `authorize/deauthorize`, `exec`, `term`, `reboot`, `move` |
 | Pools     | `pool list`, `view`, `link/unlink`                                                                |

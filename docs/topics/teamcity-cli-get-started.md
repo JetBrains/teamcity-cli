@@ -299,7 +299,7 @@ When a build fails, use this workflow to quickly find the root cause:
    teamcity run list --status failure
    ```
 
-2. View the failure summary (problems and failed tests):
+2. View failure diagnostics (problems, failed tests with full stack traces):
 
    ```Shell
    teamcity run log 12345 --failed
