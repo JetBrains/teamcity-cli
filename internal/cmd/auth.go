@@ -73,7 +73,8 @@ build-level credentials from the build properties file.`,
 			if guest {
 				return runAuthLoginGuest(serverURL, token)
 			}
-			return runAuthLogin(serverURL, token, insecureStorage, noBrowser, scopes)
+			scopesExplicit := cmd.Flags().Changed("scopes")
+			return runAuthLogin(serverURL, token, insecureStorage, noBrowser, scopes, scopesExplicit)
 		},
 	}
 
@@ -87,7 +88,7 @@ build-level credentials from the build properties file.`,
 	return cmd
 }
 
-func runAuthLogin(serverURL, token string, insecureStorage bool, noBrowser bool, scopes []string) error {
+func runAuthLogin(serverURL, token string, insecureStorage bool, noBrowser bool, scopes []string, scopesExplicit bool) error {
 	isInteractive := !NoInput && output.IsStdinTerminal()
 
 	if serverURL == "" {
@@ -128,9 +129,14 @@ func runAuthLogin(serverURL, token string, insecureStorage bool, noBrowser bool,
 		pkceChecked = true
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		enabled, _ := api.IsPkceEnabled(ctx, serverURL)
-		cancel()
 		if enabled {
 			output.Info("Secure browser login enabled on this server")
+			if !scopesExplicit {
+				if serverScopes, err := api.FetchPkceScopes(ctx, serverURL); err == nil {
+					scopes = serverScopes
+				}
+			}
+			cancel()
 			if tokenResp, err := runPkceLogin(serverURL, scopes); err != nil {
 				output.Warn("Browser auth failed: %v", err)
 				output.Info("Falling back to manual token entry...")
@@ -138,6 +144,8 @@ func runAuthLogin(serverURL, token string, insecureStorage bool, noBrowser bool,
 				token = tokenResp.AccessToken
 				tokenValidUntil = tokenResp.ValidUntil
 			}
+		} else {
+			cancel()
 		}
 	}
 
@@ -196,7 +204,7 @@ func runAuthLogin(serverURL, token string, insecureStorage bool, noBrowser bool,
 
 	output.Info("%s", output.Green("✓"))
 
-	insecureFallback, err := config.SetServerWithKeyring(serverURL, token, user.Username, insecureStorage)
+	insecureFallback, err := config.SetServerWithKeyring(serverURL, token, user.Username, tokenValidUntil, insecureStorage)
 	if err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
@@ -402,6 +410,21 @@ func showExplicitAuthStatus(serverURL, token, tokenSource string) error {
 
 	fmt.Printf("%s Logged in to %s\n", output.Green("✓"), output.Cyan(serverURL))
 	fmt.Printf("  User: %s (%s) · %s\n", user.Name, user.Username, tokenSourceLabel(tokenSource))
+
+	if expiry := config.GetTokenExpiry(); expiry != "" {
+		if t, err := time.Parse(time.RFC3339, expiry); err == nil {
+			remaining := time.Until(t)
+			switch {
+			case remaining <= 0:
+				fmt.Printf("  %s Token expired on %s\n", output.Red("✗"), t.Local().Format("Jan 2, 2006"))
+				fmt.Printf("  Run %s to re-authenticate\n", output.Cyan("teamcity auth login"))
+			case remaining <= 3*24*time.Hour:
+				fmt.Printf("  %s Token expires %s (on %s)\n", output.Yellow("!"), output.Yellow(output.TimeUntil(remaining)), t.Local().Format("Jan 2, 2006"))
+			default:
+				fmt.Printf("  Token expires: %s\n", t.Local().Format("Jan 2, 2006"))
+			}
+		}
+	}
 
 	server, err := client.ServerVersion()
 	if err == nil {

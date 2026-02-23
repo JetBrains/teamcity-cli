@@ -201,6 +201,21 @@ func FormatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dh %dm", hours, mins)
 }
 
+// TimeUntil formats a future duration as a human-readable countdown.
+func TimeUntil(d time.Duration) string {
+	hours := int(d.Hours())
+	switch {
+	case hours >= 48:
+		return fmt.Sprintf("in %d days", hours/24)
+	case hours >= 24:
+		return "in 1 day"
+	case hours >= 1:
+		return fmt.Sprintf("in %d hours", hours)
+	default:
+		return "in less than an hour"
+	}
+}
+
 // PrintTable prints a formatted table with proper Unicode/ANSI handling
 func PrintTable(headers []string, rows [][]string) {
 	noBorder := lipgloss.Border{}

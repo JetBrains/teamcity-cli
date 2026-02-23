@@ -4,22 +4,29 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html"
+	"html/template"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 )
+
+//go:embed templates/pkce_callback.html
+var callbackPageHTML string
+var callbackPageTmpl = template.Must(template.New("callback").Parse(callbackPageHTML))
 
 const (
 	PkceIsEnabledPath   = "/pkce/is_enabled.html"
 	PkceAuthorizePath   = "/pkce/authorize.html"
 	PkceTokenPath       = "/pkce/token.html"
+	PkceScopesPath      = "/pkce/scopes.html"
 	CodeChallengeMethod = "S256"
 	DefaultCallbackPath = "/callback"
 	CallbackPortMin     = 19000
@@ -27,15 +34,11 @@ const (
 	maxResponseBody     = 64 * 1024
 )
 
-// AvailableScopes lists permissions to request via PKCE.
-// The server filters these to only grant what it allows.
-var AvailableScopes = []string{
-	// View (read-only)
+// FallbackScopes are used when the server doesn't expose a scopes endpoint.
+var FallbackScopes = []string{
 	"VIEW_PROJECT",
 	"VIEW_BUILD_CONFIGURATION_SETTINGS",
 	"VIEW_AGENT_DETAILS",
-
-	// Builds
 	"RUN_BUILD",
 	"CANCEL_BUILD",
 	"TAG_BUILD",
@@ -43,20 +46,12 @@ var AvailableScopes = []string{
 	"PIN_UNPIN_BUILD",
 	"REORDER_BUILD_QUEUE",
 	"PATCH_BUILD_SOURCES",
-
-	// Jobs
 	"PAUSE_ACTIVATE_BUILD_CONFIGURATION",
-
-	// Projects (EDIT_PROJECT also covers build configuration editing)
 	"EDIT_PROJECT",
-
-	// Agents
 	"ENABLE_DISABLE_AGENT",
 	"AUTHORIZE_AGENT",
 	"ADMINISTER_AGENT",
 	"CONNECT_TO_AGENT",
-
-	// Pools
 	"MANAGE_AGENT_POOLS",
 }
 
@@ -133,6 +128,36 @@ func IsPkceEnabled(ctx context.Context, serverURL string) (bool, error) {
 	return resp.StatusCode == http.StatusOK, nil
 }
 
+// FetchPkceScopes queries the server for available PKCE scopes.
+// Returns FallbackScopes if the endpoint is not available.
+func FetchPkceScopes(ctx context.Context, serverURL string) ([]string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", strings.TrimSuffix(serverURL, "/")+PkceScopesPath, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch PKCE scopes: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch PKCE scopes: status %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBody))
+	if err != nil {
+		return nil, fmt.Errorf("read scopes response: %w", err)
+	}
+	var scopes []string
+	if err := json.Unmarshal(body, &scopes); err != nil {
+		return nil, fmt.Errorf("decode scopes response: %w", err)
+	}
+	if len(scopes) == 0 {
+		return nil, fmt.Errorf("server returned empty scopes list")
+	}
+	return scopes, nil
+}
+
 func NewCallbackServer(listener net.Listener, port int) *CallbackServer {
 	return &CallbackServer{
 		Port:       port,
@@ -159,17 +184,8 @@ func (cs *CallbackServer) handleCallback(w http.ResponseWriter, r *http.Request)
 
 	if result.Error != "" {
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = fmt.Fprintf(w, `<!DOCTYPE html><html><head><title>TeamCity CLI</title>
-<style>body{font-family:system-ui,sans-serif;text-align:center;padding:50px}</style></head><body>
-<h1 style="color:#ef4444">✗ Authentication failed</h1><p>Error: %s</p>
-<p>Please return to the terminal.</p></body></html>`, html.EscapeString(result.Error))
-	} else {
-		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html><head><title>TeamCity CLI</title>
-<style>body{font-family:system-ui,sans-serif;text-align:center;padding:50px}</style></head><body>
-<h1 style="color:#22c55e">✓ Authentication successful!</h1>
-<p>You can close this window and return to the terminal.</p>
-<script>setTimeout(function(){window.close()},2000)</script></body></html>`)
 	}
+	_ = callbackPageTmpl.Execute(w, result)
 
 	select {
 	case cs.ResultChan <- result:
@@ -186,7 +202,7 @@ func (cs *CallbackServer) Shutdown() {
 }
 
 func DefaultScopes() []string {
-	return append([]string{}, AvailableScopes...)
+	return slices.Clone(FallbackScopes)
 }
 
 func ExchangeCodeForToken(ctx context.Context, serverURL, code, verifier, redirectURI string) (*TokenResponse, error) {

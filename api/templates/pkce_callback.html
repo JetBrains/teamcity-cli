@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TeamCity CLI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #F7F8FA;
+            color: #27282E;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: #FFFFFF;
+            border: 1px solid #DFE1E5;
+            border-radius: 8px;
+            text-align: center;
+            padding: 48px 40px;
+            max-width: 420px;
+            width: 100%;
+            margin: 16px;
+        }
+        .icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 24px;
+            animation: appear 0.35s ease-out;
+        }
+        .icon-ok {
+            background: #F2FCF3;
+            border: 1px solid #89C398;
+            color: #1F8039;
+        }
+        .icon-err {
+            background: #FFF2F3;
+            border: 1px solid #F2B6BB;
+            color: #CC3645;
+        }
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #27282E;
+            margin-bottom: 8px;
+        }
+        p {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #6C707E;
+        }
+        .error-detail {
+            margin-top: 16px;
+            padding: 10px 14px;
+            background: #FFF2F3;
+            border: 1px solid #F2B6BB;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #CC3645;
+            word-break: break-word;
+        }
+        .brand {
+            margin-top: 28px;
+            font-size: 12px;
+            color: #A8ADBD;
+        }
+        @keyframes appear {
+            from { transform: scale(0.6); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+{{if .Error}}
+        <div class="icon icon-err">&#10007;</div>
+        <h1>Authentication failed</h1>
+        <p>Please return to the terminal.</p>
+        <div class="error-detail">{{.Error}}</div>
+{{else}}
+        <div class="icon icon-ok">&#10003;</div>
+        <h1>Authentication successful</h1>
+        <p>You can close this window and return to the terminal.</p>
+        <script>setTimeout(function(){window.close()},3000)</script>
+{{end}}
+        <div class="brand">TeamCity CLI</div>
+    </div>
+</body>
+</html>
