@@ -125,8 +125,7 @@ func (p *PerforceProvider) GetLocalDiff() ([]byte, error) {
 
 func (p *PerforceProvider) BranchExistsOnRemote(_ string) bool { return true }
 func (p *PerforceProvider) PushBranch(_ string) error          { return nil }
-func (p *PerforceProvider) FormatRevision(rev string) string   { return rev }
-func (p *PerforceProvider) FormatVCSBranch(branch string) string { return branch }
+func (p *PerforceProvider) FormatRevision(rev string) string { return rev }
 
 func (p *PerforceProvider) DiffHint(firstRev, lastRev string) string {
 	return fmt.Sprintf("p4 changes -l @%s,@%s", firstRev, lastRev)

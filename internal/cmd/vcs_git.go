@@ -1,9 +1,6 @@
 package cmd
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 type GitProvider struct{}
 
@@ -20,13 +17,6 @@ func (g *GitProvider) FormatRevision(rev string) string {
 		return rev[:7]
 	}
 	return rev
-}
-
-func (g *GitProvider) FormatVCSBranch(branch string) string {
-	if branch != "" && !strings.HasPrefix(branch, "refs/") {
-		return "refs/heads/" + branch
-	}
-	return branch
 }
 
 func (g *GitProvider) DiffHint(firstRev, lastRev string) string {

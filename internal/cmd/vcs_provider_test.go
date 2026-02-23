@@ -17,14 +17,6 @@ func TestGitProvider_FormatRevision(t *testing.T) {
 	assert.Equal(t, "abc1234", p.FormatRevision("abc1234"))
 }
 
-func TestGitProvider_FormatVCSBranch(t *testing.T) {
-	p := &GitProvider{}
-	assert.Equal(t, "refs/heads/main", p.FormatVCSBranch("main"))
-	assert.Equal(t, "refs/heads/feature/test", p.FormatVCSBranch("feature/test"))
-	assert.Equal(t, "refs/tags/v1.0", p.FormatVCSBranch("refs/tags/v1.0"))
-	assert.Equal(t, "", p.FormatVCSBranch(""))
-}
-
 func TestGitProvider_DiffHint(t *testing.T) {
 	assert.Equal(t, "git diff abc1234^..def1234", (&GitProvider{}).DiffHint("abc1234567890", "def1234567890"))
 }
@@ -96,12 +88,6 @@ func TestPerforceProvider_FormatRevision(t *testing.T) {
 	p := &PerforceProvider{}
 	assert.Equal(t, "12345", p.FormatRevision("12345"))
 	assert.Equal(t, "1", p.FormatRevision("1"))
-}
-
-func TestPerforceProvider_FormatVCSBranch(t *testing.T) {
-	p := &PerforceProvider{}
-	assert.Equal(t, "//depot/main", p.FormatVCSBranch("//depot/main"))
-	assert.Equal(t, "//stream/dev", p.FormatVCSBranch("//stream/dev"))
 }
 
 func TestPerforceProvider_DiffHint(t *testing.T) {

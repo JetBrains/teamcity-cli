@@ -10,7 +10,6 @@ type VCSProvider interface {
 	BranchExistsOnRemote(branch string) bool
 	PushBranch(branch string) error
 	FormatRevision(rev string) string
-	FormatVCSBranch(branch string) string
 	DiffHint(firstRev, lastRev string) string
 }
 
