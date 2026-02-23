@@ -198,7 +198,11 @@ func runRunTests(runID string, opts *runTestsOptions) error {
 	}
 
 	if tests.Count == 0 {
-		output.Info("No tests in this run")
+		if opts.failed {
+			output.Success("No failed tests in this run")
+		} else {
+			output.Info("No tests in this run")
+		}
 		return nil
 	}
 

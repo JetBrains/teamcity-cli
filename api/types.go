@@ -302,13 +302,17 @@ type FileChange struct {
 }
 
 type TestOccurrence struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Status   string `json:"status"` // SUCCESS, FAILURE, IGNORED
-	Duration int    `json:"duration,omitempty"`
-	Details  string `json:"details,omitempty"`
-	Ignored  bool   `json:"ignored,omitempty"`
-	Href     string `json:"href,omitempty"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Status     string `json:"status"` // SUCCESS, FAILURE, IGNORED
+	Duration   int    `json:"duration,omitempty"`
+	Details    string `json:"details,omitempty"`
+	NewFailure bool   `json:"newFailure,omitempty"`
+	Ignored    bool   `json:"ignored,omitempty"`
+	Href       string `json:"href,omitempty"`
+
+	FirstFailed *TestOccurrence `json:"firstFailed,omitempty"`
+	Build       *Build          `json:"build,omitempty"`
 }
 
 type TestOccurrences struct {

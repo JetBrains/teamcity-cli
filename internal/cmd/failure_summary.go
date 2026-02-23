@@ -54,6 +54,11 @@ func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webUR
 				dur := time.Duration(t.Duration) * time.Millisecond
 				line += " " + output.Faint("("+output.FormatDuration(dur)+")")
 			}
+			if t.NewFailure {
+				line += " " + output.Yellow("(new)")
+			} else if t.FirstFailed != nil && t.FirstFailed.Build != nil {
+				line += " " + output.Faint(fmt.Sprintf("(failing since #%s)", t.FirstFailed.Build.Number))
+			}
 			fmt.Println(line)
 			if t.Details != "" {
 				for dl := range strings.SplitSeq(strings.TrimSpace(t.Details), "\n") {
