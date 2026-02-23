@@ -73,3 +73,5 @@ parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
   env.GOFLAGS: '-buildvcs=false'
   env.BRANCH_NAME: '%teamcity.build.branch%'
+secrets:
+  TEAMCITY_TOKEN: credentialsJSON:c745e669-581a-454e-8984-81f635c1665d
