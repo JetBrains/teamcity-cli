@@ -1,18 +1,20 @@
 jobs:
   test_macos:
     name: Test macOS
+    runs-on: macOS-14-Sonoma-Medium-Arm64
     steps:
       - type: script
+        name: Unit Tests
         script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
       - type: script
         name: Acceptance Tests
         script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
-    runs-on: macOS-14-Sonoma-Medium-Arm64
   test_windows:
     name: Test Windows
     runs-on: Windows-Medium
     steps:
       - type: script
+        name: Unit Tests
         script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
       - type: script
         name: Acceptance Tests
@@ -20,7 +22,16 @@ jobs:
   test_linux:
     name: Test Linux
     runs-on: Ubuntu-24.04-Large
+    parameters:
+      env.GOROOT: '/usr/lib/go-1.26'
+      env.PATH: '/usr/lib/go-1.26/bin:%env.PATH%'
     steps:
+      - type: script
+        name: Install Go
+        script-content: |
+          sudo add-apt-repository -y ppa:longsleep/golang-backports
+          sudo apt-get update
+          sudo apt-get install -y golang-1.26-go
       - type: script
         name: Integration Tests
         script-content: |
@@ -33,8 +44,7 @@ jobs:
             -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
-        script-content: |
-          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+        script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Merge Coverage
         script-content: |
@@ -44,7 +54,16 @@ jobs:
   test_linux_arm64:
     name: Test Linux ARM64
     runs-on: Ubuntu-24.04-Large-Arm64
+    parameters:
+      env.GOROOT: '/usr/lib/go-1.26'
+      env.PATH: '/usr/lib/go-1.26/bin:%env.PATH%'
     steps:
+      - type: script
+        name: Install Go
+        script-content: |
+          sudo add-apt-repository -y ppa:longsleep/golang-backports
+          sudo apt-get update
+          sudo apt-get install -y golang-1.26-go
       - type: script
         name: Integration Tests
         script-content: |
@@ -57,31 +76,32 @@ jobs:
             -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
-        script-content: |
-          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+        script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Merge Coverage
         script-content: |
           head -1 coverage-integration.out > coverage.out
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
-  acceptance:
+  goreleaser:
     name: GoReleaser
+    allow-reuse: true
     steps:
       - type: script
-        docker-image: goreleaser/goreleaser-pro:latest
         name: Build & Test
+        docker-image: goreleaser/goreleaser-pro:latest
         script-content: goreleaser release --snapshot --clean --skip=publish,chocolatey
-  Lint:
+  lint:
     name: Lint
+    allow-reuse: true
     steps:
       - type: script
-        docker-image: golangci/golangci-lint:latest
         name: Lint
+        docker-image: golangci/golangci-lint:latest
         script-content: go fmt ./... && golangci-lint run --tests=false ./...
 parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
-  env.GOTOOLCHAIN: 'auto'
+  env.GOPROXY: 'https://proxy.golang.org,direct'
   env.GOFLAGS: '-buildvcs=false'
   env.BRANCH_NAME: '%teamcity.build.branch%'
 secrets:
