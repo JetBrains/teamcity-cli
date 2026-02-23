@@ -65,7 +65,9 @@ func init() {
 
 	rootCmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
 
-	cobra.OnInitialize(initColorSettings)
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		initColorSettings()
+	}
 
 	rootCmd.AddCommand(newAuthCmd())
 	rootCmd.AddCommand(newProjectCmd())
@@ -172,16 +174,18 @@ func GetRootCmd() *RootCommand {
 // This ensures tests don't share flag state from previous test runs.
 // Callers must call RegisterAliases explicitly if alias expansion is needed.
 func NewRootCmd() *RootCommand {
+	var noColor, quiet, verbose, noInput bool
+
 	cmd := &cobra.Command{
 		Use:     "teamcity",
 		Short:   "TeamCity CLI",
 		Version: Version,
 	}
 
-	cmd.PersistentFlags().BoolVar(&NoColor, "no-color", false, "Disable colored output")
-	cmd.PersistentFlags().BoolVarP(&Quiet, "quiet", "q", false, "Suppress non-essential output")
-	cmd.PersistentFlags().BoolVar(&Verbose, "verbose", false, "Show detailed output including debug info")
-	cmd.PersistentFlags().BoolVar(&NoInput, "no-input", false, "Disable interactive prompts")
+	cmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
+	cmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress non-essential output")
+	cmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Show detailed output including debug info")
+	cmd.PersistentFlags().BoolVar(&noInput, "no-input", false, "Disable interactive prompts")
 
 	cmd.AddCommand(newAuthCmd())
 	cmd.AddCommand(newProjectCmd())

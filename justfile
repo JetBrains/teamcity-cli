@@ -18,11 +18,11 @@ install:
 
 # Run unit tests
 unit:
-    TC_INSECURE_SKIP_WARN=1 go test -v ./internal/config ./internal/errors ./internal/output ./internal/cmd
+    TC_INSECURE_SKIP_WARN=1 go test -race -shuffle=on -v ./internal/config ./internal/errors ./internal/output ./internal/cmd
 
 # Run all tests with coverage
 test:
-    TC_INSECURE_SKIP_WARN=1 go test -v ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
+    TC_INSECURE_SKIP_WARN=1 go test -race -shuffle=on -v ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
 
 # Run acceptance tests against cli.teamcity.com (guest auth)
 acceptance:
