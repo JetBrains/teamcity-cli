@@ -48,9 +48,13 @@ func cancelAndWait(t *testing.T, buildID string) {
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
 		b, err := client.GetBuild(buildID)
-		if err == nil && b.State == "finished" {
+		if err != nil {
+			return // build removed from queue or no longer accessible
+		}
+		if b.State == "finished" {
 			return
 		}
+		_ = client.CancelBuild(buildID, "Test cleanup")
 		time.Sleep(time.Second)
 	}
 }
@@ -866,6 +870,11 @@ func TestPoolOperations(T *testing.T) {
 		pool, err := client.GetAgentPool(0)
 		require.NoError(t, err)
 
+		// Always restore the project-pool association, even if the test fails midway.
+		t.Cleanup(func() {
+			_ = client.AddProjectToPool(pool.ID, testProject)
+		})
+
 		// Add the test project to the default pool
 		err = client.AddProjectToPool(pool.ID, testProject)
 		if err != nil {
@@ -892,6 +901,11 @@ func TestPoolOperations(T *testing.T) {
 		agent, err := client.GetAgent(agentID)
 		require.NoError(t, err)
 		originalPoolID := agent.Pool.ID
+
+		// Always restore the agent to the original pool
+		t.Cleanup(func() {
+			_ = client.SetAgentPool(agentID, originalPoolID)
+		})
 
 		// Move agent to default pool (id:0) and back
 		err = client.SetAgentPool(agentID, 0)
