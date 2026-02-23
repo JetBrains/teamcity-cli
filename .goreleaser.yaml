@@ -184,6 +184,18 @@ changelog:
       - '^Update '
       - Merge pull request
       - Merge branch
+  ai:
+    use: anthropic
+    model: claude-sonnet-4-5-latest
+    prompt: |
+      Write concise, professional release notes for teamcity CLI (a command-line interface for TeamCity CI/CD server).
+
+      Based on the following changelog, write a brief summary highlighting the most important changes for users.
+      Group changes into sections like "New Features", "Improvements", "Bug Fixes" as appropriate.
+      Keep it short and user-focused — skip internal refactors and minor cleanups.
+      Do not use emojis.
+
+      {{ .ReleaseNotes }}
 
 release:
   github:
