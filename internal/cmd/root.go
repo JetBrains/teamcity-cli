@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/fatih/color"
@@ -104,9 +107,61 @@ func Execute() error {
 	return err
 }
 
+// tryAutoReauth attempts PKCE re-authentication when a token has expired.
+// Returns true if re-auth succeeded and the user should re-run their command.
+func tryAutoReauth() bool {
+	if !output.IsStdinTerminal() || NoInput {
+		return false
+	}
+	serverURL := config.GetServerURL()
+	if serverURL == "" {
+		return false
+	}
+	expiry := config.GetTokenExpiry()
+	if expiry == "" {
+		return false
+	}
+	t, err := time.Parse(time.RFC3339, expiry)
+	if err != nil || time.Until(t) > 0 {
+		return false
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	enabled, _ := api.IsPkceEnabled(ctx, serverURL)
+	if !enabled {
+		return false
+	}
+
+	output.Warn("Token expired. Re-authenticating via browser...")
+	scopes := api.DefaultScopes()
+	if serverScopes, err := api.FetchPkceScopes(ctx, serverURL); err == nil {
+		scopes = serverScopes
+	}
+	tokenResp, err := runPkceLogin(serverURL, scopes)
+	if err != nil {
+		output.Warn("Auto re-authentication failed: %v", err)
+		return false
+	}
+
+	user := config.GetCurrentUser()
+	if _, err := config.SetServerWithKeyring(serverURL, tokenResp.AccessToken, user, tokenResp.ValidUntil, false); err != nil {
+		return false
+	}
+
+	output.Success("Token refreshed successfully")
+	return true
+}
+
 // enrichAPIError converts typed API errors into UserErrors with CLI-specific hints.
 func enrichAPIError(err error) error {
 	if errors.Is(err, api.ErrAuthentication) {
+		if tryAutoReauth() {
+			return tcerrors.WithSuggestion(
+				"Token was refreshed automatically",
+				"Please re-run your command",
+			)
+		}
 		return tcerrors.WithSuggestion(
 			"Authentication failed: invalid or expired token",
 			"Run 'teamcity auth login' to re-authenticate",

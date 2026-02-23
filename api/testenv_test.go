@@ -191,7 +191,7 @@ func startContainers() (*testEnv, error) {
 				env.network.Name: {"teamcity-server"},
 			},
 			Env: map[string]string{
-				"TEAMCITY_SERVER_OPTS": "-Dteamcity.installation.completed=true -Dteamcity.startup.maintenance=false -Dteamcity.licenseAgreement.accepted=true",
+				"TEAMCITY_SERVER_OPTS": "-Dteamcity.installation.completed=true -Dteamcity.startup.maintenance=false -Dteamcity.licenseAgreement.accepted=true -Dteamcity.internal.server.oauth.pkce.enable=true",
 			},
 			WaitingFor: wait.ForHTTP("/app/rest/server/version").
 				WithPort("8111/tcp").
