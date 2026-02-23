@@ -677,7 +677,7 @@ func (c *Client) GetBuildTests(buildID string, failedOnly bool, limit int) (*Tes
 		detailLocator += fmt.Sprintf(",count:%d", summary.Count)
 	}
 
-	detailFields := "testOccurrence(id,name,status,duration,details)"
+	detailFields := "testOccurrence(id,name,status,duration,details,newFailure,firstFailed(build(id,number)))"
 	detailPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", url.QueryEscape(detailLocator), url.QueryEscape(detailFields))
 
 	var details TestOccurrences
