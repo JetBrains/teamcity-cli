@@ -103,7 +103,16 @@ func connectToAgent(ctx context.Context, nameOrID string, showProgress bool) (*t
 		fmt.Printf("Connecting to %s...\n", output.Cyan(agent.Name))
 	}
 
-	termClient := terminal.NewClient(serverURL, config.GetCurrentUser(), token)
+	username := config.GetCurrentUser()
+	if username == "" {
+		user, err := client.GetCurrentUser()
+		if err != nil {
+			return nil, fmt.Errorf("resolve username for terminal auth: %w", err)
+		}
+		username = user.Username
+	}
+
+	termClient := terminal.NewClient(serverURL, username, token)
 	session, err := termClient.OpenSession(agent.ID)
 	if err != nil {
 		return nil, err
