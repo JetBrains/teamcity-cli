@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -540,7 +539,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 		})
 
 		var buf bytes.Buffer
-		written, err := client.DownloadArtifactTo(context.Background(), "123", "test.txt", &buf)
+		written, err := client.DownloadArtifactTo(t.Context(), "123", "test.txt", &buf)
 
 		require.NoError(t, err)
 		assert.Equal(t, int64(len(content)), written)
@@ -557,7 +556,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 		})
 
 		var buf bytes.Buffer
-		_, _ = client.DownloadArtifactTo(context.Background(), "123", "file with spaces#1.txt", &buf)
+		_, _ = client.DownloadArtifactTo(t.Context(), "123", "file with spaces#1.txt", &buf)
 
 		assert.Contains(t, escapedPath, "file%20with%20spaces%231.txt")
 	})
@@ -570,7 +569,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 		})
 
 		var buf bytes.Buffer
-		_, err := client.DownloadArtifactTo(context.Background(), "123", "missing.txt", &buf)
+		_, err := client.DownloadArtifactTo(t.Context(), "123", "missing.txt", &buf)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "status 404")
@@ -588,7 +587,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 
 		client := NewClient(server.URL, "my-secret-token")
 		var buf bytes.Buffer
-		_, _ = client.DownloadArtifactTo(context.Background(), "123", "test.txt", &buf)
+		_, _ = client.DownloadArtifactTo(t.Context(), "123", "test.txt", &buf)
 
 		assert.Equal(t, "Bearer my-secret-token", authHeader)
 	})
@@ -606,7 +605,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 
 		client := NewClientWithBasicAuth(server.URL, "myuser", "mypass")
 		var buf bytes.Buffer
-		_, _ = client.DownloadArtifactTo(context.Background(), "123", "test.txt", &buf)
+		_, _ = client.DownloadArtifactTo(t.Context(), "123", "test.txt", &buf)
 
 		assert.True(t, hasBasicAuth)
 		assert.Equal(t, "myuser", user)
@@ -721,7 +720,7 @@ func TestRebootAgentHTTPErrors(T *testing.T) {
 				w.WriteHeader(tc.statusCode)
 			})
 
-			err := client.RebootAgent(context.Background(), 42, false)
+			err := client.RebootAgent(t.Context(), 42, false)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})

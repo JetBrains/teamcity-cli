@@ -339,8 +339,7 @@ func newRunWatchCmd() *cobra.Command {
   teamcity run watch 12345 --logs`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := doRunWatch(args[0], opts)
-			var exitErr *ExitError
-			if errors.As(err, &exitErr) {
+			if _, ok := errors.AsType[*ExitError](err); ok {
 				cmd.SilenceErrors = true
 				cmd.SilenceUsage = true
 			}
