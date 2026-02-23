@@ -79,6 +79,75 @@ Output as JSON. Use `--json=` to list available fields, `--json=f1,f2` for speci
 </tr>
 </table>
 
+## Project tree
+
+Display the project hierarchy as a tree, including subprojects and build configurations:
+
+```Shell
+teamcity project tree
+```
+
+<img src="project-tree.gif" alt="Viewing project hierarchy tree" border-effect="rounded"/>
+
+Show a specific subtree:
+
+```Shell
+teamcity project tree MyProject
+```
+
+Hide build configurations to see only the project structure:
+
+```Shell
+teamcity project tree --no-jobs
+```
+
+Limit the tree depth:
+
+```Shell
+teamcity project tree --depth 2
+```
+
+### project tree flags
+
+<table>
+<tr>
+<td>
+
+Flag
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--no-jobs`
+
+</td>
+<td>
+
+Hide build configurations, show only projects
+
+</td>
+</tr>
+<tr>
+<td>
+
+`-d`, `--depth`
+
+</td>
+<td>
+
+Limit tree depth (0 = unlimited)
+
+</td>
+</tr>
+</table>
+
 ## Viewing project details
 
 View details of a project:

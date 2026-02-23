@@ -376,6 +376,18 @@ Resume a paused job
 <tr>
 <td>
 
+`teamcity job tree`
+
+</td>
+<td>
+
+Display snapshot dependency tree
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity job view`
 
 </td>
@@ -521,6 +533,18 @@ Get the value of a secure token
 <td>
 
 Store a secret and get a secure token
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project tree`
+
+</td>
+<td>
+
+Display project hierarchy as a tree
 
 </td>
 </tr>
