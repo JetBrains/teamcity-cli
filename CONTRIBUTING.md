@@ -50,6 +50,85 @@ Run `just` with no arguments to see all available recipes.
 
 All new features and bug fixes must include tests. We have a solid integration test setup with testcontainers that spins up a real TeamCity server — please use it. If your change touches API behavior or user-facing commands, an integration test is expected, not just unit tests.
 
+## Acceptance tests
+
+Acceptance tests are end-to-end blackbox tests that exercise the real CLI binary against a live TeamCity server ([cli.teamcity.com](https://cli.teamcity.com)). They use the [testscript](https://pkg.go.dev/github.com/rogpeppe/go-internal/testscript) framework with declarative `.txtar` scripts in `acceptance/testdata/`.
+
+### Running locally
+
+```sh
+just acceptance                    # in-process, guest auth
+just snapshot                      # goreleaser snapshot (builds binary + runs acceptance tests)
+```
+
+With authentication (runs all tests including write operations):
+
+```sh
+TC_ACCEPTANCE_TOKEN=<your-token> just acceptance
+```
+
+To run a single test:
+
+```sh
+TC_ACCEPTANCE_SCRIPT=agent-cloud go test -tags=acceptance -v ./acceptance/ -count=1 -timeout 10m
+```
+
+### How they run in CI
+
+Acceptance tests are embedded in the goreleaser build pipeline as a **post-build hook** (`.goreleaser.yaml`). They run automatically after building the CLI binary for the native platform:
+
+- **Snapshot builds** (every push): guest-auth tests — no token needed
+- **Release builds** (tagged): token-auth tests using `TEAMCITY_TOKEN` secret — failures block publishing
+
+### Writing tests
+
+Each `.txtar` file is a self-contained test script. Key patterns:
+
+```
+# Tests requiring auth should skip in guest mode
+[!has_token] skip 'requires authentication token'
+
+# Run CLI commands
+exec teamcity project list --no-input
+stdout '.'           # assert stdout contains something
+! stderr 'Error'     # assert no errors
+
+# Extract values from JSON output
+exec teamcity run start Sandbox_Build --json --no-input
+extract '"id":\s*(\d+)' BUILD_ID
+
+# Wait for a cloud agent to be assigned to a build
+wait_for_agent $BUILD_ID AGENT_ID
+```
+
+Available custom commands: `extract`, `wait_for_agent`, `stdout2env`, `env2upper`, `sleep`.
+
+Available conditions: `[has_token]` (token auth), `[guest]` (guest auth).
+
+### Coverage
+
+Every CLI command and subcommand has acceptance test coverage. The following is intentionally excluded:
+- `--web` flags (open a browser, no headless assertion possible)
+- `run watch --logs` (starts a full-screen TUI, needs a terminal)
+- `agent term` (WebSocket terminal session, needs an interactive TTY)
+- `agent enable/disable`, `authorize/deauthorize`, `move`, `reboot` (need admin privileges and a live agent)
+- `run start --personal`, `--local-changes`, `--no-push` (need a VCS-connected checkout)
+- `project settings validate` (needs Maven installed locally)
+- `completion <shell>` (cobra has it tested)
+
+**Flags tested implicitly** (same code path as tested flags):
+- `--secure` on `param set` (identical to a regular set, just marks value encrypted server-side)
+- `run start --rebuild-deps`, `--agent`, `--rebuild-failed-deps`, `--clean` (build queue options, same API path as `--branch`)
+
+If you add a new command, add a corresponding `.txtar` test in `acceptance/testdata/<command>/`.
+
+### Test environment
+
+- **Server**: `cli.teamcity.com` (TeamCity Cloud, configurable via `TC_ACCEPTANCE_HOST`)
+- **Sandbox project**: use `Sandbox` for any write operations (param set/delete, token put, run start)
+- **Cloud agents**: ephemeral — tests that need agents must start a build, wait for assignment, then clean up
+- **Isolation**: each test gets its own `HOME` directory, no cross-test state leakage
+
 ## AI-assisted contributions
 
 We're fine with AI tools — Junie, Claude Code, Copilot, whatever helps you move faster. But you must understand the code you're submitting. `teamcity` is a tool where we prioritize security and reliability. PRs with AI-generated code that the author can't explain or defend during review will not be merged.
