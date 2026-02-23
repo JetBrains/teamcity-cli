@@ -30,6 +30,7 @@ func saveCfgState(t *testing.T) {
 	t.Helper()
 	oldCfg := cfg
 	oldPath := configPath
+	viper.Reset()
 	keyringMockInitWithError(errors.New("keyring disabled in test"))
 	t.Cleanup(func() {
 		cfg = oldCfg

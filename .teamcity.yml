@@ -3,11 +3,11 @@ jobs:
     name: Test macOS
     steps:
       - type: script
-        script-content: go test -v ./... -timeout 15m
+        script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
       - type: script
         name: Acceptance Tests
         script-content: |
-          TC_INSECURE_SKIP_WARN=1 go test -v -tags=acceptance ./acceptance -timeout 10m
+          TC_INSECURE_SKIP_WARN=1 go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
     runs-on: macOS-14-Sonoma-Medium-Arm64
   test_windows:
     name: Test Windows
@@ -15,14 +15,14 @@ jobs:
     steps:
       - type: script
         script-content: >-
-          go test -v ./... -timeout 15m
+          go test -race -count=1 -shuffle=on -v ./... -timeout 15m
       - type: script
         name: Acceptance Tests
         script-content: >-
-          set TC_INSECURE_SKIP_WARN=1 && go test -v -tags=acceptance ./acceptance -timeout 10m
+          set TC_INSECURE_SKIP_WARN=1 && go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
   test_linux:
     name: Test Linux
-    runs-on: Ubuntu-22.04-Medium
+    runs-on: Ubuntu-24.04-Large
     steps:
       - type: script
         name: Install Go
@@ -34,19 +34,52 @@ jobs:
         name: Integration Tests
         script-content: |
           export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          /usr/lib/go-1.25/bin/go test -v ./... -tags=integration -timeout 15m \
+          /usr/lib/go-1.25/bin/go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-integration.out
       - type: script
         name: Guest Auth Tests
         script-content: |
           export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          TEAMCITY_GUEST=1 /usr/lib/go-1.25/bin/go test -v ./api/... -tags=guest -timeout 15m \
+          TEAMCITY_GUEST=1 /usr/lib/go-1.25/bin/go test -race -count=1 -shuffle=on -v ./api/... -tags=guest -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
         script-content: |
           export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
-          TC_INSECURE_SKIP_WARN=1 /usr/lib/go-1.25/bin/go test -v -tags=acceptance ./acceptance -timeout 10m
+          TC_INSECURE_SKIP_WARN=1 /usr/lib/go-1.25/bin/go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+      - type: script
+        name: Merge Coverage
+        script-content: |
+          head -1 coverage-integration.out > coverage.out
+          tail -n +2 coverage-integration.out >> coverage.out
+          tail -n +2 coverage-guest.out >> coverage.out
+  test_linux_arm64:
+    name: Test Linux ARM64
+    runs-on: Ubuntu-24.04-Large-Arm64
+    steps:
+      - type: script
+        name: Install Go
+        script-content: |
+          sudo add-apt-repository ppa:longsleep/golang-backports
+          sudo apt update
+          sudo apt install -y golang-go
+      - type: script
+        name: Integration Tests
+        script-content: |
+          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
+          /usr/lib/go-1.25/bin/go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout 15m \
+            -coverpkg=./... -coverprofile=coverage-integration.out
+      - type: script
+        name: Guest Auth Tests
+        script-content: |
+          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
+          TEAMCITY_GUEST=1 /usr/lib/go-1.25/bin/go test -race -count=1 -shuffle=on -v ./api/... -tags=guest -timeout 15m \
+            -coverpkg=./... -coverprofile=coverage-guest.out
+      - type: script
+        name: Acceptance Tests
+        script-content: |
+          export GOPROXY=https://proxy.golang.org,direct GOROOT=/usr/lib/go-1.25
+          TC_INSECURE_SKIP_WARN=1 /usr/lib/go-1.25/bin/go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Merge Coverage
         script-content: |

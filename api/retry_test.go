@@ -104,8 +104,6 @@ func TestWithRetry_RetriesOnNetworkError(T *testing.T) {
 
 // Client integration: verify get- / post-behavior
 func TestClientRetryBehavior(T *testing.T) {
-	T.Parallel()
-
 	original := ReadRetry
 	T.Cleanup(func() { ReadRetry = original })
 	ReadRetry = fastRetry
