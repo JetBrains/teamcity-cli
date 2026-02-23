@@ -49,6 +49,12 @@ func (e *testEnv) Cleanup() {
 	if !e.ownsContainers {
 		return
 	}
+	if e.Client != nil {
+		agents, err := e.Client.GetAgents(api.AgentsOptions{})
+		if err == nil && len(agents.Agents) > 0 {
+			_ = e.Client.RebootAgent(e.ctx, agents.Agents[0].ID, true)
+		}
+	}
 	if e.agent != nil {
 		_ = e.agent.Terminate(e.ctx)
 	}

@@ -1070,9 +1070,8 @@ func TestGetBuildQueueWithFilter(T *testing.T) {
 	T.Logf("Queue has %d builds for config %s", queue.Count, testConfig)
 }
 
-// TestZAgentOperations runs last (Z prefix) since reboot affects agent availability.
-// This test exercises the full agent API, including operations that modify the agent state.
-func TestZAgentOperations(T *testing.T) {
+// TestAgentOperations exercises the full agent API.
+func TestAgentOperations(T *testing.T) {
 	skipIfGuest(T)
 	// Not parallel - modifies agent state
 
@@ -1141,16 +1140,4 @@ func TestZAgentOperations(T *testing.T) {
 		assert.True(t, agent.Enabled, "agent should be enabled")
 	})
 
-	T.Run("reboot agent", func(t *testing.T) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
-		require.NoError(t, err)
-		require.Greater(t, len(agents.Agents), 0)
-
-		agentID := agents.Agents[0].ID
-		t.Logf("Requesting reboot for agent ID %d", agentID)
-
-		err = client.RebootAgent(t.Context(), agentID, true)
-		require.NoError(t, err)
-		t.Log("Reboot scheduled (after build completes)")
-	})
 }
