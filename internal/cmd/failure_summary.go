@@ -56,9 +56,9 @@ func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webUR
 			}
 			fmt.Println(line)
 			if t.Details != "" {
-				msg := firstLine(t.Details)
-				msg = output.Truncate(msg, 120)
-				fmt.Printf("    %s\n", output.Faint(msg))
+				for dl := range strings.SplitSeq(strings.TrimSpace(t.Details), "\n") {
+					fmt.Printf("    %s\n", output.Faint(dl))
+				}
 			}
 		}
 		if tests.Failed > len(tests.TestOccurrence) {
@@ -67,13 +67,4 @@ func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webUR
 	}
 
 	fmt.Printf("\nView details: %s\n", webURL)
-}
-
-// firstLine returns the first non-empty line of s.
-func firstLine(s string) string {
-	s = strings.TrimSpace(s)
-	if before, _, ok := strings.Cut(s, "\n"); ok {
-		return strings.TrimSpace(before)
-	}
-	return s
 }
