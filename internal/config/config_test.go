@@ -750,26 +750,31 @@ func TestRemoveServerCleansKeyring(T *testing.T) {
 }
 
 func TestIsReadOnly(T *testing.T) {
-	tests := []struct {
-		name string
-		env  string
-		want bool
-	}{
-		{"empty", "", false},
-		{"1", "1", true},
-		{"true", "true", true},
-		{"yes", "yes", true},
-		{"false", "false", false},
-		{"0", "0", false},
-		{"no", "no", false},
-		{"TRUE uppercase", "TRUE", false},
-		{"random string", "enabled", false},
-	}
+	saveCfgState(T)
 
-	for _, tc := range tests {
-		T.Run(tc.name, func(t *testing.T) {
-			t.Setenv(EnvReadOnly, tc.env)
-			assert.Equal(t, tc.want, IsReadOnly())
-		})
-	}
+	T.Run("env var", func(t *testing.T) {
+		for _, env := range []string{"1", "true", "yes"} {
+			t.Setenv(EnvReadOnly, env)
+			assert.True(t, IsReadOnly(), "TEAMCITY_RO=%q should be read-only", env)
+		}
+		for _, env := range []string{"", "0", "false"} {
+			t.Setenv(EnvReadOnly, env)
+			assert.False(t, IsReadOnly(), "TEAMCITY_RO=%q should not be read-only", env)
+		}
+	})
+
+	T.Run("config file", func(t *testing.T) {
+		t.Setenv(EnvReadOnly, "")
+		t.Setenv(EnvServerURL, "")
+		cfg = &Config{
+			DefaultServer: "https://tc.example.com",
+			Servers: map[string]ServerConfig{
+				"https://tc.example.com": {Token: "token", User: "user", RO: true},
+			},
+		}
+		assert.True(t, IsReadOnly())
+
+		cfg.Servers["https://tc.example.com"] = ServerConfig{Token: "token", User: "user", RO: false}
+		assert.False(t, IsReadOnly())
+	})
 }

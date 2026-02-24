@@ -29,6 +29,7 @@ type ServerConfig struct {
 	Token string `mapstructure:"token"`
 	User  string `mapstructure:"user"`
 	Guest bool   `mapstructure:"guest,omitempty"`
+	RO    bool   `mapstructure:"ro,omitempty"`
 }
 
 type Config struct {
@@ -234,11 +235,20 @@ func IsGuestAuth() bool {
 	return false
 }
 
-// IsReadOnly returns true if read-only mode is enabled via env var.
+// IsReadOnly returns true if read-only mode is enabled via env var or server config.
 // When enabled, all non-GET API requests are blocked.
 func IsReadOnly() bool {
-	v := os.Getenv(EnvReadOnly)
-	return v == "1" || v == "true" || v == "yes"
+	if v := os.Getenv(EnvReadOnly); v == "1" || v == "true" || v == "yes" {
+		return true
+	}
+	serverURL := GetServerURL()
+	if serverURL == "" || cfg == nil {
+		return false
+	}
+	if server, ok := cfg.Servers[serverURL]; ok {
+		return server.RO
+	}
+	return false
 }
 
 // SetGuestServer saves a server with guest auth enabled and no token
