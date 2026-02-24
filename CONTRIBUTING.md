@@ -40,7 +40,7 @@ just build        # build binary to bin/teamcity
 just unit         # run unit tests only
 just test         # run all tests (unit + integration) with coverage
 just lint         # go fmt + golangci-lint
-just docs         # regenerate CLI docs in README
+just docs-generate # regenerate CLI command reference
 just install      # install to $GOPATH/bin
 ```
 
@@ -135,13 +135,21 @@ We're fine with AI tools — Junie, Claude Code, Copilot, whatever helps you mov
 
 ## Documentation
 
-Documentation lives in `docs/topics/` and is built with [Writerside](https://www.jetbrains.com/writerside/). The published site is at [jb.gg/tc/docs](https://jb.gg/tc/docs).
+The canonical documentation lives in [JetBrains/teamcity-documentation](https://github.com/JetBrains/teamcity-documentation) and is published at [jb.gg/tc/docs](https://jb.gg/tc/docs). A local copy is kept in `docs/topics/` for reference and editing convenience.
+
+Use the sync recipes to keep local and upstream docs in sync:
+
+```sh
+just docs-pull              # fetch latest from teamcity-documentation
+just docs-push              # open a PR to teamcity-documentation with local changes
+just docs-generate          # regenerate the CLI command reference table
+```
 
 When your change adds or modifies commands, flags, or user-facing behavior, update **all** of the following:
 
 | Location               | What to update                                                                   |
 |------------------------|----------------------------------------------------------------------------------|
-| `docs/topics/`         | Writerside topic files (`.md`) — the primary documentation                       |
+| `docs/topics/`         | Writerside topic files (`.md`) — edit locally, then `just docs-push` to upstream |
 | `skills/teamcity-cli/` | AI agent skill — `SKILL.md`, `references/commands.md`, `references/workflows.md` |
 | `README.md`            | Commands table in the root readme                                                |
 
@@ -165,16 +173,32 @@ Before submitting, make sure:
 
 Releases are handled by [goreleaser](https://goreleaser.com/) and publish to Homebrew, Scoop, Chocolatey, Winget, and GitHub Releases.
 
-Dry-run locally:
+### Dry-run locally
 
 ```sh
 just snapshot         # build a local snapshot
 just release-dry-run  # full release process without publishing
 ```
 
-To cut a release, tag and push:
+### Cutting a release
+
+Tag and push — the release pipeline on [TeamCity](https://teamcity-nightly.labs.intellij.net/) handles everything else automatically (build, acceptance test, sign, publish to all package managers):
 
 ```sh
-git tag -a vX.X.X -m "vX.X.X"
-git push origin vX.X.X
+git tag -a v0.7.1 -m "Release v0.7.1"
+git push origin v0.7.1
 ```
+
+### Rolling back a release
+
+If a release needs to be reverted:
+
+1. Revert the formula/manifest commits in [jetbrains/homebrew-utils](https://github.com/JetBrains/homebrew-utils) and [jetbrains/scoop-utils](https://github.com/JetBrains/scoop-utils)
+2. Close the auto-created winget PR in [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)
+3. Cancel the Chocolatey submission (if still pending moderation) on [chocolatey.org](https://community.chocolatey.org/)
+4. Delete the tag and release it from the [GitHub repository](https://github.com/JetBrains/teamcity-cli):
+   ```sh
+   git tag -d v0.7.1
+   git push origin --delete v0.7.1
+   ```
+   Then delete the release from the [Releases page](https://github.com/JetBrains/teamcity-cli/releases).
