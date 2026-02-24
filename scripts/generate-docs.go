@@ -76,7 +76,7 @@ func updateFile(path string, generate func(*cobra.Command) string, rootCmd *cobr
 
 	if check {
 		if string(content) != newContent {
-			fmt.Printf("%s is out of date. Run 'just docs' to update it.\n", path)
+			fmt.Printf("%s is out of date. Run 'just docs-generate' to update it.\n", path)
 			return false
 		}
 		fmt.Printf("%s is up to date.\n", path)
@@ -195,17 +195,17 @@ func writeWritersideRow(buf *bytes.Buffer, col1, col2 string) {
 func pageLinkText(page string) string {
 	// Map page filenames to human-readable link text
 	links := map[string]string{
-		"teamcity-cli-authentication.md":            "Authentication",
-		"teamcity-cli-managing-runs.md":             "Managing runs",
-		"teamcity-cli-managing-jobs.md":             "Managing jobs",
-		"teamcity-cli-managing-projects.md":         "Managing projects",
-		"teamcity-cli-managing-build-queue.md":      "Managing the build queue",
-		"teamcity-cli-managing-agents.md":           "Managing agents",
-		"teamcity-cli-managing-agent-pools.md":      "Managing agent pools",
-		"teamcity-cli-rest-api-access.md":           "REST API access",
-		"teamcity-cli-aliases.md":                   "Aliases",
+		"teamcity-cli-authentication.md":                 "Authentication",
+		"teamcity-cli-managing-runs.md":                  "Managing runs",
+		"teamcity-cli-managing-jobs.md":                  "Managing jobs",
+		"teamcity-cli-managing-projects.md":              "Managing projects",
+		"teamcity-cli-managing-build-queue.md":           "Managing the build queue",
+		"teamcity-cli-managing-agents.md":                "Managing agents",
+		"teamcity-cli-managing-agent-pools.md":           "Managing agent pools",
+		"teamcity-cli-rest-api-access.md":                "REST API access",
+		"teamcity-cli-aliases.md":                        "Aliases",
 		"teamcity-cli-configuration.md#shell-completion": "Configuration",
-		"teamcity-cli-ai-agent-integration.md":      "AI agent integration",
+		"teamcity-cli-ai-agent-integration.md":           "AI agent integration",
 	}
 	if text, ok := links[page]; ok {
 		return text
@@ -220,4 +220,3 @@ func sortedCommands(c *cobra.Command) []*cobra.Command {
 	sort.Slice(cmds, func(i, j int) bool { return cmds[i].Name() < cmds[j].Name() })
 	return cmds
 }
-
