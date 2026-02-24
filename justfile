@@ -120,6 +120,22 @@ docs-deploy:
     git push origin gh-pages --force
     echo "Deployed to gh-pages branch."
 
+# Install Chocolatey CLI (requires mono)
+install-choco:
+    #!/usr/bin/env sh
+    set -eu
+    CHOCO_VERSION="2.4.3"
+    INSTALL_DIR="$HOME/.local/opt/chocolatey"
+    BIN_DIR="$HOME/.local/bin"
+    mkdir -p "$INSTALL_DIR" "$BIN_DIR"
+    echo "Downloading Chocolatey v${CHOCO_VERSION}..."
+    curl -fsSL "https://github.com/chocolatey/choco/releases/download/${CHOCO_VERSION}/chocolatey.v${CHOCO_VERSION}.tar.gz" | \
+        tar -xz -C "$INSTALL_DIR"
+    printf '#!/bin/sh\nmono %s/choco.exe "$@"\n' "$INSTALL_DIR" > "$BIN_DIR/choco"
+    chmod +x "$BIN_DIR/choco"
+    echo "Installed choco $(choco --version) to $BIN_DIR/choco"
+    echo "Make sure $BIN_DIR is in your PATH"
+
 # Install JetBrains codesign client (requires JB employee VPN)
 install-codesign:
     #!/usr/bin/env sh
