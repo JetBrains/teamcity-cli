@@ -256,7 +256,6 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 	case <-ctx.Done():
 		return tcerrors.New("command timed out")
 	case <-readyCh:
-	case <-time.After(500 * time.Millisecond):
 	}
 
 	time.Sleep(100 * time.Millisecond)
