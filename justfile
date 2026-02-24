@@ -33,9 +33,17 @@ acceptance:
 clean:
     rm -rf bin/ dist/ .env coverage.out
 
-# Generate CLI documentation
-docs:
+# Regenerate CLI command reference in docs/topics/
+docs-generate:
     go run scripts/generate-docs.go
+
+# Pull latest docs from JetBrains/teamcity-documentation
+docs-pull *args:
+    go run scripts/sync-docs.go pull {{args}}
+
+# Push local docs as a PR to JetBrains/teamcity-documentation
+docs-push *args:
+    go run scripts/sync-docs.go push {{args}}
 
 # Run go generate
 generate:
@@ -56,19 +64,19 @@ release:
 
 # Record all documentation GIFs (both light and dark themes)
 record-gifs *args:
-    ./scripts/record-gifs.sh {{args}}
+    go run scripts/record-gifs.go {{args}}
 
 # Record only dark theme GIFs
 record-gifs-dark *args:
-    ./scripts/record-gifs.sh --dark-only {{args}}
+    go run scripts/record-gifs.go --dark-only {{args}}
 
 # Record only light theme GIFs
 record-gifs-light *args:
-    ./scripts/record-gifs.sh --light-only {{args}}
+    go run scripts/record-gifs.go --light-only {{args}}
 
 # List available tape files for GIF recording
 list-tapes:
-    ./scripts/record-gifs.sh --list
+    go run scripts/record-gifs.go --list
 
 # Build Writerside documentation using Docker (requires Rosetta enabled in Docker Desktop on Apple Silicon)
 docs-build:
