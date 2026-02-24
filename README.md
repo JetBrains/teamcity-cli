@@ -7,7 +7,8 @@ TeamCity CLI (`teamcity`) is an open-source command-line interface for [TeamCity
 
 > **[Documentation](https://jb.gg/tc/docs)** – full guide with installation, authentication, and command reference.
 
-![cli](https://github.com/user-attachments/assets/fa6546f2-5630-4116-aa6c-5addc8d83318)
+![cli](./docs/images/showcase_dark.gif#gh-dark-mode-only)
+![cli](./docs/images/showcase.gif#gh-light-mode-only)
 
 ## Features
 
