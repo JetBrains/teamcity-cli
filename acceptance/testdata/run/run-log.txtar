@@ -16,10 +16,7 @@ stdout '.'
 exec teamcity run log $BUILD_ID --failed --no-input
 ! stderr 'Error'
 
-# --job (by job ID)
-exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
-extract '"id":"([^"]+)"' JOB_ID
-
-exec teamcity run log --job $JOB_ID --no-input
+# --job (by job ID — use Sandbox_Build which has stable completed builds)
+exec teamcity run log --job Sandbox_Build --no-input
 stdout '.'
 ! stderr 'Error'

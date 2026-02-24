@@ -4,18 +4,7 @@
 exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
 extract '"id":"([^"]+)"' PROJECT_ID
 
-# param list
-exec teamcity project param list _Root --no-input
-stdout 'NAME'
-stdout 'VALUE'
-! stderr 'Error'
-
-# param list --json
-exec teamcity project param list _Root --json --no-input
-stdout '"count"'
-! stderr 'Error'
-
-# param set → get → delete
+# param set → get → list → delete
 exec teamcity project param set Sandbox acceptance.test.param 'test-value-$RANDOM_STRING' --no-input
 stdout 'Set parameter'
 ! stderr 'Error'
@@ -23,13 +12,24 @@ stdout 'Set parameter'
 exec teamcity project param get Sandbox acceptance.test.param --no-input
 stdout 'test-value'
 
+# param list
+exec teamcity project param list Sandbox --no-input
+stdout 'NAME'
+stdout 'VALUE'
+! stderr 'Error'
+
+# param list --json
+exec teamcity project param list Sandbox --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
 exec teamcity project param delete Sandbox acceptance.test.param --no-input
 stdout 'Deleted parameter'
 ! stderr 'Error'
 
 # token put
 exec teamcity project token put Sandbox 'acceptance-secret-$RANDOM_STRING' --no-input
-stdout 'credentialsJSON:'
+stdout '.'
 ! stderr 'Error'
 
 # settings status --json

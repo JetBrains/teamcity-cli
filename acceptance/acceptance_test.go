@@ -287,23 +287,23 @@ func cmdSleep(ts *testscript.TestScript, neg bool, args []string) {
 	time.Sleep(d)
 }
 
-// cmdWaitForAgent polls a build until an agent is assigned and stores the agent ID.
-// Usage: wait_for_agent <BUILD_ID> <AGENT_VAR>
-// Polls every 5s for up to 120s.
+// cmdWaitForAgent polls for any connected agent and stores its ID.
+// Usage: wait_for_agent <AGENT_VAR>
+// Polls every 2s for up to 30s.
 func cmdWaitForAgent(ts *testscript.TestScript, neg bool, args []string) {
 	if neg {
 		ts.Fatalf("wait_for_agent does not support negation")
 	}
-	if len(args) != 2 {
-		ts.Fatalf("usage: wait_for_agent <BUILD_ID> <AGENT_VAR>")
+	if len(args) != 1 {
+		ts.Fatalf("usage: wait_for_agent <AGENT_VAR>")
 	}
-	buildID, varName := args[0], args[1]
+	varName := args[0]
 
 	host := ts.Getenv("TEAMCITY_URL")
 	token := ts.Getenv("TEAMCITY_TOKEN")
 	guest := ts.Getenv("TEAMCITY_GUEST")
 
-	url := fmt.Sprintf("%s/app/rest/builds/id:%s?fields=agent(id,name)", host, buildID)
+	agentsURL := fmt.Sprintf("%s/app/rest/agents?locator=connected:true,count:1&fields=agent(id,name)", host)
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
@@ -312,9 +312,9 @@ func cmdWaitForAgent(ts *testscript.TestScript, neg bool, args []string) {
 		},
 	}
 
-	deadline := time.Now().Add(120 * time.Second)
+	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequest("GET", agentsURL, nil)
 		if err != nil {
 			ts.Fatalf("create request: %v", err)
 		}
@@ -336,20 +336,20 @@ func cmdWaitForAgent(ts *testscript.TestScript, neg bool, args []string) {
 		resp.Body.Close()
 
 		var result struct {
-			Agent *struct {
+			Agents []struct {
 				ID   int    `json:"id"`
 				Name string `json:"name"`
 			} `json:"agent"`
 		}
-		if err := json.Unmarshal(body, &result); err == nil && result.Agent != nil && result.Agent.ID > 0 {
-			ts.Setenv(varName, fmt.Sprintf("%d", result.Agent.ID))
-			ts.Logf("agent found: id=%d name=%s", result.Agent.ID, result.Agent.Name)
+		if err := json.Unmarshal(body, &result); err == nil && len(result.Agents) > 0 && result.Agents[0].ID > 0 {
+			ts.Setenv(varName, fmt.Sprintf("%d", result.Agents[0].ID))
+			ts.Logf("agent found: id=%d name=%s", result.Agents[0].ID, result.Agents[0].Name)
 			return
 		}
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
-	ts.Fatalf("timed out waiting for agent on build %s", buildID)
+	ts.Fatalf("no connected agent found within timeout (cloud agents may not be available)")
 }
 
 func envOr(key, fallback string) string {

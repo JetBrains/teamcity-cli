@@ -7,7 +7,3 @@ extract '"id":"([^"]+)"' JOB_ID
 exec teamcity api /app/rest/buildQueue -X POST -f buildType=id:$JOB_ID --no-input
 stdout '"id"'
 ! stderr 'Error'
-
-# Clean up: cancel the triggered build
-extract '"id":\s*(\d+)' BUILD_ID
-exec teamcity run cancel $BUILD_ID --force --no-input
