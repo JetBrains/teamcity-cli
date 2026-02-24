@@ -457,6 +457,8 @@ teamcity pool unlink <pool-id> <project-id>
 
 7. **Multiple servers** - Use `TEAMCITY_URL` env var to switch between servers, or `teamcity auth login --server <url>` to add servers
 
+8. **Read-only mode** - Set `TEAMCITY_RO=1` to block all write operations (POST, PUT, DELETE). Useful for safe monitoring. Can also be set per server with `ro: true` in the config file
+
 ## Troubleshooting
 
 | Symptom                      | Likely Cause              | Action                                                                                  |
@@ -466,3 +468,4 @@ teamcity pool unlink <pool-id> <project-id>
 | `404 Not Found`              | Build deleted or wrong ID | Verify the build ID/URL; the build may have been cleaned up                             |
 | Connection refused / timeout | Server unreachable        | Check if TeamCity instance is accessible; verify server URL with `teamcity auth status` |
 | `No server configured`       | Missing auth config       | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars  |
+| `read-only mode` error       | `TEAMCITY_RO` is set      | Unset `TEAMCITY_RO` or remove `ro: true` from the server config to allow write operations |
