@@ -200,7 +200,7 @@ changelog:
       - Merge branch
   ai:
     use: anthropic
-    model: claude-sonnet-4-5-latest
+    model: claude-sonnet-4-6
     prompt: |
       Write concise, professional release notes for teamcity CLI (a command-line interface for TeamCity CI/CD server).
 
