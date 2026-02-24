@@ -445,19 +445,15 @@ teamcity pool unlink <pool-id> <project-id>
 
 1. **Use `--json` for programmatic access** - Parse with `jq` for complex queries
 
-2. **Use `teamcity run log` interactively** - It has built-in search (`/`), navigation (`n`, `N`, `g`, `G`), and filtering (`&pattern`)
+1. **Use `teamcity api` as escape hatch** - When a specific command doesn't exist, use raw API access
 
-3. **Use `teamcity api` as escape hatch** - When a specific command doesn't exist, use raw API access
+1. **Environment variables** - Set `TEAMCITY_URL` and `TEAMCITY_TOKEN` for non-interactive use
 
-4. **Environment variables** - Set `TEAMCITY_URL` and `TEAMCITY_TOKEN` for non-interactive use
+1. **Open in browser** - Most view commands support `-w` to open in web browser
 
-5. **Open in browser** - Most view commands support `-w` to open in web browser
+1. **Auto-detection from DSL** – When working in a project with Kotlin DSL config, the server URL is auto-detected from `.teamcity/pom.xml`
 
-6. **Auto-detection from DSL** – When working in a project with Kotlin DSL config, the server URL is auto-detected from `.teamcity/pom.xml`
-
-7. **Multiple servers** - Use `TEAMCITY_URL` env var to switch between servers, or `teamcity auth login --server <url>` to add servers
-
-8. **Read-only mode** - Set `TEAMCITY_RO=1` to block all write operations (POST, PUT, DELETE). Useful for safe monitoring. Can also be set per server with `ro: true` in the config file
+1. **Multiple servers** - Use `TEAMCITY_URL` env var to switch between servers, or `teamcity auth login --server <url>` to add servers
 
 ## Troubleshooting
 
@@ -468,4 +464,3 @@ teamcity pool unlink <pool-id> <project-id>
 | `404 Not Found`              | Build deleted or wrong ID | Verify the build ID/URL; the build may have been cleaned up                             |
 | Connection refused / timeout | Server unreachable        | Check if TeamCity instance is accessible; verify server URL with `teamcity auth status` |
 | `No server configured`       | Missing auth config       | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars  |
-| `read-only mode` error       | `TEAMCITY_RO` is set      | Unset `TEAMCITY_RO` or remove `ro: true` from the server config to allow write operations |
