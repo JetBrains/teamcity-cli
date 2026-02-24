@@ -130,7 +130,11 @@ func runAPI(endpoint string, opts *apiOptions) error {
 
 			var jsonValue any
 			if err := json.Unmarshal([]byte(value), &jsonValue); err != nil {
-				jsonValue = value
+				if k, v, ok := strings.Cut(value, ":"); ok && k != "" && v != "" {
+					jsonValue = map[string]string{k: v}
+				} else {
+					jsonValue = value
+				}
 			}
 			jsonBody[key] = jsonValue
 		}
