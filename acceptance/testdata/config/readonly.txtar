@@ -1,13 +1,28 @@
 # Test TEAMCITY_RO read-only mode blocks all write operations.
 #
-# Only commands whose first API call is a write (no preceding GET lookup)
-# are tested directly. Commands like run cancel, run untag, run restart,
-# and agent authorize/disable/enable/move/reboot do a GET lookup first
-# (GetBuild, GetBuildTags, GetAgent), so a fake ID produces a 404
-# before the read-only check fires. These are still protected — the
-# teamcity api -X POST/PUT/DELETE tests prove the HTTP-level guard works.
+# Commands are organized into two groups:
+#
+# 1. Direct-write commands: their first API call is a write (POST/PUT/DELETE),
+#    so fake IDs work because the read-only guard fires before any server request.
+#
+# 2. GET-first commands: they resolve/validate via GET before writing.
+#    These use real IDs discovered from the server so the GET succeeds and
+#    the read-only check fires on the subsequent write operation.
+#
+# Commands not directly tested:
+#   run cancel  — checks build state ("cannot cancel a finished run") before writing
+#   run untag   — checks tag existence ("tag not found") before writing
+# Both are still protected by the HTTP-level guard proven by the api -X tests.
 
 env TEAMCITY_RO=1
+
+# ---- Discover real IDs for GET-first command tests ----
+
+exec teamcity api /app/rest/agents?locator=count:1&fields=agent(id) --raw --no-input
+extract '"id":(\d+)' AGENT_ID
+
+exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+extract '"id":(\d+)' BUILD_ID
 
 # ---- Read commands still work ----
 
@@ -46,7 +61,7 @@ stderr 'read-only mode'
 ! exec teamcity api /app/rest/builds/1/pin -X PATCH --no-input
 stderr 'read-only mode'
 
-# ---- run: write subcommands ----
+# ---- run: direct-write subcommands ----
 
 ! exec teamcity run start FakeJob_Build --no-input
 stderr 'read-only mode'
@@ -64,6 +79,11 @@ stderr 'read-only mode'
 stderr 'read-only mode'
 
 ! exec teamcity run comment 999999 --delete --no-input
+stderr 'read-only mode'
+
+# ---- run: GET-first write subcommands ----
+
+! exec teamcity run restart $BUILD_ID --no-input
 stderr 'read-only mode'
 
 # ---- job: write subcommands ----
@@ -108,6 +128,26 @@ stderr 'read-only mode'
 stderr 'read-only mode'
 
 ! exec teamcity project token put FakeProject fakevalue --no-input
+stderr 'read-only mode'
+
+# ---- agent: write subcommands (GET lookup first, then write blocked) ----
+
+! exec teamcity agent authorize $AGENT_ID --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent deauthorize $AGENT_ID --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent enable $AGENT_ID --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent disable $AGENT_ID --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent move $AGENT_ID 0 --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent reboot $AGENT_ID --no-input
 stderr 'read-only mode'
 
 # ---- Unsetting TEAMCITY_RO restores writes ----
