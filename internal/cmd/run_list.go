@@ -91,7 +91,11 @@ func runRunList(cmd *cobra.Command, opts *runListOptions) error {
 	if user == "@me" {
 		user = config.GetCurrentUser()
 		if user == "" {
-			return fmt.Errorf("@me requires login (username not found in config)")
+			u, err := client.GetCurrentUser()
+			if err != nil || u == nil {
+				return fmt.Errorf("@me requires login (username not found in config)")
+			}
+			user = u.Username
 		}
 	}
 
