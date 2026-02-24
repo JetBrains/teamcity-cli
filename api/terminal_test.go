@@ -36,6 +36,31 @@ func getTerminalAgent(t *testing.T) api.Agent {
 	return api.Agent{}
 }
 
+// openTerminalConn opens a terminal session and WebSocket connection with retries.
+// After pool/agent state changes, the terminal endpoint may briefly return errors.
+func openTerminalConn(t *testing.T, agentID int) *terminal.Conn {
+	t.Helper()
+	var lastErr error
+	for range 5 {
+		tc := getTerminalClient()
+		session, err := tc.OpenSession(agentID)
+		if err != nil {
+			lastErr = err
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		conn, err := tc.Connect(session, 80, 24)
+		if err != nil {
+			lastErr = err
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		return conn
+	}
+	require.NoError(t, lastErr, "failed to open terminal after retries")
+	return nil
+}
+
 func TestTerminalSession(T *testing.T) {
 	agent := getTerminalAgent(T)
 
@@ -47,12 +72,7 @@ func TestTerminalSession(T *testing.T) {
 	})
 
 	T.Run("connect websocket", func(t *testing.T) {
-		termClient := getTerminalClient()
-		session, err := termClient.OpenSession(agent.ID)
-		require.NoError(t, err)
-
-		conn, err := termClient.Connect(session, 80, 24)
-		require.NoError(t, err)
+		conn := openTerminalConn(t, agent.ID)
 
 		// Properly terminate the shell to avoid leaving server-side zombie sessions
 		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
@@ -74,72 +94,52 @@ func TestTerminalExec(T *testing.T) {
 	agent := getTerminalAgent(T)
 
 	T.Run("simple command", func(t *testing.T) {
-		termClient := getTerminalClient()
-		session, err := termClient.OpenSession(agent.ID)
-		require.NoError(t, err)
-		conn, err := termClient.Connect(session, 80, 24)
-		require.NoError(t, err)
+		conn := openTerminalConn(t, agent.ID)
 
 		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		defer cancel()
 
-		err = conn.Exec(ctx, "echo hello-terminal")
+		err := conn.Exec(ctx, "echo hello-terminal")
 		require.NoError(t, err)
 	})
 
 	T.Run("multiline with env vars", func(t *testing.T) {
-		termClient := getTerminalClient()
-		session, err := termClient.OpenSession(agent.ID)
-		require.NoError(t, err)
-		conn, err := termClient.Connect(session, 80, 24)
-		require.NoError(t, err)
+		conn := openTerminalConn(t, agent.ID)
 
 		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		defer cancel()
 
-		err = conn.Exec(ctx, "echo L1; echo L2; echo $HOME")
+		err := conn.Exec(ctx, "echo L1; echo L2; echo $HOME")
 		require.NoError(t, err)
 	})
 
 	T.Run("pipes and special chars", func(t *testing.T) {
-		termClient := getTerminalClient()
-		session, err := termClient.OpenSession(agent.ID)
-		require.NoError(t, err)
-		conn, err := termClient.Connect(session, 80, 24)
-		require.NoError(t, err)
+		conn := openTerminalConn(t, agent.ID)
 
 		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		defer cancel()
 
-		err = conn.Exec(ctx, `echo "test" | tr 'a-z' 'A-Z'`)
+		err := conn.Exec(ctx, `echo "test" | tr 'a-z' 'A-Z'`)
 		require.NoError(t, err)
 	})
 
 	T.Run("long output", func(t *testing.T) {
-		termClient := getTerminalClient()
-		session, err := termClient.OpenSession(agent.ID)
-		require.NoError(t, err)
-		conn, err := termClient.Connect(session, 80, 24)
-		require.NoError(t, err)
+		conn := openTerminalConn(t, agent.ID)
 
 		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		defer cancel()
 
-		err = conn.Exec(ctx, "seq 1 50")
+		err := conn.Exec(ctx, "seq 1 50")
 		require.NoError(t, err)
 	})
 
 	T.Run("timeout", func(t *testing.T) {
-		termClient := getTerminalClient()
-		session, err := termClient.OpenSession(agent.ID)
-		require.NoError(t, err)
-		conn, err := termClient.Connect(session, 80, 24)
-		require.NoError(t, err)
+		conn := openTerminalConn(t, agent.ID)
 
 		ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
 		defer cancel()
 
-		err = conn.Exec(ctx, "sleep 10")
+		err := conn.Exec(ctx, "sleep 10")
 		require.Error(t, err)
 	})
 }
