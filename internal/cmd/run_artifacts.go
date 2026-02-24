@@ -67,6 +67,7 @@ func runRunArtifacts(runID string, opts *runArtifactsOptions) error {
 	if opts.job != "" {
 		runs, err := client.GetBuilds(api.BuildsOptions{
 			BuildTypeID: opts.job,
+			State:       "finished",
 			Limit:       1,
 		})
 		if err != nil {
@@ -400,6 +401,7 @@ func runRunLog(runID string, opts *runLogOptions) error {
 	if opts.job != "" {
 		runs, err := client.GetBuilds(api.BuildsOptions{
 			BuildTypeID: opts.job,
+			State:       "finished",
 			Limit:       1,
 		})
 		if err != nil {
