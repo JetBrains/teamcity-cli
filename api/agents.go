@@ -138,6 +138,10 @@ func (c *Client) GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, err
 // If afterBuild is true, the agent will reboot after the current build finishes.
 // This uses the web UI endpoint as there is no REST API for agent reboot.
 func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error {
+	if c.ReadOnly {
+		return fmt.Errorf("%w: POST /remoteAccess/reboot.html", ErrReadOnly)
+	}
+
 	formData := url.Values{}
 	formData.Set("agent", fmt.Sprintf("%d", id))
 	if afterBuild {

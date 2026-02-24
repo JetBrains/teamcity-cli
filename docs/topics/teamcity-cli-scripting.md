@@ -246,6 +246,20 @@ Alternatively, use `--force` on commands that support it:
 teamcity queue remove 12345 --force
 ```
 
+### Read-only mode
+
+Set `TEAMCITY_RO=1` to prevent any write operations. In this mode, commands that would modify data (triggering builds, canceling, pinning, changing parameters, and so on) are rejected before a request is sent:
+
+```Shell
+export TEAMCITY_RO=1
+teamcity run list              # works — read-only
+teamcity run start MyBuild     # blocked — would trigger a build
+```
+
+This is useful for monitoring dashboards, reporting scripts, and shared environments where accidental modifications must be prevented. The flag also blocks write operations through `teamcity api` with non-GET methods.
+
+See [Configuration](teamcity-cli-configuration.md#environment-variables) for accepted values.
+
 ### Quiet mode
 
 Use `--quiet` to suppress non-essential output:

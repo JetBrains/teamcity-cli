@@ -236,6 +236,10 @@ set TEAMCITY_GUEST=1
 
 Environment variables take precedence over the configuration file and keyring.
 
+> To restrict the CLI to read-only operations (no builds triggered, no data modified), set `TEAMCITY_RO=1`. See [Read-only mode](teamcity-cli-scripting.md#read-only-mode).
+>
+{style="tip"}
+
 > Do not pass tokens as command-line flags in scripts — they may appear in process listings and shell history. Use environment variables instead.
 >
 {style="warning"}

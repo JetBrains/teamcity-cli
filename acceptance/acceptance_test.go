@@ -83,6 +83,7 @@ func TestAcceptance(t *testing.T) {
 	dirs := []string{
 		"help",
 		"auth",
+		"config",
 		"project",
 		"run",
 		"job",

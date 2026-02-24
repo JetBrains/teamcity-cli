@@ -748,3 +748,35 @@ func TestRemoveServerCleansKeyring(T *testing.T) {
 	_, err = keyringGet("tc:https://tc.example.com", "admin")
 	assert.ErrorIs(T, err, errKeyringNotFound)
 }
+
+func TestIsReadOnly(T *testing.T) {
+	saveCfgState(T)
+
+	T.Run("env var", func(t *testing.T) {
+		t.Setenv(EnvServerURL, "")
+		cfg = &Config{Servers: make(map[string]ServerConfig)}
+		for _, env := range []string{"1", "true", "yes"} {
+			t.Setenv(EnvReadOnly, env)
+			assert.True(t, IsReadOnly(), "TEAMCITY_RO=%q should be read-only", env)
+		}
+		for _, env := range []string{"", "0", "false"} {
+			t.Setenv(EnvReadOnly, env)
+			assert.False(t, IsReadOnly(), "TEAMCITY_RO=%q should not be read-only", env)
+		}
+	})
+
+	T.Run("config file", func(t *testing.T) {
+		t.Setenv(EnvReadOnly, "")
+		t.Setenv(EnvServerURL, "")
+		cfg = &Config{
+			DefaultServer: "https://tc.example.com",
+			Servers: map[string]ServerConfig{
+				"https://tc.example.com": {Token: "token", User: "user", RO: true},
+			},
+		}
+		assert.True(t, IsReadOnly())
+
+		cfg.Servers["https://tc.example.com"] = ServerConfig{Token: "token", User: "user", RO: false}
+		assert.False(t, IsReadOnly())
+	})
+}

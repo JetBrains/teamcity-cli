@@ -873,3 +873,45 @@ func TestGuestClientUsesGuestAuthPrefix(T *testing.T) {
 
 	assert.Equal(T, "/guestAuth/app/rest/server", requestPath)
 }
+
+func TestReadOnlyMode(T *testing.T) {
+	T.Parallel()
+
+	T.Run("blocks non-GET requests", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			t.Fatal("request should not reach server in read-only mode")
+		})
+		client.ReadOnly = true
+
+		// POST via typed method
+		_, err := client.RunBuild("SomeJob", RunBuildOptions{})
+		require.ErrorIs(t, err, ErrReadOnly)
+
+		// PUT via RawRequest
+		_, err = client.RawRequest("PUT", "/app/rest/something", nil, nil)
+		require.ErrorIs(t, err, ErrReadOnly)
+	})
+
+	T.Run("allows GET requests", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(Server{VersionMajor: 2024, VersionMinor: 12})
+		})
+		client.ReadOnly = true
+
+		server, err := client.GetServer()
+		require.NoError(t, err)
+		assert.Equal(t, 2024, server.VersionMajor)
+	})
+
+	T.Run("WithReadOnly option", func(t *testing.T) {
+		t.Parallel()
+
+		client := NewClient("https://example.com", "token", WithReadOnly(true))
+		assert.True(t, client.ReadOnly)
+	})
+}

@@ -799,6 +799,7 @@ func defaultGetClient() (api.ClientInterface, error) {
 	token := config.GetToken()
 
 	debugOpt := api.WithDebugFunc(output.Debug)
+	roOpt := api.WithReadOnly(config.IsReadOnly())
 
 	if config.IsGuestAuth() {
 		if serverURL == "" {
@@ -808,12 +809,12 @@ func defaultGetClient() (api.ClientInterface, error) {
 			)
 		}
 		output.Debug("Using guest authentication")
-		return api.NewGuestClient(serverURL, debugOpt), nil
+		return api.NewGuestClient(serverURL, debugOpt, roOpt), nil
 	}
 
 	if serverURL != "" && token != "" {
 		warnInsecureHTTP(serverURL, "authentication token")
-		return api.NewClient(serverURL, token, debugOpt), nil
+		return api.NewClient(serverURL, token, debugOpt, roOpt), nil
 	}
 
 	if buildAuth, ok := config.GetBuildAuth(); ok {
@@ -822,7 +823,7 @@ func defaultGetClient() (api.ClientInterface, error) {
 		}
 		output.Debug("Using build-level authentication")
 		warnInsecureHTTP(serverURL, "credentials")
-		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, debugOpt), nil
+		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, debugOpt, roOpt), nil
 	}
 
 	return nil, tcerrors.NotAuthenticated()

@@ -18,6 +18,9 @@ servers:
   https://teamcity-staging.example.com:
     user: alice
     guest: true
+  https://teamcity-prod.example.com:
+    user: alice
+    ro: true
 aliases:
   rl: 'run list'
   rw: 'run view $1 --web'
@@ -59,7 +62,7 @@ The server URL used when no `TEAMCITY_URL` environment variable is set. Updated 
 </td>
 <td>
 
-A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access. Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
+A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access or `ro: true` for read-only mode. Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
 
 </td>
 </tr>
@@ -127,6 +130,18 @@ Access token for authentication. Takes precedence over the keyring and config fi
 <td>
 
 Set to `1` to use guest authentication (read-only, no token needed). The CLI must be able to resolve the server URL (via `TEAMCITY_URL`, DSL detection, or the config file).
+
+</td>
+</tr>
+<tr>
+<td>
+
+`TEAMCITY_RO`
+
+</td>
+<td>
+
+Set to `1`, `true`, or `yes` to enable read-only mode. When enabled, all non-GET API requests (POST, PUT, DELETE) are blocked, preventing any modifications to the TeamCity server. Useful for monitoring scripts and dashboards. Can also be set per server in the config file with `ro: true`.
 
 </td>
 </tr>

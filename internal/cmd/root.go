@@ -106,6 +106,13 @@ func Execute() error {
 
 // enrichAPIError converts typed API errors into UserErrors with CLI-specific hints.
 func enrichAPIError(err error) error {
+	if errors.Is(err, api.ErrReadOnly) {
+		return tcerrors.WithSuggestion(
+			err.Error(),
+			"Unset the TEAMCITY_RO environment variable to allow write operations",
+		)
+	}
+
 	if errors.Is(err, api.ErrAuthentication) {
 		return tcerrors.WithSuggestion(
 			"Authentication failed: invalid or expired token",

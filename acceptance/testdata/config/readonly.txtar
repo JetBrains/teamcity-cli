@@ -1,0 +1,158 @@
+# Test TEAMCITY_RO read-only mode blocks all write operations.
+#
+# Commands are organized into two groups:
+#
+# 1. Direct-write commands: their first API call is a write (POST/PUT/DELETE),
+#    so fake IDs work because the read-only guard fires before any server request.
+#
+# 2. GET-first commands: they resolve/validate via GET before writing.
+#    These use real IDs discovered from the server so the GET succeeds and
+#    the read-only check fires on the subsequent write operation.
+#
+# Commands not directly tested:
+#   run cancel  — checks build state ("cannot cancel a finished run") before writing
+#   run untag   — checks tag existence ("tag not found") before writing
+# Both are still protected by the HTTP-level guard proven by the api -X tests.
+
+env TEAMCITY_RO=1
+
+# ---- Discover real IDs for GET-first command tests ----
+
+exec teamcity api /app/rest/agents?locator=count:1&fields=agent(id) --raw --no-input
+extract '"id":(\d+)' AGENT_ID
+
+exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+# ---- Read commands still work ----
+
+exec teamcity run list --limit 1 --no-input
+! stderr 'read-only'
+
+exec teamcity job list --limit 1 --no-input
+! stderr 'read-only'
+
+exec teamcity project list --limit 1 --no-input
+! stderr 'read-only'
+
+exec teamcity agent list --limit 1 --no-input
+! stderr 'read-only'
+
+exec teamcity pool list --no-input
+! stderr 'read-only'
+
+exec teamcity queue list --no-input
+! stderr 'read-only'
+
+exec teamcity api /app/rest/server --no-input
+! stderr 'read-only'
+
+# ---- API: non-GET methods blocked ----
+
+! exec teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:Fake' --no-input
+stderr 'read-only mode'
+
+! exec teamcity api /app/rest/builds/1/comment -X PUT --no-input
+stderr 'read-only mode'
+
+! exec teamcity api /app/rest/builds/1/tags/foo -X DELETE --no-input
+stderr 'read-only mode'
+
+! exec teamcity api /app/rest/builds/1/pin -X PATCH --no-input
+stderr 'read-only mode'
+
+# ---- run: direct-write subcommands ----
+
+! exec teamcity run start FakeJob_Build --no-input
+stderr 'read-only mode'
+
+! exec teamcity run pin 999999 --no-input
+stderr 'read-only mode'
+
+! exec teamcity run unpin 999999 --no-input
+stderr 'read-only mode'
+
+! exec teamcity run tag 999999 sometag --no-input
+stderr 'read-only mode'
+
+! exec teamcity run comment 999999 'a comment' --no-input
+stderr 'read-only mode'
+
+! exec teamcity run comment 999999 --delete --no-input
+stderr 'read-only mode'
+
+# ---- run: GET-first write subcommands ----
+
+! exec teamcity run restart $BUILD_ID --no-input
+stderr 'read-only mode'
+
+# ---- job: write subcommands ----
+
+! exec teamcity job pause FakeJob_Build --no-input
+stderr 'read-only mode'
+
+! exec teamcity job resume FakeJob_Build --no-input
+stderr 'read-only mode'
+
+! exec teamcity job param set FakeJob_Build PARAM value --no-input
+stderr 'read-only mode'
+
+! exec teamcity job param delete FakeJob_Build PARAM --no-input
+stderr 'read-only mode'
+
+# ---- queue: write subcommands ----
+
+! exec teamcity queue remove 999999 --force --no-input
+stderr 'read-only mode'
+
+! exec teamcity queue approve 999999 --no-input
+stderr 'read-only mode'
+
+! exec teamcity queue top 999999 --no-input
+stderr 'read-only mode'
+
+# ---- pool: write subcommands (pool ID must be numeric) ----
+
+! exec teamcity pool link 1 FakeProject --no-input
+stderr 'read-only mode'
+
+! exec teamcity pool unlink 1 FakeProject --no-input
+stderr 'read-only mode'
+
+# ---- project: write subcommands ----
+
+! exec teamcity project param set FakeProject PARAM value --no-input
+stderr 'read-only mode'
+
+! exec teamcity project param delete FakeProject PARAM --no-input
+stderr 'read-only mode'
+
+! exec teamcity project token put FakeProject fakevalue --no-input
+stderr 'read-only mode'
+
+# ---- agent: write subcommands (GET lookup first, then write blocked) ----
+
+! exec teamcity agent authorize $AGENT_ID --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent deauthorize $AGENT_ID --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent enable $AGENT_ID --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent disable $AGENT_ID --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent move $AGENT_ID 0 --no-input
+stderr 'read-only mode'
+
+! exec teamcity agent reboot $AGENT_ID --no-input
+stderr 'read-only mode'
+
+# ---- Unsetting TEAMCITY_RO restores writes ----
+
+env TEAMCITY_RO=
+
+exec teamcity api /app/rest/server -X HEAD --no-input
+! stderr 'read-only'
