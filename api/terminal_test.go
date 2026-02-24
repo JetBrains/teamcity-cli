@@ -55,6 +55,7 @@ func openTerminalConn(t *testing.T, agentID int) *terminal.Conn {
 			time.Sleep(2 * time.Second)
 			continue
 		}
+		t.Cleanup(func() { conn.Close() })
 		return conn
 	}
 	require.NoError(t, lastErr, "failed to open terminal after retries")
