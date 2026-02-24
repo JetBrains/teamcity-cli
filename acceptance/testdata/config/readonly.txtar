@@ -1,0 +1,90 @@
+# Test TEAMCITY_RO read-only mode blocks all write operations.
+# Only commands whose first API call is a write (no preceding GET lookup)
+# are tested here — others would 404 on the lookup before hitting read-only.
+
+env TEAMCITY_RO=1
+
+# ---- Read commands still work ----
+
+exec teamcity run list --limit 1 --no-input
+! stderr 'read-only'
+
+exec teamcity job list --limit 1 --no-input
+! stderr 'read-only'
+
+exec teamcity project list --limit 1 --no-input
+! stderr 'read-only'
+
+exec teamcity agent list --limit 1 --no-input
+! stderr 'read-only'
+
+exec teamcity pool list --no-input
+! stderr 'read-only'
+
+exec teamcity queue list --no-input
+! stderr 'read-only'
+
+exec teamcity api /app/rest/server --no-input
+! stderr 'read-only'
+
+# ---- API: non-GET methods blocked ----
+
+! exec teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:Fake' --no-input
+stderr 'read-only mode'
+
+! exec teamcity api /app/rest/builds/1/comment -X PUT --no-input
+stderr 'read-only mode'
+
+! exec teamcity api /app/rest/builds/1/tags/foo -X DELETE --no-input
+stderr 'read-only mode'
+
+# ---- run: write subcommands blocked (first call is POST/PUT/DELETE) ----
+
+! exec teamcity run start FakeJob_Build --no-input
+stderr 'read-only mode'
+
+! exec teamcity run pin 999999 --no-input
+stderr 'read-only mode'
+
+! exec teamcity run unpin 999999 --no-input
+stderr 'read-only mode'
+
+! exec teamcity run tag 999999 sometag --no-input
+stderr 'read-only mode'
+
+! exec teamcity run comment 999999 'a comment' --no-input
+stderr 'read-only mode'
+
+# ---- job: write subcommands blocked (first call is PUT) ----
+
+! exec teamcity job pause FakeJob_Build --no-input
+stderr 'read-only mode'
+
+! exec teamcity job resume FakeJob_Build --no-input
+stderr 'read-only mode'
+
+# ---- queue: write subcommands blocked (first call is DELETE/PUT) ----
+
+! exec teamcity queue remove 999999 --force --no-input
+stderr 'read-only mode'
+
+! exec teamcity queue approve 999999 --no-input
+stderr 'read-only mode'
+
+! exec teamcity queue top 999999 --no-input
+stderr 'read-only mode'
+
+# ---- pool: write subcommands blocked (first call is POST/DELETE) ----
+
+! exec teamcity pool link FakePool FakeProject --no-input
+stderr 'read-only mode'
+
+! exec teamcity pool unlink FakePool FakeProject --force --no-input
+stderr 'read-only mode'
+
+# ---- Unsetting TEAMCITY_RO restores writes ----
+
+env TEAMCITY_RO=
+
+exec teamcity api /app/rest/server -X HEAD --no-input
+! stderr 'read-only'
