@@ -32,6 +32,10 @@ teamcity api /app/rest/builds/12345/comment -X PUT --input comment.txt
 teamcity api /app/rest/builds/12345/tags/obsolete -X DELETE
 ```
 
+> When [read-only mode](teamcity-cli-scripting.md#read-only-mode) is enabled (`TEAMCITY_RO=1` or `ro: true` in config), non-GET requests are blocked.
+>
+{style="note"}
+
 ## Sending data
 
 ### JSON fields

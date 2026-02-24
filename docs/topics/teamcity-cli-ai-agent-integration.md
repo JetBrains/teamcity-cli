@@ -108,6 +108,17 @@ Install to the current project instead of globally
 </tr>
 </table>
 
+## Read-only mode for AI agents
+
+When giving AI agents access to TeamCity, you may want to prevent them from triggering builds, canceling runs, or modifying configuration. Set `TEAMCITY_RO=1` to restrict the CLI to read-only operations:
+
+```Shell
+export TEAMCITY_RO=1
+teamcity skill install --agent claude-code
+```
+
+In read-only mode, the agent can list builds, view logs, inspect failures, and query the API, but any command that would modify data is blocked. You can also set `ro: true` per server in the [configuration file](teamcity-cli-configuration.md#configuration-file).
+
 ## Alternative installation for Claude Code
 
 If you use Claude Code, you can also install the TeamCity skill directly through the plugin system:
