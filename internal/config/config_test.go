@@ -753,6 +753,8 @@ func TestIsReadOnly(T *testing.T) {
 	saveCfgState(T)
 
 	T.Run("env var", func(t *testing.T) {
+		t.Setenv(EnvServerURL, "")
+		cfg = &Config{Servers: make(map[string]ServerConfig)}
 		for _, env := range []string{"1", "true", "yes"} {
 			t.Setenv(EnvReadOnly, env)
 			assert.True(t, IsReadOnly(), "TEAMCITY_RO=%q should be read-only", env)
