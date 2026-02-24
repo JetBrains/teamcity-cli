@@ -1,6 +1,11 @@
 # Test TEAMCITY_RO read-only mode blocks all write operations.
+#
 # Only commands whose first API call is a write (no preceding GET lookup)
-# are tested here — others would 404 on the lookup before hitting read-only.
+# are tested directly. Commands like run cancel, run untag, run restart,
+# and agent authorize/disable/enable/move/reboot do a GET lookup first
+# (GetBuild, GetBuildTags, GetAgent), so a fake ID produces a 404
+# before the read-only check fires. These are still protected — the
+# teamcity api -X POST/PUT/DELETE tests prove the HTTP-level guard works.
 
 env TEAMCITY_RO=1
 
@@ -38,7 +43,10 @@ stderr 'read-only mode'
 ! exec teamcity api /app/rest/builds/1/tags/foo -X DELETE --no-input
 stderr 'read-only mode'
 
-# ---- run: write subcommands blocked (first call is POST/PUT/DELETE) ----
+! exec teamcity api /app/rest/builds/1/pin -X PATCH --no-input
+stderr 'read-only mode'
+
+# ---- run: write subcommands ----
 
 ! exec teamcity run start FakeJob_Build --no-input
 stderr 'read-only mode'
@@ -55,7 +63,10 @@ stderr 'read-only mode'
 ! exec teamcity run comment 999999 'a comment' --no-input
 stderr 'read-only mode'
 
-# ---- job: write subcommands blocked (first call is PUT) ----
+! exec teamcity run comment 999999 --delete --no-input
+stderr 'read-only mode'
+
+# ---- job: write subcommands ----
 
 ! exec teamcity job pause FakeJob_Build --no-input
 stderr 'read-only mode'
@@ -63,7 +74,13 @@ stderr 'read-only mode'
 ! exec teamcity job resume FakeJob_Build --no-input
 stderr 'read-only mode'
 
-# ---- queue: write subcommands blocked (first call is DELETE/PUT) ----
+! exec teamcity job param set FakeJob_Build PARAM value --no-input
+stderr 'read-only mode'
+
+! exec teamcity job param delete FakeJob_Build PARAM --no-input
+stderr 'read-only mode'
+
+# ---- queue: write subcommands ----
 
 ! exec teamcity queue remove 999999 --force --no-input
 stderr 'read-only mode'
@@ -74,12 +91,23 @@ stderr 'read-only mode'
 ! exec teamcity queue top 999999 --no-input
 stderr 'read-only mode'
 
-# ---- pool: write subcommands blocked (first call is POST/DELETE) ----
+# ---- pool: write subcommands (pool ID must be numeric) ----
 
-! exec teamcity pool link FakePool FakeProject --no-input
+! exec teamcity pool link 1 FakeProject --no-input
 stderr 'read-only mode'
 
-! exec teamcity pool unlink FakePool FakeProject --force --no-input
+! exec teamcity pool unlink 1 FakeProject --no-input
+stderr 'read-only mode'
+
+# ---- project: write subcommands ----
+
+! exec teamcity project param set FakeProject PARAM value --no-input
+stderr 'read-only mode'
+
+! exec teamcity project param delete FakeProject PARAM --no-input
+stderr 'read-only mode'
+
+! exec teamcity project token put FakeProject fakevalue --no-input
 stderr 'read-only mode'
 
 # ---- Unsetting TEAMCITY_RO restores writes ----
