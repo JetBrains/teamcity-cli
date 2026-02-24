@@ -2,10 +2,6 @@
 
 <show-structure for="chapter" depth="2"/>
 
-<tldr>
-    <p>Install TeamCity CLI, authenticate with your server, and learn the essential commands: listing builds, starting builds, viewing logs, and investigating failures.</p>
-</tldr>
-
 This guide walks you through installing TeamCity CLI, authenticating with a TeamCity server, and running your first commands.
 
 ## Install TeamCity CLI {id="install"}
@@ -359,7 +355,7 @@ teamcity project view MyProject --web
 
 <deflist>
     <def title="Shell completion">
-        Set up tab completion for Bash, Zsh, Fish, or PowerShell — see <a href="teamcity-cli-configuration.md" anchor="shell-completion">Configuration</a>.
+        Set up tab completion for Bash, Zsh, Fish, or PowerShell — see <a href="teamcity-cli-configuration.md#Shell+completion">Configuration</a>.
     </def>
     <def title="Authentication">
         Learn about <a href="teamcity-cli-authentication.md">authentication methods</a> including multi-server setup and CI/CD usage.

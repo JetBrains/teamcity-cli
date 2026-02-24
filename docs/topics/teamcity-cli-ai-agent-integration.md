@@ -117,7 +117,7 @@ export TEAMCITY_RO=1
 teamcity skill install --agent claude-code
 ```
 
-In read-only mode, the agent can list builds, view logs, inspect failures, and query the API, but any command that would modify data is blocked. You can also set `ro: true` per server in the [configuration file](teamcity-cli-configuration.md#configuration-file).
+In read-only mode, the agent can list builds, view logs, inspect failures, and query the API, but any command that would modify data is blocked. You can also set `ro: true` per server in the [configuration file](teamcity-cli-configuration.md#Configuration+file).
 
 ## Alternative installation for Claude Code
 

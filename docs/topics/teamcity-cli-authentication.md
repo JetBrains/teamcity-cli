@@ -4,6 +4,10 @@
 
 TeamCity CLI supports several authentication methods. This page covers interactive login, guest access, token-based authentication for CI/CD, multi-server setup, and automatic authentication within TeamCity builds.
 
+> TeamCity CLI supports TeamCity server versions 2020.1 and later.
+>
+{style="tip"}
+
 ## Interactive login
 
 The standard way to authenticate is with the `teamcity auth login` command:
@@ -67,11 +71,11 @@ Guest authentication provides read-only access. It uses the `/guestAuth/` API pr
 
 <img src="auth-login.gif" alt="Authenticating with guest access" border-effect="rounded"/>
 
-> Guest access must be enabled in the TeamCity server settings (__Administration | Authentication__). If guest access is not enabled, the login will fail.
+> Guest access must be [enabled in the TeamCity server settings](enabling-guest-login.md). Otherwise, the login will fail.
 >
 {style="note"}
 
-> The `--guest` and `--token` flags are mutually exclusive. Use one or the other.
+> The `--guest` and `--token` flags are mutually exclusive. Use either one or the other.
 >
 {style="warning"}
 
@@ -236,7 +240,7 @@ set TEAMCITY_GUEST=1
 
 Environment variables take precedence over the configuration file and keyring.
 
-> To restrict the CLI to read-only operations (no builds triggered, no data modified), set `TEAMCITY_RO=1`. See [Read-only mode](teamcity-cli-scripting.md#read-only-mode).
+> To restrict the CLI to read-only operations (no builds triggered, no data modified), set `TEAMCITY_RO=1`. See [Read-only mode](teamcity-cli-scripting.md#Read-only+mode).
 >
 {style="tip"}
 

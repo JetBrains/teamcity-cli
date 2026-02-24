@@ -172,7 +172,7 @@ teamcity project view MyProject --json
 
 ## Managing project parameters
 
-Project parameters are inherited by all build configurations within the project. They work identically to [job parameters](teamcity-cli-managing-jobs.md#managing-job-parameters).
+Project parameters are inherited by all build configurations within the project. They work identically to [job parameters](teamcity-cli-managing-jobs.md#Managing+job+parameters).
 
 ### Listing parameters
 

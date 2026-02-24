@@ -230,7 +230,7 @@ set TEAMCITY_TOKEN=your-access-token
 </tab>
 </tabs>
 
-See [Authentication](teamcity-cli-authentication.md#environment-variables) for details.
+See [Authentication](teamcity-cli-authentication.md#Environment+variables) for details.
 
 ### Non-interactive mode
 
@@ -258,7 +258,7 @@ teamcity run start MyBuild     # blocked — would trigger a build
 
 This is useful for monitoring dashboards, reporting scripts, and shared environments where accidental modifications must be prevented. The flag also blocks write operations through `teamcity api` with non-GET methods.
 
-See [Configuration](teamcity-cli-configuration.md#environment-variables) for accepted values.
+See [Configuration](teamcity-cli-configuration.md#Environment+variables) for accepted values.
 
 ### Quiet mode
 
