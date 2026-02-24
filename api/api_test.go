@@ -40,11 +40,40 @@ func skipIfGuest(t *testing.T) {
 	}
 }
 
+// waitForIdleAgent waits until no builds are running or queued, so the single
+// testcontainer agent is free. This absorbs flakiness from prior tests that may
+// have left the agent busy (slow cancel, stuck build, etc.).
+func waitForIdleAgent(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Minute)
+	for time.Now().Before(deadline) {
+		running, _ := client.GetBuilds(api.BuildsOptions{State: "running", Limit: 1})
+		queued, _ := client.GetBuildQueue(api.QueueOptions{Limit: 1})
+		if (running == nil || running.Count == 0) && (queued == nil || queued.Count == 0) {
+			return
+		}
+		if running != nil {
+			for _, b := range running.Builds {
+				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "Waiting for idle agent")
+			}
+		}
+		if queued != nil {
+			for _, b := range queued.Builds {
+				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "Waiting for idle agent")
+			}
+		}
+		time.Sleep(2 * time.Second)
+	}
+	t.Logf("waitForIdleAgent: agent still busy after 3m")
+}
+
 // cancelAndWait cancels a build and waits for it to reach a terminal state so the
 // single testcontainer agent is free for subsequent tests.
 func cancelAndWait(t *testing.T, buildID string) {
 	t.Helper()
-	_ = client.CancelBuild(buildID, "Test cleanup")
+	if err := client.CancelBuild(buildID, "Test cleanup"); err != nil {
+		t.Logf("cancelAndWait: initial cancel of %s: %v", buildID, err)
+	}
 	deadline := time.Now().Add(60 * time.Second)
 	for time.Now().Before(deadline) {
 		b, err := client.GetBuild(buildID)
@@ -54,7 +83,9 @@ func cancelAndWait(t *testing.T, buildID string) {
 		if b.State == "finished" {
 			return
 		}
-		_ = client.CancelBuild(buildID, "Test cleanup")
+		if err := client.CancelBuild(buildID, "Test cleanup"); err != nil {
+			t.Logf("cancelAndWait: retry cancel of %s (state=%s): %v", buildID, b.State, err)
+		}
 		time.Sleep(time.Second)
 	}
 	t.Logf("cancelAndWait: build %s did not finish within 60s", buildID)
@@ -727,6 +758,7 @@ func TestBuildLevelAuth(T *testing.T) {
 	if testEnvRef == nil || len(testEnvRef.agents) == 0 {
 		T.Skip("test requires testcontainers agent")
 	}
+	waitForIdleAgent(T)
 
 	configID := "Sandbox_BuildAuthTest"
 

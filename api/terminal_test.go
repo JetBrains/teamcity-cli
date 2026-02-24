@@ -92,6 +92,7 @@ func TestTerminalSession(T *testing.T) {
 }
 
 func TestTerminalExec(T *testing.T) {
+	waitForIdleAgent(T)
 	agent := getTerminalAgent(T)
 
 	T.Run("simple command", func(t *testing.T) {
