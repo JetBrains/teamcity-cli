@@ -57,6 +57,7 @@ func cancelAndWait(t *testing.T, buildID string) {
 		_ = client.CancelBuild(buildID, "Test cleanup")
 		time.Sleep(time.Second)
 	}
+	t.Logf("cancelAndWait: build %s did not finish within 30s", buildID)
 }
 
 func TestMain(m *testing.M) {
@@ -866,26 +867,26 @@ func TestPoolOperations(T *testing.T) {
 	})
 
 	T.Run("add and remove project from pool", func(t *testing.T) {
-		// Get the default pool first
 		pool, err := client.GetAgentPool(0)
 		require.NoError(t, err)
 
-		// Always restore the project-pool association, even if the test fails midway.
+		// Safety net: always restore the project-pool association.
 		t.Cleanup(func() {
-			_ = client.AddProjectToPool(pool.ID, testProject)
+			if err := client.AddProjectToPool(pool.ID, testProject); err != nil {
+				t.Logf("cleanup: AddProjectToPool: %v", err)
+			}
 		})
 
-		// Add the test project to the default pool
 		err = client.AddProjectToPool(pool.ID, testProject)
 		if err != nil {
-			t.Logf("AddProjectToPool: %v (project may already be in pool)", err)
-		} else {
-			// Only try to remove if adding succeeded
-			err = client.RemoveProjectFromPool(pool.ID, testProject)
-			if err != nil {
-				t.Logf("RemoveProjectFromPool: %v", err)
-			}
+			t.Logf("AddProjectToPool: %v (may already be in pool)", err)
 		}
+
+		err = client.RemoveProjectFromPool(pool.ID, testProject)
+		require.NoError(t, err)
+
+		err = client.AddProjectToPool(pool.ID, testProject)
+		require.NoError(t, err)
 	})
 
 	T.Run("move agent to pool and back", func(t *testing.T) {
@@ -1137,6 +1138,11 @@ func TestAgentOperations(T *testing.T) {
 		require.Greater(t, len(agents.Agents), 0)
 
 		agentID := agents.Agents[0].ID
+
+		// Always re-enable the agent, even if the test fails midway.
+		t.Cleanup(func() {
+			_ = client.EnableAgent(agentID, true)
+		})
 
 		// Disable
 		err = client.EnableAgent(agentID, false)
