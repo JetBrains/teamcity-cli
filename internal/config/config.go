@@ -151,6 +151,23 @@ func GetTokenWithSource() (token, source string) {
 	return "", ""
 }
 
+// GetTokenForServer retrieves the token for a specific server URL.
+// Unlike GetTokenWithSource, it does not use GetServerURL() — the caller
+// provides the server URL directly. Returns the token and its source
+// ("keyring" or "config"), or empty strings if none found.
+func GetTokenForServer(serverURL string) (token, source string) {
+	server, ok := cfg.Servers[serverURL]
+	if ok && server.User != "" {
+		if t, err := keyringGet(keyringService(serverURL), server.User); err == nil && t != "" {
+			return t, "keyring"
+		}
+	}
+	if ok && server.Token != "" {
+		return server.Token, "config"
+	}
+	return "", ""
+}
+
 // GetCurrentUser returns the current user from config
 func GetCurrentUser() string {
 	serverURL := GetServerURL()
@@ -170,6 +187,7 @@ func SetServer(serverURL, token, user string) error {
 }
 
 func SetServerWithKeyring(serverURL, token, user string, insecureStorage bool) (insecureFallback bool, err error) {
+	serverURL = NormalizeURL(serverURL)
 	cfg.DefaultServer = serverURL
 
 	if !insecureStorage {
@@ -252,6 +270,7 @@ func IsReadOnly() bool {
 
 // SetGuestServer saves a server with guest auth enabled and no token
 func SetGuestServer(serverURL string) error {
+	serverURL = NormalizeURL(serverURL)
 	cfg.DefaultServer = serverURL
 	cfg.Servers[serverURL] = ServerConfig{Guest: true}
 	return writeConfig()

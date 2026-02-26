@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"cmp"
 	"fmt"
+	"maps"
+	"os"
+	"slices"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
@@ -248,28 +252,95 @@ func newAuthStatusCmd() *cobra.Command {
 }
 
 func runAuthStatus() error {
-	serverURL := config.GetServerURL()
-
-	if config.IsGuestAuth() && serverURL != "" {
-		return showGuestAuthStatus(serverURL)
-	}
-
-	token, tokenSource := config.GetTokenWithSource()
-
-	if serverURL != "" && token != "" {
-		return showExplicitAuthStatus(serverURL, token, tokenSource)
+	if envURL := os.Getenv(config.EnvServerURL); envURL != "" {
+		envURL = config.NormalizeURL(envURL)
+		if config.IsGuestAuth() {
+			showGuestAuthStatus(envURL, "")
+			return nil
+		}
+		if envToken := os.Getenv(config.EnvToken); envToken != "" {
+			showExplicitAuthStatus(envURL, envToken, "env", "")
+			return nil
+		}
 	}
 
 	if buildAuth, ok := config.GetBuildAuth(); ok {
-		return showBuildAuthStatus(buildAuth)
+		showBuildAuthStatus(buildAuth)
+		return nil
 	}
 
-	fmt.Println(output.Red("✗"), "Not logged in to any TeamCity server")
-	fmt.Println("\nRun", output.Cyan("teamcity auth login"), "to authenticate")
-	if config.IsBuildEnvironment() {
-		fmt.Println("\n" + output.Yellow("!") + " Build environment detected but credentials not found in properties file")
+	cfg := config.Get()
+	shown := 0
+
+	urls := sortedServerURLs(cfg)
+	for i, serverURL := range urls {
+		if i > 0 {
+			fmt.Println()
+		}
+		sc := cfg.Servers[serverURL]
+		suffix := ""
+		if len(urls) > 1 && serverURL == cfg.DefaultServer {
+			suffix = " (default)"
+		}
+
+		if sc.Guest {
+			showGuestAuthStatus(serverURL, suffix)
+		} else if token, src := config.GetTokenForServer(serverURL); token != "" {
+			showExplicitAuthStatus(serverURL, token, src, suffix)
+		} else {
+			fmt.Printf("%s %s%s\n", output.Red("✗"), serverURL, suffix)
+			fmt.Println("  Token is missing or could not be retrieved")
+			printLoginHint(serverURL)
+		}
+		shown++
 	}
+
+	if dslURL := config.DetectServerFromDSL(); dslURL != "" && dslURL != cfg.DefaultServer {
+		if _, ok := cfg.Servers[dslURL]; !ok {
+			if shown > 0 {
+				fmt.Println()
+			}
+			fmt.Printf("%s Commands in this directory target %s (from DSL settings)\n",
+				output.Yellow("!"), output.Cyan(dslURL))
+			printLoginHint(dslURL)
+			shown++
+		}
+	}
+
+	if shown == 0 {
+		fmt.Println(output.Red("✗"), "Not logged in to any TeamCity server")
+		fmt.Println("\nRun", output.Cyan("teamcity auth login"), "to authenticate")
+		if config.IsBuildEnvironment() {
+			fmt.Println("\n" + output.Yellow("!") + " Build environment detected but credentials not found in properties file")
+		}
+	}
+
 	return nil
+}
+
+func sortedServerURLs(cfg *config.Config) []string {
+	urls := slices.Collect(maps.Keys(cfg.Servers))
+	slices.SortFunc(urls, func(a, b string) int {
+		if ad, bd := a == cfg.DefaultServer, b == cfg.DefaultServer; ad != bd {
+			if ad {
+				return -1
+			}
+			return 1
+		}
+		return cmp.Compare(a, b)
+	})
+	return urls
+}
+
+// printLoginHint probes guest access on serverURL and prints a targeted suggestion.
+func printLoginHint(serverURL string) {
+	loginCmd := output.Cyan("teamcity auth login --server " + serverURL)
+	guest := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
+	if _, err := guest.GetServer(); err == nil {
+		fmt.Printf("  Run %s, or set %s for guest access\n", loginCmd, output.Cyan("TEAMCITY_GUEST=1"))
+	} else {
+		fmt.Printf("  Run %s to authenticate\n", loginCmd)
+	}
 }
 
 func tokenSourceLabel(source string) string {
@@ -285,17 +356,17 @@ func tokenSourceLabel(source string) string {
 	}
 }
 
-func showExplicitAuthStatus(serverURL, token, tokenSource string) error {
+func showExplicitAuthStatus(serverURL, token, tokenSource, suffix string) {
 	warnInsecureHTTP(serverURL, "authentication token")
 	client := api.NewClient(serverURL, token, api.WithDebugFunc(output.Debug))
 	user, err := client.GetCurrentUser()
 	if err != nil {
-		fmt.Printf("%s Server: %s\n", output.Red("✗"), serverURL)
+		fmt.Printf("%s Server: %s%s\n", output.Red("✗"), serverURL, suffix)
 		fmt.Println("  Token is invalid or expired")
-		return nil
+		return
 	}
 
-	fmt.Printf("%s Logged in to %s\n", output.Green("✓"), output.Cyan(serverURL))
+	fmt.Printf("%s Logged in to %s%s\n", output.Green("✓"), output.Cyan(serverURL), suffix)
 	fmt.Printf("  User: %s (%s) · %s\n", user.Name, user.Username, tokenSourceLabel(tokenSource))
 
 	server, err := client.ServerVersion()
@@ -308,20 +379,18 @@ func showExplicitAuthStatus(serverURL, token, tokenSource string) error {
 			fmt.Printf("  %s API compatible\n", output.Green("✓"))
 		}
 	}
-
-	return nil
 }
 
-func showGuestAuthStatus(serverURL string) error {
+func showGuestAuthStatus(serverURL, suffix string) {
 	client := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
 	server, err := client.GetServer()
 	if err != nil {
-		fmt.Printf("%s Server: %s\n", output.Red("✗"), serverURL)
+		fmt.Printf("%s Server: %s%s\n", output.Red("✗"), serverURL, suffix)
 		fmt.Println("  Guest access is not available")
-		return nil
+		return
 	}
 
-	fmt.Printf("%s Guest access to %s\n", output.Green("✓"), output.Cyan(serverURL))
+	fmt.Printf("%s Guest access to %s%s\n", output.Green("✓"), output.Cyan(serverURL), suffix)
 	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
 
 	if err := client.CheckVersion(); err != nil {
@@ -329,24 +398,20 @@ func showGuestAuthStatus(serverURL string) error {
 	} else {
 		fmt.Printf("  %s API compatible\n", output.Green("✓"))
 	}
-
-	return nil
 }
 
-func showBuildAuthStatus(buildAuth *config.BuildAuth) error {
+func showBuildAuthStatus(buildAuth *config.BuildAuth) {
 	warnInsecureHTTP(buildAuth.ServerURL, "credentials")
 	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(output.Debug))
 	server, err := client.GetServer()
 	if err != nil {
 		fmt.Printf("%s Server: %s\n", output.Red("✗"), buildAuth.ServerURL)
 		fmt.Println("  Build credentials are invalid")
-		return nil
+		return
 	}
 
 	fmt.Printf("%s Connected to %s\n", output.Green("✓"), output.Cyan(buildAuth.ServerURL))
 	fmt.Printf("  Auth: %s\n", output.Faint("Build-level credentials"))
 	fmt.Printf("  Scope: %s\n", output.Faint("Build-level access"))
 	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
-
-	return nil
 }
