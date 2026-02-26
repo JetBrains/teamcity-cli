@@ -826,7 +826,7 @@ func defaultGetClient() (api.ClientInterface, error) {
 		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, debugOpt, roOpt), nil
 	}
 
-	return nil, tcerrors.NotAuthenticated()
+	return nil, notAuthenticatedError(serverURL)
 }
 
 func newProjectTreeCmd() *cobra.Command {

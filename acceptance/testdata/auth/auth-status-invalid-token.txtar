@@ -2,6 +2,7 @@
 
 env TEAMCITY_URL=$TC_HOST
 env TEAMCITY_TOKEN=definitely-not-a-valid-token
+env TEAMCITY_GUEST=
 
 exec teamcity auth status --no-input
 stdout 'Token is invalid or expired'
