@@ -42,6 +42,9 @@ var (
 	cfg        *Config
 	configPath string
 
+	// vi uses "::" as key delimiter to avoid Viper splitting URL map keys on dots
+	vi = viper.NewWithOptions(viper.KeyDelimiter("::"))
+
 	// injectable for testing
 	userHomeDirFn = os.UserHomeDir
 	getwdFn       = os.Getwd
@@ -66,11 +69,11 @@ func Init() error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	viper.SetConfigFile(configPath)
-	viper.SetConfigType("yaml")
-	viper.SetDefault("servers", map[string]ServerConfig{})
+	vi.SetConfigFile(configPath)
+	vi.SetConfigType("yaml")
+	vi.SetDefault("servers", map[string]ServerConfig{})
 
-	if err := viper.ReadInConfig(); err != nil {
+	if err := vi.ReadInConfig(); err != nil {
 		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); !ok {
 			if !os.IsNotExist(err) {
 				return fmt.Errorf("failed to read config: %w", err)
@@ -79,7 +82,7 @@ func Init() error {
 	}
 
 	cfg = &Config{}
-	if err := viper.Unmarshal(cfg); err != nil {
+	if err := vi.Unmarshal(cfg); err != nil {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 
@@ -202,11 +205,11 @@ func SetServerWithKeyring(serverURL, token, user string, insecureStorage bool) (
 }
 
 func writeConfig() error {
-	viper.Set("default_server", cfg.DefaultServer)
-	viper.Set("servers", cfg.Servers)
-	viper.Set("aliases", cfg.Aliases)
+	vi.Set("default_server", cfg.DefaultServer)
+	vi.Set("servers", cfg.Servers)
+	vi.Set("aliases", cfg.Aliases)
 
-	if err := viper.WriteConfigAs(configPath); err != nil {
+	if err := vi.WriteConfigAs(configPath); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	if err := os.Chmod(configPath, 0600); err != nil {
@@ -391,4 +394,5 @@ func ResetForTest() {
 		Servers: make(map[string]ServerConfig),
 		Aliases: make(map[string]string),
 	}
+	vi = viper.NewWithOptions(viper.KeyDelimiter("::"))
 }

@@ -30,11 +30,13 @@ func saveCfgState(t *testing.T) {
 	t.Helper()
 	oldCfg := cfg
 	oldPath := configPath
-	viper.Reset()
+	oldVi := vi
+	vi = viper.NewWithOptions(viper.KeyDelimiter("::"))
 	keyringMockInitWithError(errors.New("keyring disabled in test"))
 	t.Cleanup(func() {
 		cfg = oldCfg
 		configPath = oldPath
+		vi = oldVi
 	})
 }
 
@@ -516,7 +518,7 @@ func TestInitMkdirFails(T *testing.T) {
 
 func TestInitInvalidConfig(T *testing.T) {
 	saveCfgState(T)
-	viper.Reset()
+	vi = viper.NewWithOptions(viper.KeyDelimiter("::"))
 	tmpDir := T.TempDir()
 	T.Setenv("HOME", tmpDir)
 	T.Setenv("USERPROFILE", tmpDir)
@@ -532,7 +534,7 @@ func TestInitInvalidConfig(T *testing.T) {
 
 func TestInitUnmarshalError(T *testing.T) {
 	saveCfgState(T)
-	viper.Reset()
+	vi = viper.NewWithOptions(viper.KeyDelimiter("::"))
 	tmpDir := T.TempDir()
 	T.Setenv("HOME", tmpDir)
 	T.Setenv("USERPROFILE", tmpDir)
@@ -549,7 +551,7 @@ func TestInitUnmarshalError(T *testing.T) {
 
 func TestInitServersDefaulted(T *testing.T) {
 	saveCfgState(T)
-	viper.Reset()
+	vi = viper.NewWithOptions(viper.KeyDelimiter("::"))
 	tmpDir := T.TempDir()
 	T.Setenv("HOME", tmpDir)
 	T.Setenv("USERPROFILE", tmpDir)
@@ -599,10 +601,10 @@ func TestRemoveServerWriteError(T *testing.T) {
 			"https://tc.example.com": {Token: "token", User: "user"},
 		},
 	}
-	// First write must succeed so viper knows the file
-	viper.Set("default_server", cfg.DefaultServer)
-	viper.Set("servers", cfg.Servers)
-	require.NoError(T, viper.WriteConfigAs(configPath))
+	// First write must succeed so vi knows the file
+	vi.Set("default_server", cfg.DefaultServer)
+	vi.Set("servers", cfg.Servers)
+	require.NoError(T, vi.WriteConfigAs(configPath))
 
 	// Now point to unwritable path
 	configPath = "/dev/null/impossible/path/config.yml"
