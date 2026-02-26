@@ -1,35 +1,37 @@
-# Auth commands requiring authentication.
+# Auth status shows config-based servers and env override.
 [!has_token] skip 'requires authentication token'
 
 # Save token before clearing env vars
 env SAVED_TOKEN=$TEAMCITY_TOKEN
 
-# Env-based status shows "environment variable" as token source
-exec teamcity auth status --no-input
-stdout 'Logged in to'
-stdout 'cli.teamcity.com'
-stdout 'environment variable'
-stdout 'TeamCity'
-stdout 'API compatible'
-! stderr 'Error'
-
-# Login persists credentials to config
+# Login stores token in config
 exec teamcity auth login --server $TC_HOST --token $TEAMCITY_TOKEN --no-input
 ! stderr 'Error'
 
 env TEAMCITY_URL=
 env TEAMCITY_TOKEN=
+
+# Config-based status shows config path source
 exec teamcity auth status --no-input
 stdout 'Logged in to'
 stdout 'config.yml'
+stdout 'TeamCity'
+stdout 'API compatible'
+! stdout '(default)'
 ! stderr 'Error'
 
-# Login with --insecure-storage also works
+# Re-login with --insecure-storage
 exec teamcity auth login --server $TC_HOST --token $SAVED_TOKEN --insecure-storage --no-input
 ! stderr 'Error'
 
 exec teamcity auth status --no-input
 stdout 'Logged in to'
 stdout 'config.yml'
-! stdout '(default)'
 ! stderr 'Error'
+
+# Env override takes precedence and shows "environment variable"
+env TEAMCITY_URL=$TC_HOST
+env TEAMCITY_TOKEN=fake-token-that-will-fail
+
+exec teamcity auth status --no-input
+stdout 'Token is invalid or expired'

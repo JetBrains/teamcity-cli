@@ -1,0 +1,11 @@
+# Auth status when no credentials are configured.
+
+# Clear all auth sources
+env TEAMCITY_URL=
+env TEAMCITY_TOKEN=
+env TEAMCITY_GUEST=
+env TEAMCITY_BUILD_PROPERTIES_FILE=
+
+exec teamcity auth status --no-input
+stdout 'Not logged in'
+stdout 'teamcity auth login'

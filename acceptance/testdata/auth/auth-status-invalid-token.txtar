@@ -1,0 +1,8 @@
+# Auth status with an invalid token reports the error gracefully.
+
+env TEAMCITY_URL=$TC_HOST
+env TEAMCITY_TOKEN=definitely-not-a-valid-token
+
+exec teamcity auth status --no-input
+stdout 'Token is invalid or expired'
+! stderr 'Error'
