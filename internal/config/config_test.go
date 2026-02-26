@@ -750,6 +750,48 @@ func TestRemoveServerCleansKeyring(T *testing.T) {
 	assert.ErrorIs(T, err, errKeyringNotFound)
 }
 
+func TestGetTokenForServer(T *testing.T) {
+	saveCfgState(T)
+
+	cfg = &Config{
+		DefaultServer: "https://tc1.example.com",
+		Servers: map[string]ServerConfig{
+			"https://tc1.example.com": {Token: "token-1", User: "user1"},
+			"https://tc2.example.com": {Token: "token-2", User: "user2"},
+		},
+	}
+
+	token, source := GetTokenForServer("https://tc1.example.com")
+	assert.Equal(T, "token-1", token)
+	assert.Equal(T, "config", source)
+
+	token, source = GetTokenForServer("https://tc2.example.com")
+	assert.Equal(T, "token-2", token)
+	assert.Equal(T, "config", source)
+
+	token, _ = GetTokenForServer("https://unknown.example.com")
+	assert.Empty(T, token)
+}
+
+func TestGetTokenForServerKeyring(T *testing.T) {
+	saveCfgState(T)
+	keyringMockInit()
+
+	serverURL := "https://tc.example.com"
+	require.NoError(T, keyringSet("tc:"+serverURL, "admin", "keyring-token"))
+
+	cfg = &Config{
+		DefaultServer: serverURL,
+		Servers: map[string]ServerConfig{
+			serverURL: {Token: "config-token", User: "admin"},
+		},
+	}
+
+	token, source := GetTokenForServer(serverURL)
+	assert.Equal(T, "keyring-token", token)
+	assert.Equal(T, "keyring", source)
+}
+
 func TestIsReadOnly(T *testing.T) {
 	saveCfgState(T)
 

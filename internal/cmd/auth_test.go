@@ -238,3 +238,67 @@ func TestGuestAuthTakesPriorityOverToken(T *testing.T) {
 	require.NoError(T, err)
 	assert.True(T, usedGuestPath, "guest auth should use /guestAuth/ path")
 }
+
+// setupConfigAuthStatus clears env overrides and resets config so tests
+// exercise the config-based path in runAuthStatus.
+func setupConfigAuthStatus(t *testing.T, ts *TestServer) {
+	t.Helper()
+	t.Setenv("TEAMCITY_URL", "")
+	t.Setenv("TEAMCITY_TOKEN", "")
+	t.Setenv("TEAMCITY_GUEST", "")
+	t.Setenv("TEAMCITY_BUILD_PROPERTIES_FILE", "")
+	t.Setenv("TC_INSECURE_SKIP_WARN", "1")
+	config.ResetDSLCache()
+	config.ResetForTest()
+
+	ts.Handle("GET /app/rest/users/current", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.User{ID: 1, Username: "admin", Name: "Administrator"})
+	})
+	ts.Handle("GET /app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.Server{VersionMajor: 2025, VersionMinor: 7, BuildNumber: "197398"})
+	})
+}
+
+func TestAuthStatusMultipleServers(T *testing.T) {
+	ts := NewTestServer(T)
+	setupConfigAuthStatus(T, ts)
+
+	ts.Handle("GET /other/app/rest/users/current", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.User{ID: 2, Username: "admin", Name: "Administrator"})
+	})
+	ts.Handle("GET /other/app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.Server{VersionMajor: 2024, VersionMinor: 12, BuildNumber: "176523"})
+	})
+
+	cfg := config.Get()
+	cfg.DefaultServer = ts.URL
+	cfg.Servers[ts.URL] = config.ServerConfig{Token: "token-1", User: "admin"}
+	cfg.Servers[ts.URL+"/other"] = config.ServerConfig{Token: "token-2", User: "admin"}
+
+	runCmd(T, "auth", "status")
+}
+
+func TestAuthStatusWithDSLHint(T *testing.T) {
+	ts := NewTestServer(T)
+	setupConfigAuthStatus(T, ts)
+
+	tmpDir := T.TempDir()
+	dslDir := filepath.Join(tmpDir, ".teamcity")
+	require.NoError(T, os.MkdirAll(dslDir, 0755))
+	require.NoError(T, os.WriteFile(filepath.Join(dslDir, "pom.xml"), []byte(`<?xml version="1.0"?>
+<project><repositories><repository>
+  <id>teamcity-server</id>
+  <url>https://dsl-server.example.com/app/dsl-plugins-repository</url>
+</repository></repositories></project>`), 0644))
+
+	T.Setenv("TEAMCITY_DSL_DIR", dslDir)
+	config.ResetDSLCache()
+
+	cfg := config.Get()
+	cfg.DefaultServer = ts.URL
+	cfg.Servers[ts.URL] = config.ServerConfig{Token: "token-1", User: "admin"}
+
+	// DSL points to dsl-server.example.com which is not in config —
+	// should still succeed (shows authenticated server + hint)
+	runCmd(T, "auth", "status")
+}
