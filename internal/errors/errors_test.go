@@ -53,6 +53,7 @@ func TestNotAuthenticated(T *testing.T) {
 	err := NotAuthenticated()
 	assert.Contains(T, err.Message, "Not authenticated")
 	assert.Contains(T, err.Suggestion, "teamcity auth login")
+	assert.NotContains(T, err.Suggestion, "TEAMCITY_GUEST")
 }
 
 func TestNotFound(T *testing.T) {

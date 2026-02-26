@@ -65,7 +65,7 @@ func connectToAgent(ctx context.Context, nameOrID string, showProgress bool) (*t
 	serverURL := config.GetServerURL()
 	token := config.GetToken()
 	if serverURL == "" || token == "" {
-		return nil, tcerrors.NotAuthenticated()
+		return nil, notAuthenticatedError(serverURL)
 	}
 
 	client, err := getClient()

@@ -335,12 +335,31 @@ func sortedServerURLs(cfg *config.Config) []string {
 // printLoginHint probes guest access on serverURL and prints a targeted suggestion.
 func printLoginHint(serverURL string) {
 	loginCmd := output.Cyan("teamcity auth login --server " + serverURL)
-	guest := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
-	if _, err := guest.GetServer(); err == nil {
+	if probeGuestAccess(serverURL) {
 		fmt.Printf("  Run %s, or set %s for guest access\n", loginCmd, output.Cyan("TEAMCITY_GUEST=1"))
 	} else {
 		fmt.Printf("  Run %s to authenticate\n", loginCmd)
 	}
+}
+
+// probeGuestAccess checks whether the server at serverURL supports guest access.
+func probeGuestAccess(serverURL string) bool {
+	if serverURL == "" {
+		return false
+	}
+	guest := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
+	_, err := guest.GetServer()
+	return err == nil
+}
+
+// notAuthenticatedError returns a not-authenticated error with a hint that
+// conditionally includes the guest access suggestion based on server support.
+func notAuthenticatedError(serverURL string) *tcerrors.UserError {
+	err := tcerrors.NotAuthenticated()
+	if probeGuestAccess(serverURL) {
+		err.Suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
+	}
+	return err
 }
 
 func tokenSourceLabel(source string) string {

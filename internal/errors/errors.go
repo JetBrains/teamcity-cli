@@ -36,7 +36,7 @@ func WithSuggestion(message, suggestion string) *UserError {
 func NotAuthenticated() *UserError {
 	return &UserError{
 		Message:    "Not authenticated",
-		Suggestion: "Run 'teamcity auth login' to authenticate, or set TEAMCITY_GUEST=1 for guest access",
+		Suggestion: "Run 'teamcity auth login' to authenticate",
 	}
 }
 
