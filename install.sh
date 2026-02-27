@@ -28,7 +28,8 @@ echo -e '
     ██║   ██║        https://jb.gg/tc/docs
     ██║   ╚██████╗   Report issues
     ╚═╝    ╚═════╝   https://jb.gg/tc/issues
- ═════════
+ ▄▄▄▄▄▄▄▄╗
+ ╚════════╝
 '
 
 echo -e "
