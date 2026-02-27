@@ -31,6 +31,7 @@ Write-Host "
     ██║   ██║        https://jb.gg/tc/docs
     ██║   ╚██████╗   Report issues
     ╚═╝    ╚═════╝   https://jb.gg/tc/issues
+    ══════════════
 "
 
 Write-Host "This script will download TeamCity CLI to $installDir\$binName`n"
