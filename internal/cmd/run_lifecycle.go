@@ -326,6 +326,11 @@ type runWatchOptions struct {
 	timeout  time.Duration
 }
 
+var runWatchTUIFn = runWatchTUI
+var watchHasTTYFn = func() bool {
+	return output.IsTerminal() && output.IsStdinTerminal()
+}
+
 func newRunWatchCmd() *cobra.Command {
 	opts := &runWatchOptions{}
 
@@ -367,7 +372,10 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 	}
 
 	if opts.logs && !opts.quiet {
-		return runWatchTUI(client, runID, opts.interval)
+		if watchHasTTYFn() {
+			return runWatchTUIFn(client, runID, opts.interval)
+		}
+		output.Warn("--logs requires a TTY; falling back to standard watch mode")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
