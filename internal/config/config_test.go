@@ -676,18 +676,20 @@ func TestGetTokenPriority(T *testing.T) {
 		t.Setenv(EnvToken, "env-token")
 		t.Setenv(EnvServerURL, serverURL)
 
-		token, source := GetTokenWithSource()
+		token, source, krErr := GetTokenWithSource()
 		assert.Equal(t, "env-token", token)
 		assert.Equal(t, "env", source)
+		assert.NoError(t, krErr)
 	})
 
 	T.Run("keyring wins over config", func(t *testing.T) {
 		t.Setenv(EnvToken, "")
 		t.Setenv(EnvServerURL, serverURL)
 
-		token, source := GetTokenWithSource()
+		token, source, krErr := GetTokenWithSource()
 		assert.Equal(t, "keyring-token", token)
 		assert.Equal(t, "keyring", source)
+		assert.NoError(t, krErr)
 	})
 
 	T.Run("config used when keyring empty", func(t *testing.T) {
@@ -695,9 +697,10 @@ func TestGetTokenPriority(T *testing.T) {
 		t.Setenv(EnvServerURL, serverURL)
 		require.NoError(t, keyringDelete("tc:"+serverURL, "admin"))
 
-		token, source := GetTokenWithSource()
+		token, source, krErr := GetTokenWithSource()
 		assert.Equal(t, "config-token", token)
 		assert.Equal(t, "config", source)
+		assert.NoError(t, krErr)
 	})
 }
 
@@ -763,15 +766,17 @@ func TestGetTokenForServer(T *testing.T) {
 		},
 	}
 
-	token, source := GetTokenForServer("https://tc1.example.com")
+	token, source, krErr := GetTokenForServer("https://tc1.example.com")
 	assert.Equal(T, "token-1", token)
 	assert.Equal(T, "config", source)
+	assert.NoError(T, krErr)
 
-	token, source = GetTokenForServer("https://tc2.example.com")
+	token, source, krErr = GetTokenForServer("https://tc2.example.com")
 	assert.Equal(T, "token-2", token)
 	assert.Equal(T, "config", source)
+	assert.NoError(T, krErr)
 
-	token, _ = GetTokenForServer("https://unknown.example.com")
+	token, _, _ = GetTokenForServer("https://unknown.example.com")
 	assert.Empty(T, token)
 }
 
@@ -789,9 +794,70 @@ func TestGetTokenForServerKeyring(T *testing.T) {
 		},
 	}
 
-	token, source := GetTokenForServer(serverURL)
+	token, source, krErr := GetTokenForServer(serverURL)
 	assert.Equal(T, "keyring-token", token)
 	assert.Equal(T, "keyring", source)
+	assert.NoError(T, krErr)
+}
+
+func TestGetTokenWithSourceKeyringError(T *testing.T) {
+	saveCfgState(T)
+	keyringMockInitWithError(errors.New("keyring unavailable (sandbox)"))
+	T.Setenv(EnvToken, "")
+	T.Setenv(EnvServerURL, "")
+
+	serverURL := "https://tc.example.com"
+	cfg = &Config{
+		DefaultServer: serverURL,
+		Servers: map[string]ServerConfig{
+			serverURL: {User: "admin"},
+		},
+	}
+
+	token, source, krErr := GetTokenWithSource()
+	assert.Empty(T, token)
+	assert.Empty(T, source)
+	assert.Error(T, krErr)
+	assert.Contains(T, krErr.Error(), "keyring unavailable")
+}
+
+func TestGetTokenWithSourceKeyringErrorFallsBackToConfig(T *testing.T) {
+	saveCfgState(T)
+	keyringMockInitWithError(errors.New("keyring unavailable (sandbox)"))
+	T.Setenv(EnvToken, "")
+	T.Setenv(EnvServerURL, "")
+
+	serverURL := "https://tc.example.com"
+	cfg = &Config{
+		DefaultServer: serverURL,
+		Servers: map[string]ServerConfig{
+			serverURL: {Token: "config-token", User: "admin"},
+		},
+	}
+
+	token, source, krErr := GetTokenWithSource()
+	assert.Equal(T, "config-token", token)
+	assert.Equal(T, "config", source)
+	assert.NoError(T, krErr)
+}
+
+func TestGetTokenForServerKeyringError(T *testing.T) {
+	saveCfgState(T)
+	keyringMockInitWithError(errors.New("keyring unavailable (sandbox)"))
+
+	serverURL := "https://tc.example.com"
+	cfg = &Config{
+		DefaultServer: serverURL,
+		Servers: map[string]ServerConfig{
+			serverURL: {User: "admin"},
+		},
+	}
+
+	token, source, krErr := GetTokenForServer(serverURL)
+	assert.Empty(T, token)
+	assert.Empty(T, source)
+	assert.Error(T, krErr)
+	assert.Contains(T, krErr.Error(), "keyring unavailable")
 }
 
 func TestIsReadOnly(T *testing.T) {

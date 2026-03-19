@@ -389,12 +389,11 @@ func runAuthStatus() error {
 
 		if sc.Guest {
 			showGuestAuthStatus(serverURL, suffix)
-		} else if token, src := config.GetTokenForServer(serverURL); token != "" {
+		} else if token, src, krErr := config.GetTokenForServer(serverURL); token != "" {
 			showExplicitAuthStatus(serverURL, token, src, suffix)
 		} else {
 			fmt.Printf("%s %s%s\n", output.Red("✗"), serverURL, suffix)
-			fmt.Println("  Token is missing or could not be retrieved")
-			printLoginHint(serverURL)
+			showCredentialsDiagnostic(serverURL, sc, krErr)
 		}
 		shown++
 	}
@@ -436,6 +435,30 @@ func sortedServerURLs(cfg *config.Config) []string {
 	return urls
 }
 
+// showCredentialsDiagnostic prints why credentials could not be retrieved for a
+// server and offers clear remediation steps covering all auth methods.
+func showCredentialsDiagnostic(serverURL string, sc config.ServerConfig, krErr error) {
+	if sc.User != "" && sc.Token == "" {
+		// Token was stored in keyring (User set, no plaintext token in config)
+		if krErr != nil {
+			fmt.Printf("  Token is in the system keyring but could not be retrieved: %v\n", krErr)
+		} else {
+			fmt.Println("  Token was expected in the system keyring but is missing")
+		}
+	} else {
+		fmt.Println("  Token is missing or could not be retrieved")
+	}
+
+	fmt.Printf("  %s To authenticate in this environment:\n", output.Yellow("!"))
+	fmt.Printf("    • Set %s and %s environment variables\n",
+		output.Cyan("TEAMCITY_URL"), output.Cyan("TEAMCITY_TOKEN"))
+	fmt.Printf("    • Or run %s\n",
+		output.Cyan("teamcity auth login --server "+serverURL+" --insecure-storage"))
+	if probeGuestAccess(serverURL) {
+		fmt.Printf("    • Or set %s for read-only guest access\n", output.Cyan("TEAMCITY_GUEST=1"))
+	}
+}
+
 // printLoginHint probes guest access on serverURL and prints a targeted suggestion.
 func printLoginHint(serverURL string) {
 	loginCmd := output.Cyan("teamcity auth login --server " + serverURL)
@@ -456,14 +479,23 @@ func probeGuestAccess(serverURL string) bool {
 	return err == nil
 }
 
-// notAuthenticatedError returns a not-authenticated error with a hint that
-// conditionally includes the guest access suggestion based on server support.
-func notAuthenticatedError(serverURL string) *tcerrors.UserError {
-	err := tcerrors.NotAuthenticated()
-	if probeGuestAccess(serverURL) {
-		err.Suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
+// notAuthenticatedError returns a not-authenticated error with a hint that covers
+// all authentication methods: environment variables, interactive login, and guest access.
+func notAuthenticatedError(serverURL string, keyringErr error) *tcerrors.UserError {
+	msg := "Not authenticated"
+	if keyringErr != nil {
+		msg = fmt.Sprintf("Not authenticated (could not access system keyring: %v)", keyringErr)
 	}
-	return err
+
+	suggestion := "Set TEAMCITY_URL and TEAMCITY_TOKEN environment variables, or run 'teamcity auth login --insecure-storage'"
+	if probeGuestAccess(serverURL) {
+		suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
+	}
+
+	return &tcerrors.UserError{
+		Message:    msg,
+		Suggestion: suggestion,
+	}
 }
 
 func tokenSourceLabel(source string) string {

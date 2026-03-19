@@ -796,7 +796,7 @@ func getClient() (api.ClientInterface, error) {
 
 func defaultGetClient() (api.ClientInterface, error) {
 	serverURL := config.GetServerURL()
-	token := config.GetToken()
+	token, _, keyringErr := config.GetTokenWithSource()
 
 	debugOpt := api.WithDebugFunc(output.Debug)
 	roOpt := api.WithReadOnly(config.IsReadOnly())
@@ -826,7 +826,7 @@ func defaultGetClient() (api.ClientInterface, error) {
 		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, debugOpt, roOpt), nil
 	}
 
-	return nil, notAuthenticatedError(serverURL)
+	return nil, notAuthenticatedError(serverURL, keyringErr)
 }
 
 func newProjectTreeCmd() *cobra.Command {
