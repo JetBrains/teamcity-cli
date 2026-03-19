@@ -299,19 +299,32 @@ teamcity job param delete <job-id> MY_PARAM
 
 Project parameters work the same way with `teamcity project param`.
 
-## Project Settings (Versioned/DSL)
+## Validating Kotlin DSL Locally
 
-**Validate Kotlin DSL configuration:**
+**Always use `teamcity project settings validate`** to verify Kotlin DSL — never generic `mvn compile`.
+
+Under the hood it runs `mvn teamcity-configs:generate` (or `./mvnw` when available) inside the `.teamcity/` directory, which is the only correct DSL validation step. Generic Maven commands like `mvn compile` do **not** validate TeamCity DSL and will give misleading results.
+
 ```bash
+# Preferred — auto-detects .teamcity dir and Maven wrapper
 teamcity project settings validate
-```
 
-**Validate with verbose Maven output:**
-```bash
+# Explicit path
+teamcity project settings validate ./path/to/.teamcity
+
+# Show full Maven output for debugging
 teamcity project settings validate --verbose
 ```
 
-**Check versioned settings sync status:**
+If you need the raw Maven command (e.g., in CI without the CLI installed):
+```bash
+./mvnw teamcity-configs:generate -f .teamcity/pom.xml   # prefer wrapper
+mvn teamcity-configs:generate -f .teamcity/pom.xml       # fallback
+```
+
+## Project Settings (Export & Status)
+
+**Check versioned settings sync status (requires server connection):**
 ```bash
 teamcity project settings status <project-id>
 ```
