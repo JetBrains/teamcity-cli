@@ -144,6 +144,8 @@ func TestAPIPath(T *testing.T) {
 		{"no version", "", "/app/rest/builds", "/app/rest/builds"},
 		{"with version", "2023.1", "/app/rest/builds", "/app/rest/2023.1/builds"},
 		{"non-rest path unchanged", "2023.1", "/downloadBuildLog.html", "/downloadBuildLog.html"},
+		{"missing leading slash", "", "app/rest/builds", "/app/rest/builds"},
+		{"missing leading slash with version", "2023.1", "app/rest/builds", "/app/rest/2023.1/builds"},
 	}
 
 	for _, tc := range tests {
@@ -835,6 +837,7 @@ func TestGuestClientAPIPath(T *testing.T) {
 		{"rest path with version", "/app/rest/builds", "/guestAuth/app/rest/builds"},
 		{"non-rest path", "/downloadBuildLog.html", "/guestAuth/downloadBuildLog.html"},
 		{"already prefixed", "/guestAuth/app/rest/server", "/guestAuth/app/rest/server"},
+		{"missing leading slash", "app/rest/server", "/guestAuth/app/rest/server"},
 	}
 
 	for _, tc := range tests {

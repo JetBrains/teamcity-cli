@@ -190,6 +190,9 @@ func NewGuestClient(baseURL string, opts ...ClientOption) *Client {
 
 // apiPath returns the API path, optionally with version prefix
 func (c *Client) apiPath(path string) string {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
 	if c.APIVersion != "" && strings.HasPrefix(path, "/app/rest/") {
 		path = strings.Replace(path, "/app/rest/", "/app/rest/"+c.APIVersion+"/", 1)
 	}
