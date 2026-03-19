@@ -128,48 +128,56 @@ func GetServerURL() string {
 }
 
 func GetToken() string {
-	token, _ := GetTokenWithSource()
+	token, _, _ := GetTokenWithSource()
 	return token
 }
 
-func GetTokenWithSource() (token, source string) {
+func GetTokenWithSource() (token, source string, keyringErr error) {
 	if token := os.Getenv(EnvToken); token != "" {
-		return token, "env"
+		return token, "env", nil
 	}
 
 	serverURL := GetServerURL()
 	if serverURL == "" {
-		return "", ""
+		return "", "", nil
 	}
 
 	server, ok := cfg.Servers[serverURL]
 	if ok && server.User != "" {
-		if t, err := keyringGet(keyringService(serverURL), server.User); err == nil && t != "" {
-			return t, "keyring"
+		t, err := keyringGet(keyringService(serverURL), server.User)
+		if err == nil && t != "" {
+			return t, "keyring", nil
+		}
+		if err != nil && !errors.Is(err, errKeyringNotFound) {
+			keyringErr = err
 		}
 	}
 
 	if ok && server.Token != "" {
-		return server.Token, "config"
+		return server.Token, "config", nil
 	}
-	return "", ""
+	return "", "", keyringErr
 }
 
 // GetTokenForServer retrieves the token for a specific server URL.
 // Unlike GetTokenWithSource, it does not use GetServerURL() — the caller
 // provides the server URL directly. Returns the token and its source
 // ("keyring" or "config"), or empty strings if none found.
-func GetTokenForServer(serverURL string) (token, source string) {
+func GetTokenForServer(serverURL string) (token, source string, keyringErr error) {
 	server, ok := cfg.Servers[serverURL]
 	if ok && server.User != "" {
-		if t, err := keyringGet(keyringService(serverURL), server.User); err == nil && t != "" {
-			return t, "keyring"
+		t, err := keyringGet(keyringService(serverURL), server.User)
+		if err == nil && t != "" {
+			return t, "keyring", nil
+		}
+		if err != nil && !errors.Is(err, errKeyringNotFound) {
+			keyringErr = err
 		}
 	}
 	if ok && server.Token != "" {
-		return server.Token, "config"
+		return server.Token, "config", nil
 	}
-	return "", ""
+	return "", "", keyringErr
 }
 
 // GetCurrentUser returns the current user from config

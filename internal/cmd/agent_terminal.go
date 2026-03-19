@@ -63,9 +63,9 @@ func newAgentExecCmd() *cobra.Command {
 
 func connectToAgent(ctx context.Context, nameOrID string, showProgress bool) (*terminal.Conn, error) {
 	serverURL := config.GetServerURL()
-	token := config.GetToken()
+	token, _, keyringErr := config.GetTokenWithSource()
 	if serverURL == "" || token == "" {
-		return nil, notAuthenticatedError(serverURL)
+		return nil, notAuthenticatedError(serverURL, keyringErr)
 	}
 
 	client, err := getClient()
