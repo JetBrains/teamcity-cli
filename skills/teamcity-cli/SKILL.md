@@ -37,6 +37,7 @@ teamcity run log <id> --failed          # Full failure diagnostics
 **From a URL:** Extract build ID from `https://host/buildConfiguration/ConfigId/12345` → `teamcity run view 12345`
 **Start build:** `teamcity run start <job-id> --branch <branch> --watch`
 **Find jobs:** `teamcity project list` → `teamcity job list --project <id>`
+**Validate Kotlin DSL:** `teamcity project settings validate` (not `mvn compile` — see [Workflows](references/workflows.md))
 
 ## References
 
