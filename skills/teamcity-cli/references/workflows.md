@@ -193,17 +193,22 @@ teamcity run download <run-id>
 
 **Download to specific directory:**
 ```bash
-teamcity run download <run-id> --dir ./artifacts
+teamcity run download <run-id> -o ./artifacts
 ```
 
-**Download specific artifact:**
+**Download a subdirectory:**
+```bash
+teamcity run download <run-id> --path build/assets
+```
+
+**Download specific artifact pattern:**
 ```bash
 teamcity run download <run-id> --artifact "*.jar"
 ```
 
-**Browse artifact subdirectory:**
+**Combine path and pattern:**
 ```bash
-teamcity api /app/rest/builds/id:<run-id>/artifacts/children/html_reports
+teamcity run download <run-id> --path build/assets -a "*.js"
 ```
 
 ## Build Metadata
