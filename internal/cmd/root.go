@@ -100,6 +100,11 @@ func Execute() error {
 	RegisterAliases(rootCmd)
 	rootCmd.SilenceErrors = true
 	err := rootCmd.Execute()
+	if err != nil && errors.Is(err, api.ErrAuthentication) && tryAutoReauth() {
+		output.Success("Retrying...")
+		fmt.Println()
+		err = rootCmd.Execute()
+	}
 	if err != nil {
 		if _, ok := errors.AsType[*ExitError](err); !ok {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", enrichAPIError(err))
@@ -164,12 +169,6 @@ func enrichAPIError(err error) error {
 	}
 
 	if errors.Is(err, api.ErrAuthentication) {
-		if tryAutoReauth() {
-			return tcerrors.WithSuggestion(
-				"Token was refreshed automatically",
-				"Please re-run your command",
-			)
-		}
 		return tcerrors.WithSuggestion(
 			"Authentication failed: invalid or expired token",
 			"Run 'teamcity auth login' to re-authenticate",
