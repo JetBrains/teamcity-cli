@@ -17,7 +17,7 @@ exec teamcity run artifacts $BUILD_ID --path . --no-input
 ! stderr 'Error'
 
 # download to temp dir
-exec teamcity run download $BUILD_ID --dir $WORK/artifacts --no-input
+exec teamcity run download $BUILD_ID -o $WORK/artifacts --no-input
 stdout '(downloaded|No artifacts)'
 ! stderr 'Error'
 
