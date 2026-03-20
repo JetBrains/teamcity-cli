@@ -11,6 +11,16 @@ import (
 	"strings"
 )
 
+// encodeArtifactPath escapes each segment of an artifact path individually,
+// preserving "/" as path separators.
+func encodeArtifactPath(p string) string {
+	segments := strings.Split(p, "/")
+	for i, s := range segments {
+		segments[i] = url.PathEscape(s)
+	}
+	return strings.Join(segments, "/")
+}
+
 // BuildsOptions represents options for listing builds
 type BuildsOptions struct {
 	BuildTypeID string
@@ -343,7 +353,7 @@ func (c *Client) GetArtifacts(buildID string, subpath string) (*Artifacts, error
 	}
 	p := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/children", id)
 	if subpath != "" {
-		p += "/" + subpath
+		p += "/" + encodeArtifactPath(subpath)
 	}
 
 	var artifacts Artifacts
@@ -360,7 +370,7 @@ func (c *Client) DownloadArtifact(buildID, artifactPath string) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
-	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, url.PathEscape(artifactPath))
+	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, encodeArtifactPath(artifactPath))
 
 	resp, err := c.doRequest("GET", path, nil)
 	if err != nil {
@@ -382,7 +392,7 @@ func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath s
 		return 0, err
 	}
 
-	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, url.PathEscape(artifactPath))
+	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, encodeArtifactPath(artifactPath))
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
 
 	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)

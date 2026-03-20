@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -116,7 +117,11 @@ func runRunArtifacts(runID string, opts *runArtifactsOptions) error {
 		fmt.Printf("%-*s  %s\n", nameWidth, a.Name, output.Faint(fmt.Sprintf("%10s", size)))
 	}
 
-	fmt.Printf("\nDownload all: teamcity run download %s\n", runID)
+	if opts.path != "" {
+		fmt.Printf("\nDownload dir: teamcity run download %s --path %s\n", runID, opts.path)
+	} else {
+		fmt.Printf("\nDownload all: teamcity run download %s\n", runID)
+	}
 	fmt.Printf("Download one: teamcity run download %s -a \"<name>\"\n", runID)
 	return nil
 }
@@ -134,15 +139,84 @@ func flattenArtifacts(artifacts []api.Artifact, prefix string) ([]api.Artifact, 
 			result = append(result, nested...)
 			totalSize += size
 		} else {
-			result = append(result, api.Artifact{Name: name, Size: a.Size})
+			result = append(result, api.Artifact{Name: name, Size: a.Size, Content: a.Content, Children: a.Children})
 			totalSize += a.Size
 		}
 	}
 	return result, totalSize
 }
 
+const maxArtifactDepth = 20
+
+// fetchAllArtifacts recursively fetches artifacts, expanding directories via additional API calls.
+func fetchAllArtifacts(ctx context.Context, client api.ClientInterface, runID, basePath string) ([]api.Artifact, int64, error) {
+	return fetchArtifactsRecursive(ctx, client, runID, basePath, 0)
+}
+
+func fetchArtifactsRecursive(ctx context.Context, client api.ClientInterface, runID, basePath string, depth int) ([]api.Artifact, int64, error) {
+	if depth > maxArtifactDepth {
+		return nil, 0, fmt.Errorf("artifact tree exceeds maximum depth (%d)", maxArtifactDepth)
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, 0, ctx.Err()
+	default:
+	}
+
+	artifacts, err := client.GetArtifacts(runID, basePath)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var result []api.Artifact
+	var totalSize int64
+	for _, a := range artifacts.File {
+		name := a.Name
+		if basePath != "" {
+			name = basePath + "/" + a.Name
+		}
+		if a.Content != nil {
+			result = append(result, api.Artifact{Name: name, Size: a.Size, Content: a.Content})
+			totalSize += a.Size
+		} else {
+			nested, size, err := fetchArtifactsRecursive(ctx, client, runID, name, depth+1)
+			if err != nil {
+				return nil, 0, err
+			}
+			result = append(result, nested...)
+			totalSize += size
+		}
+	}
+	return result, totalSize, nil
+}
+
+func filterArtifacts(artifacts []api.Artifact, pattern string) ([]api.Artifact, int64, error) {
+	if _, err := path.Match(pattern, ""); err != nil {
+		return nil, 0, fmt.Errorf("invalid artifact pattern %q: %w", pattern, err)
+	}
+
+	var filtered []api.Artifact
+	var filteredSize int64
+
+	for _, a := range artifacts {
+		if matched, _ := path.Match(pattern, a.Name); matched {
+			filtered = append(filtered, a)
+			filteredSize += a.Size
+			continue
+		}
+		if matched, _ := path.Match(pattern, path.Base(a.Name)); matched {
+			filtered = append(filtered, a)
+			filteredSize += a.Size
+		}
+	}
+
+	return filtered, filteredSize, nil
+}
+
 type runDownloadOptions struct {
-	dir      string
+	output   string
+	path     string
 	artifact string
 }
 
@@ -155,15 +229,18 @@ func newRunDownloadCmd() *cobra.Command {
 		Long:  `Download artifacts from a completed run.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run download 12345
-  teamcity run download 12345 --dir ./artifacts
-  teamcity run download 12345 --artifact "*.jar"`,
+  teamcity run download 12345 --path build/assets
+  teamcity run download 12345 -o ./artifacts
+  teamcity run download 12345 --artifact "*.jar"
+  teamcity run download 12345 --path build/assets -a "*.js"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunDownload(args[0], opts)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.dir, "dir", "d", ".", "Directory to download artifacts to")
-	cmd.Flags().StringVarP(&opts.artifact, "artifact", "a", "", "Artifact name pattern to download")
+	cmd.Flags().StringVarP(&opts.output, "output", "o", ".", "Local directory to save artifacts to")
+	cmd.Flags().StringVarP(&opts.path, "path", "p", "", "Download artifacts under this subdirectory")
+	cmd.Flags().StringVarP(&opts.artifact, "artifact", "a", "", "Artifact name pattern to filter")
 
 	return cmd
 }
@@ -174,36 +251,36 @@ func runRunDownload(runID string, opts *runDownloadOptions) error {
 		return err
 	}
 
-	if err := os.MkdirAll(opts.dir, 0755); err != nil {
+	absOutput, err := filepath.Abs(opts.output)
+	if err != nil {
+		return fmt.Errorf("failed to resolve output path: %w", err)
+	}
+
+	if err := os.MkdirAll(absOutput, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	artifacts, err := client.GetArtifacts(runID, "")
+	ctx := context.Background()
+
+	flatList, totalSize, err := fetchAllArtifacts(ctx, client, runID, opts.path)
 	if err != nil {
 		return fmt.Errorf("failed to get artifacts: %w", err)
 	}
 
-	if artifacts.Count == 0 {
-		fmt.Println("No artifacts found for this run")
+	if len(flatList) == 0 {
+		if opts.path != "" {
+			fmt.Printf("No artifacts found under %s\n", opts.path)
+		} else {
+			fmt.Println("No artifacts found for this run")
+		}
 		return nil
 	}
 
-	flatList, totalSize := flattenArtifacts(artifacts.File, "")
-
 	if opts.artifact != "" {
-		if _, err := filepath.Match(opts.artifact, ""); err != nil {
-			return fmt.Errorf("invalid artifact pattern %q: %w", opts.artifact, err)
+		flatList, totalSize, err = filterArtifacts(flatList, opts.artifact)
+		if err != nil {
+			return err
 		}
-		var filtered []api.Artifact
-		var filteredSize int64
-		for _, a := range flatList {
-			if matched, _ := filepath.Match(opts.artifact, filepath.Base(a.Name)); matched {
-				filtered = append(filtered, a)
-				filteredSize += a.Size
-			}
-		}
-		flatList = filtered
-		totalSize = filteredSize
 	}
 
 	if len(flatList) == 0 {
@@ -220,13 +297,17 @@ func runRunDownload(runID string, opts *runDownloadOptions) error {
 
 	fmt.Printf("Downloading %d %s (%s total) to %s\n\n",
 		len(flatList), english.PluralWord(len(flatList), "file", "files"),
-		humanize.IBytes(uint64(totalSize)), opts.dir)
+		humanize.IBytes(uint64(totalSize)), opts.output)
 	fmt.Printf("%-*s  %10s\n", nameWidth, "NAME", "SIZE")
 
-	ctx := context.Background()
 	downloaded := 0
 	for _, artifact := range flatList {
-		outputPath := filepath.Join(opts.dir, artifact.Name)
+		rel, err := filepath.Rel(absOutput, filepath.Join(absOutput, artifact.Name))
+		if err != nil || !filepath.IsLocal(rel) {
+			fmt.Printf("%-*s  %10s  %s path escapes output directory\n", nameWidth, artifact.Name, "", output.Red("   ✗"))
+			continue
+		}
+		outputPath := filepath.Join(absOutput, rel)
 		size := humanize.IBytes(uint64(artifact.Size))
 
 		if err := downloadArtifact(ctx, client, runID, artifact, outputPath, nameWidth); err != nil {
