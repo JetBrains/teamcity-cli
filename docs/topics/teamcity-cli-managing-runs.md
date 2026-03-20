@@ -753,8 +753,10 @@ Download artifacts from a completed run:
 
 ```Shell
 teamcity run download 12345
-teamcity run download 12345 --dir ./artifacts
+teamcity run download 12345 --path build/assets
+teamcity run download 12345 -o ./artifacts
 teamcity run download 12345 --artifact "*.jar"
+teamcity run download 12345 --path build/assets -a "*.js"
 ```
 
 ## Test results

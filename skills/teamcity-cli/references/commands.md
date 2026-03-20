@@ -111,8 +111,9 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ### Flags for `teamcity run download`
 
-- `-a, --artifact <pattern>` - Artifact name pattern to download
-- `-d, --dir <path>` - Directory to download artifacts to
+- `-a, --artifact <pattern>` - Artifact name pattern to filter (matches full path and basename)
+- `-p, --path <subdir>` - Download artifacts under this subdirectory
+- `-o, --output <path>` - Local directory to save artifacts to
 
 ### Flags for `teamcity run cancel`
 
