@@ -90,7 +90,7 @@ jobs:
       - type: script
         name: Build & Test
         docker-image: goreleaser/goreleaser-pro:latest
-        script-content: goreleaser release --snapshot --clean --skip=publish,chocolatey
+        script-content: goreleaser release --snapshot --clean --skip=publish,chocolatey,npm
   lint:
     name: Lint
     allow-reuse: true
