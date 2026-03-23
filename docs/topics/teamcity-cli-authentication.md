@@ -19,8 +19,8 @@ teamcity auth login
 This starts an interactive flow:
 
 1. Enter your TeamCity server URL (for example, `https://teamcity.example.com`).
-2. The CLI opens your browser to the TeamCity __Access Tokens__ page.
-3. Create a new access token and paste it into the terminal.
+2. If the server supports PKCE authentication, the CLI opens your browser to approve access directly — no token copying needed.
+3. Otherwise, the CLI opens the TeamCity __Access Tokens__ page for you to create and paste a token manually.
 4. The CLI validates the token and stores it securely.
 
 To authenticate with a specific server URL:
@@ -29,11 +29,41 @@ To authenticate with a specific server URL:
 teamcity auth login --server https://teamcity.example.com
 ```
 
+To skip browser-based authentication and enter a token manually:
+
+```Shell
+teamcity auth login --no-browser
+```
+
 To pass the token directly (for example, from a password manager):
 
 ```Shell
 teamcity auth login --server https://teamcity.example.com --token <token>
 ```
+
+### Browser-based login (PKCE) {id="pkce"}
+
+When PKCE is enabled on the TeamCity server, `teamcity auth login` authenticates via the browser automatically:
+
+1. The CLI starts a temporary local server on your machine.
+2. Your browser opens a TeamCity authorization page.
+3. After you approve, the browser redirects back to the CLI with an authorization code.
+4. The CLI exchanges the code for an access token.
+
+This flow follows the [OAuth 2.0 PKCE standard (RFC 7636)](https://datatracker.ietf.org/doc/html/rfc7636) and does not require you to copy or paste any tokens.
+
+PKCE tokens have an expiry date. The CLI tracks this and shows a warning when the token is about to expire or has expired:
+
+```Shell
+$ teamcity auth status
+✓ Logged in to https://teamcity.example.com
+  User: John Doe (john.doe) · system keyring
+  ! Token expires 2 hours from now (on Mar 25, 2026)
+```
+
+> PKCE must be enabled on the TeamCity server. If it is not available, the CLI falls back to manual token entry automatically.
+>
+{style="note"}
 
 ### Check authentication status
 
