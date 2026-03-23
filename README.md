@@ -50,10 +50,9 @@ sudo dpkg -i teamcity_linux_amd64.deb
 sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/latest/download/teamcity_linux_amd64.rpm
 ```
 
-**Arch Linux:**
+**Arch Linux (AUR):**
 ```bash
-curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/latest/download/teamcity_linux_amd64.pkg.tar.zst
-sudo pacman -U teamcity_linux_amd64.pkg.tar.zst
+yay -S teamcity-bin
 ```
 
 **PowerShell:**

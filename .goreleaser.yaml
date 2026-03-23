@@ -84,6 +84,45 @@ nfpms:
       - src: README.md
         dst: /usr/share/doc/teamcity/README.md
 
+npms:
+  - name: "@jetbrains/teamcity-cli"
+    description: A command-line interface for TeamCity CI/CD server
+    homepage: https://github.com/JetBrains/teamcity-cli
+    license: Apache-2.0
+    author: JetBrains <teamcity-support@jetbrains.com>
+    repository: https://github.com/JetBrains/teamcity-cli
+    bugs: https://github.com/JetBrains/teamcity-cli/issues
+    keywords:
+      - teamcity
+      - ci
+      - cd
+      - cli
+      - jetbrains
+      - devops
+      - build
+      - automation
+    access: public
+    tag: latest
+
+aurs:
+  - name: teamcity-bin
+    homepage: https://github.com/JetBrains/teamcity-cli
+    description: A command-line interface for TeamCity CI/CD server
+    license: Apache-2.0
+    maintainers:
+      - "Viktor Tiulpin <viktor.tiulpin@jetbrains.com>"
+    private_key: "{{ .Env.AUR_SSH_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/teamcity-bin.git"
+    provides:
+      - teamcity
+    conflicts:
+      - teamcity
+    commit_author:
+      name: teamcity-bot
+      email: teamcity-support@jetbrains.com
+    commit_msg_template: "chore: update to {{ .Tag }}"
+    skip_upload: auto
+
 brews:
   - name: teamcity
     repository:
@@ -244,10 +283,9 @@ release:
     sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_linux_amd64.rpm
     ```
 
-    **Arch Linux:**
+    **Arch Linux (AUR):**
     ```bash
-    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_linux_amd64.pkg.tar.zst
-    sudo pacman -U teamcity_linux_amd64.pkg.tar.zst
+    yay -S teamcity-bin
     ```
 
     ### Windows
