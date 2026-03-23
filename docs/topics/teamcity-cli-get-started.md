@@ -157,7 +157,7 @@ teamcity --version
    teamcity auth login
    ```
 
-2. Follow the prompts to enter the server URL and create an access token in your browser.
+2. Enter your server URL when prompted. If the server supports browser-based login (PKCE), the CLI opens your browser to approve access automatically. Otherwise, you'll be guided to create an access token manually.
 
 3. Verify the login:
 
