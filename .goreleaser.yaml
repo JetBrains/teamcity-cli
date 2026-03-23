@@ -235,19 +235,19 @@ release:
 
     **Debian/Ubuntu:**
     ```bash
-    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_{{ .Version }}_linux_amd64.deb
-    sudo dpkg -i teamcity_{{ .Version }}_linux_amd64.deb
+    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_linux_amd64.deb
+    sudo dpkg -i teamcity_linux_amd64.deb
     ```
 
     **RHEL/Fedora:**
     ```bash
-    sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_{{ .Version }}_linux_amd64.rpm
+    sudo rpm -i https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_linux_amd64.rpm
     ```
 
     **Arch Linux:**
     ```bash
-    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_{{ .Version }}_linux_amd64.pkg.tar.zst
-    sudo pacman -U teamcity_{{ .Version }}_linux_amd64.pkg.tar.zst
+    curl -fsSLO https://github.com/JetBrains/teamcity-cli/releases/download/v{{ .Version }}/teamcity_linux_amd64.pkg.tar.zst
+    sudo pacman -U teamcity_linux_amd64.pkg.tar.zst
     ```
 
     ### Windows
