@@ -81,7 +81,7 @@ scoop install teamcity
 go install github.com/JetBrains/teamcity-cli/tc@latest
 ```
 
-See the [getting started guide](https://jetbrains.github.io/teamcity-cli/teamcity-cli-get-started.html) for the full walkthrough.
+See the [getting started guide](https://www.jetbrains.com/help/teamcity/teamcity-cli-get-started.html) for the full walkthrough.
 
 </details>
 
@@ -104,7 +104,7 @@ teamcity run log --job MyProject_Build
 teamcity queue list
 ```
 
-> **Note:** The CLI uses "run" for builds and "job" for build configurations. See the [glossary](https://jetbrains.github.io/teamcity-cli/teamcity-cli-glossary.html) for the full mapping.
+> **Note:** The CLI uses "run" for builds and "job" for build configurations. See the [glossary](https://www.jetbrains.com/help/teamcity/teamcity-cli-glossary.html) for the full mapping.
 
 ## Commands
 
@@ -121,7 +121,7 @@ teamcity queue list
 | **alias**   | `set`, `list`, `delete`                                                                                                                            |
 | **skill**   | `install`, `remove`, `update`                                                                                                                      |
 
-Run `teamcity <command> --help` for usage details. See the [command reference](https://jetbrains.github.io/teamcity-cli/teamcity-cli-commands.html) for full documentation.
+Run `teamcity <command> --help` for usage details. See the [command reference](https://www.jetbrains.com/help/teamcity/teamcity-cli-commands.html) for full documentation.
 
 ## For AI agents
 
@@ -140,14 +140,14 @@ or specifically for **Claude Code:**
 /plugin install teamcity-cli@teamcity-cli
 ```
 
-See [AI agent integration](https://jetbrains.github.io/teamcity-cli/teamcity-cli-ai-agent-integration.html) for details.
+See [AI agent integration](https://www.jetbrains.com/help/teamcity/teamcity-cli-ai-agent-integration.html) for details.
 
 ## Learn more
 
-- [Getting started](https://jetbrains.github.io/teamcity-cli/teamcity-cli-get-started.html) – install, authenticate, and run your first commands
-- [Configuration](https://jetbrains.github.io/teamcity-cli/teamcity-cli-configuration.html) – config file, environment variables, multi-server setup, shell completion
-- [Scripting and automation](https://jetbrains.github.io/teamcity-cli/teamcity-cli-scripting.html) – JSON output, plain text mode, CI/CD integration
-- [Aliases](https://jetbrains.github.io/teamcity-cli/teamcity-cli-aliases.html) – create custom command shortcuts
+- [Getting started](https://www.jetbrains.com/help/teamcity/teamcity-cli-get-started.html) – install, authenticate, and run your first commands
+- [Configuration](https://www.jetbrains.com/help/teamcity/teamcity-cli-configuration.html) – config file, environment variables, multi-server setup, shell completion
+- [Scripting and automation](https://www.jetbrains.com/help/teamcity/teamcity-cli-scripting.html) – JSON output, plain text mode, CI/CD integration
+- [Aliases](https://www.jetbrains.com/help/teamcity/teamcity-cli-aliases.html) – create custom command shortcuts
 
 ## Contributing
 
