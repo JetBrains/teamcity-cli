@@ -61,7 +61,7 @@ function install {
     if [ -z "$RELEASE" ]; then
         GITHUB_AUTH=""
         if [ -n "$GITHUB_TOKEN" ]; then
-            GITHUB_AUTH="-H Authorization: token $GITHUB_TOKEN"
+            GITHUB_AUTH="-H 'Authorization: token $GITHUB_TOKEN'"
         fi
         LATEST=$(curl $GITHUB_AUTH --silent "https://api.github.com/repos/JetBrains/teamcity-cli/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         RELEASE=$LATEST
