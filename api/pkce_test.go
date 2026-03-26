@@ -163,6 +163,7 @@ func TestBuildAuthorizeURL(T *testing.T) {
 		assert.Equal(t, "/pkce/authorize.html", parsed.Path)
 
 		query := parsed.Query()
+		assert.Equal(t, "teamcity-cli", query.Get("client_id"))
 		assert.Equal(t, "code", query.Get("response_type"))
 		assert.Equal(t, "http://localhost:19000/callback", query.Get("redirect_uri"))
 		assert.Equal(t, "challenge123", query.Get("code_challenge"))
@@ -324,6 +325,8 @@ func TestExchangeCodeForToken(T *testing.T) {
 			assert.Equal(t, "POST", r.Method)
 			assert.Equal(t, "/pkce/token.html", r.URL.Path)
 			require.NoError(t, r.ParseForm())
+			assert.Equal(t, "authorization_code", r.Form.Get("grant_type"))
+			assert.Equal(t, "teamcity-cli", r.Form.Get("client_id"))
 			assert.Equal(t, "testcode", r.Form.Get("code"))
 			assert.Equal(t, "testverifier", r.Form.Get("code_verifier"))
 			assert.Equal(t, "http://localhost:19000/callback", r.Form.Get("redirect_uri"))

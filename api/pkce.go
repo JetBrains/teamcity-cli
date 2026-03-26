@@ -26,6 +26,7 @@ const (
 	PkceIsEnabledPath   = "/pkce/is_enabled.html"
 	PkceAuthorizePath   = "/pkce/authorize.html"
 	PkceTokenPath       = "/pkce/token.html"
+	PkceClientID        = "teamcity-cli"
 	CodeChallengeMethod = "S256"
 	DefaultCallbackPath = "/callback"
 	maxResponseBody     = 64 * 1024
@@ -89,6 +90,7 @@ func randomBase64URL(n int) (string, error) {
 
 func BuildAuthorizeURL(serverURL, redirectURI, challenge, state string, scopes []string) string {
 	params := url.Values{}
+	params.Set("client_id", PkceClientID)
 	params.Set("response_type", "code")
 	params.Set("redirect_uri", redirectURI)
 	params.Set("code_challenge", challenge)
@@ -168,6 +170,8 @@ func DefaultScopes() []string {
 
 func ExchangeCodeForToken(ctx context.Context, serverURL, code, verifier, redirectURI string) (*TokenResponse, error) {
 	data := url.Values{}
+	data.Set("grant_type", "authorization_code")
+	data.Set("client_id", PkceClientID)
 	data.Set("code", code)
 	data.Set("code_verifier", verifier)
 	data.Set("redirect_uri", redirectURI)
