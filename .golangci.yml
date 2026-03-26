@@ -1,0 +1,39 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gocritic
+    - revive
+    - misspell
+    - nolintlint
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+    revive:
+      rules:
+        - name: blank-imports
+        - name: unreachable-code
+    misspell:
+      locale: US
+  exclusions:
+    paths:
+      - vendor
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gocritic
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
