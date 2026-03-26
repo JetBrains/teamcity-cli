@@ -219,20 +219,11 @@ func outputAPIResponse(body []byte, statusCode int, respHeaders map[string][]str
 		if opts.raw {
 			fmt.Print(string(body))
 		} else if isHTML && isError {
-			// Don't dump HTML error pages, show clean error
 			output.Warn("Server returned HTML error page (status %d)", statusCode)
+		} else if prettyJSON, ok := prettyPrintJSON(body); ok {
+			fmt.Println(prettyJSON)
 		} else {
-			var jsonData any
-			if err := json.Unmarshal(body, &jsonData); err == nil {
-				prettyJSON, err := json.MarshalIndent(jsonData, "", "  ")
-				if err == nil {
-					fmt.Println(string(prettyJSON))
-				} else {
-					fmt.Print(string(body))
-				}
-			} else {
-				fmt.Print(string(body))
-			}
+			fmt.Print(string(body))
 		}
 	}
 
@@ -337,4 +328,23 @@ func mergePages(pages [][]byte, arrayKey string) ([]byte, error) {
 	}
 
 	return json.Marshal(allItems)
+}
+
+// prettyPrintJSON formats body as indented JSON, converting XML errors to JSON first if needed.
+func prettyPrintJSON(body []byte) (string, bool) {
+	var data any
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		if xmlErrs := api.ParseXMLErrors(body); xmlErrs != nil {
+			data = xmlErrs
+		} else {
+			return "", false
+		}
+	}
+
+	pretty, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return "", false
+	}
+	return string(pretty), true
 }

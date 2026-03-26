@@ -1,6 +1,10 @@
 package api
 
-import "time"
+import (
+	"encoding/xml"
+	"strings"
+	"time"
+)
 
 // User represents a TeamCity user
 type User struct {
@@ -379,4 +383,36 @@ type APIError struct {
 // APIErrorResponse represents TeamCity's error response format
 type APIErrorResponse struct {
 	Errors []APIError `json:"errors"`
+}
+
+// XMLAPIError represents a single error in TeamCity's XML error response.
+type XMLAPIError struct {
+	Message           string `xml:"message" json:"message"`
+	AdditionalMessage string `xml:"additionalMessage" json:"additionalMessage,omitempty"`
+	StatusText        string `xml:"statusText" json:"statusText,omitempty"`
+}
+
+// XMLAPIErrorResponse represents TeamCity's XML error response format.
+type XMLAPIErrorResponse struct {
+	XMLName xml.Name      `xml:"errors" json:"-"`
+	Errors  []XMLAPIError `xml:"error" json:"errors"`
+}
+
+// ParseXMLErrors parses a TeamCity XML error response, returning nil if body is not one.
+func ParseXMLErrors(body []byte) *XMLAPIErrorResponse {
+	trimmed := strings.TrimSpace(string(body))
+	if !strings.HasPrefix(trimmed, "<errors") && !strings.HasPrefix(trimmed, "<?xml") {
+		return nil
+	}
+
+	var xmlErrs XMLAPIErrorResponse
+	if err := xml.Unmarshal(body, &xmlErrs); err != nil {
+		return nil
+	}
+
+	if len(xmlErrs.Errors) == 0 {
+		return nil
+	}
+
+	return &xmlErrs
 }

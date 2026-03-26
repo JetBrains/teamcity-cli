@@ -346,15 +346,18 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 	}
 }
 
-// extractErrorMessage extracts a clean error message from TeamCity's API response.
+// extractErrorMessage extracts a clean error message from a JSON or XML API response.
 func extractErrorMessage(body []byte) string {
-	// Try JSON format first
 	var errResp APIErrorResponse
 	if err := json.Unmarshal(body, &errResp); err == nil {
 		if len(errResp.Errors) > 0 {
 			return humanizeErrorMessage(errResp.Errors[0].Message)
 		}
 		return ""
+	}
+
+	if xmlErrs := ParseXMLErrors(body); xmlErrs != nil {
+		return humanizeErrorMessage(xmlErrs.Errors[0].Message)
 	}
 
 	text := strings.TrimSpace(string(body))
@@ -520,12 +523,30 @@ type RawResponse struct {
 	Body       []byte
 }
 
-// RawRequest performs a raw HTTP request and returns the response without parsing
+// RawRequest performs a raw HTTP request and returns the response without parsing.
 func (c *Client) RawRequest(method, path string, body io.Reader, headers map[string]string) (*RawResponse, error) {
 	if c.ReadOnly && method != "GET" {
 		return nil, fmt.Errorf("%w: %s %s", ErrReadOnly, method, path)
 	}
 
+	resp, err := c.doRawRequest(method, path, body, headers, "application/json")
+	if err != nil {
+		return nil, err
+	}
+
+	// TeamCity returns 406 when it can only produce XML for an error but the client
+	// requested JSON. Retry with Accept: */* to get the real error.
+	if resp.StatusCode == http.StatusNotAcceptable {
+		resp, err = c.doRawRequest(method, path, body, headers, "*/*")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return resp, nil
+}
+
+func (c *Client) doRawRequest(method, path string, body io.Reader, headers map[string]string, accept string) (*RawResponse, error) {
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
 
 	req, err := http.NewRequest(method, reqURL, body)
@@ -534,12 +555,11 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 	}
 
 	c.setAuth(req)
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", accept)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	// Apply custom headers (can override defaults)
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}

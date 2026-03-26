@@ -352,6 +352,9 @@ func TestExtractErrorMessage(T *testing.T) {
 		{"malformed JSON", `not json`, "not json"}, // Now handled as plain text
 		{"empty body", ``, ""},
 		{"missing errors field", `{"other":"field"}`, ""}, // Valid JSON with no errors field
+		{"XML error response", `<errors><error><message>Field 'snapshot-dependencies' is not supported. Supported are: number, status, statusText, id.</message></error></errors>`, "Field 'snapshot-dependencies' is not supported. Supported are: number, status, statusText, id."},
+		{"XML error with declaration", `<?xml version="1.0" encoding="UTF-8"?><errors><error><message>Not found</message></error></errors>`, "Not found"},
+		{"XML non-error element", `<server><version>2025.7</version></server>`, ""},
 	}
 
 	for _, tc := range tests {

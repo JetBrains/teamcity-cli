@@ -1226,3 +1226,18 @@ func TestWaitForBuild_Integration(T *testing.T) {
 	assert.Greater(T, progressCalls, 0)
 	T.Logf("Build #%d finished: status=%s number=%s (%d polls)", result.ID, result.Status, result.Number, progressCalls)
 }
+
+// TestRawRequestInvalidField verifies real error (404) is returned, not misleading 406.
+func TestRawRequestInvalidField(T *testing.T) {
+	T.Parallel()
+
+	require.NotNil(T, testBuild, "need a finished build")
+
+	endpoint := fmt.Sprintf("/app/rest/builds/id:%d/snapshot-dependencies", testBuild.ID)
+	resp, err := client.RawRequest("GET", endpoint, nil, nil)
+	require.NoError(T, err)
+
+	assert.NotEqual(T, 406, resp.StatusCode)
+	assert.Equal(T, 404, resp.StatusCode)
+	assert.Contains(T, string(resp.Body), "snapshot-dependencies")
+}
