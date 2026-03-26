@@ -491,6 +491,16 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 	lastState, lastPercent, lastOvertimeMin := "", 0, 0
 	var reachedComplete time.Time
 	waitOpts.OnProgress = func(state, status string, percent int) error {
+		if state != lastState && lastState != "" {
+			if refreshed, err := client.GetBuild(runID); err == nil {
+				build = refreshed
+				jobName = build.BuildTypeID
+				if build.BuildType != nil {
+					jobName = build.BuildType.Name
+				}
+			}
+		}
+
 		if opts.quiet {
 			if state != lastState {
 				switch state {
