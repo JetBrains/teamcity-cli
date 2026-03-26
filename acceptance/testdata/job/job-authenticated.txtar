@@ -1,7 +1,7 @@
 # Job commands requiring authentication.
 [!has_token] skip 'requires authentication token'
 
-exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 
 # param list

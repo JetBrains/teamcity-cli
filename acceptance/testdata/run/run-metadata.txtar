@@ -1,7 +1,7 @@
 # Test run metadata commands: pin/unpin, tag/untag, comment.
 [!has_token] skip 'requires authentication token'
 
-exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+exec teamcity api '/app/rest/builds?locator=count:1&fields=build(id)' --raw --no-input
 extract '"id":(\d+)' BUILD_ID
 
 # Pin and unpin

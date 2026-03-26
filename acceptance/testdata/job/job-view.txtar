@@ -1,6 +1,6 @@
 # Test job view subcommand.
 
-exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 
 exec teamcity job view $JOB_ID --no-input

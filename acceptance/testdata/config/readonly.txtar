@@ -18,10 +18,10 @@ env TEAMCITY_RO=1
 
 # ---- Discover real IDs for GET-first command tests ----
 
-exec teamcity api /app/rest/agents?locator=count:1&fields=agent(id) --raw --no-input
+exec teamcity api '/app/rest/agents?locator=count:1&fields=agent(id)' --raw --no-input
 extract '"id":(\d+)' AGENT_ID
 
-exec teamcity api /app/rest/builds?locator=count:1&fields=build(id) --raw --no-input
+exec teamcity api '/app/rest/builds?locator=count:1&fields=build(id)' --raw --no-input
 extract '"id":(\d+)' BUILD_ID
 
 # ---- Read commands still work ----
@@ -44,21 +44,21 @@ exec teamcity pool list --no-input
 exec teamcity queue list --no-input
 ! stderr 'read-only'
 
-exec teamcity api /app/rest/server --no-input
+exec teamcity api '/app/rest/server' --no-input
 ! stderr 'read-only'
 
 # ---- API: non-GET methods blocked ----
 
-! exec teamcity api /app/rest/buildQueue -X POST -f 'buildType=id:Fake' --no-input
+! exec teamcity api '/app/rest/buildQueue' -X POST -f 'buildType=id:Fake' --no-input
 stderr 'read-only mode'
 
-! exec teamcity api /app/rest/builds/1/comment -X PUT --no-input
+! exec teamcity api '/app/rest/builds/1/comment' -X PUT --no-input
 stderr 'read-only mode'
 
-! exec teamcity api /app/rest/builds/1/tags/foo -X DELETE --no-input
+! exec teamcity api '/app/rest/builds/1/tags/foo' -X DELETE --no-input
 stderr 'read-only mode'
 
-! exec teamcity api /app/rest/builds/1/pin -X PATCH --no-input
+! exec teamcity api '/app/rest/builds/1/pin' -X PATCH --no-input
 stderr 'read-only mode'
 
 # ---- run: direct-write subcommands ----
@@ -154,5 +154,5 @@ stderr 'read-only mode'
 
 env TEAMCITY_RO=
 
-exec teamcity api /app/rest/server -X HEAD --no-input
+exec teamcity api '/app/rest/server' -X HEAD --no-input
 ! stderr 'read-only'

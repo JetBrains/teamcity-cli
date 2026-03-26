@@ -16,7 +16,7 @@ stdout '"name"'
 stderr '.'
 
 # discovered via API
-exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
 extract '"id":"([^"]+)"' PROJECT_ID
 
 exec teamcity project view $PROJECT_ID --no-input
