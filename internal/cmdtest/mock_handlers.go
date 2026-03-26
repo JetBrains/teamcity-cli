@@ -1,137 +1,17 @@
-package cmd_test
+package cmdtest
 
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 )
 
-// TestServer wraps httptest.Server for easy API testing.
-type TestServer struct {
-	*httptest.Server
-	handlers map[string]http.HandlerFunc
-	t        *testing.T
-}
-
-// NewTestServer creates a test server and configures the client.
-func NewTestServer(t *testing.T) *TestServer {
-	t.Helper()
-
-	ts := &TestServer{
-		handlers: make(map[string]http.HandlerFunc),
-		t:        t,
-	}
-
-	ts.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := r.Method + " " + r.URL.Path
-		if h, ok := ts.handlers[key]; ok {
-			h(w, r)
-			return
-		}
-
-		var bestMatch string
-		var bestHandler http.HandlerFunc
-		for pattern, h := range ts.handlers {
-			parts := strings.SplitN(pattern, " ", 2)
-			if len(parts) != 2 {
-				continue
-			}
-			method, path := parts[0], parts[1]
-			if r.Method == method && strings.HasPrefix(r.URL.Path, path) {
-				if len(path) > len(bestMatch) {
-					bestMatch = path
-					bestHandler = h
-				}
-			}
-		}
-		if bestHandler != nil {
-			bestHandler(w, r)
-			return
-		}
-
-		// Default: 404
-		t.Logf("Unhandled request: %s %s", r.Method, r.URL.Path)
-		http.NotFound(w, r)
-	}))
-
-	t.Setenv("TEAMCITY_URL", ts.URL)
-	t.Setenv("TEAMCITY_TOKEN", "test-token")
-	t.Setenv("TC_INSECURE_SKIP_WARN", "1")
-	config.Init()
-
-	original := cmd.GetClientFunc
-	cmd.GetClientFunc = func() (api.ClientInterface, error) {
-		return api.NewClient(ts.URL, "test-token"), nil
-	}
-
-	t.Cleanup(func() {
-		ts.Close()
-		cmd.GetClientFunc = original
-	})
-
-	return ts
-}
-
-// Handle registers a handler for "METHOD /path" pattern.
-func (ts *TestServer) Handle(pattern string, h http.HandlerFunc) {
-	ts.handlers[pattern] = h
-}
-
-// JSON writes a JSON response with 200 OK.
-func JSON(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-// JSONStatus writes a JSON response with specified status code.
-func JSONStatus(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-// Text writes a plain text response.
-func Text(w http.ResponseWriter, s string) {
-	w.Header().Set("Content-Type", "text/plain")
-	_, _ = w.Write([]byte(s))
-}
-
-// Error writes an API error response.
-func Error(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(api.APIErrorResponse{
-		Errors: []api.APIError{{Message: message}},
-	})
-}
-
-// extractID extracts an ID from a path like /app/rest/builds/id:123/something
-func extractID(path, prefix string) string {
-	_, after, ok := strings.Cut(path, prefix)
-	if !ok {
-		return ""
-	}
-	rest := after
-	// ID ends at / or ? or end of string
-	end := strings.IndexAny(rest, "/?")
-	if end == -1 {
-		return rest
-	}
-	return rest[:end]
-}
-
-// setupMockClient creates a test server with all common API endpoints pre-registered.
-func setupMockClient(t *testing.T) *TestServer {
+// SetupMockClient creates a test server with all common API endpoints pre-registered.
+func SetupMockClient(t *testing.T) *TestServer {
 	t.Helper()
 	ts := NewTestServer(t)
 
@@ -150,7 +30,6 @@ func setupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// Generic fallback for arbitrary API paths (for raw API command tests)
 	ts.Handle("GET /app/rest/anything", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, map[string]string{"path": "anything"})
 	})
@@ -166,7 +45,6 @@ func setupMockClient(t *testing.T) *TestServer {
 
 	// Projects list
 	ts.Handle("GET /app/rest/projects", func(w http.ResponseWriter, r *http.Request) {
-		// Check for a specific project lookup
 		if strings.Contains(r.URL.RawQuery, "NonExistentProject123456") {
 			Error(w, http.StatusNotFound, "No project found by locator 'id:NonExistentProject123456'")
 			return
@@ -189,17 +67,15 @@ func setupMockClient(t *testing.T) *TestServer {
 		JSON(w, api.Project{ID: req.ID, Name: req.Name})
 	})
 
-	// Projects by ID - consolidated handler
+	// Projects by ID
 	ts.Handle("GET /app/rest/projects/id:", func(w http.ResponseWriter, r *http.Request) {
-		id := extractID(r.URL.Path, "id:")
+		id := ExtractID(r.URL.Path, "id:")
 		if id == "NonExistentProject123456" {
 			Error(w, http.StatusNotFound, "No project found by locator 'id:NonExistentProject123456'")
 			return
 		}
 
-		// Handle sub-paths
 		if strings.Contains(r.URL.Path, "/parameters/") {
-			// Get specific parameter
 			JSON(w, api.Parameter{Name: "param1", Value: "value1"})
 			return
 		}
@@ -215,7 +91,6 @@ func setupMockClient(t *testing.T) *TestServer {
 			return
 		}
 
-		// Default: return project
 		JSON(w, api.Project{
 			ID:              id,
 			Name:            "Test Project",
@@ -236,7 +111,6 @@ func setupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// Handle projects without id: prefix (used by secure token API)
 	ts.Handle("POST /app/rest/projects/TestProject", func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/secure/tokens") {
 			Text(w, "credentialsJSON:abc123")
@@ -253,7 +127,7 @@ func setupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	// Build Types (Jobs) list
+	// Build Types (Jobs)
 	ts.Handle("GET /app/rest/buildTypes", func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.RawQuery, "NonExistentJob123456") {
 			Error(w, http.StatusNotFound, "No build types found by locator 'id:NonExistentJob123456'")
@@ -267,21 +141,18 @@ func setupMockClient(t *testing.T) *TestServer {
 		})
 	})
 
-	// Build Types by ID - consolidated handler
 	ts.Handle("GET /app/rest/buildTypes/id:", func(w http.ResponseWriter, r *http.Request) {
-		id := extractID(r.URL.Path, "id:")
+		id := ExtractID(r.URL.Path, "id:")
 		if id == "NonExistentJob123456" {
 			Error(w, http.StatusNotFound, "No build types found by locator 'id:NonExistentJob123456'")
 			return
 		}
 
-		// Handle snapshot-dependencies subpath
 		if strings.Contains(r.URL.Path, "/snapshot-dependencies") {
 			JSON(w, api.SnapshotDependencyList{Count: 0, SnapshotDependency: []api.SnapshotDependency{}})
 			return
 		}
 
-		// Handle parameters subpath
 		if strings.Contains(r.URL.Path, "/parameters/") {
 			JSON(w, api.Parameter{Name: "param1", Value: "value1"})
 			return
@@ -314,7 +185,7 @@ func setupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	// Builds list
+	// Builds
 	ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.RawQuery, "id:999999999") {
 			Error(w, http.StatusNotFound, "No build found by locator 'id:999999999'")
@@ -337,15 +208,13 @@ func setupMockClient(t *testing.T) *TestServer {
 		})
 	})
 
-	// Builds by ID - consolidated handler
 	ts.Handle("GET /app/rest/builds/id:", func(w http.ResponseWriter, r *http.Request) {
-		id := extractID(r.URL.Path, "id:")
+		id := ExtractID(r.URL.Path, "id:")
 		if id == "999999999" {
 			Error(w, http.StatusNotFound, "No build found by locator 'id:999999999'")
 			return
 		}
 
-		// Handle sub-paths
 		if strings.Contains(r.URL.Path, "/tags") {
 			JSON(w, api.TagList{Tag: []api.Tag{{Name: "cli-test-tag"}, {Name: "another-tag"}}})
 			return
@@ -404,7 +273,6 @@ func setupMockClient(t *testing.T) *TestServer {
 	})
 
 	ts.Handle("POST /app/rest/builds/id:", func(w http.ResponseWriter, r *http.Request) {
-		// Cancel, tags, etc.
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -499,7 +367,7 @@ func setupMockClient(t *testing.T) *TestServer {
 	})
 
 	ts.Handle("GET /app/rest/agents/id:", func(w http.ResponseWriter, r *http.Request) {
-		id := extractID(r.URL.Path, "id:")
+		id := ExtractID(r.URL.Path, "id:")
 		if id == "999" {
 			Error(w, http.StatusNotFound, "No agent found by locator 'id:999'")
 			return
@@ -516,7 +384,7 @@ func setupMockClient(t *testing.T) *TestServer {
 	})
 
 	ts.Handle("GET /app/rest/agents/name:", func(w http.ResponseWriter, r *http.Request) {
-		name := extractID(r.URL.Path, "name:")
+		name := ExtractID(r.URL.Path, "name:")
 		if name == "NonExistentAgent" {
 			Error(w, http.StatusNotFound, "No agent found by locator 'name:NonExistentAgent'")
 			return
@@ -536,7 +404,6 @@ func setupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	// Agent reboot endpoint (form-based, not REST)
 	ts.Handle("POST /remoteAccess/reboot.html", func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
 			Error(w, http.StatusBadRequest, "Failed to parse form")
@@ -659,7 +526,6 @@ func setupMockClient(t *testing.T) *TestServer {
 		Error(w, http.StatusNotFound, "Versioned settings are not configured for this project")
 	})
 
-	// Set user for the test server URL (supports @me in run list)
 	config.SetUserForServer(ts.URL, "admin")
 
 	return ts
