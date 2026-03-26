@@ -224,11 +224,12 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 		for {
 			_, msg, err := tc.conn.ReadMessage()
 			if err != nil {
-				if buf.Len() > 0 {
+				switch {
+				case buf.Len() > 0:
 					resultCh <- result{output: extractExecOutput(buf.String())}
-				} else if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				case !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway):
 					resultCh <- result{err: fmt.Errorf("connection error: %w", err)}
-				} else {
+				default:
 					resultCh <- result{}
 				}
 				return

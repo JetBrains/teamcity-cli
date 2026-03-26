@@ -39,11 +39,12 @@ func PrintLogo() {
 	render := func() {
 		for r, line := range lines {
 			for c, ch := range []rune(line) {
-				if ch == ' ' {
+				switch {
+				case ch == ' ':
 					fmt.Print(" ")
-				} else if revealed[struct{ r, c int }{r, c}] {
+				case revealed[struct{ r, c int }{r, c}]:
 					fmt.Print(cyan.Render(string(ch)))
-				} else {
+				default:
 					fmt.Print(dim.Render(string(glyphs[rand.Intn(len(glyphs))])))
 				}
 			}

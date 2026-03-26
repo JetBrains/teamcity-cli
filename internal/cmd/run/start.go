@@ -468,7 +468,7 @@ func newRunCancelCmd(f *cmdutil.Factory) *cobra.Command {
 		Long:  `Cancel a running or queued run.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run cancel 12345
-  teamcity run cancel 12345 --comment "Cancelling for hotfix"
+  teamcity run cancel 12345 --comment "Canceling for hotfix"
   teamcity run cancel 12345 --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunCancel(f, args[0], opts)
@@ -499,20 +499,20 @@ func runRunCancel(f *cmdutil.Factory, runID string, opts *runCancelOptions) erro
 			return err
 		}
 		if !confirm {
-			output.Info("Cancelled")
+			output.Info("Canceled")
 			return nil
 		}
 	}
 
 	comment := opts.comment
 	if comment == "" {
-		comment = "Cancelled via teamcity CLI"
+		comment = "Canceled via teamcity CLI"
 	}
 
 	if err := client.CancelBuild(runID, comment); err != nil {
 		return err
 	}
 
-	output.Success("Cancelled run #%s", runID)
+	output.Success("Canceled run #%s", runID)
 	return nil
 }
