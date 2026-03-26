@@ -612,6 +612,12 @@ Use `--quiet` for minimal output that shows only state changes and the final res
 teamcity run watch 12345 --quiet
 ```
 
+Use `--json` to wait for the build to complete and output the final result as JSON (useful for scripting):
+
+```Shell
+teamcity run watch 12345 --json
+```
+
 ### run watch flags
 
 <table>
@@ -660,6 +666,18 @@ Stream build logs while watching
 <td>
 
 Minimal output — only state changes and result
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--json`
+
+</td>
+<td>
+
+Wait for completion and output result as JSON
 
 </td>
 </tr>

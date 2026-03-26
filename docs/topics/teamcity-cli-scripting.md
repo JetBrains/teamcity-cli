@@ -187,7 +187,14 @@ teamcity run list --since 24h --json=status | jq 'group_by(.status) | map({statu
 ### Wait for a build to finish
 
 ```Shell
-teamcity run start MyProject_Build --json | jq -r '.id' | xargs teamcity run watch --quiet
+teamcity run start MyProject_Build --watch --json
+```
+
+Or start and watch separately:
+
+```Shell
+BUILD_ID=$(teamcity run start MyProject_Build --json | jq -r '.id')
+teamcity run watch "$BUILD_ID" --json
 ```
 
 ### Cancel all queued builds for a job
