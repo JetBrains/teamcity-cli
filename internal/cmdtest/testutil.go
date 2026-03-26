@@ -87,7 +87,8 @@ func NewTestServer(t *testing.T) *TestServer {
 func (ts *TestServer) CloneFactory() *cmdutil.Factory {
 	return &cmdutil.Factory{
 		IOStreams:   ts.Factory.IOStreams,
-		ClientFunc:  ts.Factory.ClientFunc,
+		Printer:    ts.Factory.Printer,
+		ClientFunc: ts.Factory.ClientFunc,
 	}
 }
 
