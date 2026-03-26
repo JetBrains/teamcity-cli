@@ -32,14 +32,6 @@ func WithSuggestion(message, suggestion string) *UserError {
 	}
 }
 
-// NotAuthenticated returns an error for unauthenticated users
-func NotAuthenticated() *UserError {
-	return &UserError{
-		Message:    "Not authenticated",
-		Suggestion: "Run 'teamcity auth login' to authenticate",
-	}
-}
-
 // NotFound returns an error for resources that don't exist
 func NotFound(resource, id string) *UserError {
 	return &UserError{

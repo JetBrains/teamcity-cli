@@ -48,14 +48,6 @@ func TestWithSuggestion(T *testing.T) {
 	assert.Equal(T, "suggestion text", err.Suggestion)
 }
 
-func TestNotAuthenticated(T *testing.T) {
-	T.Parallel()
-	err := NotAuthenticated()
-	assert.Contains(T, err.Message, "Not authenticated")
-	assert.Contains(T, err.Suggestion, "teamcity auth login")
-	assert.NotContains(T, err.Suggestion, "TEAMCITY_GUEST")
-}
-
 func TestNotFound(T *testing.T) {
 	T.Parallel()
 	err := NotFound("build", "123")
