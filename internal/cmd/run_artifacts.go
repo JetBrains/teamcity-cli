@@ -218,6 +218,7 @@ type runDownloadOptions struct {
 	output   string
 	path     string
 	artifact string
+	timeout  time.Duration
 }
 
 func newRunDownloadCmd() *cobra.Command {
@@ -232,7 +233,8 @@ func newRunDownloadCmd() *cobra.Command {
   teamcity run download 12345 --path build/assets
   teamcity run download 12345 -o ./artifacts
   teamcity run download 12345 --artifact "*.jar"
-  teamcity run download 12345 --path build/assets -a "*.js"`,
+  teamcity run download 12345 --path build/assets -a "*.js"
+  teamcity run download 12345 --timeout 30m`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunDownload(args[0], opts)
 		},
@@ -241,6 +243,7 @@ func newRunDownloadCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.output, "output", "o", ".", "Local directory to save artifacts to")
 	cmd.Flags().StringVarP(&opts.path, "path", "p", "", "Download artifacts under this subdirectory")
 	cmd.Flags().StringVarP(&opts.artifact, "artifact", "a", "", "Artifact name pattern to filter")
+	cmd.Flags().DurationVar(&opts.timeout, "timeout", 10*time.Minute, "Download timeout (e.g. 30m, 1h)")
 
 	return cmd
 }
@@ -260,7 +263,8 @@ func runRunDownload(runID string, opts *runDownloadOptions) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), opts.timeout)
+	defer cancel()
 
 	flatList, totalSize, err := fetchAllArtifacts(ctx, client, runID, opts.path)
 	if err != nil {

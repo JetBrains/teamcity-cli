@@ -757,7 +757,10 @@ teamcity run download 12345 --path build/assets
 teamcity run download 12345 -o ./artifacts
 teamcity run download 12345 --artifact "*.jar"
 teamcity run download 12345 --path build/assets -a "*.js"
+teamcity run download 12345 --timeout 30m
 ```
+
+The `--timeout` flag sets the maximum time for the entire download operation (default: `10m`). Use longer values for large artifact sets, for example `--timeout 1h`.
 
 ## Test results
 
