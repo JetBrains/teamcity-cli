@@ -84,6 +84,7 @@ Shows all branches and all build states (including canceled, personal, composite
 - `-i, --interval <s>` - Refresh interval in seconds
 - `--logs` - Stream build logs while watching
 - `-Q, --quiet` - Minimal output, show only state changes and result
+- `--json` - Wait for completion and output result as JSON
 - `--timeout <duration>` - Timeout duration (e.g., 30m, 1h)
 
 ### Flags for `teamcity run view`

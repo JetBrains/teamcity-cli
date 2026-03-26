@@ -125,6 +125,12 @@ teamcity run watch <run-id> --logs
 teamcity run watch <run-id> --timeout 30m --quiet
 ```
 
+**Wait for completion and get JSON result (for scripting):**
+```bash
+teamcity run start <job-id> --watch --json
+teamcity run watch <run-id> --json
+```
+
 ## Personal Builds (Local Changes)
 
 **Run build with uncommitted git changes:**
