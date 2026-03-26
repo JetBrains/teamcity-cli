@@ -56,3 +56,15 @@ func Debug(format string, args ...any) {
 		fmt.Fprintf(os.Stderr, "%s %s\n", Faint("[debug]"), fmt.Sprintf(format, args...))
 	}
 }
+
+// PrintField prints a labeled field (e.g. "ID: value").
+func PrintField(label, value string) {
+	fmt.Printf("%s: %s\n", label, value)
+}
+
+// PrintViewHeader prints a view command header with a title, detail block, and browser link.
+func PrintViewHeader(title, webURL string, details func()) {
+	fmt.Printf("%s\n", Cyan(title))
+	details()
+	fmt.Printf("\n%s %s\n", Faint("View in browser:"), Green(webURL))
+}

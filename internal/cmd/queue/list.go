@@ -5,14 +5,12 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
 type queueListOptions struct {
-	job        string
-	limit      int
-	jsonFields string
+	job string
+	cmdutil.ListFlags
 }
 
 func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -28,50 +26,24 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity queue list --json
   teamcity queue list --json=id,state,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runQueueList(f, cmd, opts)
+			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.QueuedBuildFields, opts.fetch)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of queued runs")
-	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
+	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
 
 	return cmd
 }
 
-func runQueueList(f *cmdutil.Factory, cmd *cobra.Command, opts *queueListOptions) error {
-	if err := cmdutil.ValidateLimit(opts.limit); err != nil {
-		return err
-	}
-	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.QueuedBuildFields)
-	if err != nil {
-		return err
-	}
-	if showHelp {
-		return nil
-	}
-
-	client, err := f.Client()
-	if err != nil {
-		return err
-	}
-
+func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	queue, err := client.GetBuildQueue(api.QueueOptions{
 		BuildTypeID: opts.job,
-		Limit:       opts.limit,
-		Fields:      jsonResult.Fields,
+		Limit:       opts.Limit,
+		Fields:      fields,
 	})
 	if err != nil {
-		return err
-	}
-
-	if jsonResult.Enabled {
-		return output.PrintJSON(queue)
-	}
-
-	if queue.Count == 0 {
-		fmt.Println("No runs in queue")
-		return nil
+		return nil, err
 	}
 
 	headers := []string{"ID", "JOB", "BRANCH", "STATE"}
@@ -91,7 +63,9 @@ func runQueueList(f *cmdutil.Factory, cmd *cobra.Command, opts *queueListOptions
 		})
 	}
 
-	output.AutoSizeColumns(headers, rows, 2, 1, 2)
-	output.PrintTable(headers, rows)
-	return nil
+	return &cmdutil.ListResult{
+		JSON:     queue,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
+		EmptyMsg: "No runs in queue",
+	}, nil
 }
