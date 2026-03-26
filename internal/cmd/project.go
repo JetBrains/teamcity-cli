@@ -17,7 +17,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -783,50 +782,6 @@ func parseValidationStats(dslDir string) string {
 		stats += fmt.Sprintf(", VCS roots: %d", vcsRoots)
 	}
 	return stats
-}
-
-// GetClientFunc is the function used to create API clients.
-// It can be overridden in tests to inject mock clients.
-var GetClientFunc = defaultGetClient
-
-// getClient returns an API client using the current GetClientFunc.
-func getClient() (api.ClientInterface, error) {
-	return GetClientFunc()
-}
-
-func defaultGetClient() (api.ClientInterface, error) {
-	serverURL := config.GetServerURL()
-	token, _, keyringErr := config.GetTokenWithSource()
-
-	debugOpt := api.WithDebugFunc(output.Debug)
-	roOpt := api.WithReadOnly(config.IsReadOnly())
-
-	if config.IsGuestAuth() {
-		if serverURL == "" {
-			return nil, tcerrors.WithSuggestion(
-				"TEAMCITY_GUEST is set but no server URL configured",
-				fmt.Sprintf("Set %s environment variable or run 'teamcity auth login --guest -s <url>'", config.EnvServerURL),
-			)
-		}
-		output.Debug("Using guest authentication")
-		return api.NewGuestClient(serverURL, debugOpt, roOpt), nil
-	}
-
-	if serverURL != "" && token != "" {
-		warnInsecureHTTP(serverURL, "authentication token")
-		return api.NewClient(serverURL, token, debugOpt, roOpt), nil
-	}
-
-	if buildAuth, ok := config.GetBuildAuth(); ok {
-		if serverURL == "" {
-			serverURL = buildAuth.ServerURL
-		}
-		output.Debug("Using build-level authentication")
-		warnInsecureHTTP(serverURL, "credentials")
-		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, debugOpt, roOpt), nil
-	}
-
-	return nil, notAuthenticatedError(serverURL, keyringErr)
 }
 
 func newProjectTreeCmd() *cobra.Command {
