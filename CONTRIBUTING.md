@@ -23,6 +23,29 @@ cd teamcity-cli
 just build
 ```
 
+## Architecture
+
+```
+tc/                  # Entry point (main package)
+api/                 # HTTP client — all TeamCity REST API calls live here
+  interface.go       # ClientInterface — the contract commands code against
+  client.go          # Real HTTP implementation
+  types.go           # Request/response structs
+internal/
+  cmd/               # CLI commands, one subpackage per noun (run/, agent/, project/, …)
+    root.go          # Root cobra command, global flags
+  cmdutil/           # Shared helpers: client init, view flags, failure summaries
+  config/            # Auth config (keyring / file storage)
+  output/            # Terminal output: colors, tables, trees, pager, status icons
+  errors/            # Structured error types
+  terminal/          # Agent WebSocket terminal
+acceptance/          # End-to-end .txtar tests against a live server
+```
+
+**Data flow:** `tc/main.go` → `cmd.Execute()` builds the cobra tree → each command receives a `*cmdutil.Factory` and calls `f.Client()` to get an `api.ClientInterface` → calls API methods → formats output via `internal/output`.
+
+When adding a new command, create a subpackage under `internal/cmd/<noun>/` and register it in `root.go`.
+
 ### Integration tests
 
 Unit tests run without any setup. Integration tests need a TeamCity server — by default, they spin one up via [testcontainers](https://golang.testcontainers.org/), which requires Docker.
