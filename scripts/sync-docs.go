@@ -156,9 +156,16 @@ func pull(branchOverride string) {
 	fmt.Printf("\nDone: %d updated, %d added, %d unchanged\n", changed, added, unchanged)
 }
 
+func ghUser() string {
+	out := git("", "api", "user", "-q", ".login")
+	return strings.TrimSpace(out)
+}
+
 func push(branchOverride string) {
 	branch := resolveBranch(branchOverride)
 	syncBranch := "cli-docs-sync-" + time.Now().Format("20060102")
+	user := ghUser()
+	forkRepo := user + "/" + strings.SplitN(externalRepo, "/", 2)[1]
 
 	tmpDir, err := os.MkdirTemp("", "tc-docs-push-*")
 	if err != nil {
@@ -167,9 +174,13 @@ func push(branchOverride string) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	fmt.Println("Cloning external repo...")
+	fmt.Printf("Syncing fork %s with upstream...\n", forkRepo)
+	git("", "api", "repos/"+forkRepo+"/merge-upstream",
+		"-X", "POST", "-f", "branch="+branch, "-q", ".message")
+
+	fmt.Printf("Cloning fork %s...\n", forkRepo)
 	gitExec("", "clone", "--depth", "1", "--branch", branch,
-		"https://github.com/"+externalRepo+".git", tmpDir)
+		"https://github.com/"+forkRepo+".git", tmpDir)
 
 	fmt.Printf("Creating branch %s...\n", syncBranch)
 	gitExec(tmpDir, "checkout", "-b", syncBranch)
@@ -208,7 +219,7 @@ func push(branchOverride string) {
 	cmd := exec.Command("gh", "pr", "create",
 		"--repo", externalRepo,
 		"--base", branch,
-		"--head", syncBranch,
+		"--head", user+":"+syncBranch,
 		"--title", "Update TeamCity CLI documentation",
 		"--body", "Automated sync of CLI documentation from teamcity-cli repo.",
 	)
