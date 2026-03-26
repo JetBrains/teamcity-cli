@@ -325,25 +325,24 @@ func (e *testEnv) ensureBuild() error {
 	}
 
 	log.Println("Triggering new build...")
-	build, err := e.Client.RunBuild(e.ConfigID, api.RunBuildOptions{Comment: "Test setup"})
+	queued, err := e.Client.RunBuild(e.ConfigID, api.RunBuildOptions{Comment: "Test setup"})
 	if err != nil {
 		return err
 	}
 
-	deadline := time.Now().Add(5 * time.Minute)
-	for time.Now().Before(deadline) {
-		build, err = e.Client.GetBuild(fmt.Sprintf("%d", build.ID))
-		if err != nil {
-			return err
-		}
-		if build.State == "finished" {
-			e.Build = build
-			log.Println("Build finished:", build.Status)
-			return nil
-		}
-		time.Sleep(5 * time.Second)
+	ctx, cancel := context.WithTimeout(e.ctx, 5*time.Minute)
+	defer cancel()
+
+	build, err := e.Client.WaitForBuild(ctx, fmt.Sprintf("%d", queued.ID), api.WaitForBuildOptions{
+		Interval: 5 * time.Second,
+	})
+	if err != nil {
+		return fmt.Errorf("build timeout: %w", err)
 	}
-	return fmt.Errorf("build timeout")
+
+	e.Build = build
+	log.Println("Build finished:", build.Status)
+	return nil
 }
 
 func getSuperuserToken(ctx context.Context, container testcontainers.Container) (string, error) {

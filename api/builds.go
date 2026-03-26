@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // encodeArtifactPath escapes each segment of an artifact path individually,
@@ -119,6 +120,55 @@ func (c *Client) GetBuild(ref string) (*Build, error) {
 	}
 
 	return &build, nil
+}
+
+// buildState is a lightweight struct for polling build status with minimal fields.
+type buildState struct {
+	State              string `json:"state"`
+	Status             string `json:"status"`
+	PercentageComplete int    `json:"percentageComplete"`
+}
+
+// WaitForBuildOptions configures the WaitForBuild polling behavior.
+type WaitForBuildOptions struct {
+	Interval time.Duration
+	// OnProgress is called after each poll with the current state.
+	// Return a non-nil error to abort the wait.
+	OnProgress func(state, status string, percent int) error
+}
+
+// WaitForBuild polls a build until it reaches state "finished", then returns the full build.
+// Uses lightweight field-limited requests for polling, and fetches the complete build only once.
+func (c *Client) WaitForBuild(ctx context.Context, buildID string, opts WaitForBuildOptions) (*Build, error) {
+	id, err := c.ResolveBuildID(buildID)
+	if err != nil {
+		return nil, err
+	}
+
+	pollPath := fmt.Sprintf("/app/rest/builds/id:%s?fields=state,status,percentageComplete", id)
+
+	for {
+		var bs buildState
+		if err := c.get(pollPath, &bs); err != nil {
+			return nil, err
+		}
+
+		if opts.OnProgress != nil {
+			if err := opts.OnProgress(bs.State, bs.Status, bs.PercentageComplete); err != nil {
+				return nil, err
+			}
+		}
+
+		if bs.State == "finished" {
+			return c.GetBuild(id)
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(opts.Interval):
+		}
+	}
 }
 
 // RunBuildOptions represents options for running a build

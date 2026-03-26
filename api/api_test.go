@@ -799,17 +799,11 @@ teamcity auth status
 	T.Logf("Started build #%d", build.ID)
 	T.Cleanup(func() { cancelAndWait(T, buildID) })
 
-	deadline := time.Now().Add(3 * time.Minute)
-	for time.Now().Before(deadline) {
-		build, err = client.GetBuild(buildID)
-		require.NoError(T, err)
-		if build.State == "finished" {
-			break
-		}
-		time.Sleep(3 * time.Second)
-	}
+	ctx, cancel := context.WithTimeout(T.Context(), 3*time.Minute)
+	defer cancel()
 
-	require.Equal(T, "finished", build.State)
+	build, err = client.WaitForBuild(ctx, buildID, api.WaitForBuildOptions{Interval: 3 * time.Second})
+	require.NoError(T, err)
 
 	buildLog, err := client.GetBuildLog(buildID)
 	require.NoError(T, err)
@@ -1198,4 +1192,37 @@ func TestAgentOperations(T *testing.T) {
 		assert.True(t, agent.Enabled, "agent should be enabled")
 	})
 
+}
+
+func TestWaitForBuild_Integration(T *testing.T) {
+	skipIfGuest(T)
+	waitForIdleAgent(T)
+
+	build, err := client.RunBuild(testConfig, api.RunBuildOptions{
+		Comment: "WaitForBuild integration test",
+	})
+	require.NoError(T, err)
+	buildID := fmt.Sprintf("%d", build.ID)
+	T.Logf("Queued build #%d, waiting for completion...", build.ID)
+
+	ctx, cancel := context.WithTimeout(T.Context(), 5*time.Minute)
+	defer cancel()
+
+	var progressCalls int
+	result, err := client.WaitForBuild(ctx, buildID, api.WaitForBuildOptions{
+		Interval: 3 * time.Second,
+		OnProgress: func(state, status string, percent int) error {
+			progressCalls++
+			T.Logf("  poll #%d: state=%s status=%s percent=%d", progressCalls, state, status, percent)
+			return nil
+		},
+	})
+	require.NoError(T, err)
+
+	assert.Equal(T, "finished", result.State)
+	assert.Equal(T, "SUCCESS", result.Status)
+	assert.NotEmpty(T, result.Number)
+	assert.NotEmpty(T, result.WebURL)
+	assert.Greater(T, progressCalls, 0)
+	T.Logf("Build #%d finished: status=%s number=%s (%d polls)", result.ID, result.Status, result.Number, progressCalls)
 }

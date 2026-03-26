@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -874,6 +875,71 @@ func TestGuestClientUsesGuestAuthPrefix(T *testing.T) {
 	_, _ = client.GetServer()
 
 	assert.Equal(T, "/guestAuth/app/rest/server", requestPath)
+}
+
+func TestWaitForBuild(T *testing.T) {
+	T.Parallel()
+
+	T.Run("polls with lightweight fields then fetches full build", func(t *testing.T) {
+		t.Parallel()
+
+		pollCount := 0
+		var progressCalls []int
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+
+			if r.URL.Query().Get("fields") == "state,status,percentageComplete" {
+				pollCount++
+				state := buildState{State: "running", PercentageComplete: pollCount * 30}
+				if pollCount >= 3 {
+					state = buildState{State: "finished", Status: "SUCCESS"}
+				}
+				json.NewEncoder(w).Encode(state)
+				return
+			}
+
+			json.NewEncoder(w).Encode(Build{
+				ID:          42,
+				Number:      "7",
+				BuildTypeID: "MyJob",
+				State:       "finished",
+				Status:      "SUCCESS",
+				WebURL:      "https://tc.example.com/build/42",
+			})
+		})
+
+		build, err := client.WaitForBuild(t.Context(), "42", WaitForBuildOptions{
+			Interval: 10 * time.Millisecond,
+			OnProgress: func(state, status string, percent int) error {
+				progressCalls = append(progressCalls, percent)
+				return nil
+			},
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 42, build.ID)
+		assert.Equal(t, "SUCCESS", build.Status)
+		assert.GreaterOrEqual(t, pollCount, 3)
+		assert.NotEmpty(t, progressCalls)
+	})
+
+	T.Run("respects context cancellation", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(buildState{State: "running"})
+		})
+
+		ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+		defer cancel()
+
+		_, err := client.WaitForBuild(ctx, "1", WaitForBuildOptions{
+			Interval: 10 * time.Millisecond,
+		})
+
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
+	})
 }
 
 func TestReadOnlyMode(T *testing.T) {
