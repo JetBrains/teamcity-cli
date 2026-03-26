@@ -39,8 +39,7 @@ type agentListOptions struct {
 	connected  bool
 	enabled    bool
 	authorized bool
-	limit      int
-	jsonFields string
+	cmdutil.ListFlags
 }
 
 func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -56,7 +55,7 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity agent list --json
   teamcity agent list --json=id,name,connected,enabled`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAgentList(f, cmd, opts)
+			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.AgentFields, opts.fetch)
 		},
 	}
 
@@ -64,48 +63,22 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.connected, "connected", false, "Show only connected agents")
 	cmd.Flags().BoolVar(&opts.enabled, "enabled", false, "Show only enabled agents")
 	cmd.Flags().BoolVar(&opts.authorized, "authorized", false, "Show only authorized agents")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 100, "Maximum number of agents")
-	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
+	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
 
 	return cmd
 }
 
-func runAgentList(f *cmdutil.Factory, cmd *cobra.Command, opts *agentListOptions) error {
-	if err := cmdutil.ValidateLimit(opts.limit); err != nil {
-		return err
-	}
-	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.AgentFields)
-	if err != nil {
-		return err
-	}
-	if showHelp {
-		return nil
-	}
-
-	client, err := f.Client()
-	if err != nil {
-		return err
-	}
-
+func (opts *agentListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	agents, err := client.GetAgents(api.AgentsOptions{
 		Pool:       opts.pool,
 		Connected:  opts.connected,
 		Enabled:    opts.enabled,
 		Authorized: opts.authorized,
-		Limit:      opts.limit,
-		Fields:     jsonResult.Fields,
+		Limit:      opts.Limit,
+		Fields:     fields,
 	})
 	if err != nil {
-		return err
-	}
-
-	if jsonResult.Enabled {
-		return output.PrintJSON(agents)
-	}
-
-	if agents.Count == 0 {
-		fmt.Println("No agents found")
-		return nil
+		return nil, err
 	}
 
 	headers := []string{"ID", "NAME", "POOL", "STATUS"}
@@ -126,9 +99,11 @@ func runAgentList(f *cmdutil.Factory, cmd *cobra.Command, opts *agentListOptions
 		})
 	}
 
-	output.AutoSizeColumns(headers, rows, 2, 1, 2)
-	output.PrintTable(headers, rows)
-	return nil
+	return &cmdutil.ListResult{
+		JSON:     agents,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
+		EmptyMsg: "No agents found",
+	}, nil
 }
 
 func newAgentViewCmd(f *cmdutil.Factory) *cobra.Command {

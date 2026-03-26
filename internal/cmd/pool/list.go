@@ -11,12 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type poolListOptions struct {
-	jsonFields string
-}
-
 func newPoolListCmd(f *cmdutil.Factory) *cobra.Command {
-	opts := &poolListOptions{}
+	flags := &cmdutil.ListFlags{}
 
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -26,41 +22,19 @@ func newPoolListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity pool list --json
   teamcity pool list --json=id,name,maxAgents`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPoolList(f, cmd, opts)
+			return cmdutil.RunList(f, cmd, flags, &api.PoolFields, fetchPools)
 		},
 	}
 
-	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
+	cmdutil.AddJSONFieldsFlag(cmd, &flags.JSONFields)
 
 	return cmd
 }
 
-func runPoolList(f *cmdutil.Factory, cmd *cobra.Command, opts *poolListOptions) error {
-	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.PoolFields)
+func fetchPools(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
+	pools, err := client.GetAgentPools(fields)
 	if err != nil {
-		return err
-	}
-	if showHelp {
-		return nil
-	}
-
-	client, err := f.Client()
-	if err != nil {
-		return err
-	}
-
-	pools, err := client.GetAgentPools(jsonResult.Fields)
-	if err != nil {
-		return err
-	}
-
-	if jsonResult.Enabled {
-		return output.PrintJSON(pools)
-	}
-
-	if pools.Count == 0 {
-		fmt.Println("No agent pools found")
-		return nil
+		return nil, err
 	}
 
 	headers := []string{"ID", "NAME", "MAX AGENTS"}
@@ -79,8 +53,11 @@ func runPoolList(f *cmdutil.Factory, cmd *cobra.Command, opts *poolListOptions) 
 		})
 	}
 
-	output.PrintTable(headers, rows)
-	return nil
+	return &cmdutil.ListResult{
+		JSON:     pools,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows},
+		EmptyMsg: "No agent pools found",
+	}, nil
 }
 
 func newPoolViewCmd(f *cmdutil.Factory) *cobra.Command {

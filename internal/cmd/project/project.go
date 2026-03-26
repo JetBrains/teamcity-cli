@@ -9,7 +9,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/param"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -38,9 +37,8 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 type projectListOptions struct {
-	parent     string
-	limit      int
-	jsonFields string
+	parent string
+	cmdutil.ListFlags
 }
 
 func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -56,50 +54,24 @@ func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity project list --json
   teamcity project list --json=id,name,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runProjectList(f, cmd, opts)
+			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.ProjectFields, opts.fetch)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.parent, "parent", "p", "", "Filter by parent project ID")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 100, "Maximum number of projects")
-	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
+	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
 
 	return cmd
 }
 
-func runProjectList(f *cmdutil.Factory, cmd *cobra.Command, opts *projectListOptions) error {
-	if err := cmdutil.ValidateLimit(opts.limit); err != nil {
-		return err
-	}
-	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.ProjectFields)
-	if err != nil {
-		return err
-	}
-	if showHelp {
-		return nil
-	}
-
-	client, err := f.Client()
-	if err != nil {
-		return err
-	}
-
+func (opts *projectListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	projects, err := client.GetProjects(api.ProjectsOptions{
 		Parent: opts.parent,
-		Limit:  opts.limit,
-		Fields: jsonResult.Fields,
+		Limit:  opts.Limit,
+		Fields: fields,
 	})
 	if err != nil {
-		return err
-	}
-
-	if jsonResult.Enabled {
-		return output.PrintJSON(projects)
-	}
-
-	if projects.Count == 0 {
-		fmt.Println("No projects found")
-		return nil
+		return nil, err
 	}
 
 	headers := []string{"ID", "NAME", "PARENT"}
@@ -118,9 +90,11 @@ func runProjectList(f *cmdutil.Factory, cmd *cobra.Command, opts *projectListOpt
 		})
 	}
 
-	output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
-	output.PrintTable(headers, rows)
-	return nil
+	return &cmdutil.ListResult{
+		JSON:     projects,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg: "No projects found",
+	}, nil
 }
 
 func newProjectViewCmd(f *cmdutil.Factory) *cobra.Command {
@@ -160,18 +134,15 @@ func runProjectView(f *cmdutil.Factory, projectID string, opts *cmdutil.ViewOpti
 		return output.PrintJSON(project)
 	}
 
-	fmt.Printf("%s\n", output.Cyan(project.Name))
-	fmt.Printf("ID: %s\n", project.ID)
-
-	if project.ParentProjectID != "" {
-		fmt.Printf("Parent: %s\n", project.ParentProjectID)
-	}
-
-	if project.Description != "" {
-		fmt.Printf("Description: %s\n", project.Description)
-	}
-
-	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(project.WebURL))
+	output.PrintViewHeader(project.Name, project.WebURL, func() {
+		output.PrintField("ID", project.ID)
+		if project.ParentProjectID != "" {
+			output.PrintField("Parent", project.ParentProjectID)
+		}
+		if project.Description != "" {
+			output.PrintField("Description", project.Description)
+		}
+	})
 
 	return nil
 }
@@ -435,7 +406,3 @@ func newProjectSettingsCmd(f *cmdutil.Factory) *cobra.Command {
 	return newSettingsCmd(f)
 }
 
-// DetectTeamCityDir is a re-export for use by settings.go in same package
-func detectTeamCityDir() string {
-	return config.DetectTeamCityDir()
-}

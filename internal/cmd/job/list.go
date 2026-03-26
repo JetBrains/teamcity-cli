@@ -1,8 +1,6 @@
 package job
 
 import (
-	"fmt"
-
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -11,9 +9,8 @@ import (
 )
 
 type jobListOptions struct {
-	project    string
-	limit      int
-	jsonFields string
+	project string
+	cmdutil.ListFlags
 }
 
 func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -28,50 +25,24 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity job list --json
   teamcity job list --json=id,name,webUrl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runJobList(f, cmd, opts)
+			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.BuildTypeFields, opts.fetch)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of jobs")
-	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
+	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
 
 	return cmd
 }
 
-func runJobList(f *cmdutil.Factory, cmd *cobra.Command, opts *jobListOptions) error {
-	if err := cmdutil.ValidateLimit(opts.limit); err != nil {
-		return err
-	}
-	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.BuildTypeFields)
-	if err != nil {
-		return err
-	}
-	if showHelp {
-		return nil
-	}
-
-	client, err := f.Client()
-	if err != nil {
-		return err
-	}
-
+func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	jobs, err := client.GetBuildTypes(api.BuildTypesOptions{
 		Project: opts.project,
-		Limit:   opts.limit,
-		Fields:  jsonResult.Fields,
+		Limit:   opts.Limit,
+		Fields:  fields,
 	})
 	if err != nil {
-		return err
-	}
-
-	if jsonResult.Enabled {
-		return output.PrintJSON(jobs)
-	}
-
-	if jobs.Count == 0 {
-		fmt.Println("No jobs found")
-		return nil
+		return nil, err
 	}
 
 	headers := []string{"ID", "NAME", "PROJECT", "STATUS"}
@@ -91,9 +62,11 @@ func runJobList(f *cmdutil.Factory, cmd *cobra.Command, opts *jobListOptions) er
 		})
 	}
 
-	output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
-	output.PrintTable(headers, rows)
-	return nil
+	return &cmdutil.ListResult{
+		JSON:     jobs,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg: "No jobs found",
+	}, nil
 }
 
 func newJobViewCmd(f *cmdutil.Factory) *cobra.Command {
@@ -132,17 +105,16 @@ func runJobView(f *cmdutil.Factory, jobID string, opts *cmdutil.ViewOptions) err
 		return output.PrintJSON(buildType)
 	}
 
-	fmt.Printf("%s\n", output.Cyan(buildType.Name))
-	fmt.Printf("ID: %s\n", buildType.ID)
-	fmt.Printf("Project: %s (%s)\n", buildType.ProjectName, buildType.ProjectID)
+	output.PrintViewHeader(buildType.Name, buildType.WebURL, func() {
+		output.PrintField("ID", buildType.ID)
+		output.PrintField("Project", buildType.ProjectName+" ("+buildType.ProjectID+")")
 
-	status := output.Green("Active")
-	if buildType.Paused {
-		status = output.Faint("Paused")
-	}
-	fmt.Printf("Status: %s\n", status)
-
-	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(buildType.WebURL))
+		status := output.Green("Active")
+		if buildType.Paused {
+			status = output.Faint("Paused")
+		}
+		output.PrintField("Status", status)
+	})
 
 	return nil
 }
