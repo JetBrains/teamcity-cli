@@ -196,6 +196,52 @@ func TestAPICommandErrorResponse(T *testing.T) {
 	assert.Contains(T, err.Error(), "404")
 }
 
+func TestAPICommandXMLErrorResponse(T *testing.T) {
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`<errors><error><message>Field 'snapshot-dependencies' is not supported. Supported are: number, status, statusText, id, startDate, finishDate, buildTypeId, branchName.</message><additionalMessage>jetbrains.buildServer.server.rest.errors.NotFoundException</additionalMessage><statusText>Responding with error, status code: 404 (Not Found).</statusText></error></errors>`))
+	})
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds/id:999/snapshot-dependencies"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	require.Error(T, err, "expected error for 404 response")
+	assert.Contains(T, err.Error(), "404")
+}
+
+func TestAPICommand406RetriesWithWildcardAccept(T *testing.T) {
+	requestCount := 0
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		accept := r.Header.Get("Accept")
+		if accept == "application/json" {
+			w.WriteHeader(http.StatusNotAcceptable)
+			w.Write([]byte(`{"errors":[{"message":"Make sure you have supplied correct 'Accept' header."}]}`))
+			return
+		}
+		// Retry with */* gets the real XML error
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`<errors><error><message>Field 'foo' is not supported.</message></error></errors>`))
+	})
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds/id:1/foo"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "404")
+	assert.Equal(T, 2, requestCount)
+}
+
 func TestAPICommandDELETE(T *testing.T) {
 	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(T, "DELETE", r.Method, "Method")
@@ -766,4 +812,60 @@ func TestFetchAllPagesSinglePage(T *testing.T) {
 	pages, err := fetchAllPages(client, "/app/rest/builds", nil)
 	require.NoError(T, err)
 	assert.Len(T, pages, 1, "fetchAllPages() page count")
+}
+
+func TestPrettyPrintJSON(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name        string
+		body        string
+		wantOK      bool
+		wantContain string
+	}{
+		{
+			name:        "JSON body",
+			body:        `{"errors":[{"message":"some error"}]}`,
+			wantOK:      true,
+			wantContain: "some error",
+		},
+		{
+			name:        "XML error converted to JSON",
+			body:        `<errors><error><message>Field 'snapshot-dependencies' is not supported.</message></error></errors>`,
+			wantOK:      true,
+			wantContain: "snapshot-dependencies",
+		},
+		{
+			name:        "XML error with declaration",
+			body:        `<?xml version="1.0" encoding="UTF-8"?><errors><error><message>Not found</message></error></errors>`,
+			wantOK:      true,
+			wantContain: "Not found",
+		},
+		{
+			name:   "plain text",
+			body:   `Resource not found`,
+			wantOK: false,
+		},
+		{
+			name:   "non-error XML",
+			body:   `<server><version>2025.7</version></server>`,
+			wantOK: false,
+		},
+		{
+			name:   "empty errors element",
+			body:   `<errors></errors>`,
+			wantOK: false,
+		},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result, ok := prettyPrintJSON([]byte(tc.body))
+			assert.Equal(t, tc.wantOK, ok)
+			if tc.wantContain != "" {
+				assert.Contains(t, result, tc.wantContain)
+			}
+		})
+	}
 }
