@@ -301,6 +301,13 @@ teamcity run start MyProject_Build --branch main --watch
 
 <img src="run-start-watch.gif" alt="Starting a build with --watch" border-effect="rounded"/>
 
+You can also set a timeout or adjust the polling interval:
+
+```Shell
+teamcity run start MyProject_Build --watch --timeout 30m
+teamcity run start MyProject_Build --watch --interval 10
+```
+
 ### Personal builds
 
 Include uncommitted local changes in a personal build:
@@ -540,6 +547,30 @@ Watch the build after starting it
 <tr>
 <td>
 
+`-i`, `--interval`
+
+</td>
+<td>
+
+Refresh interval in seconds when watching (default: 3)
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--timeout`
+
+</td>
+<td>
+
+Timeout when watching (for example, `30m`, `1h`); implies `--watch`
+
+</td>
+</tr>
+<tr>
+<td>
+
 `-n`, `--dry-run`
 
 </td>
@@ -749,6 +780,7 @@ Restart a run with the same configuration:
 ```Shell
 teamcity run restart 12345
 teamcity run restart 12345 --watch
+teamcity run restart 12345 --timeout 30m
 teamcity run restart 12345 --web
 ```
 
