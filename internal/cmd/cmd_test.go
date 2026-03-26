@@ -125,7 +125,6 @@ func TestParentCommandWithoutSubcommand(T *testing.T) {
 
 func TestInvalidIDs(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
-	f := ts.Factory
 
 	cases := []struct {
 		name string
@@ -138,6 +137,7 @@ func TestInvalidIDs(T *testing.T) {
 	for _, tc := range cases {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			f := ts.CloneFactory()
 			rootCmd := cmd.NewRootCmdWithFactory(f)
 			rootCmd.SetArgs(tc.args)
 			var out bytes.Buffer

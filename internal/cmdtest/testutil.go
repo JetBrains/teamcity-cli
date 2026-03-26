@@ -68,7 +68,7 @@ func NewTestServer(t *testing.T) *TestServer {
 	t.Setenv("TEAMCITY_URL", ts.URL)
 	t.Setenv("TEAMCITY_TOKEN", "test-token")
 	t.Setenv("TC_INSECURE_SKIP_WARN", "1")
-	config.Init()
+	_ = config.Init()
 
 	ts.Factory = cmdutil.NewFactory()
 	ts.Factory.ClientFunc = func() (api.ClientInterface, error) {
@@ -80,6 +80,15 @@ func NewTestServer(t *testing.T) *TestServer {
 	})
 
 	return ts
+}
+
+// CloneFactory returns a new Factory that shares the same ClientFunc and IOStreams
+// but has its own flag storage, making it safe for parallel subtests.
+func (ts *TestServer) CloneFactory() *cmdutil.Factory {
+	return &cmdutil.Factory{
+		IOStreams:   ts.Factory.IOStreams,
+		ClientFunc:  ts.Factory.ClientFunc,
+	}
 }
 
 // Handle registers a handler for "METHOD /path" pattern.
