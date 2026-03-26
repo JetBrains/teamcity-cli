@@ -1,4 +1,4 @@
-package cmd
+package cmdutil
 
 import (
 	"fmt"
@@ -9,15 +9,6 @@ import (
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
-
-// GetClientFunc is the function used to create API clients.
-// It can be overridden in tests to inject mock clients.
-var GetClientFunc = defaultGetClient
-
-// getClient returns an API client using the current GetClientFunc.
-func getClient() (api.ClientInterface, error) {
-	return GetClientFunc()
-}
 
 func defaultGetClient() (api.ClientInterface, error) {
 	serverURL := config.GetServerURL()
@@ -48,7 +39,7 @@ func defaultGetClient() (api.ClientInterface, error) {
 	}
 
 	if serverURL != "" && token != "" {
-		warnInsecureHTTP(serverURL, "authentication token")
+		WarnInsecureHTTP(serverURL, "authentication token")
 		return api.NewClient(serverURL, token, opts...), nil
 	}
 
@@ -57,15 +48,13 @@ func defaultGetClient() (api.ClientInterface, error) {
 			serverURL = buildAuth.ServerURL
 		}
 		output.Debug("Using build-level authentication")
-		warnInsecureHTTP(serverURL, "credentials")
+		WarnInsecureHTTP(serverURL, "credentials")
 		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, opts...), nil
 	}
 
-	return nil, notAuthenticatedError(serverURL, keyringErr)
+	return nil, NotAuthenticatedError(serverURL, keyringErr)
 }
 
-// tlsOption returns a ClientOption that configures mTLS if TLS paths are
-// configured via environment variables or per-server config.
 func tlsOption() (api.ClientOption, error) {
 	certFile, keyFile, caFile := config.GetTLSPaths()
 
@@ -84,4 +73,33 @@ func tlsOption() (api.ClientOption, error) {
 
 	output.Debug("Using mTLS client certificate authentication")
 	return api.WithTransport(&http.Transport{TLSClientConfig: tlsCfg}), nil
+}
+
+// ProbeGuestAccess checks whether the server at serverURL supports guest access.
+func ProbeGuestAccess(serverURL string) bool {
+	if serverURL == "" {
+		return false
+	}
+	guest := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
+	_, err := guest.GetServer()
+	return err == nil
+}
+
+// NotAuthenticatedError returns a not-authenticated error with a hint that covers
+// all authentication methods: environment variables, interactive login, and guest access.
+func NotAuthenticatedError(serverURL string, keyringErr error) *tcerrors.UserError {
+	msg := "Not authenticated"
+	if keyringErr != nil {
+		msg = fmt.Sprintf("Not authenticated (could not access system keyring: %v)", keyringErr)
+	}
+
+	suggestion := "Set TEAMCITY_URL and TEAMCITY_TOKEN environment variables, or run 'teamcity auth login --insecure-storage'"
+	if ProbeGuestAccess(serverURL) {
+		suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
+	}
+
+	return &tcerrors.UserError{
+		Message:    msg,
+		Suggestion: suggestion,
+	}
 }
