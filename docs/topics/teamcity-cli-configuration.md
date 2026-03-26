@@ -62,7 +62,7 @@ The server URL used when no `TEAMCITY_URL` environment variable is set. Updated 
 </td>
 <td>
 
-A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access or `ro: true` for read-only mode. Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
+A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access, `ro: true` for read-only mode, or TLS certificate paths for mTLS (`client_cert`, `client_key`, `ca_cert`). Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
 
 </td>
 </tr>
@@ -154,6 +154,42 @@ Set to `1`, `true`, or `yes` to enable read-only mode. When enabled, all non-GET
 <td>
 
 Path to the Kotlin DSL directory. Overrides automatic detection of `.teamcity/` or `.tc/` directories.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`TEAMCITY_CLIENT_CERT`
+
+</td>
+<td>
+
+Path to a PEM-encoded client certificate file for mutual TLS (mTLS). Must be used together with `TEAMCITY_CLIENT_KEY`. See [Mutual TLS (mTLS)](teamcity-cli-authentication.md#mtls).
+
+</td>
+</tr>
+<tr>
+<td>
+
+`TEAMCITY_CLIENT_KEY`
+
+</td>
+<td>
+
+Path to a PEM-encoded client private key file for mutual TLS (mTLS). Must be used together with `TEAMCITY_CLIENT_CERT`.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`TEAMCITY_CA_CERT`
+
+</td>
+<td>
+
+Path to a PEM-encoded CA certificate file. Use this when the TeamCity server uses a certificate signed by a private or internal CA that is not in the system trust store. Can be used with or without client certificate settings.
 
 </td>
 </tr>
