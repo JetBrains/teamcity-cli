@@ -74,6 +74,84 @@ func TestDoRunWatchLogsFallsBackWithoutTTY(t *testing.T) {
 	}
 }
 
+func TestDoRunWatchJSONOutputsOnCompletion(t *testing.T) {
+	pollCount := 0
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/app/rest/builds/id:456" {
+			pollCount++
+			w.Header().Set("Content-Type", "application/json")
+			build := api.Build{
+				ID:          456,
+				Number:      "7",
+				BuildTypeID: "MyJob",
+				WebURL:      "https://example.invalid/build/456",
+			}
+			if pollCount < 3 {
+				build.State = "running"
+				build.Status = ""
+			} else {
+				build.State = "finished"
+				build.Status = "SUCCESS"
+			}
+			_ = json.NewEncoder(w).Encode(build)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	origGetClient := GetClientFunc
+	t.Cleanup(func() { GetClientFunc = origGetClient })
+
+	GetClientFunc = func() (api.ClientInterface, error) {
+		return api.NewClient(ts.URL, "test-token"), nil
+	}
+
+	err := doRunWatch("456", &runWatchOptions{interval: 1, json: true})
+	if err != nil {
+		t.Fatalf("doRunWatch with --json returned error: %v", err)
+	}
+	if pollCount < 3 {
+		t.Fatalf("expected at least 3 polls, got %d", pollCount)
+	}
+}
+
+func TestDoRunWatchJSONReturnsExitErrorOnFailure(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/app/rest/builds/id:789" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(api.Build{
+				ID:          789,
+				Number:      "1",
+				BuildTypeID: "FailJob",
+				WebURL:      "https://example.invalid/build/789",
+				State:       "finished",
+				Status:      "FAILURE",
+			})
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	origGetClient := GetClientFunc
+	t.Cleanup(func() { GetClientFunc = origGetClient })
+
+	GetClientFunc = func() (api.ClientInterface, error) {
+		return api.NewClient(ts.URL, "test-token"), nil
+	}
+
+	err := doRunWatch("789", &runWatchOptions{interval: 1, json: true})
+	var exitErr *ExitError
+	if !errors.As(err, &exitErr) {
+		t.Fatalf("expected ExitError, got: %v", err)
+	}
+	if exitErr.Code != ExitFailure {
+		t.Fatalf("expected exit code %d, got %d", ExitFailure, exitErr.Code)
+	}
+}
+
 func TestDoRunWatchLogsUsesTUIWhenTTYIsAvailable(t *testing.T) {
 	origGetClient := GetClientFunc
 	origRunWatchTUIFn := runWatchTUIFn

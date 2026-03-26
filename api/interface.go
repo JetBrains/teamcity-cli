@@ -48,6 +48,7 @@ type ClientInterface interface {
 	// Builds (Runs)
 	GetBuilds(opts BuildsOptions) (*BuildList, error)
 	GetBuild(ref string) (*Build, error)
+	WaitForBuild(ctx context.Context, buildID string, opts WaitForBuildOptions) (*Build, error)
 	ResolveBuildID(ref string) (string, error)
 	RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, error)
 	CancelBuild(buildID string, comment string) error

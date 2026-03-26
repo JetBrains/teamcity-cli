@@ -218,6 +218,9 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 	}
 
 	if opts.json {
+		if opts.watch {
+			return doRunWatch(fmt.Sprintf("%d", build.ID), &runWatchOptions{interval: 3, json: true})
+		}
 		return output.PrintJSON(build)
 	}
 
@@ -323,6 +326,7 @@ type runWatchOptions struct {
 	interval int
 	logs     bool
 	quiet    bool
+	json     bool
 	timeout  time.Duration
 }
 
@@ -355,8 +359,9 @@ func newRunWatchCmd() *cobra.Command {
 	cmd.Flags().IntVarP(&opts.interval, "interval", "i", 5, "Refresh interval in seconds")
 	cmd.Flags().BoolVar(&opts.logs, "logs", false, "Stream build logs while watching")
 	cmd.Flags().BoolVarP(&opts.quiet, "quiet", "Q", false, "Minimal output, show only state changes and result")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Wait for completion and output result as JSON")
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Timeout duration (e.g., 30m, 1h)")
-	cmd.MarkFlagsMutuallyExclusive("quiet", "logs")
+	cmd.MarkFlagsMutuallyExclusive("quiet", "logs", "json")
 
 	return cmd
 }
@@ -380,13 +385,38 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
 	if opts.timeout > 0 {
-		var timeoutCancel context.CancelFunc
-		ctx, timeoutCancel = context.WithTimeout(ctx, opts.timeout)
-		defer timeoutCancel()
+		ctx, cancel = context.WithTimeout(ctx, opts.timeout)
+		defer cancel()
 	}
 
+	waitOpts := api.WaitForBuildOptions{
+		Interval: time.Duration(opts.interval) * time.Second,
+	}
+
+	// JSON mode: wait silently and output result
+	if opts.json {
+		result, err := client.WaitForBuild(ctx, runID, waitOpts)
+		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				return &ExitError{Code: ExitTimeout}
+			}
+			return err
+		}
+		if err := output.PrintJSON(result); err != nil {
+			return err
+		}
+		switch result.Status {
+		case "SUCCESS":
+			return nil
+		case "FAILURE":
+			return &ExitError{Code: ExitFailure}
+		default:
+			return &ExitError{Code: ExitCancelled}
+		}
+	}
+
+	// Interactive mode: set up signal handling
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
 	defer signal.Stop(sigCh)
@@ -401,7 +431,6 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 			}
 			cancel()
 		case <-ctx.Done():
-			return
 		}
 	}()
 
@@ -416,51 +445,33 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 		output.Info("Watching run #%s... %s\n", runID, output.Faint("(Ctrl-C to stop watching)"))
 	}
 
-	lastState := ""
-	lastPercent := 0
-	lastOvertimeMin := 0
+	jobName := build.BuildTypeID
+	if build.BuildType != nil {
+		jobName = build.BuildType.Name
+	}
+
+	lastState, lastPercent, lastOvertimeMin := "", 0, 0
 	var reachedComplete time.Time
-	for {
-		select {
-		case <-ctx.Done():
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				fmt.Printf("\n%s Timeout exceeded\n", output.Red("✗"))
-				return &ExitError{Code: ExitTimeout}
-			}
-			return nil // interrupted by user, build continues
-		default:
-		}
-
-		build, err = client.GetBuild(runID)
-		if err != nil {
-			return err
-		}
-
-		jobName := build.BuildTypeID
-		if build.BuildType != nil {
-			jobName = build.BuildType.Name
-		}
-
+	waitOpts.OnProgress = func(state, status string, percent int) error {
 		if opts.quiet {
-			if build.State != lastState {
-				switch build.State {
+			if state != lastState {
+				switch state {
 				case "queued":
 					fmt.Print("Queued")
 				case "running":
 					fmt.Print("\rRunning")
 				}
-				lastState = build.State
+				lastState = state
 			}
-			if build.State == "running" {
-				pct := build.PercentageComplete
-				if pct > lastPercent && pct > 0 {
-					fmt.Printf("... %d%%", pct)
-					lastPercent = pct
-					if pct == 100 {
+			if state == "running" {
+				if percent > lastPercent && percent > 0 {
+					fmt.Printf("... %d%%", percent)
+					lastPercent = percent
+					if percent == 100 {
 						reachedComplete = time.Now()
 					}
 				}
-				if pct == 100 && !reachedComplete.IsZero() {
+				if percent == 100 && !reachedComplete.IsZero() {
 					overtimeMin := int(time.Since(reachedComplete).Minutes())
 					if overtimeMin > lastOvertimeMin {
 						fmt.Printf("... +%dm", overtimeMin)
@@ -469,55 +480,55 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 				}
 			}
 		} else {
-			status := output.Yellow("Running")
-			if build.State == "queued" {
-				status = output.Faint("Queued")
+			statusLabel := output.Yellow("Running")
+			if state == "queued" {
+				statusLabel = output.Faint("Queued")
 			}
 			progress := ""
-			if build.PercentageComplete > 0 {
-				progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
+			if percent > 0 {
+				progress = fmt.Sprintf(" (%d%%)", percent)
 			}
 			fmt.Printf("\r%s %s %d  #%s %s · %s%s    ",
-				output.StatusIcon(build.Status, build.State),
+				output.StatusIcon(status, state),
 				output.Cyan(jobName),
-				build.ID,
-				build.Number,
+				build.ID, build.Number,
 				output.Faint(build.WebURL),
-				status,
+				statusLabel,
 				progress)
 		}
+		return nil
+	}
 
-		if build.State == "finished" {
-			fmt.Println()
-			if !opts.quiet {
-				fmt.Println()
-			}
-
-			switch build.Status {
-			case "SUCCESS":
-				fmt.Printf("%s %s %d  #%s succeeded\n", output.Green("✓"), output.Cyan(jobName), build.ID, build.Number)
-				if !opts.quiet {
-					fmt.Printf("\nView details: %s\n", build.WebURL)
-				}
-				return nil
-			case "FAILURE":
-				printFailureSummary(client, runID, build.Number, build.WebURL, build.StatusText)
-				return &ExitError{Code: ExitFailure}
-			default:
-				fmt.Printf("%s Build %d  #%s cancelled\n", output.Yellow("○"), build.ID, build.Number)
-				return &ExitError{Code: ExitCancelled}
-			}
+	result, err := client.WaitForBuild(ctx, runID, waitOpts)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			fmt.Printf("\n%s Timeout exceeded\n", output.Red("✗"))
+			return &ExitError{Code: ExitTimeout}
 		}
-
-		select {
-		case <-ctx.Done():
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				fmt.Printf("\n%s Timeout exceeded\n", output.Red("✗"))
-				return &ExitError{Code: ExitTimeout}
-			}
-			return nil // interrupted by user, build continues
-		case <-time.After(time.Duration(opts.interval) * time.Second):
+		if errors.Is(err, context.Canceled) {
+			return nil
 		}
+		return err
+	}
+
+	fmt.Println()
+	if !opts.quiet {
+		fmt.Println()
+	}
+
+	switch result.Status {
+	case "SUCCESS":
+		fmt.Printf("%s %s %d  #%s succeeded\n", output.Green("✓"), output.Cyan(jobName), result.ID, result.Number)
+		if !opts.quiet {
+			fmt.Printf("\nView details: %s\n", result.WebURL)
+		}
+		return nil
+	case "FAILURE":
+		printFailureSummary(client, runID, result.Number, result.WebURL, result.StatusText)
+		return &ExitError{Code: ExitFailure}
+	default:
+		fmt.Printf("%s Build %d  #%s cancelled\n", output.Yellow("○"), result.ID, result.Number)
+		return &ExitError{Code: ExitCancelled}
 	}
 }
 
