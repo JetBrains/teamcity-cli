@@ -145,6 +145,11 @@ func (c *Client) WaitForBuild(ctx context.Context, buildID string, opts WaitForB
 		return nil, err
 	}
 
+	interval := opts.Interval
+	if interval <= 0 {
+		interval = 5 * time.Second
+	}
+
 	pollPath := fmt.Sprintf("/app/rest/builds/id:%s?fields=state,status,percentageComplete", id)
 
 	for {
@@ -166,7 +171,7 @@ func (c *Client) WaitForBuild(ctx context.Context, buildID string, opts WaitForB
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(opts.Interval):
+		case <-time.After(interval):
 		}
 	}
 }
