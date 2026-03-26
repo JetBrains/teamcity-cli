@@ -39,6 +39,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/rogpeppe/go-internal/testscript"
 )
@@ -66,7 +67,7 @@ func teamcityMain() int {
 		return 1
 	}
 	if err := cmd.Execute(); err != nil {
-		if exitErr, ok := errors.AsType[*cmd.ExitError](err); ok {
+		if exitErr, ok := errors.AsType[*cmdutil.ExitError](err); ok {
 			return exitErr.Code
 		}
 		return 1

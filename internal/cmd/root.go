@@ -8,27 +8,30 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/agent"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/alias"
+	apicmd "github.com/JetBrains/teamcity-cli/internal/cmd/api"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/auth"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/job"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/pool"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/project"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/queue"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/run"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/skill"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/fatih/color"
-	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 )
 
-var (
-	Version = "dev"
+var Version = "dev"
 
-	NoColor bool
-	Quiet   bool
-	Verbose bool
-	NoInput bool
-)
-
-var rootCmd = &cobra.Command{
-	Use:   "teamcity",
-	Short: "TeamCity CLI",
-	Long: "TeamCity CLI v" + Version + `
+func buildRootCmd(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "teamcity",
+		Short: "TeamCity CLI",
+		Long: "TeamCity CLI v" + Version + `
 
 A command-line interface for interacting with TeamCity CI/CD server.
 
@@ -37,82 +40,73 @@ TeamCity runs, jobs, projects and more from the command line.
 
 Documentation:  https://jb.gg/tc/docs
 Report issues:  https://jb.gg/tc/issues`,
-	Version: Version,
-	Run: func(cmd *cobra.Command, args []string) {
-		output.PrintLogo()
-		fmt.Println()
-		fmt.Println("TeamCity CLI " + output.Faint("v"+Version) + " - " + output.Faint("https://jb.gg/tc/docs"))
-		fmt.Println()
-		fmt.Println("Usage: teamcity <command> [flags]")
-		fmt.Println()
-		fmt.Println("Common commands:")
-		fmt.Println("  auth login              Authenticate with TeamCity")
-		fmt.Println("  run list                List recent runs")
-		fmt.Println("  run start <job>         Trigger a new run")
-		fmt.Println("  run view <id>           View run details")
-		fmt.Println("  job list                List jobs")
-		fmt.Println()
-		fmt.Println(output.Faint("Run 'teamcity --help' for full command list, or 'teamcity <command> --help' for details"))
-	},
-}
-
-func init() {
-	rootCmd.SetVersionTemplate("teamcity version {{.Version}}\n")
-	rootCmd.SuggestionsMinimumDistance = 2
-
-	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", false, "Disable colored output")
-	rootCmd.PersistentFlags().BoolVarP(&Quiet, "quiet", "q", false, "Suppress non-essential output")
-	rootCmd.PersistentFlags().BoolVar(&Verbose, "verbose", false, "Show detailed output including debug info")
-	rootCmd.PersistentFlags().BoolVar(&NoInput, "no-input", false, "Disable interactive prompts")
-
-	rootCmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
-
-	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		initColorSettings()
+		Version: Version,
+		Run: func(cmd *cobra.Command, args []string) {
+			output.PrintLogo()
+			fmt.Println()
+			fmt.Println("TeamCity CLI " + output.Faint("v"+Version) + " - " + output.Faint("https://jb.gg/tc/docs"))
+			fmt.Println()
+			fmt.Println("Usage: teamcity <command> [flags]")
+			fmt.Println()
+			fmt.Println("Common commands:")
+			fmt.Println("  auth login              Authenticate with TeamCity")
+			fmt.Println("  run list                List recent runs")
+			fmt.Println("  run start <job>         Trigger a new run")
+			fmt.Println("  run view <id>           View run details")
+			fmt.Println("  job list                List jobs")
+			fmt.Println()
+			fmt.Println(output.Faint("Run 'teamcity --help' for full command list, or 'teamcity <command> --help' for details"))
+		},
 	}
 
-	rootCmd.AddCommand(newAuthCmd())
-	rootCmd.AddCommand(newProjectCmd())
-	rootCmd.AddCommand(newJobCmd())
-	rootCmd.AddCommand(newRunCmd())
-	rootCmd.AddCommand(newQueueCmd())
-	rootCmd.AddCommand(newAgentCmd())
-	rootCmd.AddCommand(newPoolCmd())
-	rootCmd.AddCommand(newAPICmd())
-	rootCmd.AddCommand(newSkillCmd())
-	rootCmd.AddCommand(newAliasCmd())
-}
+	cmd.SetVersionTemplate("teamcity version {{.Version}}\n")
+	cmd.SuggestionsMinimumDistance = 2
 
-func initColorSettings() {
-	output.Quiet = Quiet
-	output.Verbose = Verbose
+	cmd.PersistentFlags().BoolVar(&f.NoColor, "no-color", false, "Disable colored output")
+	cmd.PersistentFlags().BoolVarP(&f.Quiet, "quiet", "q", false, "Suppress non-essential output")
+	cmd.PersistentFlags().BoolVar(&f.Verbose, "verbose", false, "Show detailed output including debug info")
+	cmd.PersistentFlags().BoolVar(&f.NoInput, "no-input", false, "Disable interactive prompts")
 
-	if os.Getenv("NO_COLOR") != "" ||
-		os.Getenv("TERM") == "dumb" ||
-		NoColor ||
-		!isatty.IsTerminal(os.Stdout.Fd()) {
-		color.NoColor = true
+	cmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
+
+	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		f.InitOutput()
 	}
+
+	cmd.AddCommand(auth.NewCmd(f))
+	cmd.AddCommand(project.NewCmd(f))
+	cmd.AddCommand(job.NewCmd(f))
+	cmd.AddCommand(run.NewCmd(f))
+	cmd.AddCommand(queue.NewCmd(f))
+	cmd.AddCommand(agent.NewCmd(f))
+	cmd.AddCommand(pool.NewCmd(f))
+	cmd.AddCommand(apicmd.NewCmd(f))
+	cmd.AddCommand(skill.NewCmd(f))
+	cmd.AddCommand(alias.NewCmd(f))
+
+	return cmd
 }
 
 func Execute() error {
+	f := cmdutil.NewFactory()
+	rootCmd := buildRootCmd(f)
+
 	RegisterAliases(rootCmd)
 	rootCmd.SilenceErrors = true
 	err := rootCmd.Execute()
 	if err != nil && errors.Is(err, api.ErrAuthentication) {
-		tryAutoReauth()
+		tryAutoReauth(f)
 	}
 	if err != nil {
-		if _, ok := errors.AsType[*ExitError](err); !ok {
+		if _, ok := errors.AsType[*cmdutil.ExitError](err); !ok {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", enrichAPIError(err))
 		}
 	}
 	return err
 }
 
-// tryAutoReauth detects an expired PKCE token and tells the user how to fix it.
-func tryAutoReauth() {
-	if !output.IsStdinTerminal() || NoInput {
+func tryAutoReauth(f *cmdutil.Factory) {
+	if !f.IsInteractive() {
 		return
 	}
 	expiry := config.GetTokenExpiry()
@@ -126,7 +120,6 @@ func tryAutoReauth() {
 	fmt.Fprintf(os.Stderr, "\n%s Token expired. Run %s to re-authenticate.\n", output.Yellow("!"), output.Cyan("teamcity auth login"))
 }
 
-// enrichAPIError converts typed API errors into UserErrors with CLI-specific hints.
 func enrichAPIError(err error) error {
 	if errors.Is(err, api.ErrReadOnly) {
 		return tcerrors.WithSuggestion(
@@ -173,47 +166,33 @@ func notFoundHint(message string) string {
 	}
 }
 
-// subcommandRequired is a RunE function for parent commands that require a subcommand.
-// It returns an error when no valid subcommand is provided.
-func subcommandRequired(cmd *cobra.Command, args []string) error {
-	return fmt.Errorf("requires a subcommand\n\nRun '%s --help' for available commands", cmd.CommandPath())
+// RegisterAliases forwards to alias.RegisterAliases for backward compatibility with tests.
+func RegisterAliases(rootCmd *cobra.Command) {
+	alias.RegisterAliases(rootCmd)
 }
 
 // RootCommand is an alias for cobra.Command for external access
 type RootCommand = cobra.Command
 
-// GetRootCmd returns the root command for testing
+// GetRootCmd returns a root command for doc generation and external access.
 func GetRootCmd() *RootCommand {
-	return rootCmd
+	f := cmdutil.NewFactory()
+	return buildRootCmd(f)
 }
 
 // NewRootCmd creates a fresh root command instance for testing.
-// This ensures tests don't share flag state from previous test runs.
-// Callers must call RegisterAliases explicitly if alias expansion is needed.
+// Unlike the production root, it does not set PersistentPreRun to avoid
+// races on output globals when tests run in parallel.
 func NewRootCmd() *RootCommand {
-	var noColor, quiet, verbose, noInput bool
+	f := cmdutil.NewFactory()
+	cmd := buildRootCmd(f)
+	cmd.PersistentPreRun = nil
+	return cmd
+}
 
-	cmd := &cobra.Command{
-		Use:     "teamcity",
-		Short:   "TeamCity CLI",
-		Version: Version,
-	}
-
-	cmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
-	cmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress non-essential output")
-	cmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Show detailed output including debug info")
-	cmd.PersistentFlags().BoolVar(&noInput, "no-input", false, "Disable interactive prompts")
-
-	cmd.AddCommand(newAuthCmd())
-	cmd.AddCommand(newProjectCmd())
-	cmd.AddCommand(newJobCmd())
-	cmd.AddCommand(newRunCmd())
-	cmd.AddCommand(newQueueCmd())
-	cmd.AddCommand(newAgentCmd())
-	cmd.AddCommand(newPoolCmd())
-	cmd.AddCommand(newAPICmd())
-	cmd.AddCommand(newSkillCmd())
-	cmd.AddCommand(newAliasCmd())
-
+// NewRootCmdWithFactory creates a fresh root command with a specific factory (for tests).
+func NewRootCmdWithFactory(f *cmdutil.Factory) *RootCommand {
+	cmd := buildRootCmd(f)
+	cmd.PersistentPreRun = nil
 	return cmd
 }
