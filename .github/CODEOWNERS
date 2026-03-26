@@ -1,0 +1,16 @@
+# Default owners for everything in the repo
+* @tiulpin
+
+# API client
+/api/ @tiulpin
+
+# CLI commands
+/internal/cmd/ @tiulpin
+
+# Documentation
+/docs/ @tiulpin
+/skills/ @tiulpin
+
+# Release & CI
+/.goreleaser.yaml @tiulpin
+/justfile @tiulpin
