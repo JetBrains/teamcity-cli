@@ -427,7 +427,7 @@ func doRunWatch(runID string, opts *runWatchOptions) error {
 			if !opts.quiet {
 				fmt.Println()
 				fmt.Println(output.Faint("Interrupted. Run continues in background."))
-				fmt.Printf("%s Resume watching: teamcity run watch %s\n", output.Faint("Hint:"), runID)
+				fmt.Printf("%s Resume watching: teamcity run watch %s --logs\n", output.Faint("Hint:"), runID)
 			}
 			cancel()
 		case <-ctx.Done():
