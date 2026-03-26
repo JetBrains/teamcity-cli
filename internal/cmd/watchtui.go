@@ -256,26 +256,13 @@ func runWatchTUI(client api.ClientInterface, runID string, interval int) error {
 	}
 
 	fm := finalModel.(watchModel)
-	if fm.build != nil {
-		fmt.Println()
-		jobName := fm.build.BuildTypeID
-		if fm.build.BuildType != nil {
-			jobName = fm.build.BuildType.Name
-		}
+	fmt.Println()
 
-		icon := output.StatusIcon(fm.build.Status, fm.build.State)
-		if fm.build.State == "finished" {
-			if fm.build.Status == "SUCCESS" {
-				fmt.Printf("%s %s %d  #%s completed\n", icon, output.Cyan(jobName), fm.build.ID, fm.build.Number)
-			} else {
-				fmt.Printf("%s %s %d  #%s failed: %s\n", icon, output.Cyan(jobName), fm.build.ID, fm.build.Number, fm.build.StatusText)
-			}
-		} else {
-			fmt.Println(output.Faint("Build still running in background"))
-			fmt.Printf("Resume: teamcity run watch %s --logs\n", fm.runID)
-		}
-		fmt.Printf("View details: %s\n", fm.build.WebURL)
+	if fm.build == nil || fm.build.State != "finished" {
+		fmt.Println(output.Faint("Build still running in background"))
+		fmt.Printf("Resume: teamcity run watch %s --logs\n", fm.runID)
+		return nil
 	}
 
-	return nil
+	return buildResultError(client, fm.build, true)
 }
