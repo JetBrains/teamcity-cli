@@ -278,6 +278,66 @@ Environment variables take precedence over the configuration file and keyring.
 >
 {style="warning"}
 
+## Mutual TLS (mTLS) {id="mtls"}
+
+If your TeamCity server requires client certificate authentication (mutual TLS), configure certificate paths in the config file or via environment variables. mTLS works with all authentication modes (token, basic, guest).
+
+### Per-server configuration
+
+Add `client_cert`, `client_key`, and optionally `ca_cert` to the server entry in `~/.config/tc/config.yml`:
+
+```yaml
+servers:
+    https://teamcity.example.com:
+        user: alice
+        client_cert: /path/to/client.crt
+        client_key: /path/to/client.key
+        ca_cert: /path/to/ca.crt
+```
+
+The `ca_cert` field is only needed when the server uses a certificate signed by a private or internal CA that is not in the system trust store.
+
+### Environment variables
+
+For CI/CD pipelines, use environment variables instead:
+
+<tabs>
+<tab title="macOS and Linux">
+
+```Shell
+export TEAMCITY_CLIENT_CERT="/path/to/client.crt"
+export TEAMCITY_CLIENT_KEY="/path/to/client.key"
+export TEAMCITY_CA_CERT="/path/to/ca.crt"
+```
+
+</tab>
+<tab title="Windows">
+
+PowerShell:
+
+```PowerShell
+$env:TEAMCITY_CLIENT_CERT = "C:\path\to\client.crt"
+$env:TEAMCITY_CLIENT_KEY = "C:\path\to\client.key"
+$env:TEAMCITY_CA_CERT = "C:\path\to\ca.crt"
+```
+
+CMD:
+
+```Shell
+set TEAMCITY_CLIENT_CERT=C:\path\to\client.crt
+set TEAMCITY_CLIENT_KEY=C:\path\to\client.key
+set TEAMCITY_CA_CERT=C:\path\to\ca.crt
+```
+
+</tab>
+</tabs>
+
+Environment variables take precedence over per-server config file settings.
+
+> Both `TEAMCITY_CLIENT_CERT` and `TEAMCITY_CLIENT_KEY` must be provided together. Specifying only one will result in an error.
+>
+{style="warning"}
+
 ## Advanced authentication scenarios
 
 ### Authentication inside TeamCity builds
