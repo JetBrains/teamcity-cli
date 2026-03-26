@@ -291,8 +291,8 @@ esac
 For operations not covered by dedicated commands, use `teamcity api` to make direct REST API requests:
 
 ```Shell
-teamcity api /app/rest/server
-teamcity api /app/rest/builds --paginate --slurp
+teamcity api '/app/rest/server'
+teamcity api '/app/rest/builds' --paginate --slurp
 ```
 
 See [REST API access](teamcity-cli-rest-api-access.md) for details.

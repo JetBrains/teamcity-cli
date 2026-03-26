@@ -6,7 +6,7 @@
 stderr '.'
 
 # remove: start a build and try to remove from queue (may already be running)
-exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 
 exec teamcity run start $JOB_ID --json --no-input

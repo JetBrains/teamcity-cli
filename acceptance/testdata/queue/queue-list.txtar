@@ -19,7 +19,7 @@ exec teamcity queue list --limit 10 --no-input
 ! stderr 'Error'
 
 # --job filter (discover job first)
-exec teamcity api /app/rest/buildTypes?locator=count:1&fields=buildType(id) --raw --no-input
+exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 
 exec teamcity queue list --job $JOB_ID --limit 5 --no-input

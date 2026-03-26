@@ -20,7 +20,7 @@ exec teamcity run list --since 2024-01-01 --until 2025-12-31 --limit 5 --no-inpu
 ! stderr 'Error'
 
 # --project (discover first)
-exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
 extract '"id":"([^"]+)"' PROJECT_ID
 
 exec teamcity run list --project $PROJECT_ID --limit 3 --no-input

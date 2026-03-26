@@ -2,7 +2,7 @@
 [!has_token] skip 'requires authentication token'
 
 # Find a completed build from Sandbox (stable, not affected by parallel tests)
-exec teamcity api /app/rest/builds?locator=buildType:Sandbox_Build,count:1,status:SUCCESS&fields=build(id) --raw --no-input
+exec teamcity api '/app/rest/builds?locator=buildType:Sandbox_Build,count:1,status:SUCCESS&fields=build(id)' --raw --no-input
 extract '"id":\s*(\d+)' BUILD_ID
 
 exec teamcity run restart $BUILD_ID --no-input

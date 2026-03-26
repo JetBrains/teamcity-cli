@@ -15,7 +15,7 @@ teamcity run list --status failure      # Find failed builds
 teamcity run log <id> --failed          # Full failure diagnostics
 ```
 
-**Do not guess flags or syntax.** Use the [Command Reference](references/commands.md) or `teamcity <command> --help`. Fall back to `teamcity api /app/rest/...` when needed. Builds are **runs** (`teamcity run`), build configurations are **jobs** (`teamcity job`).
+**Do not guess flags or syntax.** Use the [Command Reference](references/commands.md) or `teamcity <command> --help`. Fall back to `teamcity api '/app/rest/...'` when needed. Builds are **runs** (`teamcity run`), build configurations are **jobs** (`teamcity job`).
 
 ## Core Commands
 

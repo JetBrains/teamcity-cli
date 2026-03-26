@@ -29,7 +29,7 @@ stdout '"projectId"'
 stderr 'must be a positive number'
 
 # --project filter
-exec teamcity api /app/rest/projects?locator=count:1&fields=project(id) --raw --no-input
+exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
 extract '"id":"([^"]+)"' PROJECT_ID
 
 exec teamcity job list --project $PROJECT_ID --limit 3 --no-input

@@ -1,6 +1,6 @@
 # Watch a completed run (should return immediately since already finished).
 
-exec teamcity api /app/rest/builds?locator=count:1,status:SUCCESS,state:finished&fields=build(id) --raw --no-input
+exec teamcity api '/app/rest/builds?locator=count:1,status:SUCCESS,state:finished&fields=build(id)' --raw --no-input
 extract '"id":(\d+)' BUILD_ID
 
 # Watching a finished successful build should return quickly

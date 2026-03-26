@@ -105,7 +105,7 @@ teamcity alias set unmaint  'agent enable $1'
 ### API shortcuts
 
 ```Shell
-teamcity alias set whoami   'api /app/rest/users/current'
+teamcity alias set whoami   "api '/app/rest/users/current'"
 ```
 
 ### Shell aliases with external tools
