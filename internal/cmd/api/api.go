@@ -217,14 +217,17 @@ func outputAPIResponse(body []byte, statusCode int, respHeaders map[string][]str
 		strings.HasPrefix(strings.TrimSpace(string(body)), "<html"))
 
 	if len(body) > 0 {
-		if opts.raw {
+		switch {
+		case opts.raw:
 			fmt.Print(string(body))
-		} else if isHTML && isError {
+		case isHTML && isError:
 			output.Warn("Server returned HTML error page (status %d)", statusCode)
-		} else if prettyJSON, ok := prettyPrintJSON(body); ok {
-			fmt.Println(prettyJSON)
-		} else {
-			fmt.Print(string(body))
+		default:
+			if prettyJSON, ok := prettyPrintJSON(body); ok {
+				fmt.Println(prettyJSON)
+			} else {
+				fmt.Print(string(body))
+			}
 		}
 	}
 

@@ -104,7 +104,7 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 			return err
 		}
 		if !confirm {
-			output.Info("Cancelled")
+			output.Info("Canceled")
 			return nil
 		}
 	}

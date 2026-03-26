@@ -51,7 +51,7 @@ func runQueueRemove(f *cmdutil.Factory, runID string, opts *queueRemoveOptions) 
 			return err
 		}
 		if !confirm {
-			output.Info("Cancelled")
+			output.Info("Canceled")
 			return nil
 		}
 	}
