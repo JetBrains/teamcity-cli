@@ -19,6 +19,56 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// watchFlags holds the shared watch-related flags used by run start, restart, and watch.
+type watchFlags struct {
+	watch    bool
+	interval int
+	timeout  time.Duration
+}
+
+// addToCmd registers the shared watch flags on a cobra command.
+func (w *watchFlags) addToCmd(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&w.watch, "watch", false, "Watch run until it completes")
+	cmd.Flags().IntVarP(&w.interval, "interval", "i", 3, "Refresh interval in seconds when watching")
+	cmd.Flags().DurationVar(&w.timeout, "timeout", 0, "Timeout when watching (e.g., 30m, 1h); implies --watch")
+}
+
+// resolve ensures timeout implies watch and returns the runWatchOptions.
+func (w *watchFlags) resolve() {
+	if w.timeout > 0 {
+		w.watch = true
+	}
+}
+
+// watchOpts builds runWatchOptions from the shared flags with additional overrides.
+func (w *watchFlags) watchOpts(logs, json bool) *runWatchOptions {
+	return &runWatchOptions{
+		interval: w.interval,
+		timeout:  w.timeout,
+		logs:     logs,
+		json:     json,
+	}
+}
+
+func printQueuedRun(build *api.Build, context string) {
+	ref := fmt.Sprintf("%d  #%s", build.ID, build.Number)
+	if build.Number == "" {
+		ref = fmt.Sprintf("%d", build.ID)
+	}
+	output.Success("Queued run %s for %s", ref, context)
+}
+
+func afterQueue(build *api.Build, web bool, wf *watchFlags) error {
+	if web {
+		_ = browser.OpenURL(build.WebURL)
+	}
+	if wf.watch {
+		fmt.Println()
+		return doRunWatch(fmt.Sprintf("%d", build.ID), wf.watchOpts(true, false))
+	}
+	return nil
+}
+
 type runStartOptions struct {
 	branch            string
 	revision          string
@@ -35,10 +85,10 @@ type runStartOptions struct {
 	queueAtTop        bool
 	agent             int
 	tags              []string
-	watch             bool
-	web               bool
-	dryRun            bool
-	json              bool
+	watchFlags
+	web    bool
+	dryRun bool
+	json   bool
 }
 
 func newRunStartCmd() *cobra.Command {
@@ -82,7 +132,7 @@ func newRunStartCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.rebuildFailedDeps, "rebuild-failed-deps", false, "Rebuild failed/incomplete dependencies")
 	cmd.Flags().BoolVar(&opts.queueAtTop, "top", false, "Add to top of queue")
 	cmd.Flags().IntVar(&opts.agent, "agent", 0, "Run on specific agent (by ID)")
-	cmd.Flags().BoolVar(&opts.watch, "watch", false, "Watch run until it completes")
+	opts.addToCmd(cmd)
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open run in browser")
 	cmd.Flags().BoolVarP(&opts.dryRun, "dry-run", "n", false, "Show what would be triggered without running")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON (for scripting)")
@@ -91,6 +141,8 @@ func newRunStartCmd() *cobra.Command {
 }
 
 func runRunStart(jobID string, opts *runStartOptions) error {
+	opts.resolve()
+
 	if opts.dryRun {
 		fmt.Printf("%s Would trigger run for %s\n", output.Faint("[dry-run]"), output.Cyan(jobID))
 		if opts.branch != "" {
@@ -219,16 +271,12 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 
 	if opts.json {
 		if opts.watch {
-			return doRunWatch(fmt.Sprintf("%d", build.ID), &runWatchOptions{interval: 3, json: true})
+			return doRunWatch(fmt.Sprintf("%d", build.ID), opts.watchOpts(false, true))
 		}
 		return output.PrintJSON(build)
 	}
 
-	runRef := fmt.Sprintf("%d  #%s", build.ID, build.Number)
-	if build.Number == "" {
-		runRef = fmt.Sprintf("%d", build.ID)
-	}
-	output.Success("Queued run %s for %s", runRef, jobID)
+	printQueuedRun(build, jobID)
 
 	if opts.branch != "" {
 		output.Info("  Branch: %s", opts.branch)
@@ -239,7 +287,6 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 	if len(opts.tags) > 0 {
 		output.Info("  Tags: %s", strings.Join(opts.tags, ", "))
 	}
-
 	output.Info("  URL: %s", build.WebURL)
 	if opts.agent > 0 {
 		fmt.Printf("  %s teamcity agent term %d\n", output.Faint("Agent terminal:"), opts.agent)
@@ -247,16 +294,7 @@ func runRunStart(jobID string, opts *runStartOptions) error {
 		fmt.Printf("  %s teamcity agent term <agent-id>\n", output.Faint("Agent terminal:"))
 	}
 
-	if opts.web {
-		_ = browser.OpenURL(build.WebURL)
-	}
-
-	if opts.watch {
-		fmt.Println()
-		return doRunWatch(fmt.Sprintf("%d", build.ID), &runWatchOptions{interval: 3, logs: true})
-	}
-
-	return nil
+	return afterQueue(build, opts.web, &opts.watchFlags)
 }
 
 type runCancelOptions struct {
@@ -544,8 +582,8 @@ func buildResultError(client api.ClientInterface, build *api.Build, showDetails 
 }
 
 type runRestartOptions struct {
-	watch bool
-	web   bool
+	watchFlags
+	web bool
 }
 
 func newRunRestartCmd() *cobra.Command {
@@ -563,13 +601,15 @@ func newRunRestartCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.watch, "watch", false, "Watch the new run after restarting")
+	opts.addToCmd(cmd)
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open run in browser")
 
 	return cmd
 }
 
 func runRunRestart(runID string, opts *runRestartOptions) error {
+	opts.resolve()
+
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -587,27 +627,14 @@ func runRunRestart(runID string, opts *runRestartOptions) error {
 		return fmt.Errorf("failed to trigger run: %w", err)
 	}
 
-	newRef := fmt.Sprintf("%d  #%s", newBuild.ID, newBuild.Number)
-	if newBuild.Number == "" {
-		newRef = fmt.Sprintf("%d", newBuild.ID)
-	}
-	fmt.Printf("%s Queued run %s (restart of %d)\n", output.Green("✓"), newRef, originalBuild.ID)
+	printQueuedRun(newBuild, fmt.Sprintf("%s (restart of %d)", originalBuild.BuildTypeID, originalBuild.ID))
 	fmt.Printf("  Job: %s\n", originalBuild.BuildTypeID)
 	if originalBuild.BranchName != "" {
 		fmt.Printf("  Branch: %s\n", originalBuild.BranchName)
 	}
-	fmt.Printf("  URL: %s\n", newBuild.WebURL)
+	output.Info("  URL: %s", newBuild.WebURL)
 
-	if opts.web {
-		_ = browser.OpenURL(newBuild.WebURL)
-	}
-
-	if opts.watch {
-		fmt.Println()
-		return doRunWatch(fmt.Sprintf("%d", newBuild.ID), &runWatchOptions{interval: 3, logs: true})
-	}
-
-	return nil
+	return afterQueue(newBuild, opts.web, &opts.watchFlags)
 }
 
 type localChangesValue struct {
