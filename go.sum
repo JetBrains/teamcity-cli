@@ -223,6 +223,8 @@ github.com/testcontainers/testcontainers-go v0.40.0 h1:pSdJYLOVgLE8YdUY2FHQ1Fxu+
 github.com/testcontainers/testcontainers-go v0.40.0/go.mod h1:FSXV5KQtX2HAMlm7U3APNyLkkap35zNLxukw9oBi/MY=
 github.com/tiulpin/instill v0.0.0-20260213180125-bfc25c314930 h1:kn4FGn5NAmE4oCx6XiQeo4jICEPe5LSFBjjBgy9rxUw=
 github.com/tiulpin/instill v0.0.0-20260213180125-bfc25c314930/go.mod h1:OxdrM9ElyAp2nLawA1UpPHWVscyOqfsI0+2mZnwEjIU=
+github.com/tiulpin/instill v0.0.0-20260326161152-a164e118f826 h1:N6L4iV5aQBiV/cw+VOldVOelx1HbApzcwHk0KyAa2MQ=
+github.com/tiulpin/instill v0.0.0-20260326161152-a164e118f826/go.mod h1:OxdrM9ElyAp2nLawA1UpPHWVscyOqfsI0+2mZnwEjIU=
 github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFAEVmqU=
 github.com/tklauser/go-sysconf v0.3.12/go.mod h1:Ho14jnntGE1fpdOqQEEaiKRpvIavV0hSfmBq8nJbHYI=
 github.com/tklauser/numcpus v0.6.1 h1:ng9scYS7az0Bk4OZLvrNXNSAO2Pxr1XXRAPyjhIx+Fk=
