@@ -72,3 +72,27 @@ func PrintFailureSummary(client api.ClientInterface, buildID, buildNumber, webUR
 
 	fmt.Printf("\nView details: %s\n", webURL)
 }
+
+// BuildResultError prints the final build result and returns an appropriate exit error.
+// Used by both the standard watch and TUI watch paths.
+func BuildResultError(client api.ClientInterface, build *api.Build, showDetails bool) error {
+	jobName := build.BuildTypeID
+	if build.BuildType != nil {
+		jobName = build.BuildType.Name
+	}
+
+	switch build.Status {
+	case "SUCCESS":
+		fmt.Printf("%s %s %d  #%s succeeded\n", output.Green("✓"), output.Cyan(jobName), build.ID, build.Number)
+		if showDetails {
+			fmt.Printf("\nView details: %s\n", build.WebURL)
+		}
+		return nil
+	case "FAILURE":
+		PrintFailureSummary(client, fmt.Sprintf("%d", build.ID), build.Number, build.WebURL, build.StatusText)
+		return &ExitError{Code: ExitFailure}
+	default:
+		fmt.Printf("%s Build %d  #%s canceled\n", output.Yellow("○"), build.ID, build.Number)
+		return &ExitError{Code: ExitCancelled}
+	}
+}
