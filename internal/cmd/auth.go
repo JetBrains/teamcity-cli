@@ -12,10 +12,10 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/dustin/go-humanize"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/dustin/go-humanize"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
@@ -291,12 +291,13 @@ func runPkceLogin(serverURL string) (*api.TokenResponse, error) {
 	redirectURI := fmt.Sprintf("http://localhost:%d%s", callbackServer.Port, api.DefaultCallbackPath)
 	authURL := api.BuildAuthorizeURL(serverURL, redirectURI, api.GenerateCodeChallenge(verifier), state, api.DefaultScopes())
 
-	output.Info("Opening browser for authentication...")
-	fmt.Printf("  %s Approve access in TeamCity\n", output.Yellow("→"))
-
 	if err := browser.OpenURL(authURL); err != nil {
-		return nil, fmt.Errorf("open browser: %w", err)
+		output.Warn("Could not open browser automatically: %v", err)
+		fmt.Printf("\nOpen this URL in your browser to authenticate:\n  %s\n\n", authURL)
+	} else {
+		output.Info("Opening browser for authentication...")
 	}
+	fmt.Printf("  %s Approve access in TeamCity\n", output.Yellow("→"))
 
 	select {
 	case result := <-callbackServer.ResultChan:
