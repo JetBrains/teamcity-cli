@@ -1,4 +1,4 @@
-package cmd
+package cmdutil
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 
 const maxFailedTestsToShow = 10
 
-func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webURL, statusText string) {
+func PrintFailureSummary(client api.ClientInterface, buildID, buildNumber, webURL, statusText string) {
 	header := fmt.Sprintf("%s Build %s  #%s failed", output.Red("✗"), buildID, buildNumber)
 	if statusText != "" {
 		header += ": " + statusText
@@ -34,7 +34,6 @@ func printFailureSummary(client api.ClientInterface, buildID, buildNumber, webUR
 	} else if problems.Count > 0 {
 		fmt.Printf("\nProblems:\n")
 		for _, p := range problems.ProblemOccurrence {
-			// Skip TC_FAILED_TESTS when we already show the tests section.
 			if hasTests && p.Type == "TC_FAILED_TESTS" {
 				continue
 			}
