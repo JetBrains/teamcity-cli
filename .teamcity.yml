@@ -19,6 +19,19 @@ jobs:
       - type: script
         name: Acceptance Tests
         script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+      - type: script
+        name: Verify install.ps1
+        script-content: |
+          set "TC_INSTALL_DIR=%%TEMP%%\tc-install-ps1"
+          powershell -ExecutionPolicy Bypass -Command "iex (Get-Content install.ps1 -Raw -Encoding UTF8)"
+          "%%TEMP%%\tc-install-ps1\teamcity.exe" --version
+          rmdir /s /q "%%TEMP%%\tc-install-ps1"
+      - type: script
+        name: Verify install.cmd
+        script-content: |
+          call install.cmd "" "%%TEMP%%\tc-install-cmd"
+          "%%TEMP%%\tc-install-cmd\teamcity.exe" --version
+          rmdir /s /q "%%TEMP%%\tc-install-cmd"
   test_linux:
     name: Test Linux
     runs-on: Ubuntu-24.04-Large
@@ -51,6 +64,13 @@ jobs:
           head -1 coverage-integration.out > coverage.out
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
+      - type: script
+        name: Verify install.sh
+        script-content: |
+          INSTALL_DIR=$(mktemp -d)
+          bash install.sh "" "$INSTALL_DIR"
+          "$INSTALL_DIR/teamcity" --version
+          rm -rf "$INSTALL_DIR"
   test_linux_arm64:
     name: Test Linux ARM64
     runs-on: Ubuntu-24.04-Large-Arm64

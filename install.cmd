@@ -1,60 +1,152 @@
 @echo off
-setlocal
+::
+:: Copyright 2021-2026 JetBrains s.r.o.
+::
+:: Licensed under the Apache License, Version 2.0 (the "License");
+:: you may not use this file except in compliance with the License.
+:: You may obtain a copy of the License at
+::
+:: https://www.apache.org/licenses/LICENSE-2.0
+::
+:: Unless required by applicable law or agreed to in writing, software
+:: distributed under the License is distributed on an "AS IS" BASIS,
+:: WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+:: See the License for the specific language governing permissions and
+:: limitations under the License.
+::
 
-set "REPO=JetBrains/teamcity-cli"
+setlocal enabledelayedexpansion
+
+set "RELEASE=%~1"
+set "INSTALL_DIR=%~2"
+if "!INSTALL_DIR!"=="" set "INSTALL_DIR=%USERPROFILE%\.local\bin"
 set "BIN_NAME=teamcity.exe"
-set "INSTALL_DIR=%USERPROFILE%\.local\bin"
+set "REPO=JetBrains/teamcity-cli"
 
-if not exist "%INSTALL_DIR%" (
-    mkdir "%INSTALL_DIR%"
+echo.
+echo  ========= ======
+echo  ==   ==        TeamCity CLI (installer)
+echo     ==   ==        Documentation
+echo     ==   ==        https://jb.gg/tc/docs
+echo     ==    ======   Report issues
+echo     ==     =====   https://jb.gg/tc/issues
+echo.
+echo This script will download TeamCity CLI to !INSTALL_DIR!\!BIN_NAME!
+echo.
+echo To install a specific version: install.cmd v0.7.0
+echo.
+
+:: Check curl is available (ships with Windows 10+)
+curl --version >nul 2>&1
+if !ERRORLEVEL! neq 0 (
+    echo Error: curl is required but not found. Use install.ps1 instead. >&2
+    exit /b 1
 )
 
-echo.
-
-echo This script will download TeamCity CLI to %INSTALL_DIR%\%BIN_NAME%
-echo.
-
-:: Use PowerShell to get the latest release info and download the asset
-powershell -NoProfile -Command ^
-    "$releasesUrl = 'https://api.github.com/repos/%REPO%/releases/latest';" ^
-    "$release = Invoke-RestMethod -Uri $releasesUrl;" ^
-    "$tag = $release.tag_name;" ^
-    "$version = $tag.TrimStart('v');" ^
-    "$arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x86_64' };" ^
-    "$assetName = \"teamcity_$($version)_windows_$($arch).zip\";" ^
-    "$asset = $release.assets | Where-Object { $_.name -eq $assetName };" ^
-    "if (-not $asset) { Write-Error \"Could not find asset $assetName in release $tag\"; exit 1 };" ^
-    "$tempZip = Join-Path $env:TEMP 'teamcity.zip';" ^
-    "Write-Host \"Downloading $assetName...\";" ^
-    "Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $tempZip;" ^
-    "$tempExtract = Join-Path $env:TEMP 'teamcity_extract';" ^
-    "if (Test-Path $tempExtract) { Remove-Item -Recurse -Force $tempExtract };" ^
-    "New-Item -ItemType Directory -Path $tempExtract | Out-Null;" ^
-    "Write-Host \"Extracting...\";" ^
-    "Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force;" ^
-    "$exePath = Get-ChildItem -Path $tempExtract -Filter '%BIN_NAME%' -Recurse | Select-Object -First 1;" ^
-    "Move-Item -Path $exePath.FullName -Destination '%INSTALL_DIR%\%BIN_NAME%' -Force;" ^
-    "Remove-Item $tempZip -Force;" ^
-    "Remove-Item -Recurse -Force $tempExtract;"
-
-if %ERRORLEVEL% neq 0 (
-    echo.
-    echo Error: Installation failed.
-    exit /b %ERRORLEVEL%
+:: Resolve latest release via 302 redirect if no version specified
+if "!RELEASE!"=="" (
+    for /f "delims=" %%a in ('curl -s -o nul -w "%%{redirect_url}" "https://github.com/!REPO!/releases/latest"') do set "LOCATION=%%a"
+    if "!LOCATION!"=="" (
+        echo Error: failed to resolve latest release >&2
+        exit /b 1
+    )
+    for %%t in ("!LOCATION!") do set "RELEASE=%%~nxt"
 )
 
-echo.
-echo v Installed at %INSTALL_DIR%\%BIN_NAME%
+if "!RELEASE!"=="" (
+    echo Error: failed to resolve latest release >&2
+    exit /b 1
+)
+
+:: Strip leading 'v' for version
+set "VERSION=!RELEASE!"
+if "!VERSION:~0,1!"=="v" set "VERSION=!VERSION:~1!"
+
+:: Detect architecture
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
+    set "ARCH=arm64"
+) else (
+    set "ARCH=x86_64"
+)
+
+set "ASSET_NAME=teamcity_!VERSION!_windows_!ARCH!.zip"
+set "URL=https://github.com/!REPO!/releases/download/!RELEASE!/!ASSET_NAME!"
+
+echo Installing teamcity (!RELEASE!) from !URL!
 echo.
 
-"%INSTALL_DIR%\%BIN_NAME%" --version
+:: Create install dir
+if not exist "!INSTALL_DIR!" mkdir "!INSTALL_DIR!"
+
+:: Create unique temp paths
+set "TEMP_ZIP=%TEMP%\teamcity_%RANDOM%%RANDOM%.zip"
+set "TEMP_DIR=%TEMP%\teamcity_extract_%RANDOM%%RANDOM%"
+
+:: Download
+curl -fsSL "!URL!" -o "!TEMP_ZIP!"
+if !ERRORLEVEL! neq 0 (
+    echo Error: download failed for !ASSET_NAME! >&2
+    if exist "!TEMP_ZIP!" del "!TEMP_ZIP!"
+    exit /b 1
+)
+
+:: Extract using tar (ships with Windows 10+, handles zip)
+mkdir "!TEMP_DIR!"
+tar -xf "!TEMP_ZIP!" -C "!TEMP_DIR!"
+if !ERRORLEVEL! neq 0 (
+    echo Error: extraction failed >&2
+    del "!TEMP_ZIP!" 2>nul
+    rmdir /s /q "!TEMP_DIR!" 2>nul
+    exit /b 1
+)
+
+:: Find the binary
+set "FOUND_BIN="
+for /r "!TEMP_DIR!" %%f in (!BIN_NAME!) do (
+    if exist "%%f" set "FOUND_BIN=%%f"
+)
+
+if "!FOUND_BIN!"=="" (
+    echo Error: could not find !BIN_NAME! in archive >&2
+    del "!TEMP_ZIP!" 2>nul
+    rmdir /s /q "!TEMP_DIR!" 2>nul
+    exit /b 1
+)
+
+:: Atomic install: copy to staged file, then rename
+set "STAGED=!INSTALL_DIR!\.teamcity_staged_%RANDOM%.exe"
+copy "!FOUND_BIN!" "!STAGED!" >nul
+if !ERRORLEVEL! neq 0 (
+    echo Error: failed to stage binary >&2
+    del "!TEMP_ZIP!" 2>nul
+    rmdir /s /q "!TEMP_DIR!" 2>nul
+    exit /b 1
+)
+move /y "!STAGED!" "!INSTALL_DIR!\!BIN_NAME!" >nul
+if !ERRORLEVEL! neq 0 (
+    echo Error: failed to install binary >&2
+    del "!STAGED!" 2>nul
+    del "!TEMP_ZIP!" 2>nul
+    rmdir /s /q "!TEMP_DIR!" 2>nul
+    exit /b 1
+)
+
+:: Cleanup temp files
+del "!TEMP_ZIP!" 2>nul
+rmdir /s /q "!TEMP_DIR!" 2>nul
+
+echo.
+echo v Installed at !INSTALL_DIR!\!BIN_NAME!
+echo.
+
+"!INSTALL_DIR!\!BIN_NAME!" --version
 
 :: Add to PATH if not present
 powershell -NoProfile -Command ^
     "$path = [Environment]::GetEnvironmentVariable('Path', 'User');" ^
-    "if ($path -notlike '*%INSTALL_DIR%*') {" ^
-    "  Write-Host 'Adding %INSTALL_DIR% to your PATH...';" ^
-    "  [Environment]::SetEnvironmentVariable('Path', \"$path;%INSTALL_DIR%\", 'User');" ^
+    "if ($path -notlike '*!INSTALL_DIR!*') {" ^
+    "  Write-Host 'Adding !INSTALL_DIR! to your PATH...';" ^
+    "  [Environment]::SetEnvironmentVariable('Path', \"$path;!INSTALL_DIR!\", 'User');" ^
     "  Write-Host 'You might need to restart your terminal for changes to take effect.';" ^
     "}"
 

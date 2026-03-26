@@ -15,13 +15,45 @@
 #
 
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 
 $repo = "JetBrains/teamcity-cli"
 $binName = "teamcity.exe"
-$installDir = "$HOME\.local\bin"
+$Release = if ($env:TC_INSTALL_RELEASE) { $env:TC_INSTALL_RELEASE } else { "" }
+$OutDir = if ($env:TC_INSTALL_DIR) { $env:TC_INSTALL_DIR } else { "$HOME\.local\bin" }
+$tempZip = $null
+$tempExtract = $null
+$stagedBin = $null
 
-if (-not (Test-Path $installDir)) {
-    New-Item -ItemType Directory -Path $installDir | Out-Null
+function Cleanup {
+    if ($tempZip -and (Test-Path $tempZip)) {
+        Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+    }
+    if ($tempExtract -and (Test-Path $tempExtract)) {
+        Remove-Item -Recurse -Force $tempExtract -ErrorAction SilentlyContinue
+    }
+    if ($stagedBin -and (Test-Path $stagedBin)) {
+        Remove-Item $stagedBin -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Fail {
+    param([string]$Message)
+    Cleanup
+    Write-Error "Error: $Message"
+    exit 1
+}
+
+function Resolve-LatestRelease {
+    $location = & curl.exe -s -o NUL -w "%{redirect_url}" "https://github.com/$repo/releases/latest"
+    if (-not $location) {
+        Fail "failed to resolve latest TeamCity CLI release"
+    }
+    $tag = ($location -split '/')[-1]
+    if (-not $tag) {
+        Fail "failed to resolve latest TeamCity CLI release"
+    }
+    return $tag
 }
 
 Write-Host "
@@ -33,68 +65,71 @@ Write-Host "
     ╚═╝    ╚═════╝   https://jb.gg/tc/issues
 "
 
-Write-Host "This script will download TeamCity CLI to $installDir\$binName`n"
+Write-Host "This script will download TeamCity CLI to $OutDir\$binName`n"
+Write-Host "To install a specific version:"
+Write-Host "  `$env:TC_INSTALL_RELEASE='v0.7.0'; irm https://jb.gg/tc/install.ps1 | iex`n"
 
-$releasesUrl = "https://api.github.com/repos/$repo/releases/latest"
-$release = Invoke-RestMethod -Uri $releasesUrl
+try {
+    if (-not $Release) {
+        $Release = Resolve-LatestRelease
+    }
 
-$tag = $release.tag_name
-$version = $tag.TrimStart('v')
+    $version = $Release.TrimStart('v')
+    $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "x86_64" }
+    $assetName = "teamcity_$($version)_windows_$($arch).zip"
+    $downloadUrl = "https://github.com/$repo/releases/download/$Release/$assetName"
 
-$arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "x86_64" }
-$os = "windows"
-$assetName = "teamcity_$($version)_$($os)_$($arch).zip"
+    Write-Host "Installing teamcity ($Release) from $downloadUrl`n"
 
-$asset = $release.assets | Where-Object { $_.name -eq $assetName }
-if (-not $asset) {
-    Write-Error "Could not find asset $assetName in release $tag"
-    exit 1
+    if (-not (Test-Path $OutDir)) {
+        New-Item -ItemType Directory -Path $OutDir | Out-Null
+    }
+    if (-not (Test-Path $OutDir -PathType Container)) {
+        Fail "output path is not a directory: $OutDir"
+    }
+
+    $tempZip = Join-Path $env:TEMP "teamcity_$([guid]::NewGuid().ToString('N')).zip"
+    $tempExtract = Join-Path $env:TEMP "teamcity_extract_$([guid]::NewGuid().ToString('N'))"
+
+    try {
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip
+    } catch {
+        Fail "download failed for $assetName"
+    }
+
+    New-Item -ItemType Directory -Path $tempExtract | Out-Null
+    Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+
+    $exePath = Get-ChildItem -Path $tempExtract -Filter $binName -Recurse | Select-Object -First 1
+    if (-not $exePath) {
+        Fail "could not find $binName in the downloaded archive"
+    }
+
+    $stagedBin = Join-Path $OutDir ".teamcity_staged_$([guid]::NewGuid().ToString('N')).exe"
+    Copy-Item -Path $exePath.FullName -Destination $stagedBin -Force
+    Move-Item -Path $stagedBin -Destination "$OutDir\$binName" -Force
+    $stagedBin = $null
+
+    Write-Host "`n✓ Installed at $OutDir\$binName`n"
+    & "$OutDir\$binName" --version
+
+    $path = [Environment]::GetEnvironmentVariable("Path", "User")
+    if ($path -notlike "*$OutDir*") {
+        Write-Host "`nAdding $OutDir to your PATH..."
+        [Environment]::SetEnvironmentVariable("Path", "$path;$OutDir", "User")
+        $env:Path += ";$OutDir"
+        Write-Host "You might need to restart your terminal for changes to take effect."
+    }
+
+    Cleanup
+
+    Write-Host "`nNext steps:"
+    Write-Host "  Authenticate with TeamCity"
+    Write-Host "  teamcity auth login`n"
+    Write-Host "  List recent builds"
+    Write-Host "  teamcity run list`n"
+    Write-Host "  Get help"
+    Write-Host "  teamcity --help`n"
+} catch {
+    Fail $_.Exception.Message
 }
-
-$downloadUrl = $asset.browser_download_url
-$tempZip = Join-Path $env:TEMP "teamcity.zip"
-$tempExtract = Join-Path $env:TEMP "teamcity_extract"
-
-Write-Host "Downloading $assetName from $downloadUrl..."
-Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip
-
-if (Test-Path $tempExtract) {
-    Remove-Item -Recurse -Force $tempExtract
-}
-New-Item -ItemType Directory -Path $tempExtract | Out-Null
-
-Write-Host "Extracting..."
-Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
-
-$exePath = Get-ChildItem -Path $tempExtract -Filter $binName -Recurse | Select-Object -First 1
-if (-not $exePath) {
-    Write-Error "Could not find $binName in the downloaded archive"
-    exit 1
-}
-
-Move-Item -Path $exePath.FullName -Destination "$installDir\$binName" -Force
-
-Write-Host "`n✓ Installed at $installDir\$binName"
-
-# Check if installDir is in PATH
-$path = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($path -notlike "*$installDir*") {
-    Write-Host "`nAdding $installDir to your PATH..."
-    [Environment]::SetEnvironmentVariable("Path", "$path;$installDir", "User")
-    $env:Path += ";$installDir"
-    Write-Host "You might need to restart your terminal for changes to take effect."
-}
-
-& "$installDir\$binName" --version
-
-# Cleanup
-Remove-Item $tempZip -Force
-Remove-Item -Recurse -Force $tempExtract
-
-Write-Host "`nNext steps:"
-Write-Host "  Authenticate with TeamCity"
-Write-Host "  teamcity auth login`n"
-Write-Host "  List recent builds"
-Write-Host "  teamcity run list`n"
-Write-Host "  Get help"
-Write-Host "  teamcity --help`n"
