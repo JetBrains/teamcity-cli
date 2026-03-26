@@ -67,7 +67,7 @@ func RunList(
 	}
 
 	if jsonResult.Enabled {
-		return output.PrintJSON(result.JSON)
+		return f.Printer.PrintJSON(result.JSON)
 	}
 
 	if len(result.Table.Rows) == 0 {
@@ -75,7 +75,7 @@ func RunList(
 		if msg == "" {
 			msg = "No items found"
 		}
-		output.Info(msg)
+		f.Printer.Info(msg)
 		return nil
 	}
 

@@ -32,6 +32,11 @@ type Factory struct {
 	// IOStreams provides standard I/O handles. Override in tests to capture output.
 	IOStreams *IOStreams
 
+	// Printer writes formatted output. Prefer this over the output package
+	// free functions — it uses the Factory's IOStreams and respects Quiet/Verbose
+	// without relying on package globals.
+	Printer *output.Printer
+
 	// ClientFunc returns an API client. Override in tests to inject mocks.
 	ClientFunc func() (api.ClientInterface, error)
 }
@@ -44,6 +49,7 @@ func NewFactory() *Factory {
 			Out:    os.Stdout,
 			ErrOut: os.Stderr,
 		},
+		Printer:    output.DefaultPrinter(),
 		ClientFunc: defaultGetClient,
 	}
 }
@@ -56,6 +62,7 @@ func (f *Factory) Client() (api.ClientInterface, error) {
 // InitOutput synchronizes the output package state from Factory flags.
 // Called once after flags are parsed (in PersistentPreRun).
 func (f *Factory) InitOutput() {
+	// Sync to package globals for backward compat with free functions.
 	output.Quiet = f.Quiet
 	output.Verbose = f.Verbose
 
@@ -65,6 +72,10 @@ func (f *Factory) InitOutput() {
 		!isatty.IsTerminal(os.Stdout.Fd()) {
 		color.NoColor = true
 	}
+
+	// Keep Printer in sync.
+	f.Printer.Quiet = f.Quiet
+	f.Printer.Verbose = f.Verbose
 }
 
 // IsInteractive returns true if the CLI can prompt the user.
