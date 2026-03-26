@@ -93,6 +93,7 @@ teamcity run start <job-id> -P version=1.0 -S build.number=123 -E CI=true
 **Start and watch:**
 ```bash
 teamcity run start <job-id> --watch
+teamcity run start <job-id> --watch --timeout 30m
 ```
 
 **Start with comment and tags:**
