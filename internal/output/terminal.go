@@ -76,7 +76,7 @@ func WithPager(out io.Writer, fn func(w io.Writer)) {
 
 	data := buf.Bytes()
 	pager.Stdin = bytes.NewReader(data)
-	pager.Stdout = os.Stdout
+	pager.Stdout = os.Stdout // must be a real terminal fd; using `out` here breaks pager rendering
 	pager.Stderr = os.Stderr
 	if err := pager.Run(); err != nil {
 		_, _ = out.Write(data)
