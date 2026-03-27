@@ -23,7 +23,7 @@ type watchFlags struct {
 // addToCmd registers the shared watch flags on a cobra command.
 func (w *watchFlags) addToCmd(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&w.watch, "watch", false, "Watch run until it completes")
-	cmd.Flags().IntVarP(&w.interval, "interval", "i", 3, "Refresh interval in seconds when watching")
+	cmd.Flags().IntVarP(&w.interval, "interval", "i", 5, "Refresh interval in seconds when watching")
 	cmd.Flags().DurationVar(&w.timeout, "timeout", 0, "Timeout when watching (e.g., 30m, 1h); implies --watch")
 }
 
