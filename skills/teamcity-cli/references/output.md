@@ -51,7 +51,7 @@ Run `teamcity <command> --json=` to see all available fields for that command.
 
 **Get build IDs of failed builds:**
 ```bash
-teamcity run list --status failure --plain --no-header | awk '{print $1}'
+teamcity run list --status failure --plain --no-header | awk '{print $2}'
 ```
 
 **JSON with jq:**
