@@ -205,11 +205,11 @@ just release-dry-run  # full release process without publishing
 
 ### Cutting a release
 
-Tag and push — the release pipeline on [TeamCity](https://teamcity-nightly.labs.intellij.net/) handles everything else automatically (build, acceptance test, sign, publish to all package managers):
+Tag and push — the [release pipeline](https://teamcity-nightly.labs.intellij.net/pipeline/TeamCity_TeamCityCLI_Release) on TeamCity handles everything else automatically (build, acceptance test, sign, publish to all package managers):
 
 ```sh
-git tag -a v0.7.1 -m "Release v0.7.1"
-git push origin v0.7.1
+git tag -a v1.1.1 -m "Release v1.1.1"
+git push origin v1.1.1
 ```
 
 ### Rolling back a release
@@ -221,7 +221,7 @@ If a release needs to be reverted:
 3. Cancel the Chocolatey submission (if still pending moderation) on [chocolatey.org](https://community.chocolatey.org/)
 4. Delete the tag and release it from the [GitHub repository](https://github.com/JetBrains/teamcity-cli):
    ```sh
-   git tag -d v0.7.1
-   git push origin --delete v0.7.1
+   git tag -d v1.1.1
+   git push origin --delete v1.1.1
    ```
    Then delete the release from the [Releases page](https://github.com/JetBrains/teamcity-cli/releases).
