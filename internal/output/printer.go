@@ -27,31 +27,31 @@ func DefaultPrinter() *Printer {
 
 func (p *Printer) Success(format string, args ...any) {
 	if !p.Quiet {
-		fmt.Fprintf(p.Out, "%s %s\n", Green("✓"), fmt.Sprintf(format, args...))
+		_, _ = fmt.Fprintf(p.Out, "%s %s\n", Green("✓"), fmt.Sprintf(format, args...))
 	}
 }
 
 func (p *Printer) Info(format string, args ...any) {
 	if !p.Quiet {
-		fmt.Fprintf(p.Out, format+"\n", args...)
+		_, _ = fmt.Fprintf(p.Out, format+"\n", args...)
 	}
 }
 
 func (p *Printer) Infof(format string, args ...any) {
 	if !p.Quiet {
-		fmt.Fprintf(p.Out, format, args...)
+		_, _ = fmt.Fprintf(p.Out, format, args...)
 	}
 }
 
 func (p *Printer) Warn(format string, args ...any) {
 	if !p.Quiet {
-		fmt.Fprintf(p.ErrOut, "%s %s\n", Yellow("!"), fmt.Sprintf(format, args...))
+		_, _ = fmt.Fprintf(p.ErrOut, "%s %s\n", Yellow("!"), fmt.Sprintf(format, args...))
 	}
 }
 
 func (p *Printer) Debug(format string, args ...any) {
 	if p.Verbose {
-		fmt.Fprintf(p.ErrOut, "%s %s\n", Faint("[debug]"), fmt.Sprintf(format, args...))
+		_, _ = fmt.Fprintf(p.ErrOut, "%s %s\n", Faint("[debug]"), fmt.Sprintf(format, args...))
 	}
 }
 
@@ -62,11 +62,11 @@ func (p *Printer) PrintJSON(data any) error {
 }
 
 func (p *Printer) PrintField(label, value string) {
-	fmt.Fprintf(p.Out, "%s: %s\n", label, value)
+	_, _ = fmt.Fprintf(p.Out, "%s: %s\n", label, value)
 }
 
 func (p *Printer) PrintViewHeader(title, webURL string, details func()) {
-	fmt.Fprintf(p.Out, "%s\n", Cyan(title))
+	_, _ = fmt.Fprintf(p.Out, "%s\n", Cyan(title))
 	details()
-	fmt.Fprintf(p.Out, "\n%s %s\n", Faint("View in browser:"), Green(webURL))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", Faint("View in browser:"), Green(webURL))
 }
