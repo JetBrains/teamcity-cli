@@ -13,14 +13,16 @@ func newAuthLogoutCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:   "logout",
 		Short: "Log out from a TeamCity server",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAuthLogout()
+			return runAuthLogout(f)
 		},
 	}
 
 	return cmd
 }
 
-func runAuthLogout() error {
+func runAuthLogout(f *cmdutil.Factory) error {
+	p := f.Printer
+
 	serverURL := config.GetServerURL()
 	if serverURL == "" {
 		return fmt.Errorf("not logged in to any server")
@@ -30,6 +32,6 @@ func runAuthLogout() error {
 		return err
 	}
 
-	fmt.Printf("Logged out from %s\n", serverURL)
+	_, _ = fmt.Fprintf(p.Out, "Logged out from %s\n", serverURL)
 	return nil
 }

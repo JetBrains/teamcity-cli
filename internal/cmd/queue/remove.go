@@ -5,7 +5,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +50,7 @@ func runQueueRemove(f *cmdutil.Factory, runID string, opts *queueRemoveOptions) 
 			return err
 		}
 		if !confirm {
-			output.Info("Canceled")
+			f.Printer.Info("Canceled")
 			return nil
 		}
 	}
@@ -60,6 +59,6 @@ func runQueueRemove(f *cmdutil.Factory, runID string, opts *queueRemoveOptions) 
 		return fmt.Errorf("failed to remove run from queue: %w", err)
 	}
 
-	output.Success("Removed run %s from queue", runID)
+	f.Printer.Success("Removed run %s from queue", runID)
 	return nil
 }

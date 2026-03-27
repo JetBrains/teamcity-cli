@@ -95,31 +95,32 @@ func runParamList(f *cmdutil.Factory, id string, opts *paramListOptions, paramAP
 	}
 
 	if opts.json {
-		return output.PrintJSON(params)
+		return f.Printer.PrintJSON(params)
 	}
 
+	p := f.Printer
 	if params.Count == 0 {
-		fmt.Println("No parameters found")
+		_, _ = fmt.Fprintln(p.Out, "No parameters found")
 		return nil
 	}
 
 	headers := []string{"NAME", "VALUE"}
 	var rows [][]string
 
-	for _, p := range params.Property {
-		value := p.Value
-		if p.Type != nil && p.Type.RawValue == "password" {
+	for _, param := range params.Property {
+		value := param.Value
+		if param.Type != nil && param.Type.RawValue == "password" {
 			value = "********"
 		}
 
 		rows = append(rows, []string{
-			p.Name,
+			param.Name,
 			value,
 		})
 	}
 
 	output.AutoSizeColumns(headers, rows, 2, 0, 1)
-	output.PrintTable(headers, rows)
+	p.PrintTable(headers, rows)
 	return nil
 }
 
@@ -145,17 +146,17 @@ func runParamGet(f *cmdutil.Factory, id, name string, paramAPI ParamAPI) error {
 		return err
 	}
 
-	p, err := paramAPI.Get(client, id, name)
+	param, err := paramAPI.Get(client, id, name)
 	if err != nil {
 		return err
 	}
 
-	value := p.Value
-	if p.Type != nil && p.Type.RawValue == "password" {
+	value := param.Value
+	if param.Type != nil && param.Type.RawValue == "password" {
 		value = "********"
 	}
 
-	fmt.Println(value)
+	_, _ = fmt.Fprintln(f.Printer.Out, value)
 	return nil
 }
 
@@ -193,7 +194,7 @@ func runParamSet(f *cmdutil.Factory, id, name, value string, opts *paramSetOptio
 		return fmt.Errorf("failed to set parameter: %w", err)
 	}
 
-	output.Success("Set parameter %s", name)
+	f.Printer.Success("Set parameter %s", name)
 	return nil
 }
 
@@ -222,6 +223,6 @@ func runParamDelete(f *cmdutil.Factory, id, name string, paramAPI ParamAPI) erro
 		return fmt.Errorf("failed to delete parameter: %w", err)
 	}
 
-	output.Success("Deleted parameter %s", name)
+	f.Printer.Success("Deleted parameter %s", name)
 	return nil
 }

@@ -23,9 +23,13 @@ func IsTerminal() bool {
 	return isTerminalFn()
 }
 
+// isStdinTerminalFn is the function used to detect whether stdin is a terminal.
+// Tests can override this to simulate interactive mode.
+var isStdinTerminalFn = func() bool { return isatty.IsTerminal(os.Stdin.Fd()) }
+
 // IsStdinTerminal returns true if stdin is a terminal
 func IsStdinTerminal() bool {
-	return isatty.IsTerminal(os.Stdin.Fd())
+	return isStdinTerminalFn()
 }
 
 // TerminalSize returns terminal width and height (defaults: 80x24)
@@ -55,8 +59,9 @@ var pagerCmdFn = func() (*exec.Cmd, error) {
 	return exec.Command(lessPath, "-FIRX", "--mouse", "--incsearch"), nil
 }
 
-// WithPager pipes output through less if it exceeds terminal height
-func WithPager(fn func(w io.Writer)) {
+// WithPager pipes output through less if it exceeds terminal height.
+// The out writer is used as a fallback when paging is not available.
+func WithPager(out io.Writer, fn func(w io.Writer)) {
 	var buf bytes.Buffer
 	fn(&buf)
 
@@ -65,7 +70,7 @@ func WithPager(fn func(w io.Writer)) {
 	pager, err := pagerCmdFn()
 
 	if !IsTerminal() || err != nil || lineCount <= height-2 {
-		_, _ = os.Stdout.Write(buf.Bytes())
+		_, _ = out.Write(buf.Bytes())
 		return
 	}
 
@@ -74,6 +79,6 @@ func WithPager(fn func(w io.Writer)) {
 	pager.Stdout = os.Stdout
 	pager.Stderr = os.Stderr
 	if err := pager.Run(); err != nil {
-		_, _ = os.Stdout.Write(data)
+		_, _ = out.Write(data)
 	}
 }

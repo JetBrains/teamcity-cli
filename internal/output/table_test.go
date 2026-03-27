@@ -218,7 +218,7 @@ func TestPrintJSON(T *testing.T) {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := PrintJSON(tc.data)
+			err := DefaultPrinter().PrintJSON(tc.data)
 			require.NoError(t, err)
 		})
 	}
@@ -241,7 +241,7 @@ func TestPrintTable(T *testing.T) {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			// PrintTable writes to stdout; just verify it doesn't panic
-			PrintTable(tc.headers, tc.rows)
+			DefaultPrinter().PrintTable(tc.headers, tc.rows)
 		})
 	}
 }
@@ -265,7 +265,7 @@ func TestPrintPlainTable(T *testing.T) {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			// PrintPlainTable writes to stdout; just verify it doesn't panic
-			PrintPlainTable(tc.headers, tc.rows, tc.noHeader)
+			DefaultPrinter().PrintPlainTable(tc.headers, tc.rows, tc.noHeader)
 		})
 	}
 }

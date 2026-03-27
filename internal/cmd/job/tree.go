@@ -47,9 +47,10 @@ func runJobTree(f *cmdutil.Factory, jobID string, depth int, only string) error 
 		return err
 	}
 
+	p := f.Printer
 	if only != "" {
 		tree := buildJobTree(client, jobID, bt.Name, depth, only == "dependents", map[string]bool{jobID: true})
-		output.PrintTree(tree)
+		p.PrintTree(tree)
 		return nil
 	}
 
@@ -64,7 +65,7 @@ func runJobTree(f *cmdutil.Factory, jobID string, depth int, only string) error 
 		return output.TreeNode{Label: l, Children: children}
 	}
 
-	output.PrintTree(output.TreeNode{
+	p.PrintTree(output.TreeNode{
 		Label: output.Cyan(bt.Name),
 		Children: []output.TreeNode{
 			section("▲ Dependents", up.Children),

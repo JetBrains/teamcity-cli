@@ -48,28 +48,29 @@ func runAgentJobs(f *cmdutil.Factory, nameOrID string, opts *agentJobsOptions) e
 		return err
 	}
 
+	p := f.Printer
 	if opts.incompatible {
-		return showIncompatibleJobs(client, agentID, opts.json)
+		return showIncompatibleJobs(p, client, agentID, opts.json)
 	}
-	return showCompatibleJobs(client, agentID, opts.json)
+	return showCompatibleJobs(p, client, agentID, opts.json)
 }
 
-func showCompatibleJobs(client api.ClientInterface, agentID int, jsonOutput bool) error {
+func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID int, jsonOutput bool) error {
 	jobs, err := client.GetAgentCompatibleBuildTypes(agentID)
 	if err != nil {
 		return err
 	}
 
 	if jsonOutput {
-		return output.PrintJSON(jobs)
+		return p.PrintJSON(jobs)
 	}
 
 	if jobs.Count == 0 {
-		fmt.Println("No compatible jobs found")
+		_, _ = fmt.Fprintln(p.Out, "No compatible jobs found")
 		return nil
 	}
 
-	fmt.Printf("%s (%d)\n\n", output.Green("Compatible Jobs"), jobs.Count)
+	_, _ = fmt.Fprintf(p.Out, "%s (%d)\n\n", output.Green("Compatible Jobs"), jobs.Count)
 
 	headers := []string{"ID", "NAME", "PROJECT"}
 	var rows [][]string
@@ -84,42 +85,42 @@ func showCompatibleJobs(client api.ClientInterface, agentID int, jsonOutput bool
 
 	output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
 
-	output.PrintTable(headers, rows)
+	p.PrintTable(headers, rows)
 	return nil
 }
 
-func showIncompatibleJobs(client api.ClientInterface, agentID int, jsonOutput bool) error {
+func showIncompatibleJobs(p *output.Printer, client api.ClientInterface, agentID int, jsonOutput bool) error {
 	compat, err := client.GetAgentIncompatibleBuildTypes(agentID)
 	if err != nil {
 		return err
 	}
 
 	if jsonOutput {
-		return output.PrintJSON(compat)
+		return p.PrintJSON(compat)
 	}
 
 	if compat.Count == 0 {
-		fmt.Println("No incompatible jobs found")
+		_, _ = fmt.Fprintln(p.Out, "No incompatible jobs found")
 		return nil
 	}
 
-	fmt.Printf("%s (%d)\n\n", output.Yellow("Incompatible Jobs"), compat.Count)
+	_, _ = fmt.Fprintf(p.Out, "%s (%d)\n\n", output.Yellow("Incompatible Jobs"), compat.Count)
 
 	for _, c := range compat.Compatibility {
 		if c.BuildType == nil {
 			continue
 		}
-		fmt.Printf("%s %s\n", output.Cyan(c.BuildType.Name), output.Faint("("+c.BuildType.ID+")"))
+		_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Cyan(c.BuildType.Name), output.Faint("("+c.BuildType.ID+")"))
 		if c.BuildType.ProjectName != "" {
-			fmt.Printf("  Project: %s\n", c.BuildType.ProjectName)
+			_, _ = fmt.Fprintf(p.Out, "  Project: %s\n", c.BuildType.ProjectName)
 		}
 		if c.Reasons != nil && len(c.Reasons.Reasons) > 0 {
-			fmt.Printf("  Reasons:\n")
+			_, _ = fmt.Fprintf(p.Out, "  Reasons:\n")
 			for _, reason := range c.Reasons.Reasons {
-				fmt.Printf("    %s %s\n", output.Red("•"), reason)
+				_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Red("•"), reason)
 			}
 		}
-		fmt.Println()
+		_, _ = fmt.Fprintln(p.Out)
 	}
 
 	return nil

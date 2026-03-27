@@ -72,6 +72,8 @@ build-level credentials from the build properties file.`,
 func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage bool, noBrowser bool) error {
 	isInteractive := f.IsInteractive()
 
+	p := f.Printer
+
 	if serverURL == "" {
 		detectedServer := config.DetectServerFromDSL()
 
@@ -90,7 +92,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 			if detectedServer != "" {
 				prompt.Default = detectedServer
 				dslDir := config.DetectTeamCityDir()
-				fmt.Printf("%s Detected server from %s/pom.xml\n", output.Green("✓"), dslDir)
+				_, _ = fmt.Fprintf(p.Out, "%s Detected server from %s/pom.xml\n", output.Green("✓"), dslDir)
 			}
 
 			if err := survey.AskOne(prompt, &serverURL, survey.WithValidator(survey.Required)); err != nil {
@@ -109,10 +111,10 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 		enabled, _ := api.IsPkceEnabled(ctx, serverURL)
 		cancel()
 		if enabled {
-			output.Info("Secure browser login enabled on this server")
-			if tokenResp, err := runPkceLogin(serverURL); err != nil {
-				output.Warn("Browser auth failed: %v", err)
-				output.Info("Falling back to manual token entry...")
+			p.Info("Secure browser login enabled on this server")
+			if tokenResp, err := runPkceLogin(p, serverURL); err != nil {
+				p.Warn("Browser auth failed: %v", err)
+				p.Info("Falling back to manual token entry...")
 			} else {
 				token = tokenResp.AccessToken
 				tokenValidUntil = tokenResp.ValidUntil
@@ -127,14 +129,14 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 
 		tokenURL := fmt.Sprintf("%s/profile.html?item=accessTokens", serverURL)
 
-		fmt.Println()
+		_, _ = fmt.Fprintln(p.Out)
 		if pkceChecked {
-			fmt.Println(output.Faint("Tip: Server admins can enable secure browser login for easier authentication"))
-			fmt.Println()
+			_, _ = fmt.Fprintln(p.Out, output.Faint("Tip: Server admins can enable secure browser login for easier authentication"))
+			_, _ = fmt.Fprintln(p.Out)
 		}
-		fmt.Println(output.Yellow("!"), "To authenticate, you need an access token.")
-		fmt.Printf("  Generate one at: %s\n", tokenURL)
-		fmt.Println()
+		_, _ = fmt.Fprintln(p.Out, output.Yellow("!"), "To authenticate, you need an access token.")
+		_, _ = fmt.Fprintf(p.Out, "  Generate one at: %s\n", tokenURL)
+		_, _ = fmt.Fprintln(p.Out)
 
 		openBrowser := false
 		confirmPrompt := &survey.Confirm{
@@ -147,11 +149,11 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 
 		if openBrowser {
 			if err := browser.OpenURL(tokenURL); err != nil {
-				fmt.Printf("  Could not open browser. Please visit: %s\n", tokenURL)
+				_, _ = fmt.Fprintf(p.Out, "  Could not open browser. Please visit: %s\n", tokenURL)
 			} else {
-				fmt.Println(output.Green("  ✓"), "Opened browser")
+				_, _ = fmt.Fprintln(p.Out, output.Green("  ✓"), "Opened browser")
 			}
-			fmt.Println()
+			_, _ = fmt.Fprintln(p.Out)
 		}
 
 		tokenPrompt := &survey.Password{
@@ -162,32 +164,32 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 		}
 	}
 
-	cmdutil.WarnInsecureHTTP(serverURL, "authentication token")
-	output.Infof("Validating... ")
+	f.WarnInsecureHTTP(serverURL, "authentication token")
+	p.Infof("Validating... ")
 
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(output.Debug))
+	client := api.NewClient(serverURL, token, api.WithDebugFunc(p.Debug))
 	user, err := client.GetCurrentUser()
 	if err != nil {
-		output.Info("%s", output.Red("✗"))
+		p.Info("%s", output.Red("✗"))
 		return tcerrors.AuthenticationFailed()
 	}
 
-	output.Info("%s", output.Green("✓"))
+	p.Info("%s", output.Green("✓"))
 
 	insecureFallback, err := config.SetServerWithKeyring(serverURL, token, user.Username, tokenValidUntil, insecureStorage)
 	if err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
-	output.Success("Logged in as %s", output.Cyan(user.Name))
+	p.Success("Logged in as %s", output.Cyan(user.Name))
 	if insecureFallback {
-		fmt.Printf("%s Token stored in plain text at %s\n", output.Yellow("!"), config.ConfigPath())
+		_, _ = fmt.Fprintf(p.Out, "%s Token stored in plain text at %s\n", output.Yellow("!"), config.ConfigPath())
 	} else {
-		fmt.Printf("%s Token stored in system keyring\n", output.Green("✓"))
+		_, _ = fmt.Fprintf(p.Out, "%s Token stored in system keyring\n", output.Green("✓"))
 	}
 	if tokenValidUntil != "" {
 		if expiry, err := time.Parse(time.RFC3339, tokenValidUntil); err == nil {
-			output.Info("Token expires: %s", output.Yellow(expiry.Local().Format("Jan 2, 2006")))
+			p.Info("Token expires: %s", output.Yellow(expiry.Local().Format("Jan 2, 2006")))
 		}
 	}
 
@@ -219,32 +221,33 @@ func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 
 	serverURL = config.NormalizeURL(serverURL)
 
-	cmdutil.WarnInsecureHTTP(serverURL, "guest access")
-	output.Infof("Validating guest access... ")
+	p := f.Printer
+	f.WarnInsecureHTTP(serverURL, "guest access")
+	p.Infof("Validating guest access... ")
 
-	client := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(p.Debug))
 	server, err := client.GetServer()
 	if err != nil {
-		output.Info("%s", output.Red("✗"))
+		p.Info("%s", output.Red("✗"))
 		return tcerrors.WithSuggestion(
 			"Guest access validation failed",
 			"Verify the server URL and that guest access is enabled on the server",
 		)
 	}
 
-	output.Info("%s", output.Green("✓"))
+	p.Info("%s", output.Green("✓"))
 
 	if err := config.SetGuestServer(serverURL); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
-	output.Success("Guest access to %s", output.Cyan(serverURL))
-	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
+	p.Success("Guest access to %s", output.Cyan(serverURL))
+	_, _ = fmt.Fprintf(p.Out, "  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
 
 	return nil
 }
 
-func runPkceLogin(serverURL string) (*api.TokenResponse, error) {
+func runPkceLogin(p *output.Printer, serverURL string) (*api.TokenResponse, error) {
 	verifier, err := api.GenerateCodeVerifier()
 	if err != nil {
 		return nil, fmt.Errorf("generate code verifier: %w", err)
@@ -267,12 +270,12 @@ func runPkceLogin(serverURL string) (*api.TokenResponse, error) {
 	authURL := api.BuildAuthorizeURL(serverURL, redirectURI, api.GenerateCodeChallenge(verifier), state, api.DefaultScopes())
 
 	if err := browser.OpenURL(authURL); err != nil {
-		output.Warn("Could not open browser automatically: %v", err)
-		fmt.Printf("\nOpen this URL in your browser to authenticate:\n  %s\n\n", authURL)
+		p.Warn("Could not open browser automatically: %v", err)
+		_, _ = fmt.Fprintf(p.Out, "\nOpen this URL in your browser to authenticate:\n  %s\n\n", authURL)
 	} else {
-		output.Info("Opening browser for authentication...")
+		p.Info("Opening browser for authentication...")
 	}
-	fmt.Printf("  %s Approve access in TeamCity\n", output.Yellow("→"))
+	_, _ = fmt.Fprintf(p.Out, "  %s Approve access in TeamCity\n", output.Yellow("→"))
 
 	select {
 	case result := <-callbackServer.ResultChan:
@@ -282,7 +285,7 @@ func runPkceLogin(serverURL string) (*api.TokenResponse, error) {
 		if subtle.ConstantTimeCompare([]byte(result.State), []byte(state)) != 1 {
 			return nil, fmt.Errorf("state mismatch: possible CSRF attack")
 		}
-		fmt.Println()
+		_, _ = fmt.Fprintln(p.Out)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

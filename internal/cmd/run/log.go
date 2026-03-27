@@ -114,7 +114,7 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 			return fmt.Errorf("no runs found for job %s", opts.job)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
-		output.Info("Showing log for run %s  #%s", runID, runs.Builds[0].Number)
+		f.Printer.Info("Showing log for run %s  #%s", runID, runs.Builds[0].Number)
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
@@ -125,10 +125,10 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 			return fmt.Errorf("failed to get build: %w", err)
 		}
 		if build.Status == "SUCCESS" {
-			output.Success("Build %d  #%s succeeded", build.ID, build.Number)
+			f.Printer.Success("Build %d  #%s succeeded", build.ID, build.Number)
 			return nil
 		}
-		cmdutil.PrintFailureSummary(client, runID, build.Number, build.WebURL, build.StatusText)
+		cmdutil.PrintFailureSummary(f.Printer, client, runID, build.Number, build.WebURL, build.StatusText)
 		return nil
 	}
 
@@ -138,13 +138,13 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 	}
 
 	if log == "" {
-		output.Info("No log available for this run")
+		f.Printer.Info("No log available for this run")
 		return nil
 	}
 
 	lines := strings.Split(log, "\n")
 
-	output.WithPager(func(w io.Writer) {
+	output.WithPager(f.Printer.Out, func(w io.Writer) {
 		if opts.raw {
 			_, _ = fmt.Fprintln(w, log)
 		} else {

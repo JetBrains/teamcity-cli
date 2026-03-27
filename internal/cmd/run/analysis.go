@@ -40,6 +40,7 @@ func newRunChangesCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) error {
+	p := f.Printer
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -51,15 +52,15 @@ func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) er
 	}
 
 	if opts.json {
-		return output.PrintJSON(changes)
+		return p.PrintJSON(changes)
 	}
 
 	if changes.Count == 0 {
-		output.Info("No changes in this run")
+		p.Info("No changes in this run")
 		return nil
 	}
 
-	fmt.Printf("CHANGES (%d %s)\n\n", changes.Count, english.PluralWord(changes.Count, "commit", "commits"))
+	_, _ = fmt.Fprintf(p.Out, "CHANGES (%d %s)\n\n", changes.Count, english.PluralWord(changes.Count, "commit", "commits"))
 
 	var firstSHA, lastSHA string
 	for i, c := range changes.Change {
@@ -80,18 +81,18 @@ func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) er
 			}
 		}
 
-		fmt.Printf("%s  %s  %s\n", output.Yellow(sha), output.Faint(c.Username), output.Faint(date))
+		_, _ = fmt.Fprintf(p.Out, "%s  %s  %s\n", output.Yellow(sha), output.Faint(c.Username), output.Faint(date))
 
 		comment := strings.TrimSpace(c.Comment)
 		if idx := strings.Index(comment, "\n"); idx > 0 {
 			comment = comment[:idx]
 		}
-		fmt.Printf("  %s\n", comment)
+		_, _ = fmt.Fprintf(p.Out, "  %s\n", comment)
 
 		if !opts.noFiles && c.Files != nil && len(c.Files.File) > 0 {
-			for _, f := range c.Files.File {
+			for _, af := range c.Files.File {
 				changeType := "M"
-				switch f.ChangeType {
+				switch af.ChangeType {
 				case "added":
 					changeType = output.Green("A")
 				case "removed":
@@ -99,10 +100,10 @@ func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) er
 				case "edited":
 					changeType = output.Yellow("M")
 				}
-				fmt.Printf("  %s  %s\n", changeType, output.Faint(f.File))
+				_, _ = fmt.Fprintf(p.Out, "  %s  %s\n", changeType, output.Faint(af.File))
 			}
 		}
-		fmt.Println()
+		_, _ = fmt.Fprintln(p.Out)
 	}
 
 	if firstSHA != "" && lastSHA != "" && firstSHA != lastSHA {
@@ -114,7 +115,7 @@ func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) er
 		if len(last) > 7 {
 			last = last[:7]
 		}
-		fmt.Printf("%s git diff %s^..%s\n", output.Faint("# For full diff:"), first, last)
+		_, _ = fmt.Fprintf(p.Out, "%s git diff %s^..%s\n", output.Faint("# For full diff:"), first, last)
 	}
 
 	return nil
@@ -163,6 +164,7 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 }
 
 func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error {
+	p := f.Printer
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -195,19 +197,19 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	}
 
 	if opts.json {
-		return output.PrintJSON(tests)
+		return p.PrintJSON(tests)
 	}
 
 	if tests.Count == 0 {
 		if opts.failed {
-			output.Success("No failed tests in this run")
+			p.Success("No failed tests in this run")
 		} else {
-			output.Info("No tests in this run")
+			p.Info("No tests in this run")
 		}
 		return nil
 	}
 
-	fmt.Printf("%s %s\n\n", output.Faint("View in browser:"), build.WebURL+"?buildTab=tests")
+	_, _ = fmt.Fprintf(p.Out, "%s %s\n\n", output.Faint("View in browser:"), build.WebURL+"?buildTab=tests")
 
 	var parts []string
 	if tests.Passed > 0 {
@@ -219,16 +221,16 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	if tests.Ignored > 0 {
 		parts = append(parts, output.Faint(fmt.Sprintf("%d ignored", tests.Ignored)))
 	}
-	fmt.Printf("TESTS: %s\n\n", strings.Join(parts, ", "))
+	_, _ = fmt.Fprintf(p.Out, "TESTS: %s\n\n", strings.Join(parts, ", "))
 
 	for _, t := range tests.TestOccurrence {
 		switch t.Status {
 		case "FAILURE":
-			fmt.Printf("%s %s\n", output.Red("✗"), t.Name)
+			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Red("✗"), t.Name)
 		case "SUCCESS":
-			fmt.Printf("%s %s\n", output.Green("✓"), t.Name)
+			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Green("✓"), t.Name)
 		default:
-			fmt.Printf("%s %s\n", output.Faint("○"), t.Name)
+			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint("○"), t.Name)
 		}
 	}
 

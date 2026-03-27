@@ -48,7 +48,7 @@ func RunList(
 		}
 	}
 
-	jsonResult, showHelp, err := ParseJSONFields(cmd, flags.JSONFields, fieldSpec)
+	jsonResult, showHelp, err := ParseJSONFields(cmd, flags.JSONFields, fieldSpec, f.Printer.Out)
 	if err != nil {
 		return err
 	}
@@ -82,6 +82,6 @@ func RunList(
 	if len(result.Table.FlexCols) > 0 {
 		output.AutoSizeColumns(result.Table.Headers, result.Table.Rows, 2, result.Table.FlexCols...)
 	}
-	output.PrintTable(result.Table.Headers, result.Table.Rows)
+	f.Printer.PrintTable(result.Table.Headers, result.Table.Rows)
 	return nil
 }

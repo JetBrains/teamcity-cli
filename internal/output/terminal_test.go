@@ -124,23 +124,21 @@ func TestTerminalSizeZeroWidth(T *testing.T) {
 func TestWithPagerNonTerminal(T *testing.T) {
 	overrideTerminal(T, false, 120, 40, nil)
 
-	output := captureStdout(T, func() {
-		WithPager(func(w io.Writer) {
-			fmt.Fprintln(w, "hello pager")
-		})
+	var buf bytes.Buffer
+	WithPager(&buf, func(w io.Writer) {
+		fmt.Fprintln(w, "hello pager")
 	})
-	assert.Contains(T, output, "hello pager")
+	assert.Contains(T, buf.String(), "hello pager")
 }
 
 func TestWithPagerFallbackShortContent(T *testing.T) {
 	overrideTerminal(T, true, 80, 50, nil)
 
-	output := captureStdout(T, func() {
-		WithPager(func(w io.Writer) {
-			fmt.Fprintln(w, "short content")
-		})
+	var buf bytes.Buffer
+	WithPager(&buf, func(w io.Writer) {
+		fmt.Fprintln(w, "short content")
 	})
-	assert.Contains(T, output, "short content")
+	assert.Contains(T, buf.String(), "short content")
 }
 
 func TestWithPagerRunsLess(T *testing.T) {
@@ -153,12 +151,12 @@ func TestWithPagerRunsLess(T *testing.T) {
 	}
 	content := strings.Join(lines, "\n") + "\n"
 
+	// less requires a real terminal for stdin, so it will fail and fall back to the out writer
 	output := captureStdout(T, func() {
-		WithPager(func(w io.Writer) {
+		WithPager(os.Stdout, func(w io.Writer) {
 			fmt.Fprint(w, content)
 		})
 	})
-	// less requires a real terminal for stdin, so it will fail and fall back to direct write
 	assert.Contains(T, output, "line 0")
 }
 
@@ -177,12 +175,13 @@ func TestWithPagerLessError(T *testing.T) {
 	}
 	content := strings.Join(lines, "\n") + "\n"
 
-	output := captureStdout(T, func() {
-		WithPager(func(w io.Writer) {
+	var buf bytes.Buffer
+	// pager fails → falls back to the out writer
+	captureStdout(T, func() {
+		WithPager(&buf, func(w io.Writer) {
 			fmt.Fprint(w, content)
 		})
 	})
-	// pager fails → falls back to direct stdout write
-	assert.Contains(T, output, "line 0")
-	assert.Contains(T, output, "line 19")
+	assert.Contains(T, buf.String(), "line 0")
+	assert.Contains(T, buf.String(), "line 19")
 }

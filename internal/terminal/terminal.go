@@ -40,14 +40,16 @@ type Client struct {
 	username   string
 	token      string
 	httpClient *http.Client
+	debugf     func(string, ...any)
 }
 
-func NewClient(baseURL, username, token string) *Client {
+func NewClient(baseURL, username, token string, debugf func(string, ...any)) *Client {
 	jar, _ := cookiejar.New(nil)
 	return &Client{
 		baseURL:  strings.TrimSuffix(baseURL, "/"),
 		username: username,
 		token:    token,
+		debugf:   debugf,
 		httpClient: &http.Client{
 			Jar:     jar,
 			Timeout: 30 * time.Second,
@@ -72,7 +74,7 @@ func (c *Client) OpenSession(agentID int) (*Session, error) {
 	}
 	req.SetBasicAuth(username, c.token)
 
-	output.Debug("> POST %s", endpoint)
+	c.debugf("> POST %s", endpoint)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -80,7 +82,7 @@ func (c *Client) OpenSession(agentID int) (*Session, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	output.Debug("< %s", resp.Status)
+	c.debugf("< %s", resp.Status)
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, tcerrors.AuthenticationFailed()
@@ -136,7 +138,7 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 		header.Set("Cookie", strings.Join(cookies, "; "))
 	}
 
-	output.Debug("WebSocket URL: %s", wsURL)
+	c.debugf("WebSocket URL: %s", wsURL)
 
 	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err != nil {
@@ -148,7 +150,7 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 		return nil, fmt.Errorf("WebSocket connection failed: %w", err)
 	}
 
-	return &Conn{conn: conn, done: make(chan struct{})}, nil
+	return &Conn{conn: conn, done: make(chan struct{}), debugf: c.debugf}, nil
 }
 
 type Conn struct {
@@ -158,6 +160,7 @@ type Conn struct {
 	mu        sync.Mutex
 	writeMu   sync.Mutex // serializes writes to WebSocket
 	err       error
+	debugf    func(string, ...any)
 }
 
 const execMarker = "__TC_EXEC_7f3a9e2b__"
@@ -406,10 +409,10 @@ func (tc *Conn) sendJSON(cmd string, details map[string]string) {
 		"details":                details,
 	})
 	if err != nil {
-		output.Debug("terminal: failed to marshal %s command: %v", cmd, err)
+		tc.debugf("terminal: failed to marshal %s command: %v", cmd, err)
 		return
 	}
 	if err := tc.writeMessage(websocket.TextMessage, data); err != nil {
-		output.Debug("terminal: failed to send %s command: %v", cmd, err)
+		tc.debugf("terminal: failed to send %s command: %v", cmd, err)
 	}
 }

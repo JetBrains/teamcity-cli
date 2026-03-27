@@ -294,7 +294,7 @@ func TestLoadLocalChanges(t *testing.T) {
 
 		createFile(t, dir, "test.txt", "modified")
 
-		patch, err := loadLocalChanges("git")
+		patch, err := loadLocalChanges("git", nil)
 		require.NoError(t, err)
 		assert.Contains(t, string(patch), "modified")
 	})
@@ -308,7 +308,7 @@ func TestLoadLocalChanges(t *testing.T) {
 		runGit(t, dir, "add", ".")
 		runGit(t, dir, "commit", "-m", "initial")
 
-		_, err := loadLocalChanges("git")
+		_, err := loadLocalChanges("git", nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "no uncommitted changes")
 	})
@@ -318,7 +318,7 @@ func TestLoadLocalChanges(t *testing.T) {
 		restore := chdir(t, dir)
 		defer restore()
 
-		_, err := loadLocalChanges("git")
+		_, err := loadLocalChanges("git", nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "not a git repository")
 	})
@@ -328,14 +328,14 @@ func TestLoadLocalChanges(t *testing.T) {
 		patchFile := filepath.Join(t.TempDir(), "changes.patch")
 		require.NoError(t, os.WriteFile(patchFile, []byte("diff content"), 0644))
 
-		patch, err := loadLocalChanges(patchFile)
+		patch, err := loadLocalChanges(patchFile, nil)
 		require.NoError(t, err)
 		assert.Equal(t, "diff content", string(patch))
 	})
 
 	t.Run("file source not found", func(t *testing.T) {
 		t.Parallel()
-		_, err := loadLocalChanges("/nonexistent/path.patch")
+		_, err := loadLocalChanges("/nonexistent/path.patch", nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not found")
 	})
@@ -345,7 +345,7 @@ func TestLoadLocalChanges(t *testing.T) {
 		patchFile := filepath.Join(t.TempDir(), "empty.patch")
 		require.NoError(t, os.WriteFile(patchFile, []byte{}, 0644))
 
-		_, err := loadLocalChanges(patchFile)
+		_, err := loadLocalChanges(patchFile, nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "empty")
 	})

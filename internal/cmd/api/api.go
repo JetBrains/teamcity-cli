@@ -107,7 +107,7 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	var body io.Reader
 	if opts.input != "" {
 		if opts.input == "-" {
-			data, err := io.ReadAll(os.Stdin)
+			data, err := io.ReadAll(f.IOStreams.In)
 			if err != nil {
 				return fmt.Errorf("failed to read stdin: %w", err)
 			}
@@ -148,7 +148,7 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	}
 
 	if opts.paginate {
-		return runAPIPaginated(client, endpoint, headers, opts)
+		return runAPIPaginated(f.Printer, client, endpoint, headers, opts)
 	}
 
 	resp, err := client.RawRequest(opts.method, endpoint, body, headers)
@@ -156,10 +156,10 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 		return err
 	}
 
-	return outputAPIResponse(resp.Body, resp.StatusCode, resp.Headers, opts)
+	return outputAPIResponse(f.Printer, resp.Body, resp.StatusCode, resp.Headers, opts)
 }
 
-func runAPIPaginated(client api.ClientInterface, endpoint string, headers map[string]string, opts *apiOptions) error {
+func runAPIPaginated(p *output.Printer, client api.ClientInterface, endpoint string, headers map[string]string, opts *apiOptions) error {
 	pages, err := fetchAllPages(client, endpoint, headers)
 	if err != nil {
 		return err
@@ -182,14 +182,14 @@ func runAPIPaginated(client api.ClientInterface, endpoint string, headers map[st
 		if err != nil {
 			return fmt.Errorf("failed to merge pages: %w", err)
 		}
-		return outputAPIResponse(merged, http.StatusOK, nil, opts)
+		return outputAPIResponse(p, merged, http.StatusOK, nil, opts)
 	}
 
 	for i, page := range pages {
 		if i > 0 {
-			fmt.Println()
+			_, _ = fmt.Fprintln(p.Out)
 		}
-		if err := outputAPIResponse(page, http.StatusOK, nil, opts); err != nil {
+		if err := outputAPIResponse(p, page, http.StatusOK, nil, opts); err != nil {
 			return err
 		}
 	}
@@ -197,19 +197,19 @@ func runAPIPaginated(client api.ClientInterface, endpoint string, headers map[st
 	return nil
 }
 
-func outputAPIResponse(body []byte, statusCode int, respHeaders map[string][]string, opts *apiOptions) error {
+func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeaders map[string][]string, opts *apiOptions) error {
 	if opts.silent && statusCode >= 200 && statusCode < 300 {
 		return nil
 	}
 
 	if opts.include && respHeaders != nil {
-		fmt.Printf("HTTP/1.1 %d %s\n", statusCode, http.StatusText(statusCode))
+		_, _ = fmt.Fprintf(p.Out, "HTTP/1.1 %d %s\n", statusCode, http.StatusText(statusCode))
 		for k, v := range respHeaders {
 			for _, val := range v {
-				fmt.Printf("%s: %s\n", k, val)
+				_, _ = fmt.Fprintf(p.Out, "%s: %s\n", k, val)
 			}
 		}
-		fmt.Println()
+		_, _ = fmt.Fprintln(p.Out)
 	}
 
 	isError := statusCode < 200 || statusCode >= 300
@@ -219,21 +219,21 @@ func outputAPIResponse(body []byte, statusCode int, respHeaders map[string][]str
 	if len(body) > 0 {
 		switch {
 		case opts.raw:
-			fmt.Print(string(body))
+			_, _ = fmt.Fprint(p.Out, string(body))
 		case isHTML && isError:
-			output.Warn("Server returned HTML error page (status %d)", statusCode)
+			p.Warn("Server returned HTML error page (status %d)", statusCode)
 		default:
 			if prettyJSON, ok := prettyPrintJSON(body); ok {
-				fmt.Println(prettyJSON)
+				_, _ = fmt.Fprintln(p.Out, prettyJSON)
 			} else {
-				fmt.Print(string(body))
+				_, _ = fmt.Fprint(p.Out, string(body))
 			}
 		}
 	}
 
 	if isError {
 		if !opts.include && len(body) == 0 {
-			output.Warn("Request failed with status %d", statusCode)
+			p.Warn("Request failed with status %d", statusCode)
 		}
 		return fmt.Errorf("request failed with status %d", statusCode)
 	}

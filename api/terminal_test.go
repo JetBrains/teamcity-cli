@@ -19,7 +19,8 @@ func getTerminalClient() *terminal.Client {
 	if user == "" {
 		user, pass = "admin", "admin123"
 	}
-	return terminal.NewClient(client.BaseURL, user, pass)
+	noop := func(string, ...any) {}
+	return terminal.NewClient(client.BaseURL, user, pass, noop)
 }
 
 func getTerminalAgent(t *testing.T) api.Agent {

@@ -45,7 +45,7 @@ Auto-detects installed agents when --agent is not specified.`,
   teamcity skill install --agent claude-code --agent cursor
   teamcity skill install --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillInstall(opts, false)
+			return runSkillInstall(f.Printer, opts, false)
 		},
 	}
 
@@ -67,7 +67,7 @@ Auto-detects installed agents when --agent is not specified.`,
   teamcity skill update --agent claude-code
   teamcity skill update --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillInstall(opts, true)
+			return runSkillInstall(f.Printer, opts, true)
 		},
 	}
 
@@ -80,7 +80,7 @@ func addSkillFlags(cmd *cobra.Command, opts *skillOptions) {
 	cmd.Flags().BoolVar(&opts.project, "project", false, "Install to current project instead of globally")
 }
 
-func runSkillInstall(opts *skillOptions, checkVersion bool) error {
+func runSkillInstall(p *output.Printer, opts *skillOptions, checkVersion bool) error {
 	agents, err := resolveSkillAgents(opts.agents, !opts.project)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func runSkillInstall(opts *skillOptions, checkVersion bool) error {
 			return err
 		}
 		if installed == bundled {
-			output.Success("Already up to date (%s)", bundled)
+			p.Success("Already up to date (%s)", bundled)
 			return nil
 		}
 	}
@@ -113,13 +113,13 @@ func runSkillInstall(opts *skillOptions, checkVersion bool) error {
 	for _, r := range results {
 		switch {
 		case !r.Existed:
-			output.Success("Installed for %s (%s)", r.Agent, bundled)
+			p.Success("Installed for %s (%s)", r.Agent, bundled)
 		case r.PriorVersion != "" && r.PriorVersion != bundled:
-			output.Success("Updated for %s (%s → %s)", r.Agent, r.PriorVersion, bundled)
+			p.Success("Updated for %s (%s → %s)", r.Agent, r.PriorVersion, bundled)
 		case r.PriorVersion == "":
-			output.Success("Updated for %s (unversioned → %s)", r.Agent, bundled)
+			p.Success("Updated for %s (unversioned → %s)", r.Agent, bundled)
 		default:
-			output.Success("Reinstalled for %s (%s)", r.Agent, bundled)
+			p.Success("Reinstalled for %s (%s)", r.Agent, bundled)
 		}
 	}
 	return nil
@@ -135,7 +135,7 @@ func newSkillRemoveCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity skill remove --agent claude-code
   teamcity skill remove --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillRemove(opts)
+			return runSkillRemove(f.Printer, opts)
 		},
 	}
 
@@ -143,7 +143,7 @@ func newSkillRemoveCmd(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func runSkillRemove(opts *skillOptions) error {
+func runSkillRemove(p *output.Printer, opts *skillOptions) error {
 	agents, err := resolveSkillAgents(opts.agents, !opts.project)
 	if err != nil {
 		return err
@@ -160,9 +160,9 @@ func runSkillRemove(opts *skillOptions) error {
 
 	for _, r := range results {
 		if r.Existed {
-			output.Success("Removed from %s", r.Agent)
+			p.Success("Removed from %s", r.Agent)
 		} else {
-			output.Info("Not installed for %s, nothing to remove", r.Agent)
+			p.Info("Not installed for %s, nothing to remove", r.Agent)
 		}
 	}
 	return nil

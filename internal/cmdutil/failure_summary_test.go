@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/acarl005/stripansi"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,25 +31,10 @@ func failureSummaryFixture(t *testing.T, tests api.TestOccurrences, problems api
 	}))
 	t.Cleanup(ts.Close)
 
-	client := api.NewClient(ts.URL, "test")
-	return captureStdout(t, func() {
-		PrintFailureSummary(client, "123", "42", "https://tc/build/123", statusText)
-	})
-}
-
-func captureStdout(t *testing.T, fn func()) string {
-	t.Helper()
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
 	var buf bytes.Buffer
-	done := make(chan struct{})
-	go func() { _, _ = buf.ReadFrom(r); close(done) }()
-	fn()
-	w.Close()
-	os.Stdout = old
-	<-done
-	r.Close()
+	p := &output.Printer{Out: &buf, ErrOut: &buf}
+	client := api.NewClient(ts.URL, "test")
+	PrintFailureSummary(p, client, "123", "42", "https://tc/build/123", statusText)
 	return stripansi.Strip(buf.String())
 }
 
@@ -192,11 +177,12 @@ func TestPrintFailureSummary(t *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		t.Cleanup(ts.Close)
-		client := api.NewClient(ts.URL, "test")
 
-		out := captureStdout(t, func() {
-			PrintFailureSummary(client, "1", "42", "https://tc/build/1", "")
-		})
+		var buf bytes.Buffer
+		p := &output.Printer{Out: &buf, ErrOut: &buf}
+		client := api.NewClient(ts.URL, "test")
+		PrintFailureSummary(p, client, "1", "42", "https://tc/build/1", "")
+		out := stripansi.Strip(buf.String())
 		// Should still print header and URL, not panic
 		assert.Contains(t, out, "#42 failed")
 		assert.Contains(t, out, "https://tc/build/1")

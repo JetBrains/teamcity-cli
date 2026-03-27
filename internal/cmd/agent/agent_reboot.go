@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +44,7 @@ func runAgentMove(f *cmdutil.Factory, nameOrID string, poolID int) error {
 		return fmt.Errorf("failed to move agent: %w", err)
 	}
 
-	output.Success("Moved agent %s to pool %d", agentName, poolID)
+	f.Printer.Success("Moved agent %s to pool %d", agentName, poolID)
 	return nil
 }
 
@@ -104,7 +103,7 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 			return err
 		}
 		if !confirm {
-			output.Info("Canceled")
+			f.Printer.Info("Canceled")
 			return nil
 		}
 	}
@@ -114,10 +113,10 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 	}
 
 	if opts.afterBuild {
-		output.Success("Reboot scheduled for %s", agentName)
-		fmt.Println("  The agent will reboot after the current build finishes.")
+		f.Printer.Success("Reboot scheduled for %s", agentName)
+		_, _ = fmt.Fprintln(f.Printer.Out, "  The agent will reboot after the current build finishes.")
 	} else {
-		output.Success("Reboot initiated for %s", agentName)
+		f.Printer.Success("Reboot initiated for %s", agentName)
 	}
 	return nil
 }

@@ -15,7 +15,7 @@ func TestTLSOptionNoPaths(t *testing.T) {
 	t.Setenv("TEAMCITY_CA_CERT", "")
 	config.Init()
 
-	opt, err := tlsOption()
+	opt, err := NewFactory().tlsOption()
 	require.NoError(t, err)
 	assert.Nil(t, opt)
 }
@@ -27,7 +27,7 @@ func TestTLSOptionCertWithoutKey(t *testing.T) {
 	t.Setenv("TEAMCITY_CA_CERT", "")
 	config.Init()
 
-	_, err := tlsOption()
+	_, err := NewFactory().tlsOption()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "both client certificate and key must be provided together")
 }
@@ -39,7 +39,7 @@ func TestTLSOptionKeyWithoutCert(t *testing.T) {
 	t.Setenv("TEAMCITY_CA_CERT", "")
 	config.Init()
 
-	_, err := tlsOption()
+	_, err := NewFactory().tlsOption()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "both client certificate and key must be provided together")
 }

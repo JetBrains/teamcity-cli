@@ -102,39 +102,40 @@ func runPoolView(f *cmdutil.Factory, poolID int, opts *cmdutil.ViewOptions) erro
 	}
 
 	if opts.JSON {
-		return output.PrintJSON(pool)
+		return f.Printer.PrintJSON(pool)
 	}
 
-	fmt.Printf("%s\n", output.Cyan(pool.Name))
-	fmt.Printf("ID: %d\n", pool.ID)
+	p := f.Printer
+	_, _ = fmt.Fprintf(p.Out, "%s\n", output.Cyan(pool.Name))
+	_, _ = fmt.Fprintf(p.Out, "ID: %d\n", pool.ID)
 
 	if pool.MaxAgents > 0 {
-		fmt.Printf("Max Agents: %d\n", pool.MaxAgents)
+		_, _ = fmt.Fprintf(p.Out, "Max Agents: %d\n", pool.MaxAgents)
 	} else {
-		fmt.Printf("Max Agents: %s\n", output.Faint("unlimited"))
+		_, _ = fmt.Fprintf(p.Out, "Max Agents: %s\n", output.Faint("unlimited"))
 	}
 
 	if pool.Agents != nil && pool.Agents.Count > 0 {
-		fmt.Printf("\n%s (%d)\n", output.Bold("Agents"), pool.Agents.Count)
+		_, _ = fmt.Fprintf(p.Out, "\n%s (%d)\n", output.Bold("Agents"), pool.Agents.Count)
 		for _, a := range pool.Agents.Agents {
 			status := cmdutil.FormatAgentStatus(a)
-			fmt.Printf("  %d  %s  %s\n", a.ID, a.Name, status)
+			_, _ = fmt.Fprintf(p.Out, "  %d  %s  %s\n", a.ID, a.Name, status)
 		}
 	} else {
-		fmt.Printf("\n%s\n", output.Faint("No agents in this pool"))
+		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint("No agents in this pool"))
 	}
 
 	if pool.Projects != nil && pool.Projects.Count > 0 {
-		fmt.Printf("\n%s (%d)\n", output.Bold("Projects"), pool.Projects.Count)
-		for _, p := range pool.Projects.Projects {
-			fmt.Printf("  %s  %s\n", p.ID, p.Name)
+		_, _ = fmt.Fprintf(p.Out, "\n%s (%d)\n", output.Bold("Projects"), pool.Projects.Count)
+		for _, pp := range pool.Projects.Projects {
+			_, _ = fmt.Fprintf(p.Out, "  %s  %s\n", pp.ID, pp.Name)
 		}
 	} else {
-		fmt.Printf("\n%s\n", output.Faint("No projects assigned to this pool"))
+		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint("No projects assigned to this pool"))
 	}
 
 	webURL := fmt.Sprintf("%s/agents.html?tab=agentPools&poolId=%d", config.GetServerURL(), poolID)
-	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(webURL))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), output.Green(webURL))
 
 	return nil
 }

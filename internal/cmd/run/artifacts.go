@@ -56,6 +56,7 @@ Shows artifact names and sizes. Use teamcity run download to download artifacts.
 }
 
 func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions) error {
+	p := f.Printer
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -74,7 +75,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 			return fmt.Errorf("no runs found for job %s", opts.job)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
-		output.Info("Listing artifacts for run %s  #%s", runID, runs.Builds[0].Number)
+		p.Info("Listing artifacts for run %s  #%s", runID, runs.Builds[0].Number)
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
@@ -85,11 +86,11 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 	}
 
 	if opts.json {
-		return output.PrintJSON(artifacts)
+		return p.PrintJSON(artifacts)
 	}
 
 	if artifacts.Count == 0 {
-		output.Info("No artifacts found for this run")
+		p.Info("No artifacts found for this run")
 		return nil
 	}
 
@@ -102,23 +103,23 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 		}
 	}
 
-	fmt.Printf("ARTIFACTS (%d %s, %s total)\n\n", len(flatList), english.PluralWord(len(flatList), "file", "files"), humanize.IBytes(uint64(totalSize)))
-	fmt.Printf("%-*s  %10s\n", nameWidth, "NAME", "SIZE")
+	_, _ = fmt.Fprintf(p.Out, "ARTIFACTS (%d %s, %s total)\n\n", len(flatList), english.PluralWord(len(flatList), "file", "files"), humanize.IBytes(uint64(totalSize)))
+	_, _ = fmt.Fprintf(p.Out, "%-*s  %10s\n", nameWidth, "NAME", "SIZE")
 
 	for _, a := range flatList {
 		size := ""
 		if a.Size > 0 {
 			size = humanize.IBytes(uint64(a.Size))
 		}
-		fmt.Printf("%-*s  %s\n", nameWidth, a.Name, output.Faint(fmt.Sprintf("%10s", size)))
+		_, _ = fmt.Fprintf(p.Out, "%-*s  %s\n", nameWidth, a.Name, output.Faint(fmt.Sprintf("%10s", size)))
 	}
 
 	if opts.path != "" {
-		fmt.Printf("\nDownload dir: teamcity run download %s --path %s\n", runID, opts.path)
+		_, _ = fmt.Fprintf(p.Out, "\nDownload dir: teamcity run download %s --path %s\n", runID, opts.path)
 	} else {
-		fmt.Printf("\nDownload all: teamcity run download %s\n", runID)
+		_, _ = fmt.Fprintf(p.Out, "\nDownload all: teamcity run download %s\n", runID)
 	}
-	fmt.Printf("Download one: teamcity run download %s -a \"<name>\"\n", runID)
+	_, _ = fmt.Fprintf(p.Out, "Download one: teamcity run download %s -a \"<name>\"\n", runID)
 	return nil
 }
 

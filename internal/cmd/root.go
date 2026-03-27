@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -42,20 +41,21 @@ Documentation:  https://jb.gg/tc/docs
 Report issues:  https://jb.gg/tc/issues`,
 		Version: Version,
 		Run: func(cmd *cobra.Command, args []string) {
-			output.PrintLogo()
-			fmt.Println()
-			fmt.Println("TeamCity CLI " + output.Faint("v"+Version) + " - " + output.Faint("https://jb.gg/tc/docs"))
-			fmt.Println()
-			fmt.Println("Usage: teamcity <command> [flags]")
-			fmt.Println()
-			fmt.Println("Common commands:")
-			fmt.Println("  auth login              Authenticate with TeamCity")
-			fmt.Println("  run list                List recent runs")
-			fmt.Println("  run start <job>         Trigger a new run")
-			fmt.Println("  run view <id>           View run details")
-			fmt.Println("  job list                List jobs")
-			fmt.Println()
-			fmt.Println(output.Faint("Run 'teamcity --help' for full command list, or 'teamcity <command> --help' for details"))
+			out := f.Printer.Out
+			output.PrintLogo(out)
+			_, _ = fmt.Fprintln(out)
+			_, _ = fmt.Fprintln(out, "TeamCity CLI "+output.Faint("v"+Version)+" - "+output.Faint("https://jb.gg/tc/docs"))
+			_, _ = fmt.Fprintln(out)
+			_, _ = fmt.Fprintln(out, "Usage: teamcity <command> [flags]")
+			_, _ = fmt.Fprintln(out)
+			_, _ = fmt.Fprintln(out, "Common commands:")
+			_, _ = fmt.Fprintln(out, "  auth login              Authenticate with TeamCity")
+			_, _ = fmt.Fprintln(out, "  run list                List recent runs")
+			_, _ = fmt.Fprintln(out, "  run start <job>         Trigger a new run")
+			_, _ = fmt.Fprintln(out, "  run view <id>           View run details")
+			_, _ = fmt.Fprintln(out, "  job list                List jobs")
+			_, _ = fmt.Fprintln(out)
+			_, _ = fmt.Fprintln(out, output.Faint("Run 'teamcity --help' for full command list, or 'teamcity <command> --help' for details"))
 		},
 	}
 
@@ -91,7 +91,7 @@ func Execute() error {
 	f := cmdutil.NewFactory()
 	rootCmd := buildRootCmd(f)
 
-	RegisterAliases(rootCmd)
+	RegisterAliases(rootCmd, f.Printer)
 	rootCmd.SilenceErrors = true
 	err := rootCmd.Execute()
 	if err != nil && errors.Is(err, api.ErrAuthentication) {
@@ -99,7 +99,7 @@ func Execute() error {
 	}
 	if err != nil {
 		if _, ok := errors.AsType[*cmdutil.ExitError](err); !ok {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", enrichAPIError(err))
+			_, _ = fmt.Fprintf(f.Printer.ErrOut, "Error: %v\n", enrichAPIError(err))
 		}
 	}
 	return err
@@ -117,7 +117,7 @@ func tryAutoReauth(f *cmdutil.Factory) {
 	if err != nil || time.Until(t) > 0 {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "\n%s Token expired. Run %s to re-authenticate.\n", output.Yellow("!"), output.Cyan("teamcity auth login"))
+	_, _ = fmt.Fprintf(f.Printer.ErrOut, "\n%s Token expired. Run %s to re-authenticate.\n", output.Yellow("!"), output.Cyan("teamcity auth login"))
 }
 
 func enrichAPIError(err error) error {
@@ -166,9 +166,9 @@ func notFoundHint(message string) string {
 	}
 }
 
-// RegisterAliases forwards to alias.RegisterAliases for backward compatibility with tests.
-func RegisterAliases(rootCmd *cobra.Command) {
-	alias.RegisterAliases(rootCmd)
+// RegisterAliases forwards to alias.RegisterAliases.
+func RegisterAliases(rootCmd *cobra.Command, p *output.Printer) {
+	alias.RegisterAliases(rootCmd, p)
 }
 
 // RootCommand is an alias for cobra.Command for external access

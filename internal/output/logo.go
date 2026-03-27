@@ -2,6 +2,7 @@ package output
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"strings"
 	"time"
@@ -16,9 +17,9 @@ const Logo = `████████╗ ██████╗
    ██║   ╚██████╗
    ╚═╝    ╚═════╝`
 
-func PrintLogo() {
+func PrintLogo(w io.Writer) {
 	if !IsTerminal() {
-		fmt.Println(Cyan("\n" + Logo))
+		_, _ = fmt.Fprintln(w, Cyan("\n"+Logo))
 		return
 	}
 	cyan := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ffff"))
@@ -41,20 +42,20 @@ func PrintLogo() {
 			for c, ch := range []rune(line) {
 				switch {
 				case ch == ' ':
-					fmt.Print(" ")
+					_, _ = fmt.Fprint(w, " ")
 				case revealed[struct{ r, c int }{r, c}]:
-					fmt.Print(cyan.Render(string(ch)))
+					_, _ = fmt.Fprint(w, cyan.Render(string(ch)))
 				default:
-					fmt.Print(dim.Render(string(glyphs[rand.Intn(len(glyphs))])))
+					_, _ = fmt.Fprint(w, dim.Render(string(glyphs[rand.Intn(len(glyphs))])))
 				}
 			}
-			fmt.Print("\033[K\n")
+			_, _ = fmt.Fprint(w, "\033[K\n")
 		}
 	}
-	fmt.Print("\033[?25l\n")
-	defer fmt.Print("\033[?25h")
+	_, _ = fmt.Fprint(w, "\033[?25l\n")
+	defer func() { _, _ = fmt.Fprint(w, "\033[?25h") }()
 	moveUp := fmt.Sprintf("\033[%dA", height)
-	frame := func(d time.Duration) { render(); time.Sleep(d); fmt.Print(moveUp) }
+	frame := func(d time.Duration) { render(); time.Sleep(d); _, _ = fmt.Fprint(w, moveUp) }
 	for range 10 {
 		frame(50 * time.Millisecond)
 	}
@@ -69,6 +70,6 @@ func PrintLogo() {
 		frame(50 * time.Millisecond)
 	}
 	for _, line := range lines {
-		fmt.Print(cyan.Render(line) + "\033[K\n")
+		_, _ = fmt.Fprint(w, cyan.Render(line)+"\033[K\n")
 	}
 }

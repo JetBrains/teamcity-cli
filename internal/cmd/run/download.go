@@ -51,6 +51,7 @@ func newRunDownloadCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) error {
+	p := f.Printer
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -75,9 +76,9 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 
 	if len(flatList) == 0 {
 		if opts.path != "" {
-			fmt.Printf("No artifacts found under %s\n", opts.path)
+			_, _ = fmt.Fprintf(p.Out, "No artifacts found under %s\n", opts.path)
 		} else {
-			fmt.Println("No artifacts found for this run")
+			_, _ = fmt.Fprintln(p.Out, "No artifacts found for this run")
 		}
 		return nil
 	}
@@ -90,7 +91,7 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 	}
 
 	if len(flatList) == 0 {
-		fmt.Println("No artifacts match the pattern")
+		_, _ = fmt.Fprintln(p.Out, "No artifacts match the pattern")
 		return nil
 	}
 
@@ -101,34 +102,34 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 		}
 	}
 
-	fmt.Printf("Downloading %d %s (%s total) to %s\n\n",
+	_, _ = fmt.Fprintf(p.Out, "Downloading %d %s (%s total) to %s\n\n",
 		len(flatList), english.PluralWord(len(flatList), "file", "files"),
 		humanize.IBytes(uint64(totalSize)), opts.output)
-	fmt.Printf("%-*s  %10s\n", nameWidth, "NAME", "SIZE")
+	_, _ = fmt.Fprintf(p.Out, "%-*s  %10s\n", nameWidth, "NAME", "SIZE")
 
 	downloaded := 0
 	for _, artifact := range flatList {
 		rel, err := filepath.Rel(absOutput, filepath.Join(absOutput, artifact.Name))
 		if err != nil || !filepath.IsLocal(rel) {
-			fmt.Printf("%-*s  %10s  %s path escapes output directory\n", nameWidth, artifact.Name, "", output.Red("   ✗"))
+			_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s path escapes output directory\n", nameWidth, artifact.Name, "", output.Red("   ✗"))
 			continue
 		}
 		outputPath := filepath.Join(absOutput, rel)
 		size := humanize.IBytes(uint64(artifact.Size))
 
-		if err := downloadArtifact(ctx, client, runID, artifact, outputPath, nameWidth); err != nil {
-			fmt.Printf("%-*s  %10s  %s %v\n", nameWidth, artifact.Name, size, output.Red("   ✗"), err)
+		if err := downloadArtifact(ctx, client, runID, artifact, outputPath, nameWidth, p.Quiet, p.Out); err != nil {
+			_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s %v\n", nameWidth, artifact.Name, size, output.Red("   ✗"), err)
 			continue
 		}
-		fmt.Printf("%-*s  %10s  %s\n", nameWidth, artifact.Name, size, output.Green("   ✓"))
+		_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s\n", nameWidth, artifact.Name, size, output.Green("   ✓"))
 		downloaded++
 	}
 
-	fmt.Printf("\n%s %s downloaded\n", output.Green("✓"), english.Plural(downloaded, "artifact", ""))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s downloaded\n", output.Green("✓"), english.Plural(downloaded, "artifact", ""))
 	return nil
 }
 
-func downloadArtifact(ctx context.Context, client api.ClientInterface, runID string, artifact api.Artifact, outputPath string, nameWidth int) error {
+func downloadArtifact(ctx context.Context, client api.ClientInterface, runID string, artifact api.Artifact, outputPath string, nameWidth int, quiet bool, out io.Writer) error {
 	if dir := filepath.Dir(outputPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
@@ -141,9 +142,10 @@ func downloadArtifact(ctx context.Context, client api.ClientInterface, runID str
 	}
 
 	var w io.Writer = f
-	if output.IsTerminal() && !output.Quiet && artifact.Size > 0 {
+	if output.IsTerminal() && !quiet && artifact.Size > 0 {
 		pw := &progressWriter{
 			w:         f,
+			out:       out,
 			name:      artifact.Name,
 			size:      humanize.IBytes(uint64(artifact.Size)),
 			total:     artifact.Size,
@@ -171,6 +173,7 @@ func downloadArtifact(ctx context.Context, client api.ClientInterface, runID str
 
 type progressWriter struct {
 	w          io.Writer
+	out        io.Writer
 	name       string
 	size       string
 	total      int64
@@ -187,11 +190,11 @@ func (p *progressWriter) Write(b []byte) (int, error) {
 	if now.Sub(p.lastUpdate) >= 100*time.Millisecond {
 		p.lastUpdate = now
 		pct := int(float64(p.written) / float64(p.total) * 100)
-		_, _ = fmt.Fprintf(os.Stdout, "\r%-*s  %10s  %3d%%", p.nameWidth, p.name, p.size, pct)
+		_, _ = fmt.Fprintf(p.out, "\r%-*s  %10s  %3d%%", p.nameWidth, p.name, p.size, pct)
 	}
 	return n, err
 }
 
 func (p *progressWriter) clear() {
-	_, _ = fmt.Fprint(os.Stdout, "\r\033[K")
+	_, _ = fmt.Fprint(p.out, "\r\033[K")
 }

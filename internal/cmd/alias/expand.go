@@ -17,10 +17,10 @@ const maxAliasDepth = 10
 
 var aliasDepth int
 
-func RegisterAliases(rootCmd *cobra.Command) {
+func RegisterAliases(rootCmd *cobra.Command, p *output.Printer) {
 	for name, expansion := range config.GetAllAliases() {
 		if isBuiltinCommand(rootCmd, name) {
-			output.Debug("skipping alias %q: conflicts with built-in command", name)
+			p.Debug("skipping alias %q: conflicts with built-in command", name)
 			continue
 		}
 		if exp, shell := config.ParseExpansion(expansion); shell {

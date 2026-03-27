@@ -102,18 +102,18 @@ func runJobView(f *cmdutil.Factory, jobID string, opts *cmdutil.ViewOptions) err
 	}
 
 	if opts.JSON {
-		return output.PrintJSON(buildType)
+		return f.Printer.PrintJSON(buildType)
 	}
 
-	output.PrintViewHeader(buildType.Name, buildType.WebURL, func() {
-		output.PrintField("ID", buildType.ID)
-		output.PrintField("Project", buildType.ProjectName+" ("+buildType.ProjectID+")")
+	f.Printer.PrintViewHeader(buildType.Name, buildType.WebURL, func() {
+		f.Printer.PrintField("ID", buildType.ID)
+		f.Printer.PrintField("Project", buildType.ProjectName+" ("+buildType.ProjectID+")")
 
 		status := output.Green("Active")
 		if buildType.Paused {
 			status = output.Faint("Paused")
 		}
-		output.PrintField("Status", status)
+		f.Printer.PrintField("Status", status)
 	})
 
 	return nil

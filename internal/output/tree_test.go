@@ -13,9 +13,9 @@ func TestPrintTree(t *testing.T) {
 		},
 	}
 	// Verify it doesn't panic; output goes to stdout.
-	PrintTree(root)
+	DefaultPrinter().PrintTree(root)
 }
 
 func TestPrintTreeSingleNode(t *testing.T) {
-	PrintTree(TreeNode{Label: "Only root"})
+	DefaultPrinter().PrintTree(TreeNode{Label: "Only root"})
 }
