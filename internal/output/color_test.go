@@ -30,4 +30,14 @@ func TestOutputFunctions(T *testing.T) {
 			Debug("test %s", "debug")
 		})
 	}
+
+	T.Run("PrintField", func(t *testing.T) {
+		PrintField("Name", "value")
+	})
+
+	T.Run("PrintViewHeader", func(t *testing.T) {
+		PrintViewHeader("Title", "https://example.com", func() {
+			PrintField("Status", "OK")
+		})
+	})
 }
