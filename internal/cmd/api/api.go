@@ -216,12 +216,22 @@ func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeade
 	isHTML := len(body) > 0 && (strings.HasPrefix(strings.TrimSpace(string(body)), "<!") ||
 		strings.HasPrefix(strings.TrimSpace(string(body)), "<html"))
 
+	if isError {
+		if opts.raw && len(body) > 0 {
+			_, _ = fmt.Fprint(p.Out, string(body))
+		}
+		if msg := api.ExtractErrorMessage(body); msg != "" {
+			return fmt.Errorf("%d %s — %s", statusCode, http.StatusText(statusCode), msg)
+		}
+		return fmt.Errorf("request failed with status %d", statusCode)
+	}
+
 	if len(body) > 0 {
 		switch {
 		case opts.raw:
 			_, _ = fmt.Fprint(p.Out, string(body))
-		case isHTML && isError:
-			p.Warn("Server returned HTML error page (status %d)", statusCode)
+		case isHTML:
+			p.Warn("Server returned HTML page (status %d)", statusCode)
 		default:
 			if prettyJSON, ok := prettyPrintJSON(body); ok {
 				_, _ = fmt.Fprintln(p.Out, prettyJSON)
@@ -229,13 +239,6 @@ func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeade
 				_, _ = fmt.Fprint(p.Out, string(body))
 			}
 		}
-	}
-
-	if isError {
-		if !opts.include && len(body) == 0 {
-			p.Warn("Request failed with status %d", statusCode)
-		}
-		return fmt.Errorf("request failed with status %d", statusCode)
 	}
 
 	return nil

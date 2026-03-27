@@ -361,7 +361,7 @@ func TestExtractErrorMessage(T *testing.T) {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := extractErrorMessage([]byte(tc.body))
+			got := ExtractErrorMessage([]byte(tc.body))
 			assert.Equal(t, tc.want, got)
 		})
 	}

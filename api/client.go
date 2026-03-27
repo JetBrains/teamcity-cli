@@ -325,7 +325,7 @@ func (c *Client) getWithRetry(path string, result any, retry RetryConfig) error 
 func (c *Client) handleErrorResponse(resp *http.Response) error {
 	bodyBytes, _ := io.ReadAll(resp.Body)
 
-	message := extractErrorMessage(bodyBytes)
+	message := ExtractErrorMessage(bodyBytes)
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
@@ -346,8 +346,8 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 	}
 }
 
-// extractErrorMessage extracts a clean error message from a JSON or XML API response.
-func extractErrorMessage(body []byte) string {
+// ExtractErrorMessage extracts a clean error message from a JSON or XML API response.
+func ExtractErrorMessage(body []byte) string {
 	var errResp APIErrorResponse
 	if err := json.Unmarshal(body, &errResp); err == nil {
 		if len(errResp.Errors) > 0 {
