@@ -338,6 +338,45 @@ Environment variables take precedence over per-server config file settings.
 >
 {style="warning"}
 
+### OS certificate store (macOS and Windows) {id="certstore"}
+
+Instead of PEM files, load client certificates from macOS Keychain or Windows Certificate Store by SHA-1 thumbprint. Private keys never leave the OS keystore.
+
+Per-server configuration:
+
+```yaml
+servers:
+    https://teamcity.example.com:
+        user: alice
+        client_cert_thumbprint: AB12CD34EF56789012AB34CD56EF7890AB12CD34
+        ca_cert: /path/to/ca.crt
+```
+
+Environment variable:
+
+<tabs>
+<tab title="macOS">
+
+```Shell
+export TEAMCITY_CLIENT_CERT_THUMBPRINT="AB12CD34EF56789012AB34CD56EF7890AB12CD34"
+```
+
+</tab>
+<tab title="Windows">
+
+```PowerShell
+$env:TEAMCITY_CLIENT_CERT_THUMBPRINT = "AB12CD34EF56789012AB34CD56EF7890AB12CD34"
+```
+
+</tab>
+</tabs>
+
+The thumbprint is 40 hex characters. Colons, spaces, and case are normalized automatically. When set, it takes precedence over `TEAMCITY_CLIENT_CERT` / `TEAMCITY_CLIENT_KEY`. Can be combined with `ca_cert`.
+
+> Not supported on Linux — use PEM file paths instead.
+>
+{style="warning"}
+
 ## Advanced authentication scenarios
 
 ### Authentication inside TeamCity builds
