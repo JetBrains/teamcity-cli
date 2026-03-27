@@ -51,7 +51,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Filter by branch name")
-	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running, error, unknown)")
+	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running, queued, error, unknown)")
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of runs")
@@ -101,12 +101,18 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		}
 	}
 
+	var statusFilter, stateFilter string
 	if opts.status != "" {
-		validStatuses := []string{"success", "failure", "running", "error", "unknown"}
-		status := strings.ToLower(opts.status)
-		valid := slices.Contains(validStatuses, status)
-		if !valid {
-			return fmt.Errorf("invalid status %q, must be one of: %s", opts.status, strings.Join(validStatuses, ", "))
+		validValues := []string{"success", "failure", "running", "queued", "error", "unknown"}
+		v := strings.ToLower(opts.status)
+		if !slices.Contains(validValues, v) {
+			return fmt.Errorf("invalid status %q, must be one of: %s", opts.status, strings.Join(validValues, ", "))
+		}
+		switch v {
+		case "running", "queued":
+			stateFilter = v
+		default:
+			statusFilter = v
 		}
 	}
 
@@ -135,7 +141,8 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	runs, err := client.GetBuilds(api.BuildsOptions{
 		BuildTypeID: opts.job,
 		Branch:      opts.branch,
-		Status:      opts.status,
+		Status:      statusFilter,
+		State:       stateFilter,
 		User:        user,
 		Project:     opts.project,
 		Limit:       opts.limit,
