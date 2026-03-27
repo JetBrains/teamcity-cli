@@ -35,7 +35,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short: "List recent runs",
+		Short:   "List recent runs",
 		Example: `  teamcity run list
   teamcity run list --job Falcon_Build
   teamcity run list --status failure --limit 10
@@ -216,12 +216,10 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	}
 
 	p := f.Printer
-	if !opts.plain {
-		output.AutoSizeColumns(headers, rows, 2, 2, 3, 4)
-	}
 	if opts.plain {
 		p.PrintPlainTable(headers, rows, opts.noHeader)
 	} else {
+		output.AutoSizeColumns(headers, rows, 2, 2, 3, 4)
 		p.PrintTable(headers, rows)
 	}
 	return nil
@@ -232,8 +230,8 @@ func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view <run-id>",
 		Aliases: []string{"show"},
-		Short: "View run details",
-		Args:  cobra.ExactArgs(1),
+		Short:   "View run details",
+		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity run view 12345
   teamcity run view 12345 --web
   teamcity run view 12345 --json`,
