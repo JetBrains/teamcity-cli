@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/asn1"
 	"fmt"
 	"io"
 	"math/big"
@@ -219,30 +220,15 @@ func ecdsaRawToASN1(raw []byte) ([]byte, error) {
 	half := len(raw) / 2
 	r := new(big.Int).SetBytes(raw[:half])
 	s := new(big.Int).SetBytes(raw[half:])
-
-	// Determine curve order size for proper encoding
-	return encodeECDSASig(r, s), nil
-}
-
-func encodeECDSASig(r, s *big.Int) []byte {
-	rb := asn1Integer(r)
-	sb := asn1Integer(s)
-	seq := append(rb, sb...)
-	return append([]byte{0x30, byte(len(seq))}, seq...)
-}
-
-func asn1Integer(n *big.Int) []byte {
-	b := n.Bytes()
-	if len(b) > 0 && b[0]&0x80 != 0 {
-		b = append([]byte{0}, b...)
-	}
-	if len(b) == 0 {
-		b = []byte{0}
-	}
-	return append([]byte{0x02, byte(len(b))}, b...)
+	return asn1.Marshal(struct {
+		R, S *big.Int
+	}{r, s})
 }
 
 func hexToBytes(s string) ([]byte, error) {
+	if len(s)%2 != 0 {
+		return nil, fmt.Errorf("odd-length hex string")
+	}
 	b := make([]byte, len(s)/2)
 	for i := 0; i < len(s); i += 2 {
 		hi := unhex(s[i])
