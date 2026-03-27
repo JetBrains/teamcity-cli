@@ -9,6 +9,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -16,6 +17,7 @@ type runLogOptions struct {
 	job    string
 	failed bool
 	raw    bool
+	web    bool
 }
 
 func newRunLogCmd(f *cmdutil.Factory) *cobra.Command {
@@ -51,6 +53,7 @@ Use --raw to bypass the pager.`,
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Get log for latest run of this job")
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show failure summary (problems and failed tests)")
 	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Show raw log without formatting")
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open build log in browser")
 
 	return cmd
 }
@@ -117,6 +120,14 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 		f.Printer.Info("Showing log for run %s  #%s", runID, runs.Builds[0].Number)
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
+	}
+
+	if opts.web {
+		build, err := client.GetBuild(runID)
+		if err != nil {
+			return err
+		}
+		return browser.OpenURL(build.WebURL + "?buildTab=buildLog")
 	}
 
 	if opts.failed {
