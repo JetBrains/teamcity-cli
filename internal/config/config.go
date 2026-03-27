@@ -13,14 +13,15 @@ import (
 )
 
 const (
-	EnvServerURL  = "TEAMCITY_URL"
-	EnvToken      = "TEAMCITY_TOKEN"
-	EnvGuestAuth  = "TEAMCITY_GUEST"
-	EnvReadOnly   = "TEAMCITY_RO"
-	EnvClientCert = "TEAMCITY_CLIENT_CERT"
-	EnvClientKey  = "TEAMCITY_CLIENT_KEY"
-	EnvCACert     = "TEAMCITY_CA_CERT"
-	EnvDSLDir     = "TEAMCITY_DSL_DIR"
+	EnvServerURL       = "TEAMCITY_URL"
+	EnvToken           = "TEAMCITY_TOKEN"
+	EnvGuestAuth       = "TEAMCITY_GUEST"
+	EnvReadOnly        = "TEAMCITY_RO"
+	EnvClientCert      = "TEAMCITY_CLIENT_CERT"
+	EnvClientKey       = "TEAMCITY_CLIENT_KEY"
+	EnvCACert          = "TEAMCITY_CA_CERT"
+	EnvClientCertThumb = "TEAMCITY_CLIENT_CERT_THUMBPRINT"
+	EnvDSLDir          = "TEAMCITY_DSL_DIR"
 
 	DefaultDSLDirTeamCity = ".teamcity"
 	DefaultDSLDirTC       = ".tc"
@@ -29,14 +30,15 @@ const (
 )
 
 type ServerConfig struct {
-	Token       string `mapstructure:"token"`
-	User        string `mapstructure:"user"`
-	Guest       bool   `mapstructure:"guest,omitempty"`
-	RO          bool   `mapstructure:"ro,omitempty"`
-	TokenExpiry string `mapstructure:"token_expiry,omitempty"`
-	ClientCert  string `mapstructure:"client_cert,omitempty"`
-	ClientKey   string `mapstructure:"client_key,omitempty"`
-	CACert      string `mapstructure:"ca_cert,omitempty"`
+	Token           string `mapstructure:"token"`
+	User            string `mapstructure:"user"`
+	Guest           bool   `mapstructure:"guest,omitempty"`
+	RO              bool   `mapstructure:"ro,omitempty"`
+	TokenExpiry     string `mapstructure:"token_expiry,omitempty"`
+	ClientCert      string `mapstructure:"client_cert,omitempty"`
+	ClientKey       string `mapstructure:"client_key,omitempty"`
+	CACert          string `mapstructure:"ca_cert,omitempty"`
+	ClientCertThumb string `mapstructure:"client_cert_thumbprint,omitempty"`
 }
 
 type Config struct {
@@ -313,6 +315,22 @@ func GetTLSPaths() (certFile, keyFile, caFile string) {
 		return server.ClientCert, server.ClientKey, server.CACert
 	}
 	return "", "", ""
+}
+
+// GetClientCertThumbprint returns the certificate thumbprint for the current server.
+// Environment variable takes priority over per-server config.
+func GetClientCertThumbprint() string {
+	if v := os.Getenv(EnvClientCertThumb); v != "" {
+		return v
+	}
+	serverURL := GetServerURL()
+	if serverURL == "" || cfg == nil {
+		return ""
+	}
+	if server, ok := cfg.Servers[serverURL]; ok {
+		return server.ClientCertThumb
+	}
+	return ""
 }
 
 // SetGuestServer saves a server with guest auth enabled and no token
