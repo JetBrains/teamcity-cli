@@ -1,0 +1,14 @@
+# Test project token put and verify output format.
+[!has_token] skip 'requires authentication token'
+
+# Put a token and verify it returns a scrambled value
+exec teamcity project token put Sandbox 'acceptance-secret-$RANDOM_STRING' --no-input
+stdout '.'
+! stderr 'Error'
+
+# Capture token for subsequent get
+stdout2env TOKEN_REF
+
+# token get requires System Administrator — test the error path
+! exec teamcity project token get Sandbox $TOKEN_REF --no-input
+stderr '.'

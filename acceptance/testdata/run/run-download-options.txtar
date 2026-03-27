@@ -1,0 +1,33 @@
+# Test run download with --path and --artifact options.
+
+# Find a build with artifacts via Sandbox_Build
+exec teamcity api '/app/rest/builds?locator=buildType:Sandbox_Build,count:1,state:finished,status:SUCCESS&fields=build(id)' --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+# Download with --path filter
+exec teamcity run download $BUILD_ID --path . -o $WORK/dl-path --no-input
+stdout '(downloaded|No artifacts)'
+! stderr 'Error'
+
+# Download with --artifact glob pattern
+exec teamcity run download $BUILD_ID --artifact '*.txt' -o $WORK/dl-glob --no-input
+stdout '(downloaded|No artifacts)'
+! stderr 'Error'
+
+# Download with nonexistent --artifact pattern
+exec teamcity run download $BUILD_ID --artifact 'nonexistent-pattern-xyz' -o $WORK/dl-none --no-input
+stdout '(No artifacts match|No artifacts found)'
+! stderr 'Error'
+
+# Download to specific output directory
+exec teamcity run download $BUILD_ID -o $WORK/dl-custom --no-input
+stdout '(downloaded|No artifacts)'
+! stderr 'Error'
+
+# Validation: missing run-id
+! exec teamcity run download --no-input
+stderr 'accepts 1 arg'
+
+# Validation: nonexistent build ID
+! exec teamcity run download 999999999 -o $WORK/dl-bogus --no-input
+stderr '.'

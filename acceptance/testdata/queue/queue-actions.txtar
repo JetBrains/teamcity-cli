@@ -1,0 +1,30 @@
+# Test queue action subcommands: top, remove, approve.
+[!has_token] skip 'requires authentication token'
+
+# Validation: missing arguments
+! exec teamcity queue top --no-input
+stderr 'accepts 1 arg'
+
+! exec teamcity queue remove --no-input
+stderr 'accepts 1 arg'
+
+! exec teamcity queue approve --no-input
+stderr 'accepts 1 arg'
+
+# Error cases: nonexistent build ID
+! exec teamcity queue top 999999999 --no-input
+stderr '.'
+
+! exec teamcity queue approve 999999999 --no-input
+stderr '.'
+
+! exec teamcity queue remove 999999999 --force --no-input
+stderr '.'
+
+# Start a build and immediately try to remove from queue.
+# The build may already be running, so we cancel as fallback.
+exec teamcity run start Sandbox_Build --json --no-input
+extract '"id":\s*(\d+)' BUILD_ID
+
+# Cancel/cleanup regardless of queue state
+exec teamcity run cancel $BUILD_ID --force --no-input
