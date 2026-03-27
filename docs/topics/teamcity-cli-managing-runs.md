@@ -135,7 +135,7 @@ Filter by branch name
 </td>
 <td>
 
-Filter by status: `success`, `failure`, `running`, `error`, or `unknown`
+Filter by status: `success`, `failure`, `running`, `queued`, `error`, or `unknown`
 
 </td>
 </tr>
@@ -752,6 +752,12 @@ Bypass the pager and output raw text:
 
 ```Shell
 teamcity run log 12345 --raw
+```
+
+Open the build log in your browser:
+
+```Shell
+teamcity run log 12345 --web
 ```
 
 > The log viewer uses a pager by default. Use `/` to search, `n`/`N` to navigate matches, `g`/`G` to jump to the top or bottom, and `q` to quit.

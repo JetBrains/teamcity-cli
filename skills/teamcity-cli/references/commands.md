@@ -40,7 +40,7 @@ Shows all branches and all build states (including canceled, personal, composite
 
 - `-j, --job <id>` - Filter by job
 - `-b, --branch <name>` - Filter by branch
-- `--status <status>` - Filter: success, failure, running, error, unknown
+- `--status <status>` - Filter: success, failure, running, queued, error, unknown
 - `-u, --user <name>` - Filter by user
 - `-p, --project <id>` - Filter by project
 - `-n, --limit <n>` - Limit results (default: 30)
@@ -80,6 +80,7 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--failed` - Show failure summary (problems and failed tests)
 - `-j, --job <id>` - Get log for latest run of this job
 - `--raw` - Show raw log without formatting
+- `-w, --web` - Open build log in browser
 
 ### Flags for `teamcity run watch`
 
