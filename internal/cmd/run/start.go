@@ -290,4 +290,3 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 
 	return afterQueue(f, build, opts.web, &opts.watchFlags)
 }
-

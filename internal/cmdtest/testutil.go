@@ -86,7 +86,7 @@ func NewTestServer(t *testing.T) *TestServer {
 // but has its own flag storage, making it safe for parallel subtests.
 func (ts *TestServer) CloneFactory() *cmdutil.Factory {
 	return &cmdutil.Factory{
-		IOStreams:   ts.Factory.IOStreams,
+		IOStreams:  ts.Factory.IOStreams,
 		Printer:    ts.Factory.Printer,
 		ClientFunc: ts.Factory.ClientFunc,
 	}

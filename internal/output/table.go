@@ -196,4 +196,3 @@ func Truncate(s string, maxLen int) string {
 	}
 	return runewidth.Truncate(s, maxLen, "...")
 }
-

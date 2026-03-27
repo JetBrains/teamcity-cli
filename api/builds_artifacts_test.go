@@ -66,7 +66,6 @@ func TestDownloadArtifact(t *testing.T) {
 	assert.Equal(t, "fake-jar-content", string(data))
 }
 
-
 func TestGetBuildLog(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
