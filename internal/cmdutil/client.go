@@ -76,7 +76,7 @@ func (f *Factory) tlsOption() (api.ClientOption, error) {
 	}
 
 	f.Printer.Debug("Using mTLS client certificate authentication (PEM files)")
-	return api.WithTransport(&http.Transport{TLSClientConfig: tlsCfg}), nil
+	return api.WithTransport(&http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: tlsCfg}), nil
 }
 
 func (f *Factory) tlsFromCertStore(thumbprint string) (api.ClientOption, error) {
@@ -96,7 +96,7 @@ func (f *Factory) tlsFromCertStore(thumbprint string) (api.ClientOption, error) 
 		cn = tlsCert.Leaf.Subject.CommonName
 	}
 	f.Printer.Debug("Using mTLS client certificate from OS store (%s)", cn)
-	return api.WithTransport(&http.Transport{TLSClientConfig: tlsCfg}), nil
+	return api.WithTransport(&http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: tlsCfg}), nil
 }
 
 // ProbeGuestAccess checks whether the server at serverURL supports guest access.

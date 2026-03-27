@@ -28,6 +28,10 @@ test:
 acceptance:
     TC_INSECURE_SKIP_WARN=1 go test -v -tags=acceptance ./acceptance -timeout 10m
 
+# Run sandbox integration tests (requires npx, bubblewrap+socat on Linux)
+sandbox:
+    go test -v -tags=sandbox ./api -run TestSandbox -timeout 2m
+
 # Remove build artifacts
 [confirm]
 clean:

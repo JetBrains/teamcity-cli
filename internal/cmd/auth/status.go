@@ -2,6 +2,7 @@ package auth
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -160,7 +161,17 @@ func showExplicitAuthStatus(f *cmdutil.Factory, serverURL, token, tokenSource, s
 	user, err := client.GetCurrentUser()
 	if err != nil {
 		_, _ = fmt.Fprintf(p.Out, "%s Server: %s%s\n", output.Red("✗"), serverURL, suffix)
-		_, _ = fmt.Fprintln(p.Out, "  Token is invalid or expired")
+		if netErr, ok := errors.AsType[*api.NetworkError](err); ok {
+			if api.IsSandboxBlockedError(netErr) {
+				_, _ = fmt.Fprintln(p.Out, "  Network access blocked by sandbox")
+				_, _ = fmt.Fprintf(p.Out, "  %s Add the server domain to the sandbox allowlist, or exclude %s from sandboxing\n",
+					output.Yellow("!"), output.Cyan("teamcity"))
+			} else {
+				_, _ = fmt.Fprintf(p.Out, "  %s\n", netErr.Error())
+			}
+		} else {
+			_, _ = fmt.Fprintln(p.Out, "  Token is invalid or expired")
+		}
 		return
 	}
 

@@ -143,7 +143,11 @@ func enrichAPIError(err error) error {
 		return tcerrors.WithSuggestion(err.Error(), notFoundHint(err.Error()))
 	}
 
-	if _, ok := errors.AsType[*api.NetworkError](err); ok {
+	if netErr, ok := errors.AsType[*api.NetworkError](err); ok {
+		if api.IsSandboxBlockedError(netErr) {
+			return tcerrors.WithSuggestion("Network access blocked by sandbox",
+				"Add the server domain to the sandbox allowlist, or exclude teamcity from sandboxing")
+		}
 		return tcerrors.WithSuggestion(err.Error(), "Check your network connection and verify the server URL")
 	}
 

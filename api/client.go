@@ -136,7 +136,8 @@ func NewClient(baseURL, token string, opts ...ClientOption) *Client {
 		BaseURL: baseURL,
 		Token:   token,
 		HTTPClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: defaultTransport(),
 		},
 	}
 
@@ -157,7 +158,8 @@ func NewClientWithBasicAuth(baseURL, username, password string, opts ...ClientOp
 		basicUser: username,
 		basicPass: password,
 		HTTPClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: defaultTransport(),
 		},
 	}
 
@@ -177,7 +179,8 @@ func NewGuestClient(baseURL string, opts ...ClientOption) *Client {
 		BaseURL:   baseURL,
 		guestAuth: true,
 		HTTPClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: defaultTransport(),
 		},
 	}
 

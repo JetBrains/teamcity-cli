@@ -9,6 +9,11 @@ jobs:
       - type: script
         name: Acceptance Tests
         script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+      - type: script
+        name: Sandbox Tests
+        script-content: |
+          HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install -q ripgrep
+          go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
   test_windows:
     name: Test Windows
     runs-on: Windows-Medium
@@ -59,6 +64,12 @@ jobs:
         name: Acceptance Tests
         script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
       - type: script
+        name: Sandbox Tests
+        script-content: |
+          sudo apt-get install -y bubblewrap socat ripgrep
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
+      - type: script
         name: Merge Coverage
         script-content: |
           head -1 coverage-integration.out > coverage.out
@@ -97,6 +108,12 @@ jobs:
       - type: script
         name: Acceptance Tests
         script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+      - type: script
+        name: Sandbox Tests
+        script-content: |
+          sudo apt-get install -y bubblewrap socat ripgrep
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
       - type: script
         name: Merge Coverage
         script-content: |
