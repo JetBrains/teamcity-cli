@@ -1,11 +1,14 @@
 package job_test
 
 import (
+	"bytes"
 	"net/http"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/stretchr/testify/require"
 )
 
 const testJob = "TestProject_Build"
@@ -79,4 +82,82 @@ func TestJobTreeWithDeps(T *testing.T) {
 	})
 
 	cmdtest.RunCmdWithFactory(T, ts.Factory, "job", "tree", "Deploy")
+}
+
+func TestJobTreeDepth(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	ts.Handle("GET /app/rest/buildTypes/id:Deploy/snapshot-dependencies", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.SnapshotDependencyList{
+			Count: 1,
+			SnapshotDependency: []api.SnapshotDependency{
+				{ID: "dep1", SourceBuildType: &api.BuildType{ID: "Build", Name: "Build", ProjectID: "MyProject"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/buildTypes/id:Build/snapshot-dependencies", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.SnapshotDependencyList{
+			Count: 1,
+			SnapshotDependency: []api.SnapshotDependency{
+				{ID: "dep2", SourceBuildType: &api.BuildType{ID: "Compile", Name: "Compile", ProjectID: "MyProject"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/buildTypes/id:Deploy/dependents", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.BuildTypeList{Count: 0})
+	})
+
+	ts.Handle("GET /app/rest/buildTypes/id:Deploy", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.BuildType{ID: "Deploy", Name: "Deploy", ProjectID: "MyProject"})
+	})
+
+	cmdtest.RunCmdWithFactory(T, ts.CloneFactory(), "job", "tree", "Deploy", "--only", "dependencies", "--depth", "1")
+	cmdtest.RunCmdWithFactory(T, ts.CloneFactory(), "job", "tree", "Deploy", "--only", "dependencies", "--depth", "2")
+}
+
+func TestJobTreeDepthOutput(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	ts.Handle("GET /app/rest/buildTypes/id:Deploy/snapshot-dependencies", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.SnapshotDependencyList{
+			Count: 1,
+			SnapshotDependency: []api.SnapshotDependency{
+				{ID: "dep1", SourceBuildType: &api.BuildType{ID: "Build", Name: "Build", ProjectID: "MyProject"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/buildTypes/id:Build/snapshot-dependencies", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.SnapshotDependencyList{
+			Count: 1,
+			SnapshotDependency: []api.SnapshotDependency{
+				{ID: "dep2", SourceBuildType: &api.BuildType{ID: "Compile", Name: "Compile", ProjectID: "MyProject"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/buildTypes/id:Deploy", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.BuildType{ID: "Deploy", Name: "Deploy", ProjectID: "MyProject"})
+	})
+
+	runWithBuf := func(args ...string) string {
+		T.Helper()
+		var buf bytes.Buffer
+		f := ts.CloneFactory()
+		f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
+		cmdtest.RunCmdWithFactory(T, f, args...)
+		return buf.String()
+	}
+
+	// --depth 1 shows Deploy and its direct dependency (Build), but not transitive (Compile)
+	out1 := runWithBuf("job", "tree", "Deploy", "--only", "dependencies", "--depth", "1")
+	require.Contains(T, out1, "Build", "--depth 1 should show direct dependencies")
+	require.NotContains(T, out1, "Compile", "--depth 1 should not show transitive dependencies")
+
+	// --depth 2 shows Deploy, Build, and Compile
+	out2 := runWithBuf("job", "tree", "Deploy", "--only", "dependencies", "--depth", "2")
+	require.Contains(T, out2, "Build", "--depth 2 should show direct dependencies")
+	require.Contains(T, out2, "Compile", "--depth 2 should show transitive dependencies")
 }

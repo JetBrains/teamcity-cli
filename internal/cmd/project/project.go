@@ -358,16 +358,19 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int) e
 		resolveHiddenProjects(client, known, children, jobsByProject)
 	}
 
+	if depth == 0 {
+		depth = -1
+	}
 	f.Printer.PrintTree(buildProjectTree(children, jobsByProject, rootID, root.Name, depth))
 	return nil
 }
 
 func buildProjectTree(children map[string][]api.Project, jobs map[string][]api.BuildType, id, name string, depth int) output.TreeNode {
 	node := output.TreeNode{Label: output.Cyan(name) + " " + output.Faint(id)}
-	if depth == 1 {
+	if depth == 0 {
 		return node
 	}
-	next := max(depth-1, 0)
+	next := depth - 1
 	slices.SortFunc(children[id], func(a, b api.Project) int { return cmp.Compare(a.Name, b.Name) })
 	for _, p := range children[id] {
 		node.Children = append(node.Children, buildProjectTree(children, jobs, p.ID, p.Name, next))
