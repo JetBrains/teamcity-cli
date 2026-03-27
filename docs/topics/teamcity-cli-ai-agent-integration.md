@@ -119,6 +119,12 @@ teamcity skill install --agent claude-code
 
 In read-only mode, the agent can list builds, view logs, inspect failures, and query the API, but any command that would modify data is blocked. You can also set `ro: true` per server in the [configuration file](teamcity-cli-configuration.md#Configuration+file).
 
+## Sandbox compatibility
+
+The CLI works inside sandboxed agent environments (for example, Claude Code `/sandbox`) out of the box. The CLI loads TLS root certificates from PEM bundle files and respects HTTP proxy settings, which allows it to function when platform certificate stores and direct network access are restricted.
+
+If the sandbox blocks outbound requests to your TeamCity server, add the server domain to the sandbox's network allowlist.
+
 ## Alternative installation for Claude Code
 
 If you use Claude Code, you can also install the TeamCity skill directly through the plugin system:
