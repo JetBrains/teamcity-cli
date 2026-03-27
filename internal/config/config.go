@@ -110,6 +110,7 @@ func Get() *Config {
 //
 //goland:noinspection HttpUrlsUsage
 func NormalizeURL(u string) string {
+	u = strings.TrimSpace(u)
 	u = strings.TrimSuffix(u, "/")
 	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
 		u = "https://" + u
