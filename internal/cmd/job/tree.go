@@ -47,6 +47,10 @@ func runJobTree(f *cmdutil.Factory, jobID string, depth int, only string) error 
 		return err
 	}
 
+	if depth > 0 {
+		depth++
+	}
+
 	p := f.Printer
 	if only != "" {
 		tree := buildJobTree(client, jobID, bt.Name, depth, only == "dependents", map[string]bool{jobID: true})

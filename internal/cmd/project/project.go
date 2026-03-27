@@ -358,6 +358,9 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int) e
 		resolveHiddenProjects(client, known, children, jobsByProject)
 	}
 
+	if depth > 0 {
+		depth++
+	}
 	f.Printer.PrintTree(buildProjectTree(children, jobsByProject, rootID, root.Name, depth))
 	return nil
 }
