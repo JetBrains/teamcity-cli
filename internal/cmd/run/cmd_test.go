@@ -2,8 +2,10 @@ package run_test
 
 import (
 	"bytes"
+	"net/http"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/JetBrains/teamcity-cli/internal/config"
@@ -148,7 +150,7 @@ func TestInvalidStatusFilter(T *testing.T) {
 func TestValidStatusFilter(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
-	validStatuses := []string{"success", "failure", "running"}
+	validStatuses := []string{"success", "failure", "running", "queued"}
 	for _, status := range validStatuses {
 		T.Run(status, func(t *testing.T) {
 			rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
@@ -158,6 +160,53 @@ func TestValidStatusFilter(T *testing.T) {
 			rootCmd.SetErr(&out)
 			err := rootCmd.Execute()
 			require.NoError(t, err, "expected no error for valid status %s", status)
+		})
+	}
+}
+
+func TestStatusFilterLocator(T *testing.T) {
+	tests := []struct {
+		status        string
+		wantLocator   string // substring that must appear in the locator query
+		rejectLocator string // substring that must NOT appear
+	}{
+		{"success", "status%3ASUCCESS", "state%3A"},
+		{"failure", "status%3AFAILURE", "state%3A"},
+		{"running", "state%3Arunning", "status%3ARUNNING"},
+		{"queued", "state%3Aqueued", "status%3AQUEUED"},
+		{"error", "status%3AERROR", "state%3A"},
+		{"unknown", "status%3AUNKNOWN", "state%3A"},
+	}
+
+	for _, tt := range tests {
+		T.Run(tt.status, func(t *testing.T) {
+			var capturedQuery string
+			ts := cmdtest.NewTestServer(t)
+			ts.Handle("GET /app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+				cmdtest.JSON(w, api.Server{VersionMajor: 2025, VersionMinor: 7, BuildNumber: "197398"})
+			})
+			ts.Handle("HEAD /app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			})
+			ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
+				capturedQuery = r.URL.RawQuery
+				cmdtest.JSON(w, api.BuildList{Count: 0, Builds: []api.Build{}})
+			})
+
+			rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
+			rootCmd.SetArgs([]string{"run", "list", "--status", tt.status, "--limit", "1"})
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			err := rootCmd.Execute()
+			require.NoError(t, err)
+
+			assert.Contains(t, capturedQuery, tt.wantLocator,
+				"--status %s: expected locator to contain %s, got query: %s", tt.status, tt.wantLocator, capturedQuery)
+			if tt.rejectLocator != "" {
+				assert.NotContains(t, capturedQuery, tt.rejectLocator,
+					"--status %s: locator must not contain %s, got query: %s", tt.status, tt.rejectLocator, capturedQuery)
+			}
 		})
 	}
 }
