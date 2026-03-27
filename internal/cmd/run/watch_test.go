@@ -9,6 +9,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
 func TestDoRunWatchLogsFallsBackWithoutTTY(t *testing.T) {
@@ -48,7 +49,7 @@ func TestDoRunWatchLogsFallsBackWithoutTTY(t *testing.T) {
 	})
 
 	f := &cmdutil.Factory{
-
+		Printer: output.DefaultPrinter(),
 		ClientFunc: func() (api.ClientInterface, error) {
 			return api.NewClient(ts.URL, "test-token"), nil
 		},
@@ -104,7 +105,7 @@ func TestDoRunWatchJSONOutputsOnCompletion(t *testing.T) {
 	defer ts.Close()
 
 	f := &cmdutil.Factory{
-
+		Printer: output.DefaultPrinter(),
 		ClientFunc: func() (api.ClientInterface, error) {
 			return api.NewClient(ts.URL, "test-token"), nil
 		},
@@ -138,7 +139,7 @@ func TestDoRunWatchJSONReturnsExitErrorOnFailure(t *testing.T) {
 	defer ts.Close()
 
 	f := &cmdutil.Factory{
-
+		Printer: output.DefaultPrinter(),
 		ClientFunc: func() (api.ClientInterface, error) {
 			return api.NewClient(ts.URL, "test-token"), nil
 		},
@@ -161,7 +162,7 @@ func TestDoRunWatchLogsUsesTUIWhenTTYIsAvailable(t *testing.T) {
 	})
 
 	f := &cmdutil.Factory{
-
+		Printer: output.DefaultPrinter(),
 		ClientFunc: func() (api.ClientInterface, error) {
 			return api.NewClient("https://example.invalid", "test-token"), nil
 		},
