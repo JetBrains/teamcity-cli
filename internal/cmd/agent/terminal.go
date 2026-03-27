@@ -100,7 +100,7 @@ func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, sh
 	agentURL := fmt.Sprintf("%s/agentDetails.html?id=%d", serverURL, agent.ID)
 
 	if showProgress {
-		fmt.Printf("Connecting to %s...\n", output.Cyan(agent.Name))
+		_, _ = fmt.Fprintf(f.Printer.Out, "Connecting to %s...\n", output.Cyan(agent.Name))
 	}
 
 	username := config.GetCurrentUser()
@@ -112,7 +112,7 @@ func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, sh
 		username = user.Username
 	}
 
-	termClient := terminal.NewClient(serverURL, username, token)
+	termClient := terminal.NewClient(serverURL, username, token, f.Printer.Debug)
 	session, err := termClient.OpenSession(agent.ID)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, sh
 		return nil, err
 	}
 
-	fmt.Printf("%s %s\n", output.Green("✓"), agentURL)
+	_, _ = fmt.Fprintf(f.Printer.Out, "%s %s\n", output.Green("✓"), agentURL)
 
 	return conn, nil
 }

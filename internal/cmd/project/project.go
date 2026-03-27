@@ -3,7 +3,9 @@ package project
 import (
 	"cmp"
 	"fmt"
+	"io"
 	"slices"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
@@ -12,9 +14,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
-	"io"
-	"os"
-	"strings"
 )
 
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
@@ -131,16 +130,16 @@ func runProjectView(f *cmdutil.Factory, projectID string, opts *cmdutil.ViewOpti
 	}
 
 	if opts.JSON {
-		return output.PrintJSON(project)
+		return f.Printer.PrintJSON(project)
 	}
 
-	output.PrintViewHeader(project.Name, project.WebURL, func() {
-		output.PrintField("ID", project.ID)
+	f.Printer.PrintViewHeader(project.Name, project.WebURL, func() {
+		f.Printer.PrintField("ID", project.ID)
 		if project.ParentProjectID != "" {
-			output.PrintField("Parent", project.ParentProjectID)
+			f.Printer.PrintField("Parent", project.ParentProjectID)
 		}
 		if project.Description != "" {
-			output.PrintField("Description", project.Description)
+			f.Printer.PrintField("Description", project.Description)
 		}
 	})
 
@@ -218,7 +217,7 @@ func runProjectTokenPut(f *cmdutil.Factory, projectID, value string, opts *proje
 	}
 
 	if opts.stdin {
-		data, err := io.ReadAll(os.Stdin)
+		data, err := io.ReadAll(f.IOStreams.In)
 		if err != nil {
 			return fmt.Errorf("failed to read from stdin: %w", err)
 		}
@@ -243,11 +242,11 @@ func runProjectTokenPut(f *cmdutil.Factory, projectID, value string, opts *proje
 		return fmt.Errorf("failed to create secure token: %w", err)
 	}
 
-	fmt.Println(token)
+	_, _ = fmt.Fprintln(f.Printer.Out, token)
 
 	if strings.HasPrefix(token, "credentialsJSON:") {
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintln(os.Stderr, output.Faint("Use in versioned settings as: "+token))
+		_, _ = fmt.Fprintln(f.Printer.ErrOut, "")
+		_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Faint("Use in versioned settings as: "+token))
 	}
 
 	return nil
@@ -285,7 +284,7 @@ func runProjectTokenGet(f *cmdutil.Factory, projectID, token string) error {
 		return fmt.Errorf("failed to get secure value: %w", err)
 	}
 
-	fmt.Println(value)
+	_, _ = fmt.Fprintln(f.Printer.Out, value)
 	return nil
 }
 
@@ -359,7 +358,7 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int) e
 		resolveHiddenProjects(client, known, children, jobsByProject)
 	}
 
-	output.PrintTree(buildProjectTree(children, jobsByProject, rootID, root.Name, depth))
+	f.Printer.PrintTree(buildProjectTree(children, jobsByProject, rootID, root.Name, depth))
 	return nil
 }
 
@@ -405,4 +404,3 @@ func resolveHiddenProjects(client api.ClientInterface, known map[string]*api.Pro
 func newProjectSettingsCmd(f *cmdutil.Factory) *cobra.Command {
 	return newSettingsCmd(f)
 }
-

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +35,7 @@ func newJobStateCmd(f *cmdutil.Factory, a jobStateAction) *cobra.Command {
 			if err := client.SetBuildTypePaused(args[0], a.paused); err != nil {
 				return fmt.Errorf("failed to %s job: %w", a.use, err)
 			}
-			output.Success("%s job %s", a.verb, args[0])
+			f.Printer.Success("%s job %s", a.verb, args[0])
 			return nil
 		},
 	}

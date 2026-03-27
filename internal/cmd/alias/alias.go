@@ -9,7 +9,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -73,9 +72,9 @@ Use --shell for aliases that need pipes, redirection, or other shell features.`,
 			}
 
 			if existed {
-				output.Success("Changed alias %q", name)
+				f.Printer.Success("Changed alias %q", name)
 			} else {
-				output.Success("Added alias %q", name)
+				f.Printer.Success("Added alias %q", name)
 			}
 			return nil
 		},
@@ -133,7 +132,7 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 				}
 				rows = append(rows, []string{name, displayExp, aliasType})
 			}
-			output.PrintTable(headers, rows)
+			f.Printer.PrintTable(headers, rows)
 			return nil
 		},
 	}
@@ -154,7 +153,7 @@ func newAliasDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 			if err := config.DeleteAlias(name); err != nil {
 				return err
 			}
-			output.Success("Deleted alias %q", name)
+			f.Printer.Success("Deleted alias %q", name)
 			return nil
 		},
 	}

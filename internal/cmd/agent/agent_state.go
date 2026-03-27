@@ -5,7 +5,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +47,7 @@ func newAgentActionCmd(f *cmdutil.Factory, a agentAction) *cobra.Command {
 			if err := a.execute(client, agentID); err != nil {
 				return fmt.Errorf("failed to %s agent: %w", a.use, err)
 			}
-			output.Success("%s agent %s", a.verb, agentName)
+			f.Printer.Success("%s agent %s", a.verb, agentName)
 			return nil
 		},
 	}

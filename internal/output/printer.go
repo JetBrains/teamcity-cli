@@ -7,9 +7,7 @@ import (
 	"os"
 )
 
-// Printer writes formatted output to configurable writers.
-// Commands should use a Printer instead of the package-level
-// functions to enable proper testing and parallel execution.
+// Printer writes formatted output respecting Quiet/Verbose flags.
 type Printer struct {
 	Out     io.Writer
 	ErrOut  io.Writer
@@ -69,4 +67,28 @@ func (p *Printer) PrintViewHeader(title, webURL string, details func()) {
 	_, _ = fmt.Fprintf(p.Out, "%s\n", Cyan(title))
 	details()
 	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", Faint("View in browser:"), Green(webURL))
+}
+
+func (p *Printer) PrintTable(headers []string, rows [][]string) {
+	_, _ = fmt.Fprintln(p.Out, renderTable(headers, rows))
+}
+
+func (p *Printer) PrintPlainTable(headers []string, rows [][]string, noHeader bool) {
+	_, _ = fmt.Fprint(p.Out, renderPlainTable(headers, rows, noHeader))
+}
+
+func (p *Printer) PrintTree(root TreeNode) {
+	_, _ = fmt.Fprintln(p.Out, root.Label)
+	p.printTreeNodes(root.Children, "")
+}
+
+func (p *Printer) printTreeNodes(nodes []TreeNode, prefix string) {
+	for i, n := range nodes {
+		conn, next := "├── ", "│   "
+		if i == len(nodes)-1 {
+			conn, next = "└── ", "    "
+		}
+		_, _ = fmt.Fprintf(p.Out, "%s%s%s\n", prefix, conn, n.Label)
+		p.printTreeNodes(n.Children, prefix+next)
+	}
 }

@@ -141,48 +141,49 @@ func runAgentView(f *cmdutil.Factory, nameOrID string, opts *cmdutil.ViewOptions
 	}
 
 	if opts.JSON {
-		return output.PrintJSON(agent)
+		return f.Printer.PrintJSON(agent)
 	}
 
-	fmt.Printf("%s\n", output.Cyan(agent.Name))
-	fmt.Printf("ID: %d\n", agent.ID)
+	p := f.Printer
+	_, _ = fmt.Fprintf(p.Out, "%s\n", output.Cyan(agent.Name))
+	_, _ = fmt.Fprintf(p.Out, "ID: %d\n", agent.ID)
 
 	if agent.Pool != nil {
-		fmt.Printf("Pool: %s\n", agent.Pool.Name)
+		_, _ = fmt.Fprintf(p.Out, "Pool: %s\n", agent.Pool.Name)
 	}
 
-	fmt.Printf("Status: %s\n", cmdutil.FormatAgentStatus(*agent))
+	_, _ = fmt.Fprintf(p.Out, "Status: %s\n", cmdutil.FormatAgentStatus(*agent))
 
 	if agent.Connected {
-		fmt.Printf("Connected: %s\n", output.Green("Yes"))
+		_, _ = fmt.Fprintf(p.Out, "Connected: %s\n", output.Green("Yes"))
 	} else {
-		fmt.Printf("Connected: %s\n", output.Red("No"))
+		_, _ = fmt.Fprintf(p.Out, "Connected: %s\n", output.Red("No"))
 	}
 
 	if agent.Enabled {
-		fmt.Printf("Enabled: %s\n", output.Green("Yes"))
+		_, _ = fmt.Fprintf(p.Out, "Enabled: %s\n", output.Green("Yes"))
 	} else {
-		fmt.Printf("Enabled: %s\n", output.Faint("No"))
+		_, _ = fmt.Fprintf(p.Out, "Enabled: %s\n", output.Faint("No"))
 	}
 
 	if agent.Authorized {
-		fmt.Printf("Authorized: %s\n", output.Green("Yes"))
+		_, _ = fmt.Fprintf(p.Out, "Authorized: %s\n", output.Green("Yes"))
 	} else {
-		fmt.Printf("Authorized: %s\n", output.Yellow("No"))
+		_, _ = fmt.Fprintf(p.Out, "Authorized: %s\n", output.Yellow("No"))
 	}
 
 	if agent.Build != nil {
-		fmt.Printf("\nCurrent build: %s %d  #%s (%s)\n",
+		_, _ = fmt.Fprintf(p.Out, "\nCurrent build: %s %d  #%s (%s)\n",
 			agent.Build.BuildType.Name,
 			agent.Build.ID,
 			agent.Build.Number,
 			agent.Build.Status)
 	}
 
-	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(agent.WebURL))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), output.Green(agent.WebURL))
 
 	if agent.Connected && agent.Authorized && agent.Enabled {
-		fmt.Printf("%s teamcity agent term %d\n", output.Faint("Open terminal:"), agent.ID)
+		_, _ = fmt.Fprintf(p.Out, "%s teamcity agent term %d\n", output.Faint("Open terminal:"), agent.ID)
 	}
 
 	return nil

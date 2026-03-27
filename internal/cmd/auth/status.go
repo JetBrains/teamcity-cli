@@ -21,28 +21,30 @@ func newAuthStatusCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:   "status",
 		Short: "Show authentication status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAuthStatus()
+			return runAuthStatus(f)
 		},
 	}
 
 	return cmd
 }
 
-func runAuthStatus() error {
+func runAuthStatus(f *cmdutil.Factory) error {
+	p := f.Printer
+
 	if envURL := os.Getenv(config.EnvServerURL); envURL != "" {
 		envURL = config.NormalizeURL(envURL)
 		if config.IsGuestAuth() {
-			showGuestAuthStatus(envURL, "")
+			showGuestAuthStatus(p, envURL, "")
 			return nil
 		}
 		if envToken := os.Getenv(config.EnvToken); envToken != "" {
-			showExplicitAuthStatus(envURL, envToken, "env", "")
+			showExplicitAuthStatus(f, envURL, envToken, "env", "")
 			return nil
 		}
 	}
 
 	if buildAuth, ok := config.GetBuildAuth(); ok {
-		showBuildAuthStatus(buildAuth)
+		showBuildAuthStatus(f, buildAuth)
 		return nil
 	}
 
@@ -52,7 +54,7 @@ func runAuthStatus() error {
 	urls := sortedServerURLs(cfg)
 	for i, serverURL := range urls {
 		if i > 0 {
-			fmt.Println()
+			_, _ = fmt.Fprintln(p.Out)
 		}
 		sc := cfg.Servers[serverURL]
 		suffix := ""
@@ -61,12 +63,12 @@ func runAuthStatus() error {
 		}
 
 		if sc.Guest {
-			showGuestAuthStatus(serverURL, suffix)
+			showGuestAuthStatus(p, serverURL, suffix)
 		} else if token, src, krErr := config.GetTokenForServer(serverURL); token != "" {
-			showExplicitAuthStatus(serverURL, token, src, suffix)
+			showExplicitAuthStatus(f, serverURL, token, src, suffix)
 		} else {
-			fmt.Printf("%s %s%s\n", output.Red("✗"), serverURL, suffix)
-			showCredentialsDiagnostic(serverURL, sc, krErr)
+			_, _ = fmt.Fprintf(p.Out, "%s %s%s\n", output.Red("✗"), serverURL, suffix)
+			showCredentialsDiagnostic(p, serverURL, sc, krErr)
 		}
 		shown++
 	}
@@ -74,20 +76,20 @@ func runAuthStatus() error {
 	if dslURL := config.DetectServerFromDSL(); dslURL != "" && dslURL != cfg.DefaultServer {
 		if _, ok := cfg.Servers[dslURL]; !ok {
 			if shown > 0 {
-				fmt.Println()
+				_, _ = fmt.Fprintln(p.Out)
 			}
-			fmt.Printf("%s Commands in this directory target %s (from DSL settings)\n",
+			_, _ = fmt.Fprintf(p.Out, "%s Commands in this directory target %s (from DSL settings)\n",
 				output.Yellow("!"), output.Cyan(dslURL))
-			printLoginHint(dslURL)
+			printLoginHint(p, dslURL)
 			shown++
 		}
 	}
 
 	if shown == 0 {
-		fmt.Println(output.Red("✗"), "Not logged in to any TeamCity server")
-		fmt.Println("\nRun", output.Cyan("teamcity auth login"), "to authenticate")
+		_, _ = fmt.Fprintln(p.Out, output.Red("✗"), "Not logged in to any TeamCity server")
+		_, _ = fmt.Fprintln(p.Out, "\nRun", output.Cyan("teamcity auth login"), "to authenticate")
 		if config.IsBuildEnvironment() {
-			fmt.Println("\n" + output.Yellow("!") + " Build environment detected but credentials not found in properties file")
+			_, _ = fmt.Fprintln(p.Out, "\n"+output.Yellow("!")+" Build environment detected but credentials not found in properties file")
 		}
 	}
 
@@ -108,33 +110,33 @@ func sortedServerURLs(cfg *config.Config) []string {
 	return urls
 }
 
-func showCredentialsDiagnostic(serverURL string, sc config.ServerConfig, krErr error) {
+func showCredentialsDiagnostic(p *output.Printer, serverURL string, sc config.ServerConfig, krErr error) {
 	if sc.User != "" && sc.Token == "" {
 		if krErr != nil {
-			fmt.Printf("  Token is in the system keyring but could not be retrieved: %v\n", krErr)
+			_, _ = fmt.Fprintf(p.Out, "  Token is in the system keyring but could not be retrieved: %v\n", krErr)
 		} else {
-			fmt.Println("  Token was expected in the system keyring but is missing")
+			_, _ = fmt.Fprintln(p.Out, "  Token was expected in the system keyring but is missing")
 		}
 	} else {
-		fmt.Println("  Token is missing or could not be retrieved")
+		_, _ = fmt.Fprintln(p.Out, "  Token is missing or could not be retrieved")
 	}
 
-	fmt.Printf("  %s To authenticate in this environment:\n", output.Yellow("!"))
-	fmt.Printf("    • Set %s and %s environment variables\n",
+	_, _ = fmt.Fprintf(p.Out, "  %s To authenticate in this environment:\n", output.Yellow("!"))
+	_, _ = fmt.Fprintf(p.Out, "    • Set %s and %s environment variables\n",
 		output.Cyan("TEAMCITY_URL"), output.Cyan("TEAMCITY_TOKEN"))
-	fmt.Printf("    • Or run %s\n",
+	_, _ = fmt.Fprintf(p.Out, "    • Or run %s\n",
 		output.Cyan("teamcity auth login --server "+serverURL+" --insecure-storage"))
 	if cmdutil.ProbeGuestAccess(serverURL) {
-		fmt.Printf("    • Or set %s for read-only guest access\n", output.Cyan("TEAMCITY_GUEST=1"))
+		_, _ = fmt.Fprintf(p.Out, "    • Or set %s for read-only guest access\n", output.Cyan("TEAMCITY_GUEST=1"))
 	}
 }
 
-func printLoginHint(serverURL string) {
+func printLoginHint(p *output.Printer, serverURL string) {
 	loginCmd := output.Cyan("teamcity auth login --server " + serverURL)
 	if cmdutil.ProbeGuestAccess(serverURL) {
-		fmt.Printf("  Run %s, or set %s for guest access\n", loginCmd, output.Cyan("TEAMCITY_GUEST=1"))
+		_, _ = fmt.Fprintf(p.Out, "  Run %s, or set %s for guest access\n", loginCmd, output.Cyan("TEAMCITY_GUEST=1"))
 	} else {
-		fmt.Printf("  Run %s to authenticate\n", loginCmd)
+		_, _ = fmt.Fprintf(p.Out, "  Run %s to authenticate\n", loginCmd)
 	}
 }
 
@@ -151,77 +153,79 @@ func tokenSourceLabel(source string) string {
 	}
 }
 
-func showExplicitAuthStatus(serverURL, token, tokenSource, suffix string) {
-	cmdutil.WarnInsecureHTTP(serverURL, "authentication token")
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(output.Debug))
+func showExplicitAuthStatus(f *cmdutil.Factory, serverURL, token, tokenSource, suffix string) {
+	p := f.Printer
+	f.WarnInsecureHTTP(serverURL, "authentication token")
+	client := api.NewClient(serverURL, token, api.WithDebugFunc(p.Debug))
 	user, err := client.GetCurrentUser()
 	if err != nil {
-		fmt.Printf("%s Server: %s%s\n", output.Red("✗"), serverURL, suffix)
-		fmt.Println("  Token is invalid or expired")
+		_, _ = fmt.Fprintf(p.Out, "%s Server: %s%s\n", output.Red("✗"), serverURL, suffix)
+		_, _ = fmt.Fprintln(p.Out, "  Token is invalid or expired")
 		return
 	}
 
-	fmt.Printf("%s Logged in to %s%s\n", output.Green("✓"), output.Cyan(serverURL), suffix)
-	fmt.Printf("  User: %s (%s) · %s\n", user.Name, user.Username, tokenSourceLabel(tokenSource))
+	_, _ = fmt.Fprintf(p.Out, "%s Logged in to %s%s\n", output.Green("✓"), output.Cyan(serverURL), suffix)
+	_, _ = fmt.Fprintf(p.Out, "  User: %s (%s) · %s\n", user.Name, user.Username, tokenSourceLabel(tokenSource))
 
 	if expiry := config.GetTokenExpiry(); expiry != "" {
 		if t, err := time.Parse(time.RFC3339, expiry); err == nil {
 			remaining := time.Until(t)
 			switch {
 			case remaining <= 0:
-				fmt.Printf("  %s Token expired on %s\n", output.Red("✗"), t.Local().Format("Jan 2, 2006"))
-				fmt.Printf("  Run %s to re-authenticate\n", output.Cyan("teamcity auth login"))
+				_, _ = fmt.Fprintf(p.Out, "  %s Token expired on %s\n", output.Red("✗"), t.Local().Format("Jan 2, 2006"))
+				_, _ = fmt.Fprintf(p.Out, "  Run %s to re-authenticate\n", output.Cyan("teamcity auth login"))
 			case remaining <= 3*24*time.Hour:
-				fmt.Printf("  %s Token expires %s (on %s)\n", output.Yellow("!"), output.Yellow(humanize.Time(t)), t.Local().Format("Jan 2, 2006"))
+				_, _ = fmt.Fprintf(p.Out, "  %s Token expires %s (on %s)\n", output.Yellow("!"), output.Yellow(humanize.Time(t)), t.Local().Format("Jan 2, 2006"))
 			default:
-				fmt.Printf("  Token expires: %s\n", t.Local().Format("Jan 2, 2006"))
+				_, _ = fmt.Fprintf(p.Out, "  Token expires: %s\n", t.Local().Format("Jan 2, 2006"))
 			}
 		}
 	}
 
 	server, err := client.ServerVersion()
 	if err == nil {
-		fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
+		_, _ = fmt.Fprintf(p.Out, "  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
 
 		if err := client.CheckVersion(); err != nil {
-			fmt.Printf("  %s %s\n", output.Yellow("!"), err.Error())
+			_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Yellow("!"), err.Error())
 		} else {
-			fmt.Printf("  %s API compatible\n", output.Green("✓"))
+			_, _ = fmt.Fprintf(p.Out, "  %s API compatible\n", output.Green("✓"))
 		}
 	}
 }
 
-func showGuestAuthStatus(serverURL, suffix string) {
-	client := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
+func showGuestAuthStatus(p *output.Printer, serverURL, suffix string) {
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(p.Debug))
 	server, err := client.GetServer()
 	if err != nil {
-		fmt.Printf("%s Server: %s%s\n", output.Red("✗"), serverURL, suffix)
-		fmt.Println("  Guest access is not available")
+		_, _ = fmt.Fprintf(p.Out, "%s Server: %s%s\n", output.Red("✗"), serverURL, suffix)
+		_, _ = fmt.Fprintln(p.Out, "  Guest access is not available")
 		return
 	}
 
-	fmt.Printf("%s Guest access to %s%s\n", output.Green("✓"), output.Cyan(serverURL), suffix)
-	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
+	_, _ = fmt.Fprintf(p.Out, "%s Guest access to %s%s\n", output.Green("✓"), output.Cyan(serverURL), suffix)
+	_, _ = fmt.Fprintf(p.Out, "  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
 
 	if err := client.CheckVersion(); err != nil {
-		fmt.Printf("  %s %s\n", output.Yellow("!"), err.Error())
+		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Yellow("!"), err.Error())
 	} else {
-		fmt.Printf("  %s API compatible\n", output.Green("✓"))
+		_, _ = fmt.Fprintf(p.Out, "  %s API compatible\n", output.Green("✓"))
 	}
 }
 
-func showBuildAuthStatus(buildAuth *config.BuildAuth) {
-	cmdutil.WarnInsecureHTTP(buildAuth.ServerURL, "credentials")
-	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(output.Debug))
+func showBuildAuthStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth) {
+	p := f.Printer
+	f.WarnInsecureHTTP(buildAuth.ServerURL, "credentials")
+	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(p.Debug))
 	server, err := client.GetServer()
 	if err != nil {
-		fmt.Printf("%s Server: %s\n", output.Red("✗"), buildAuth.ServerURL)
-		fmt.Println("  Build credentials are invalid")
+		_, _ = fmt.Fprintf(p.Out, "%s Server: %s\n", output.Red("✗"), buildAuth.ServerURL)
+		_, _ = fmt.Fprintln(p.Out, "  Build credentials are invalid")
 		return
 	}
 
-	fmt.Printf("%s Connected to %s\n", output.Green("✓"), output.Cyan(buildAuth.ServerURL))
-	fmt.Printf("  Auth: %s\n", output.Faint("Build-level credentials"))
-	fmt.Printf("  Scope: %s\n", output.Faint("Build-level access"))
-	fmt.Printf("  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
+	_, _ = fmt.Fprintf(p.Out, "%s Connected to %s\n", output.Green("✓"), output.Cyan(buildAuth.ServerURL))
+	_, _ = fmt.Fprintf(p.Out, "  Auth: %s\n", output.Faint("Build-level credentials"))
+	_, _ = fmt.Fprintf(p.Out, "  Scope: %s\n", output.Faint("Build-level access"))
+	_, _ = fmt.Fprintf(p.Out, "  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
 }

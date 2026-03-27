@@ -101,10 +101,11 @@ func TestFactoryClient(t *testing.T) {
 }
 
 func TestWarnInsecureHTTP(t *testing.T) {
+	f := NewFactory()
 	// Should not panic with HTTPS
-	WarnInsecureHTTP("https://tc.example.com", "token")
+	f.WarnInsecureHTTP("https://tc.example.com", "token")
 
 	// Should not panic with env var set
 	t.Setenv("TC_INSECURE_SKIP_WARN", "1")
-	WarnInsecureHTTP("http://tc.example.com", "token")
+	f.WarnInsecureHTTP("http://tc.example.com", "token")
 }

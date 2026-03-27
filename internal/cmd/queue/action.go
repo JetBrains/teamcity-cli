@@ -5,7 +5,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +42,7 @@ func newQueueActionCmd(f *cmdutil.Factory, a queueAction) *cobra.Command {
 			if err := a.execute(client, args[0]); err != nil {
 				return fmt.Errorf("failed to %s run: %w", a.use, err)
 			}
-			output.Success(a.verb, args[0])
+			f.Printer.Success(a.verb, args[0])
 			return nil
 		},
 	}

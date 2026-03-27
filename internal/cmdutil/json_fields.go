@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/spf13/cobra"
@@ -20,13 +21,17 @@ type JSONFieldsResult struct {
 }
 
 // ParseJSONFields parses the --json flag value, returns (result, showHelp, error).
-func ParseJSONFields(cmd *cobra.Command, flagValue string, spec *api.FieldSpec) (JSONFieldsResult, bool, error) {
+func ParseJSONFields(cmd *cobra.Command, flagValue string, spec *api.FieldSpec, out ...io.Writer) (JSONFieldsResult, bool, error) {
 	if !cmd.Flags().Changed("json") {
 		return JSONFieldsResult{}, false, nil
 	}
 
 	if flagValue == "" || flagValue == "?" {
-		fmt.Println(spec.Help())
+		w := io.Writer(cmd.OutOrStdout())
+		if len(out) > 0 {
+			w = out[0]
+		}
+		_, _ = fmt.Fprintln(w, spec.Help())
 		return JSONFieldsResult{}, true, nil
 	}
 

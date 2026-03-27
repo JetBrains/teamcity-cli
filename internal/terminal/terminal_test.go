@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	c := NewClient("https://tc.example.com/", "admin", "token123")
+	c := NewClient("https://tc.example.com/", "admin", "token123", func(string, ...any) {})
 	assert.Equal(t, "https://tc.example.com", c.baseURL)
 	assert.Equal(t, "admin", c.username)
 	assert.Equal(t, "token123", c.token)
@@ -16,7 +16,7 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestNewClientEmptyUsername(t *testing.T) {
-	c := NewClient("http://localhost:8111", "", "tok")
+	c := NewClient("http://localhost:8111", "", "tok", func(string, ...any) {})
 	assert.Equal(t, "http://localhost:8111", c.baseURL)
 	assert.Empty(t, c.username)
 }

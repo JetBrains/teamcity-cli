@@ -58,6 +58,7 @@ func newRunWatchCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
+	p := f.Printer
 	if opts.interval < 1 {
 		return fmt.Errorf("--interval must be at least 1 second, got %d", opts.interval)
 	}
@@ -71,7 +72,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		if watchHasTTYFn() {
 			return runWatchTUIFn(client, runID, opts.interval)
 		}
-		output.Warn("--logs requires a TTY; falling back to standard watch mode")
+		p.Warn("--logs requires a TTY; falling back to standard watch mode")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -89,11 +90,11 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 	go func() {
 		select {
 		case <-sigCh:
-			fmt.Println()
+			_, _ = fmt.Fprintln(p.Out)
 			if !opts.quiet {
-				fmt.Println()
-				fmt.Println(output.Faint("Interrupted. Run continues in background."))
-				fmt.Printf("%s Resume watching: teamcity run watch %s\n", output.Faint("Hint:"), runID)
+				_, _ = fmt.Fprintln(p.Out)
+				_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
+				_, _ = fmt.Fprintf(p.Out, "%s Resume watching: teamcity run watch %s\n", output.Faint("Hint:"), runID)
 			}
 			cancel()
 		case <-ctx.Done():
@@ -107,9 +108,9 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 	}
 
 	if opts.quiet {
-		fmt.Printf("Watching: %s\n", build.WebURL)
+		_, _ = fmt.Fprintf(p.Out, "Watching: %s\n", build.WebURL)
 	} else {
-		output.Info("Watching run #%s... %s\n", runID, output.Faint("(Ctrl-C to stop watching)"))
+		p.Info("Watching run #%s... %s\n", runID, output.Faint("(Ctrl-C to stop watching)"))
 	}
 
 	lastState := ""
@@ -120,7 +121,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		select {
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				fmt.Printf("\n%s Timeout exceeded\n", output.Red("✗"))
+				_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
 				return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
 			}
 			return nil
@@ -141,16 +142,16 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 			if build.State != lastState {
 				switch build.State {
 				case "queued":
-					fmt.Print("Queued")
+					_, _ = fmt.Fprint(p.Out, "Queued")
 				case "running":
-					fmt.Print("\rRunning")
+					_, _ = fmt.Fprint(p.Out, "\rRunning")
 				}
 				lastState = build.State
 			}
 			if build.State == "running" {
 				pct := build.PercentageComplete
 				if pct > lastPercent && pct > 0 {
-					fmt.Printf("... %d%%", pct)
+					_, _ = fmt.Fprintf(p.Out, "... %d%%", pct)
 					lastPercent = pct
 					if pct == 100 {
 						reachedComplete = time.Now()
@@ -159,7 +160,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 				if pct == 100 && !reachedComplete.IsZero() {
 					overtimeMin := int(time.Since(reachedComplete).Minutes())
 					if overtimeMin > lastOvertimeMin {
-						fmt.Printf("... +%dm", overtimeMin)
+						_, _ = fmt.Fprintf(p.Out, "... +%dm", overtimeMin)
 						lastOvertimeMin = overtimeMin
 					}
 				}
@@ -173,7 +174,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 			if build.PercentageComplete > 0 {
 				progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
 			}
-			fmt.Printf("\r%s %s %d  #%s %s · %s%s    ",
+			_, _ = fmt.Fprintf(p.Out, "\r%s %s %d  #%s %s · %s%s    ",
 				output.StatusIcon(build.Status, build.State),
 				output.Cyan(jobName),
 				build.ID,
@@ -184,18 +185,18 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		}
 
 		if build.State == "finished" {
-			fmt.Println()
+			_, _ = fmt.Fprintln(p.Out)
 			if !opts.quiet {
-				fmt.Println()
+				_, _ = fmt.Fprintln(p.Out)
 			}
 
-			return cmdutil.BuildResultError(client, build, !opts.quiet)
+			return cmdutil.BuildResultError(p, client, build, !opts.quiet)
 		}
 
 		select {
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				fmt.Printf("\n%s Timeout exceeded\n", output.Red("✗"))
+				_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
 				return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
 			}
 			return nil

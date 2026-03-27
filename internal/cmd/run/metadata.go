@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +25,9 @@ func newRunPinCmd(f *cmdutil.Factory) *cobra.Command {
 			if err := client.PinBuild(args[0], comment); err != nil {
 				return fmt.Errorf("failed to pin run: %w", err)
 			}
-			output.Success("Pinned run #%s", args[0])
+			f.Printer.Success("Pinned run #%s", args[0])
 			if comment != "" {
-				output.Info("  Comment: %s", comment)
+				f.Printer.Info("  Comment: %s", comment)
 			}
 			return nil
 		},
@@ -52,7 +51,7 @@ func newRunUnpinCmd(f *cmdutil.Factory) *cobra.Command {
 			if err := client.UnpinBuild(args[0]); err != nil {
 				return fmt.Errorf("failed to unpin run: %w", err)
 			}
-			output.Success("Unpinned run #%s", args[0])
+			f.Printer.Success("Unpinned run #%s", args[0])
 			return nil
 		},
 	}
@@ -95,8 +94,8 @@ func runRunTag(f *cmdutil.Factory, runID string, tags []string) error {
 		return fmt.Errorf("failed to add tags: %w", err)
 	}
 
-	output.Success("Added %d tag(s) to run #%s", len(tags), runID)
-	output.Info("  Tags: %s", strings.Join(tags, ", "))
+	f.Printer.Success("Added %d tag(s) to run #%s", len(tags), runID)
+	f.Printer.Info("  Tags: %s", strings.Join(tags, ", "))
 	return nil
 }
 
@@ -133,12 +132,12 @@ func runRunUntag(f *cmdutil.Factory, runID string, tags []string) error {
 	}
 
 	if removed > 0 {
-		output.Success("Removed %d tag(s) from run #%s", removed, runID)
+		f.Printer.Success("Removed %d tag(s) from run #%s", removed, runID)
 	}
 
 	if len(errors) > 0 {
 		for _, e := range errors {
-			output.Warn("  Failed: %s", e)
+			f.Printer.Warn("  Failed: %s", e)
 		}
 		if removed == 0 {
 			return fmt.Errorf("failed to remove any tags")
@@ -191,7 +190,7 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 		if err := client.DeleteBuildComment(runID); err != nil {
 			return fmt.Errorf("failed to delete comment: %w", err)
 		}
-		output.Success("Deleted comment from run #%s", runID)
+		f.Printer.Success("Deleted comment from run #%s", runID)
 		return nil
 	}
 
@@ -199,8 +198,8 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 		if err := client.SetBuildComment(runID, comment); err != nil {
 			return fmt.Errorf("failed to set comment: %w", err)
 		}
-		output.Success("Set comment on run #%s", runID)
-		output.Info("  Comment: %s", comment)
+		f.Printer.Success("Set comment on run #%s", runID)
+		f.Printer.Info("  Comment: %s", comment)
 		return nil
 	}
 
@@ -209,10 +208,11 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 		return fmt.Errorf("failed to get comment: %w", err)
 	}
 
+	p := f.Printer
 	if existingComment == "" {
-		output.Info("No comment set on run #%s", runID)
+		p.Info("No comment set on run #%s", runID)
 	} else {
-		fmt.Println(existingComment)
+		_, _ = fmt.Fprintln(p.Out, existingComment)
 	}
 	return nil
 }

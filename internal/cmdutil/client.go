@@ -7,19 +7,18 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
-func defaultGetClient() (api.ClientInterface, error) {
+func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 	serverURL := config.GetServerURL()
 	token, _, keyringErr := config.GetTokenWithSource()
 
-	debugOpt := api.WithDebugFunc(output.Debug)
+	debugOpt := api.WithDebugFunc(f.Printer.Debug)
 	roOpt := api.WithReadOnly(config.IsReadOnly())
 
 	opts := []api.ClientOption{debugOpt, roOpt}
 
-	tlsOpt, err := tlsOption()
+	tlsOpt, err := f.tlsOption()
 	if err != nil {
 		return nil, err
 	}
@@ -34,12 +33,12 @@ func defaultGetClient() (api.ClientInterface, error) {
 				fmt.Sprintf("Set %s environment variable or run 'teamcity auth login --guest -s <url>'", config.EnvServerURL),
 			)
 		}
-		output.Debug("Using guest authentication")
+		f.Printer.Debug("Using guest authentication")
 		return api.NewGuestClient(serverURL, opts...), nil
 	}
 
 	if serverURL != "" && token != "" {
-		WarnInsecureHTTP(serverURL, "authentication token")
+		f.WarnInsecureHTTP(serverURL, "authentication token")
 		return api.NewClient(serverURL, token, opts...), nil
 	}
 
@@ -47,15 +46,15 @@ func defaultGetClient() (api.ClientInterface, error) {
 		if serverURL == "" {
 			serverURL = buildAuth.ServerURL
 		}
-		output.Debug("Using build-level authentication")
-		WarnInsecureHTTP(serverURL, "credentials")
+		f.Printer.Debug("Using build-level authentication")
+		f.WarnInsecureHTTP(serverURL, "credentials")
 		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, opts...), nil
 	}
 
 	return nil, NotAuthenticatedError(serverURL, keyringErr)
 }
 
-func tlsOption() (api.ClientOption, error) {
+func (f *Factory) tlsOption() (api.ClientOption, error) {
 	certFile, keyFile, caFile := config.GetTLSPaths()
 
 	if certFile == "" && keyFile == "" && caFile == "" {
@@ -71,7 +70,7 @@ func tlsOption() (api.ClientOption, error) {
 		return nil, err
 	}
 
-	output.Debug("Using mTLS client certificate authentication")
+	f.Printer.Debug("Using mTLS client certificate authentication")
 	return api.WithTransport(&http.Transport{TLSClientConfig: tlsCfg}), nil
 }
 
@@ -80,7 +79,7 @@ func ProbeGuestAccess(serverURL string) bool {
 	if serverURL == "" {
 		return false
 	}
-	guest := api.NewGuestClient(serverURL, api.WithDebugFunc(output.Debug))
+	guest := api.NewGuestClient(serverURL)
 	_, err := guest.GetServer()
 	return err == nil
 }

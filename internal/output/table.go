@@ -1,9 +1,6 @@
 package output
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -11,8 +8,8 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-// PrintTable prints a formatted table with proper Unicode/ANSI handling
-func PrintTable(headers []string, rows [][]string) {
+// renderTable renders a formatted table string with proper Unicode/ANSI handling.
+func renderTable(headers []string, rows [][]string) string {
 	noBorder := lipgloss.Border{}
 	headerStyle := lipgloss.NewStyle().Faint(true)
 	cellStyle := lipgloss.NewStyle()
@@ -25,7 +22,6 @@ func PrintTable(headers []string, rows [][]string) {
 		BorderRow(false).
 		BorderHeader(false).
 		StyleFunc(func(row, col int) lipgloss.Style {
-			// Last column doesn't need right padding
 			padding := 2
 			if col == len(headers)-1 {
 				padding = 0
@@ -36,12 +32,11 @@ func PrintTable(headers []string, rows [][]string) {
 			return cellStyle.PaddingRight(padding)
 		})
 
-	output := strings.TrimSpace(t.Render())
-	fmt.Println(output)
+	return strings.TrimSpace(t.Render())
 }
 
-// PrintPlainTable prints tab-separated output for scripting (works with cut -f, awk)
-func PrintPlainTable(headers []string, rows [][]string, noHeader bool) {
+// renderPlainTable renders tab-separated output for scripting (works with cut -f, awk).
+func renderPlainTable(headers []string, rows [][]string, noHeader bool) string {
 	colWidths := make([]int, len(headers))
 	for i, h := range headers {
 		colWidths[i] = runewidth.StringWidth(h)
@@ -68,13 +63,16 @@ func PrintPlainTable(headers []string, rows [][]string, noHeader bool) {
 		return strings.Join(padded, "\t")
 	}
 
+	var b strings.Builder
 	if !noHeader {
-		fmt.Println(padRow(headers))
+		b.WriteString(padRow(headers))
+		b.WriteByte('\n')
 	}
-
 	for _, row := range rows {
-		fmt.Println(padRow(row))
+		b.WriteString(padRow(row))
+		b.WriteByte('\n')
 	}
+	return b.String()
 }
 
 // AutoSizeColumns truncates flexible columns in-place to fit the terminal width.
@@ -199,9 +197,3 @@ func Truncate(s string, maxLen int) string {
 	return runewidth.Truncate(s, maxLen, "...")
 }
 
-// PrintJSON prints data as JSON
-func PrintJSON(data any) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(data)
-}

@@ -2,13 +2,9 @@ package run
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
@@ -48,12 +44,12 @@ func (w *watchFlags) watchOpts(logs, json bool) *runWatchOptions {
 	}
 }
 
-func printQueuedRun(build *api.Build, context string) {
+func printQueuedRun(p *output.Printer, build *api.Build, context string) {
 	ref := fmt.Sprintf("%d  #%s", build.ID, build.Number)
 	if build.Number == "" {
 		ref = fmt.Sprintf("%d", build.ID)
 	}
-	output.Success("Queued run %s for %s", ref, context)
+	p.Success("Queued run %s for %s", ref, context)
 }
 
 func afterQueue(f *cmdutil.Factory, build *api.Build, web bool, wf *watchFlags) error {
@@ -61,7 +57,7 @@ func afterQueue(f *cmdutil.Factory, build *api.Build, web bool, wf *watchFlags) 
 		_ = browser.OpenURL(build.WebURL)
 	}
 	if wf.watch {
-		fmt.Println()
+		_, _ = fmt.Fprintln(f.Printer.Out)
 		return doRunWatch(f, fmt.Sprintf("%d", build.ID), wf.watchOpts(true, false))
 	}
 	return nil
@@ -139,56 +135,57 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error {
+	p := f.Printer
 	opts.resolve()
 	if opts.dryRun {
-		fmt.Printf("%s Would trigger run for %s\n", output.Faint("[dry-run]"), output.Cyan(jobID))
+		_, _ = fmt.Fprintf(p.Out, "%s Would trigger run for %s\n", output.Faint("[dry-run]"), output.Cyan(jobID))
 		if opts.branch != "" {
-			fmt.Printf("  Branch: %s\n", opts.branch)
+			_, _ = fmt.Fprintf(p.Out, "  Branch: %s\n", opts.branch)
 		}
 		if opts.revision != "" {
-			fmt.Printf("  Revision: %s\n", opts.revision)
+			_, _ = fmt.Fprintf(p.Out, "  Revision: %s\n", opts.revision)
 		}
 		if len(opts.params) > 0 {
-			fmt.Println("  Parameters:")
+			_, _ = fmt.Fprintln(p.Out, "  Parameters:")
 			for k, v := range opts.params {
-				fmt.Printf("    %s=%s\n", k, v)
+				_, _ = fmt.Fprintf(p.Out, "    %s=%s\n", k, v)
 			}
 		}
 		if len(opts.systemProps) > 0 {
-			fmt.Println("  System properties:")
+			_, _ = fmt.Fprintln(p.Out, "  System properties:")
 			for k, v := range opts.systemProps {
-				fmt.Printf("    %s=%s\n", k, v)
+				_, _ = fmt.Fprintf(p.Out, "    %s=%s\n", k, v)
 			}
 		}
 		if len(opts.envVars) > 0 {
-			fmt.Println("  Environment variables:")
+			_, _ = fmt.Fprintln(p.Out, "  Environment variables:")
 			for k, v := range opts.envVars {
-				fmt.Printf("    %s=%s\n", k, v)
+				_, _ = fmt.Fprintf(p.Out, "    %s=%s\n", k, v)
 			}
 		}
 		if opts.comment != "" {
-			fmt.Printf("  Comment: %s\n", opts.comment)
+			_, _ = fmt.Fprintf(p.Out, "  Comment: %s\n", opts.comment)
 		}
 		if len(opts.tags) > 0 {
-			fmt.Printf("  Tags: %s\n", strings.Join(opts.tags, ", "))
+			_, _ = fmt.Fprintf(p.Out, "  Tags: %s\n", strings.Join(opts.tags, ", "))
 		}
 		if opts.personal || opts.localChanges != "" {
-			fmt.Println("  Personal build: yes")
+			_, _ = fmt.Fprintln(p.Out, "  Personal build: yes")
 		}
 		if opts.localChanges != "" {
-			fmt.Printf("  Local changes: %s\n", opts.localChanges)
+			_, _ = fmt.Fprintf(p.Out, "  Local changes: %s\n", opts.localChanges)
 		}
 		if opts.cleanSources {
-			fmt.Println("  Clean sources: yes")
+			_, _ = fmt.Fprintln(p.Out, "  Clean sources: yes")
 		}
 		if opts.rebuildDeps {
-			fmt.Println("  Rebuild dependencies: yes")
+			_, _ = fmt.Fprintln(p.Out, "  Rebuild dependencies: yes")
 		}
 		if opts.queueAtTop {
-			fmt.Println("  Queue at top: yes")
+			_, _ = fmt.Fprintln(p.Out, "  Queue at top: yes")
 		}
 		if opts.agent > 0 {
-			fmt.Printf("  Agent ID: %d\n", opts.agent)
+			_, _ = fmt.Fprintf(p.Out, "  Agent ID: %d\n", opts.agent)
 		}
 		return nil
 	}
@@ -205,16 +202,16 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 			return err
 		}
 		opts.branch = branch
-		output.Info("Using current branch: %s", branch)
+		p.Info("Using current branch: %s", branch)
 	}
 
 	if opts.localChanges != "" && !opts.noPush {
 		if !branchExistsOnRemote(opts.branch) {
-			output.Info("Pushing branch to remote...")
+			p.Info("Pushing branch to remote...")
 			if err := pushBranch(opts.branch); err != nil {
 				return err
 			}
-			output.Success("Branch pushed to remote")
+			p.Success("Branch pushed to remote")
 		}
 	}
 
@@ -225,12 +222,12 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 
 	var personalChangeID string
 	if opts.localChanges != "" {
-		patch, err := loadLocalChanges(opts.localChanges)
+		patch, err := loadLocalChanges(opts.localChanges, f.IOStreams.In)
 		if err != nil {
 			return err
 		}
 
-		output.Info("Uploading local changes...")
+		p.Info("Uploading local changes...")
 		description := opts.comment
 		if description == "" {
 			description = "Personal build with local changes"
@@ -241,7 +238,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 			return fmt.Errorf("failed to upload changes: %w", err)
 		}
 		personalChangeID = changeID
-		output.Success("Uploaded changes (ID: %s)", changeID)
+		p.Success("Uploaded changes (ID: %s)", changeID)
 
 		opts.personal = true
 	}
@@ -270,249 +267,27 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		if opts.watch {
 			return doRunWatch(f, fmt.Sprintf("%d", build.ID), opts.watchOpts(false, true))
 		}
-		return output.PrintJSON(build)
+		return p.PrintJSON(build)
 	}
 
-	printQueuedRun(build, jobID)
+	printQueuedRun(p, build, jobID)
 
 	if opts.branch != "" {
-		output.Info("  Branch: %s", opts.branch)
+		p.Info("  Branch: %s", opts.branch)
 	}
 	if opts.comment != "" {
-		output.Info("  Comment: %s", opts.comment)
+		p.Info("  Comment: %s", opts.comment)
 	}
 	if len(opts.tags) > 0 {
-		output.Info("  Tags: %s", strings.Join(opts.tags, ", "))
+		p.Info("  Tags: %s", strings.Join(opts.tags, ", "))
 	}
-	output.Info("  URL: %s", build.WebURL)
+	p.Info("  URL: %s", build.WebURL)
 	if opts.agent > 0 {
-		fmt.Printf("  %s teamcity agent term %d\n", output.Faint("Agent terminal:"), opts.agent)
+		_, _ = fmt.Fprintf(p.Out, "  %s teamcity agent term %d\n", output.Faint("Agent terminal:"), opts.agent)
 	} else {
-		fmt.Printf("  %s teamcity agent term <agent-id>\n", output.Faint("Agent terminal:"))
+		_, _ = fmt.Fprintf(p.Out, "  %s teamcity agent term <agent-id>\n", output.Faint("Agent terminal:"))
 	}
 
 	return afterQueue(f, build, opts.web, &opts.watchFlags)
 }
 
-type runRestartOptions struct {
-	watchFlags
-	web bool
-}
-
-func newRunRestartCmd(f *cmdutil.Factory) *cobra.Command {
-	opts := &runRestartOptions{}
-
-	cmd := &cobra.Command{
-		Use:   "restart <run-id>",
-		Short: "Restart a run",
-		Long:  `Restart a run with the same configuration.`,
-		Args:  cobra.ExactArgs(1),
-		Example: `  teamcity run restart 12345
-  teamcity run restart 12345 --watch`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRunRestart(f, args[0], opts)
-		},
-	}
-
-	opts.addToCmd(cmd)
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open run in browser")
-
-	return cmd
-}
-
-func runRunRestart(f *cmdutil.Factory, runID string, opts *runRestartOptions) error {
-	opts.resolve()
-
-	client, err := f.Client()
-	if err != nil {
-		return err
-	}
-
-	originalBuild, err := client.GetBuild(runID)
-	if err != nil {
-		return fmt.Errorf("failed to get run: %w", err)
-	}
-
-	newBuild, err := client.RunBuild(originalBuild.BuildTypeID, api.RunBuildOptions{
-		Branch: originalBuild.BranchName,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to trigger run: %w", err)
-	}
-
-	printQueuedRun(newBuild, fmt.Sprintf("%s (restart of %d)", originalBuild.BuildTypeID, originalBuild.ID))
-	fmt.Printf("  Job: %s\n", originalBuild.BuildTypeID)
-	if originalBuild.BranchName != "" {
-		fmt.Printf("  Branch: %s\n", originalBuild.BranchName)
-	}
-	output.Info("  URL: %s", newBuild.WebURL)
-
-	return afterQueue(f, newBuild, opts.web, &opts.watchFlags)
-}
-
-type localChangesValue struct {
-	val *string
-}
-
-func (v *localChangesValue) String() string {
-	if v.val == nil {
-		return ""
-	}
-	return *v.val
-}
-
-func (v *localChangesValue) Set(s string) error {
-	*v.val = s
-	return nil
-}
-
-func (v *localChangesValue) Type() string {
-	return "string"
-}
-
-func loadLocalChanges(source string) ([]byte, error) {
-	switch source {
-	case "git":
-		if !isGitRepo() {
-			return nil, tcerrors.WithSuggestion(
-				"not a git repository",
-				"Run this command from within a git repository, or use --local-changes <path> to specify a diff file",
-			)
-		}
-		patch, err := getGitDiff()
-		if err != nil {
-			return nil, err
-		}
-		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
-				"no uncommitted changes found",
-				"Make some changes to your files before running a personal build, or use --local-changes <path> to specify a diff file",
-			)
-		}
-		return patch, nil
-	case "-":
-		patch, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read from stdin: %w", err)
-		}
-		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
-				"no changes provided via stdin",
-				"Pipe a diff file to stdin, e.g.: git diff | teamcity run start Job --local-changes -",
-			)
-		}
-		return patch, nil
-	default:
-		patch, err := os.ReadFile(source)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil, tcerrors.WithSuggestion(
-					fmt.Sprintf("diff file not found: %s", source),
-					"Check the file path and try again",
-				)
-			}
-			return nil, fmt.Errorf("failed to read diff file: %w", err)
-		}
-		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
-				fmt.Sprintf("diff file is empty: %s", source),
-				"Provide a non-empty diff file",
-			)
-		}
-		return patch, nil
-	}
-}
-
-func getGitDiff() ([]byte, error) {
-	untrackedFiles, err := getUntrackedFiles()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get untracked files: %w", err)
-	}
-
-	if len(untrackedFiles) > 0 {
-		addArgs := append([]string{"add", "-N", "--"}, untrackedFiles...)
-		addCmd := exec.Command("git", addArgs...)
-		if err := addCmd.Run(); err != nil {
-			output.Debug("Failed to stage untracked files: %v", err)
-		} else {
-			defer func() {
-				resetArgs := append([]string{"reset", "HEAD", "--"}, untrackedFiles...)
-				resetCmd := exec.Command("git", resetArgs...)
-				_ = resetCmd.Run()
-			}()
-		}
-	}
-
-	cmd := exec.Command("git", "diff", "HEAD")
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, tcerrors.WithSuggestion(
-			"failed to generate git diff",
-			"Ensure you have at least one commit in your repository",
-		)
-	}
-	return out, nil
-}
-
-type runCancelOptions struct {
-	comment string
-	force   bool
-}
-
-func newRunCancelCmd(f *cmdutil.Factory) *cobra.Command {
-	opts := &runCancelOptions{}
-
-	cmd := &cobra.Command{
-		Use:   "cancel <run-id>",
-		Short: "Cancel a running build",
-		Long:  `Cancel a running or queued run.`,
-		Args:  cobra.ExactArgs(1),
-		Example: `  teamcity run cancel 12345
-  teamcity run cancel 12345 --comment "Canceling for hotfix"
-  teamcity run cancel 12345 --force`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRunCancel(f, args[0], opts)
-		},
-	}
-
-	cmd.Flags().StringVar(&opts.comment, "comment", "", "Comment for cancellation")
-	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
-
-	return cmd
-}
-
-func runRunCancel(f *cmdutil.Factory, runID string, opts *runCancelOptions) error {
-	client, err := f.Client()
-	if err != nil {
-		return err
-	}
-
-	needsConfirmation := !opts.force && opts.comment == "" && f.IsInteractive()
-
-	if needsConfirmation {
-		var confirm bool
-		prompt := &survey.Confirm{
-			Message: fmt.Sprintf("Cancel run #%s?", runID),
-			Default: false,
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
-			return err
-		}
-		if !confirm {
-			output.Info("Canceled")
-			return nil
-		}
-	}
-
-	comment := opts.comment
-	if comment == "" {
-		comment = "Canceled via teamcity CLI"
-	}
-
-	if err := client.CancelBuild(runID, comment); err != nil {
-		return err
-	}
-
-	output.Success("Canceled run #%s", runID)
-	return nil
-}

@@ -43,15 +43,16 @@ type Factory struct {
 
 // NewFactory creates a Factory with production defaults.
 func NewFactory() *Factory {
-	return &Factory{
+	f := &Factory{
 		IOStreams: &IOStreams{
 			In:     os.Stdin,
 			Out:    os.Stdout,
 			ErrOut: os.Stderr,
 		},
-		Printer:    output.DefaultPrinter(),
-		ClientFunc: defaultGetClient,
+		Printer: output.DefaultPrinter(),
 	}
+	f.ClientFunc = f.defaultGetClient
+	return f
 }
 
 // Client returns an API client using the configured ClientFunc.
@@ -59,21 +60,18 @@ func (f *Factory) Client() (api.ClientInterface, error) {
 	return f.ClientFunc()
 }
 
-// InitOutput synchronizes the output package state from Factory flags.
+// InitOutput configures output settings from Factory flags.
 // Called once after flags are parsed (in PersistentPreRun).
 func (f *Factory) InitOutput() {
-	// Sync to package globals for backward compat with free functions.
-	output.Quiet = f.Quiet
-	output.Verbose = f.Verbose
-
-	if os.Getenv("NO_COLOR") != "" ||
+	noColor := os.Getenv("NO_COLOR") != "" ||
 		os.Getenv("TERM") == "dumb" ||
 		f.NoColor ||
-		!isatty.IsTerminal(os.Stdout.Fd()) {
+		!isatty.IsTerminal(os.Stdout.Fd())
+
+	if noColor {
 		color.NoColor = true
 	}
 
-	// Keep Printer in sync.
 	f.Printer.Quiet = f.Quiet
 	f.Printer.Verbose = f.Verbose
 }

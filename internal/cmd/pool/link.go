@@ -5,7 +5,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +56,7 @@ func newPoolProjectCmd(f *cmdutil.Factory, a poolProjectAction) *cobra.Command {
 			if err := a.execute(client, poolID, args[1]); err != nil {
 				return fmt.Errorf("failed to %s project: %w", a.use, err)
 			}
-			output.Success("%s project %s to pool %d", a.verb, args[1], poolID)
+			f.Printer.Success("%s project %s to pool %d", a.verb, args[1], poolID)
 			return nil
 		},
 	}

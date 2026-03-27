@@ -258,13 +258,14 @@ func RunWatchTUI(client api.ClientInterface, runID string, interval int) error {
 	}
 
 	fm := finalModel.(watchModel)
-	fmt.Println()
+	printer := output.DefaultPrinter()
+	_, _ = fmt.Fprintln(printer.Out)
 
 	if fm.build == nil || fm.build.State != "finished" {
-		fmt.Println(output.Faint("Build still running in background"))
-		fmt.Printf("Resume: teamcity run watch %s --logs\n", fm.runID)
+		_, _ = fmt.Fprintln(printer.Out, output.Faint("Build still running in background"))
+		_, _ = fmt.Fprintf(printer.Out, "Resume: teamcity run watch %s --logs\n", fm.runID)
 		return nil
 	}
 
-	return cmdutil.BuildResultError(client, fm.build, true)
+	return cmdutil.BuildResultError(printer, client, fm.build, true)
 }

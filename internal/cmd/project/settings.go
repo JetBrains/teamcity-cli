@@ -99,12 +99,13 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 		if statusErr != nil {
 			result["statusError"] = statusErr.Error()
 		}
-		return output.PrintJSON(result)
+		return f.Printer.PrintJSON(result)
 	}
 
+	p := f.Printer
 	if configErr != nil {
-		fmt.Printf("%s %s %s %s\n", output.Yellow("!"), output.Cyan(project.Name), output.Faint("·"), "not configured")
-		fmt.Printf("\n%s\n", output.Faint(configErr.Error()))
+		_, _ = fmt.Fprintf(p.Out, "%s %s %s %s\n", output.Yellow("!"), output.Cyan(project.Name), output.Faint("·"), "not configured")
+		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint(configErr.Error()))
 		return nil
 	}
 
@@ -133,38 +134,38 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 	if project.ID != project.Name {
 		header += " " + output.Faint("("+project.ID+")")
 	}
-	fmt.Printf("%s %s %s %s\n", statusIcon, header, output.Faint("·"), statusLabel)
+	_, _ = fmt.Fprintf(p.Out, "%s %s %s %s\n", statusIcon, header, output.Faint("·"), statusLabel)
 
-	fmt.Println()
-	fmt.Printf("%-12s %s\n", output.Faint("Format"), formatSettingsFormat(cfg.Format))
-	fmt.Printf("%-12s %s\n", output.Faint("Sync"), cfg.SynchronizationMode)
-	fmt.Printf("%-12s %s\n", output.Faint("Build"), formatBuildMode(cfg.BuildSettingsMode))
+	_, _ = fmt.Fprintln(p.Out)
+	_, _ = fmt.Fprintf(p.Out, "%-12s %s\n", output.Faint("Format"), formatSettingsFormat(cfg.Format))
+	_, _ = fmt.Fprintf(p.Out, "%-12s %s\n", output.Faint("Sync"), cfg.SynchronizationMode)
+	_, _ = fmt.Fprintf(p.Out, "%-12s %s\n", output.Faint("Build"), formatBuildMode(cfg.BuildSettingsMode))
 	if cfg.VcsRootID != "" {
 		vcsRoot := cfg.VcsRootID
 		if cfg.SettingsPath != "" {
 			vcsRoot += " @ " + cfg.SettingsPath
 		}
-		fmt.Printf("%-12s %s\n", output.Faint("VCS Root"), vcsRoot)
+		_, _ = fmt.Fprintf(p.Out, "%-12s %s\n", output.Faint("VCS Root"), vcsRoot)
 	}
 
 	if statusErr != nil {
-		fmt.Printf("\n%s\n", output.Faint(statusErr.Error()))
+		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint(statusErr.Error()))
 		return nil
 	}
 
 	if status.DslOutdated {
-		fmt.Printf("\n%s DSL scripts need to be regenerated\n", output.Yellow("!"))
+		_, _ = fmt.Fprintf(p.Out, "\n%s DSL scripts need to be regenerated\n", output.Yellow("!"))
 	}
 
 	if status.Timestamp != "" {
-		fmt.Printf("\n%-12s %s\n", output.Faint("Last sync"), formatRelativeTime(status.Timestamp))
+		_, _ = fmt.Fprintf(p.Out, "\n%-12s %s\n", output.Faint("Last sync"), formatRelativeTime(status.Timestamp))
 	}
 
 	if status.Message != "" && status.Type != "info" {
-		fmt.Printf("%-12s %s\n", output.Faint("Message"), output.Faint(status.Message))
+		_, _ = fmt.Fprintf(p.Out, "%-12s %s\n", output.Faint("Message"), output.Faint(status.Message))
 	}
 
-	fmt.Printf("\n%-12s %s\n", output.Faint("View"), output.Faint(project.WebURL+"&tab=versionedSettings"))
+	_, _ = fmt.Fprintf(p.Out, "\n%-12s %s\n", output.Faint("View"), output.Faint(project.WebURL+"&tab=versionedSettings"))
 
 	return nil
 }
@@ -241,7 +242,7 @@ func runProjectSettingsExport(f *cmdutil.Factory, projectID string, opts *projec
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
-	fmt.Printf("Exported %s settings to %s (%d bytes)\n", format, outputFile, len(data))
+	_, _ = fmt.Fprintf(f.Printer.Out, "Exported %s settings to %s (%d bytes)\n", format, outputFile, len(data))
 	return nil
 }
 
@@ -322,7 +323,7 @@ Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.`,
 			if len(args) > 0 {
 				opts.path = args[0]
 			}
-			return runProjectSettingsValidate(opts)
+			return runProjectSettingsValidate(f, opts)
 		},
 	}
 
@@ -331,7 +332,7 @@ Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.`,
 	return cmd
 }
 
-func runProjectSettingsValidate(opts *projectSettingsValidateOptions) error {
+func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidateOptions) error {
 	var dslDir string
 	if opts.path != "" {
 		abs, err := filepath.Abs(opts.path)
@@ -357,8 +358,9 @@ func runProjectSettingsValidate(opts *projectSettingsValidateOptions) error {
 		return err
 	}
 
-	if !output.Quiet {
-		fmt.Printf("Validating %s\n", output.Faint(dslDir))
+	p := f.Printer
+	if !p.Quiet {
+		_, _ = fmt.Fprintf(p.Out, "Validating %s\n", output.Faint(dslDir))
 	}
 
 	cmd := exec.Command(mvnCmd, "teamcity-configs:generate", "-f", pomPath)
@@ -372,33 +374,33 @@ func runProjectSettingsValidate(opts *projectSettingsValidateOptions) error {
 	combinedOutput := stdout.String() + stderr.String()
 
 	if opts.verbose {
-		fmt.Println(combinedOutput)
+		_, _ = fmt.Fprintln(p.Out, combinedOutput)
 	}
 
 	if err != nil {
-		fmt.Printf("%s Configuration invalid\n", output.Red("✗"))
+		_, _ = fmt.Fprintf(p.Out, "%s Configuration invalid\n", output.Red("✗"))
 
 		errs := parseKotlinErrors(combinedOutput)
 		if len(errs) > 0 {
-			fmt.Println()
+			_, _ = fmt.Fprintln(p.Out)
 			for _, e := range errs {
-				fmt.Printf("%s\n", e)
+				_, _ = fmt.Fprintf(p.Out, "%s\n", e)
 			}
 		}
 
 		if !opts.verbose {
-			fmt.Printf("\n%s\n", output.Faint("Hint: Run with --verbose for full compiler output"))
+			_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint("Hint: Run with --verbose for full compiler output"))
 		}
 		return fmt.Errorf("validation failed")
 	}
 
-	fmt.Printf("%s Configuration valid\n", output.Green("✓"))
+	_, _ = fmt.Fprintf(p.Out, "%s Configuration valid\n", output.Green("✓"))
 
 	if serverURL := config.DetectServerFromDSL(); serverURL != "" {
-		fmt.Printf("  %s %s\n", output.Faint("Server:"), serverURL)
+		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Faint("Server:"), serverURL)
 	}
 	if stats := parseValidationStats(dslDir); stats != "" {
-		fmt.Printf("  %s\n", output.Faint(stats))
+		_, _ = fmt.Fprintf(p.Out, "  %s\n", output.Faint(stats))
 	}
 
 	return nil

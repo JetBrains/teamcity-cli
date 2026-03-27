@@ -58,12 +58,12 @@ func ResolveAgentID(client api.ClientInterface, nameOrID string) (int, string, e
 }
 
 // WarnInsecureHTTP prints a warning to stderr when connecting over plain HTTP.
-func WarnInsecureHTTP(serverURL, credentialType string) {
+func (f *Factory) WarnInsecureHTTP(serverURL, credentialType string) {
 	if !strings.HasPrefix(serverURL, "http://") || os.Getenv("TC_INSECURE_SKIP_WARN") != "" {
 		return
 	}
-	output.Warn("Using insecure HTTP connection. Your %s will be transmitted in plaintext.", credentialType)
-	output.Warn("Consider using HTTPS for secure communication.")
+	f.Printer.Warn("Using insecure HTTP connection. Your %s will be transmitted in plaintext.", credentialType)
+	f.Printer.Warn("Consider using HTTPS for secure communication.")
 }
 
 // FormatAgentStatus returns a formatted status string for an agent.

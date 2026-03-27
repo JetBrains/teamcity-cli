@@ -71,7 +71,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	if err := cmdutil.ValidateLimit(opts.limit); err != nil {
 		return err
 	}
-	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.BuildFields)
+	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.BuildFields, f.Printer.Out)
 	if err != nil {
 		return err
 	}
@@ -148,11 +148,11 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	}
 
 	if jsonResult.Enabled {
-		return output.PrintJSON(runs)
+		return f.Printer.PrintJSON(runs)
 	}
 
 	if runs.Count == 0 {
-		output.Info("No runs found")
+		f.Printer.Info("No runs found")
 		return nil
 	}
 
@@ -215,13 +215,14 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		})
 	}
 
+	p := f.Printer
 	if !opts.plain {
 		output.AutoSizeColumns(headers, rows, 2, 2, 3, 4)
 	}
 	if opts.plain {
-		output.PrintPlainTable(headers, rows, opts.noHeader)
+		p.PrintPlainTable(headers, rows, opts.noHeader)
 	} else {
-		output.PrintTable(headers, rows)
+		p.PrintTable(headers, rows)
 	}
 	return nil
 }
@@ -245,6 +246,7 @@ func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) error {
+	p := f.Printer
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -260,7 +262,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	}
 
 	if opts.JSON {
-		return output.PrintJSON(build)
+		return p.PrintJSON(build)
 	}
 
 	icon := output.StatusIcon(build.Status, build.State)
@@ -269,50 +271,50 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 		jobName = build.BuildType.Name
 	}
 
-	fmt.Printf("%s %s %d  #%s", icon, output.Cyan(jobName), build.ID, build.Number)
+	_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s", icon, output.Cyan(jobName), build.ID, build.Number)
 	if build.BranchName != "" {
-		fmt.Printf(" · %s", build.BranchName)
+		_, _ = fmt.Fprintf(p.Out, " · %s", build.BranchName)
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(p.Out)
 
 	if build.Triggered != nil {
 		triggeredBy := build.Triggered.Type
 		if build.Triggered.User != nil {
 			triggeredBy = build.Triggered.User.Name
 		}
-		fmt.Printf("Triggered by %s", triggeredBy)
+		_, _ = fmt.Fprintf(p.Out, "Triggered by %s", triggeredBy)
 
 		if build.StartDate != "" {
 			startTime, _ := api.ParseTeamCityTime(build.StartDate)
-			fmt.Printf(" · %s", output.RelativeTime(startTime))
+			_, _ = fmt.Fprintf(p.Out, " · %s", output.RelativeTime(startTime))
 
 			if build.FinishDate != "" {
 				finishTime, _ := api.ParseTeamCityTime(build.FinishDate)
 				duration := finishTime.Sub(startTime)
-				fmt.Printf(" · Took %s", output.FormatDuration(duration))
+				_, _ = fmt.Fprintf(p.Out, " · Took %s", output.FormatDuration(duration))
 			}
 		}
-		fmt.Println()
+		_, _ = fmt.Fprintln(p.Out)
 	}
 
 	if build.StatusText != "" && build.StatusText != build.Status {
-		fmt.Printf("\nStatus: %s\n", build.StatusText)
+		_, _ = fmt.Fprintf(p.Out, "\nStatus: %s\n", build.StatusText)
 	}
 
 	if build.State == "running" && build.PercentageComplete > 0 {
-		fmt.Printf("\nProgress: %d%%\n", build.PercentageComplete)
+		_, _ = fmt.Fprintf(p.Out, "\nProgress: %d%%\n", build.PercentageComplete)
 	}
 
 	if build.Agent != nil {
-		fmt.Printf("\nAgent: %s", output.Faint(build.Agent.Name))
+		_, _ = fmt.Fprintf(p.Out, "\nAgent: %s", output.Faint(build.Agent.Name))
 		if build.State == "running" {
-			fmt.Printf("  %s teamcity agent term %d", output.Faint("·"), build.Agent.ID)
+			_, _ = fmt.Fprintf(p.Out, "  %s teamcity agent term %d", output.Faint("·"), build.Agent.ID)
 		}
-		fmt.Println()
+		_, _ = fmt.Fprintln(p.Out)
 	}
 
 	if build.Pinned {
-		fmt.Printf("\n%s\n", output.Yellow("📌 Pinned"))
+		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Yellow("📌 Pinned"))
 	}
 
 	if build.Tags != nil && len(build.Tags.Tag) > 0 {
@@ -320,10 +322,10 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 		for _, t := range build.Tags.Tag {
 			tagNames = append(tagNames, t.Name)
 		}
-		fmt.Printf("\nTags: %s\n", strings.Join(tagNames, ", "))
+		_, _ = fmt.Fprintf(p.Out, "\nTags: %s\n", strings.Join(tagNames, ", "))
 	}
 
-	fmt.Printf("\n%s %s\n", output.Faint("View in browser:"), output.Green(build.WebURL))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), output.Green(build.WebURL))
 
 	return nil
 }
