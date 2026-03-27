@@ -51,8 +51,11 @@ func newRunWatchCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().IntVarP(&opts.interval, "interval", "i", 5, "Refresh interval in seconds")
 	cmd.Flags().BoolVar(&opts.logs, "logs", false, "Stream build logs while watching")
 	cmd.Flags().BoolVarP(&opts.quiet, "quiet", "Q", false, "Minimal output, show only state changes and result")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Wait for completion and output result as JSON")
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Timeout duration (e.g., 30m, 1h)")
 	cmd.MarkFlagsMutuallyExclusive("quiet", "logs")
+	cmd.MarkFlagsMutuallyExclusive("json", "logs")
+	cmd.MarkFlagsMutuallyExclusive("json", "quiet")
 
 	return cmd
 }
@@ -90,8 +93,10 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 	go func() {
 		select {
 		case <-sigCh:
-			_, _ = fmt.Fprintln(p.Out)
-			if !opts.quiet {
+			if !opts.json {
+				_, _ = fmt.Fprintln(p.Out)
+			}
+			if !opts.quiet && !opts.json {
 				_, _ = fmt.Fprintln(p.Out)
 				_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
 				_, _ = fmt.Fprintf(p.Out, "%s Resume watching: teamcity run watch %s\n", output.Faint("Hint:"), runID)
@@ -107,9 +112,12 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		return err
 	}
 
-	if opts.quiet {
+	switch {
+	case opts.json:
+		// silent until completion
+	case opts.quiet:
 		_, _ = fmt.Fprintf(p.Out, "Watching: %s\n", build.WebURL)
-	} else {
+	default:
 		p.Info("Watching run #%s... %s\n", runID, output.Faint("(Ctrl-C to stop watching)"))
 	}
 
@@ -121,7 +129,9 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		select {
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
+				if !opts.json {
+					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
+				}
 				return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
 			}
 			return nil
@@ -138,7 +148,10 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 			jobName = build.BuildType.Name
 		}
 
-		if opts.quiet {
+		switch {
+		case opts.json:
+			// silent polling — no output until completion
+		case opts.quiet:
 			if build.State != lastState {
 				switch build.State {
 				case "queued":
@@ -165,7 +178,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 					}
 				}
 			}
-		} else {
+		default:
 			status := output.Yellow("Running")
 			if build.State == "queued" {
 				status = output.Faint("Queued")
@@ -185,6 +198,20 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		}
 
 		if build.State == "finished" {
+			if opts.json {
+				if err := p.PrintJSON(build); err != nil {
+					return err
+				}
+				switch build.Status {
+				case "SUCCESS":
+					return nil
+				case "FAILURE":
+					return &cmdutil.ExitError{Code: cmdutil.ExitFailure}
+				default:
+					return &cmdutil.ExitError{Code: cmdutil.ExitCancelled}
+				}
+			}
+
 			_, _ = fmt.Fprintln(p.Out)
 			if !opts.quiet {
 				_, _ = fmt.Fprintln(p.Out)
@@ -196,7 +223,9 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		select {
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
+				if !opts.json {
+					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
+				}
 				return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
 			}
 			return nil
