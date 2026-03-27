@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
+	"sync"
 )
 
-// TLSConfig builds a tls.Config for mutual TLS client certificate authentication.
-// certFile and keyFile are paths to PEM-encoded client certificate and key.
-// caFile is an optional path to a PEM-encoded CA certificate for server verification.
+// TLSConfig builds a tls.Config for mTLS client certificate authentication.
 func TLSConfig(certFile, keyFile, caFile string) (*tls.Config, error) {
 	tlsCfg := &tls.Config{}
 
@@ -37,9 +37,7 @@ func TLSConfig(certFile, keyFile, caFile string) (*tls.Config, error) {
 	return tlsCfg, nil
 }
 
-// TLSConfigWithCert creates a tls.Config that presents the given certificate
-// during TLS handshakes. The certificate's PrivateKey may be a keystore-backed
-// crypto.Signer — the private key never needs to be exportable.
+// TLSConfigWithCert creates a tls.Config with the given certificate (private key may be keystore-backed).
 func TLSConfigWithCert(cert tls.Certificate, caFile string) (*tls.Config, error) {
 	tlsCfg := &tls.Config{
 		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
@@ -65,4 +63,31 @@ func WithTransport(transport *http.Transport) ClientOption {
 	return func(c *Client) {
 		c.HTTPClient.Transport = transport
 	}
+}
+
+// defaultTransport clones http.DefaultTransport with PEM-based root CAs to bypass platform verifiers that sandboxes block.
+var defaultTransport = sync.OnceValue(func() *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	if pool := loadRootCAs(); pool != nil {
+		t.TLSClientConfig = &tls.Config{RootCAs: pool}
+	}
+	return t
+})
+
+// loadRootCAs loads root CAs from well-known PEM bundle files (nil if none found).
+func loadRootCAs() *x509.CertPool {
+	for _, path := range certBundlePaths[runtime.GOOS] {
+		if data, err := os.ReadFile(path); err == nil {
+			pool := x509.NewCertPool()
+			if pool.AppendCertsFromPEM(data) {
+				return pool
+			}
+		}
+	}
+	return nil
+}
+
+var certBundlePaths = map[string][]string{
+	"darwin": {"/etc/ssl/cert.pem"},
+	"linux":  {"/etc/ssl/certs/ca-certificates.crt", "/etc/pki/tls/certs/ca-bundle.crt", "/etc/ssl/cert.pem"},
 }

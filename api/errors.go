@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // ErrAuthentication is returned when credentials are invalid or expired.
@@ -46,4 +47,13 @@ func (e *NetworkError) Error() string {
 
 func (e *NetworkError) Unwrap() error {
 	return e.Cause
+}
+
+// IsSandboxBlockedError reports whether a sandbox proxy is blocking outbound network access.
+func IsSandboxBlockedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.HasSuffix(msg, ": Forbidden") || strings.HasSuffix(msg, ": Blocked")
 }
