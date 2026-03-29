@@ -79,6 +79,26 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session", autouse=True)
+def verify_env() -> None:
+    """Fail fast if required env vars are missing or TeamCity auth is broken."""
+    import subprocess
+
+    missing = [k for k in ("TEAMCITY_URL", "TEAMCITY_TOKEN", "ANTHROPIC_API_KEY")
+               if not os.environ.get(k)]
+    assert not missing, f"Missing required env vars: {', '.join(missing)}"
+
+    result = subprocess.run(
+        ["teamcity", "auth", "status", "--no-input"],
+        capture_output=True, text=True, timeout=15,
+        env={**os.environ, "NO_COLOR": "1"},
+    )
+    assert result.returncode == 0, (
+        f"TeamCity auth failed (is TEAMCITY_TOKEN valid for {os.environ['TEAMCITY_URL']}?):\n"
+        f"{result.stdout}{result.stderr}"
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
 def verify_skill() -> None:
     """Verify the skill exists and print its version."""
     skill_md = SKILLS_DIR / "teamcity-cli" / "SKILL.md"
