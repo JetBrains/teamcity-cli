@@ -1,0 +1,52 @@
+[
+  {
+    "id": "investigate-failure",
+    "prompt": "Find a recent failed build on this TeamCity server and investigate what went wrong.\n\nTell me:\n1. Which build failed and in which job\n2. What the build log says about the failure\n3. Which tests failed (if any)\n4. What changes triggered the build",
+    "checks": ["found_failed_build", "viewed_log", "viewed_tests", "viewed_changes", "produced_diagnosis", "valid_commands", "no_hallucinations"],
+    "llm_grade": true
+  },
+  {
+    "id": "daily-loop",
+    "prompt": "Show me the last 5 builds on the `master` branch across all projects, and check if any of them failed.\n\nFor any failure you find:\n1. Show me the failure details and what tests broke\n2. Tell me what changes went into that build\n3. If any builds are still running, watch the most recent one until it finishes",
+    "checks": ["lists_builds", "investigates_failure", "views_changes", "handles_running", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],
+    "llm_grade": true
+  },
+  {
+    "id": "composite-failure",
+    "prompt": "The job `ijplatform_master_Idea_Test_Ultimate_Aggregator` is a composite build with many snapshot dependencies. Find its most recent failed run, then:\n\n1. Show me the dependency tree for this job\n2. Find which child build(s) actually failed\n3. Get the test failures from those child builds",
+    "checks": ["finds_composite", "explores_dependencies", "drills_into_child", "multi_step", "no_thrashing", "provides_diagnosis", "valid_commands", "no_hallucinations"],
+    "llm_grade": true
+  },
+  {
+    "id": "inspect-url",
+    "prompt": "What's going on with this build configuration? Show me recent builds and their status.\n\nhttps://buildserver.labs.intellij.net/buildConfiguration/ijplatform_master_CIDR_CLion_CLionTrunkHeavyTests_TestsUbuntu2404x86_64",
+    "checks": ["extracts_config_id", "lists_config_builds", "provides_answer", "executes_commands", "valid_commands", "no_hallucinations"]
+  },
+  {
+    "id": "find-builds",
+    "prompt": "Find the 10 most recent failed builds in the JetBrains Runtime project (project ID: JBR). Give me their IDs, statuses, and branch names in JSON format.",
+    "checks": ["uses_run_list", "filters_by_status", "filters_by_project", "uses_json", "uses_run_not_build", "valid_commands", "no_hallucinations"]
+  },
+  {
+    "id": "cross-project",
+    "prompt": "I'm trying to understand the CI setup for the CEF/JCEF part of JetBrains Runtime. Can you:\n\n1. Find the JCEF-related subprojects under JetBrains Runtime\n2. List the build jobs in those projects\n3. Show me the recent build history — are things generally green or are there frequent failures?\n4. Find if there are any builds currently in the queue for these projects\n\nGive me a summary of the CI health for this area.",
+    "checks": ["finds_subprojects", "lists_jobs", "views_build_history", "checks_queue", "provides_health_summary", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],
+    "llm_grade": true
+  },
+  {
+    "id": "explore-infrastructure",
+    "prompt": "I'm new to this TeamCity server. Can you give me an overview?\n\n1. What top-level projects are there?\n2. How many agent pools exist and what are the main ones?\n3. Show me the project hierarchy tree for the JetBrains Runtime project",
+    "checks": ["lists_projects", "lists_pools", "shows_tree", "provides_overview", "valid_commands", "no_hallucinations"]
+  },
+  {
+    "id": "hallucination-resistance",
+    "prompt": "I need to do the following with the teamcity CLI:\n\n1. List the last 50 failed builds in JSON format for the JetBrains Runtime project\n2. Get the build log for the most recent failure and show only the errors\n3. Show me test results sorted by duration",
+    "checks": ["uses_limit_not_count", "uses_status_filter", "uses_project_filter", "uses_failed_for_log", "no_sort_flag", "acknowledges_limitation", "uses_json_flag", "uses_run_not_build", "valid_commands", "no_hallucinations"]
+  },
+  {
+    "id": "negative-unrelated",
+    "prompt": "Write a Python script that reads a CSV file called \"sales.csv\" and prints the total revenue from the \"amount\" column.",
+    "checks": ["no_teamcity_commands", "no_skill_invocation", "produces_python"],
+    "treatments": ["CURRENT"]
+  }
+]

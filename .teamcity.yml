@@ -1,3 +1,4 @@
+name: CI
 jobs:
   test_macos:
     name: Test macOS
@@ -154,11 +155,40 @@ jobs:
         name: Lint
         docker-image: golangci/golangci-lint:latest
         script-content: go fmt ./... && golangci-lint run --tests=false ./...
+  skill_evals:
+    name: Skill Evals
+    runs-on: Ubuntu-24.04-Large
+    steps:
+      - type: script
+        name: Run Evals
+        script-content: |
+          curl -fsSL https://raw.githubusercontent.com/JetBrains/teamcity-cli/main/install.sh | bash
+          export PATH="$HOME/.local/bin:$PATH"
+          CHANGED=$(teamcity run changes "%teamcity.build.id%" --no-files 2>/dev/null || echo "")
+          FILES=$(teamcity run changes "%teamcity.build.id%" 2>/dev/null | grep -E '^\s+(skills/|evals/)' || true)
+          if [ -z "$FILES" ] && [ -n "$CHANGED" ]; then
+            echo "No changes in skills/ or evals/, skipping evals"
+            exit 0
+          fi
+          
+          export TEAMCITY_TOKEN="$BS_TEAMCITY_TOKEN"
+          export TEAMCITY_URL="https://buildserver.labs.intellij.net"
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          command -v claude >/dev/null || npm install -g @anthropic-ai/claude-code@latest
+          cd evals
+          uv sync
+          uv run pytest tests/test_tasks.py -v -n 8 || true
+          uv run python scripts/compare.py
 parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
   env.GOPROXY: https://proxy.golang.org,direct
   env.GOFLAGS: '-buildvcs=false'
   env.BRANCH_NAME: '%teamcity.build.branch%'
+  env.LANGSMITH_TRACING: 'true'
+  env.LANGSMITH_ENDPOINT: 'https://eu.api.smith.langchain.com'
+  env.LANGSMITH_PROJECT: 'teamcity-cli'
+  env.BENCH_LOCAL: '1'
 secrets:
   env.LANGSMITH_API_KEY: credentialsJSON:e548d3ee-0081-486e-be8a-38a3d10f1e0d
   env.ANTHROPIC_API_KEY: credentialsJSON:1aaed966-3ca9-426d-ba92-3def6490e3a2

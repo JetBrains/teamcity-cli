@@ -149,6 +149,22 @@ install-choco:
     echo "Installed choco $(choco --version) to $BIN_DIR/choco"
     echo "Make sure $BIN_DIR is in your PATH"
 
+# Run skill evals (pass any pytest args: --task=X, --runs=3, -n 4, etc.)
+eval *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd evals
+    set -a; [ -f .env ] && source .env; set +a
+    uv run pytest tests/test_tasks.py -v {{args}}
+
+# Compare experiments via LangSmith (auto-picks current branch vs main)
+eval-diff *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd evals
+    set -a; [ -f .env ] && source .env; set +a
+    uv run python scripts/compare.py {{args}}
+
 # Install JetBrains codesign client (requires JB employee VPN)
 install-codesign:
     #!/usr/bin/env sh
