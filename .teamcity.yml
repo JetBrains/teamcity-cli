@@ -8,11 +8,15 @@ jobs:
         script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
       - type: script
         name: Acceptance Tests
-        script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+        script-content: >-
+          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout
+          10m
       - type: script
         name: Sandbox Tests
-        script-content: |
-          HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install -q ripgrep
+        script-content: >-
+          HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install -q
+          ripgrep
+
           go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
   test_windows:
     name: Test Windows
@@ -23,17 +27,23 @@ jobs:
         script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
       - type: script
         name: Acceptance Tests
-        script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+        script-content: >-
+          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout
+          10m
       - type: script
         name: Verify install.ps1
-        script-content: |
+        script-content: >-
           set "TC_INSTALL_DIR=%%TEMP%%\tc-install-ps1"
-          powershell -ExecutionPolicy Bypass -Command "iex (Get-Content install.ps1 -Raw -Encoding UTF8)"
+
+          powershell -ExecutionPolicy Bypass -Command "iex (Get-Content
+          install.ps1 -Raw -Encoding UTF8)"
+
           "%%TEMP%%\tc-install-ps1\teamcity.exe" --version
+
           rmdir /s /q "%%TEMP%%\tc-install-ps1"
       - type: script
         name: Verify install.cmd
-        script-content: |
+        script-content: |-
           call install.cmd "" "%%TEMP%%\tc-install-cmd"
           "%%TEMP%%\tc-install-cmd\teamcity.exe" --version
           rmdir /s /q "%%TEMP%%\tc-install-cmd"
@@ -41,43 +51,47 @@ jobs:
     name: Test Linux
     runs-on: Ubuntu-24.04-Large
     parameters:
-      env.GOROOT: '/usr/lib/go-1.26'
-      env.PATH: '/usr/lib/go-1.26/bin:%env.PATH%'
+      env.GOROOT: /usr/lib/go-1.26
+      env.PATH: /usr/lib/go-1.26/bin:%env.PATH%
     steps:
       - type: script
         name: Install Go
-        script-content: |
+        script-content: |-
           sudo add-apt-repository -y ppa:longsleep/golang-backports
           sudo apt-get update
           sudo apt-get install -y golang-1.26-go
       - type: script
         name: Integration Tests
-        script-content: |
-          go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout 15m \
+        script-content: >-
+          go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout
+          15m \
             -coverpkg=./... -coverprofile=coverage-integration.out
       - type: script
         name: Guest Auth Tests
-        script-content: |
-          TEAMCITY_GUEST=1 go test -race -count=1 -shuffle=on -v ./api/... -tags=guest -timeout 15m \
+        script-content: >-
+          TEAMCITY_GUEST=1 go test -race -count=1 -shuffle=on -v ./api/...
+          -tags=guest -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
-        script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+        script-content: >-
+          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout
+          10m
       - type: script
         name: Sandbox Tests
-        script-content: |
+        script-content: |-
           sudo apt-get install -y bubblewrap socat ripgrep
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
       - type: script
         name: Merge Coverage
-        script-content: |
+        script-content: |-
           head -1 coverage-integration.out > coverage.out
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
       - type: script
         name: Verify install.sh
-        script-content: |
+        script-content: |-
           INSTALL_DIR=$(mktemp -d)
           bash install.sh "" "$INSTALL_DIR"
           "$INSTALL_DIR/teamcity" --version
@@ -86,37 +100,41 @@ jobs:
     name: Test Linux ARM64
     runs-on: Ubuntu-24.04-Large-Arm64
     parameters:
-      env.GOROOT: '/usr/lib/go-1.26'
-      env.PATH: '/usr/lib/go-1.26/bin:%env.PATH%'
+      env.GOROOT: /usr/lib/go-1.26
+      env.PATH: /usr/lib/go-1.26/bin:%env.PATH%
     steps:
       - type: script
         name: Install Go
-        script-content: |
+        script-content: |-
           sudo add-apt-repository -y ppa:longsleep/golang-backports
           sudo apt-get update
           sudo apt-get install -y golang-1.26-go
       - type: script
         name: Integration Tests
-        script-content: |
-          go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout 15m \
+        script-content: >-
+          go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout
+          15m \
             -coverpkg=./... -coverprofile=coverage-integration.out
       - type: script
         name: Guest Auth Tests
-        script-content: |
-          TEAMCITY_GUEST=1 go test -race -count=1 -shuffle=on -v ./api/... -tags=guest -timeout 15m \
+        script-content: >-
+          TEAMCITY_GUEST=1 go test -race -count=1 -shuffle=on -v ./api/...
+          -tags=guest -timeout 15m \
             -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
-        script-content: go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout 10m
+        script-content: >-
+          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout
+          10m
       - type: script
         name: Sandbox Tests
-        script-content: |
+        script-content: |-
           sudo apt-get install -y bubblewrap socat ripgrep
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
       - type: script
         name: Merge Coverage
-        script-content: |
+        script-content: |-
           head -1 coverage-integration.out > coverage.out
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
@@ -138,8 +156,10 @@ jobs:
         script-content: go fmt ./... && golangci-lint run --tests=false ./...
 parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
-  env.GOPROXY: 'https://proxy.golang.org,direct'
+  env.GOPROXY: https://proxy.golang.org,direct
   env.GOFLAGS: '-buildvcs=false'
   env.BRANCH_NAME: '%teamcity.build.branch%'
 secrets:
-  TEAMCITY_TOKEN: credentialsJSON:c745e669-581a-454e-8984-81f635c1665d
+  env.LANGSMITH_API_KEY: credentialsJSON:e548d3ee-0081-486e-be8a-38a3d10f1e0d
+  env.ANTHROPIC_API_KEY: credentialsJSON:1aaed966-3ca9-426d-ba92-3def6490e3a2
+  env.BS_TEAMCITY_TOKEN: credentialsJSON:8206848e-387b-447c-9b3b-c770ac5ff050
