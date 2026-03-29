@@ -1,0 +1,9 @@
+# Auth login with an invalid token fails with a clear error.
+
+env TEAMCITY_URL=
+env TEAMCITY_TOKEN=
+env TEAMCITY_GUEST=
+
+! exec teamcity auth login --server $TC_HOST --token invalid-token-value --no-input
+stderr 'Authentication failed'
+stderr 'invalid or expired token'
