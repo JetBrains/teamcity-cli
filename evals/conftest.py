@@ -87,6 +87,9 @@ def verify_env() -> None:
                if not os.environ.get(k)]
     assert not missing, f"Missing required env vars: {', '.join(missing)}"
 
+    import shutil
+    assert shutil.which("teamcity"), "teamcity CLI not found on PATH"
+
     result = subprocess.run(
         ["teamcity", "auth", "status", "--no-input"],
         capture_output=True, text=True, timeout=15,

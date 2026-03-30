@@ -14,9 +14,8 @@ jobs:
           10m
       - type: script
         name: Sandbox Tests
-        script-content: >-
-          HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install -q
-          ripgrep
+        script-content: |-
+          HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install -q ripgrep
           go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
   test_windows:
     name: Test Windows
@@ -158,7 +157,7 @@ jobs:
       - type: script
         name: Run Evals
         script-content: |
-          curl -fsSL https://raw.githubusercontent.com/JetBrains/teamcity-cli/main/install.sh | bash
+          curl -fsSL https://raw.githubusercontent.com/JetBrains/teamcity-cli/main/install.sh | bash -s -- "" "$HOME/.local/bin"
           export PATH="$HOME/.local/bin:$PATH"
           CHANGED=$(teamcity run changes "%teamcity.build.id%" --no-files 2>/dev/null || echo "")
           FILES=$(teamcity run changes "%teamcity.build.id%" 2>/dev/null | grep -E '^\s+(skills/|evals/)' || true)
@@ -188,4 +187,4 @@ parameters:
 secrets:
   env.LANGSMITH_API_KEY: credentialsJSON:e548d3ee-0081-486e-be8a-38a3d10f1e0d
   env.ANTHROPIC_API_KEY: credentialsJSON:1aaed966-3ca9-426d-ba92-3def6490e3a2
-  env.BS_TEAMCITY_TOKEN: credentialsJSON:8206848e-387b-447c-9b3b-c770ac5ff050
+  env.BS_TEAMCITY_TOKEN: credentialsJSON:6800abb7-60cc-4b76-ab80-ead91ea46455
