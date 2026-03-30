@@ -37,14 +37,8 @@ class EvalRunner:
 
     @property
     def commands(self) -> list[str]:
-        """All teamcity commands — both mentioned in text AND executed via Bash."""
-        seen = set()
-        result = []
-        for cmd in self.events.commands_mentioned + self.events.commands_run:
-            if cmd not in seen:
-                seen.add(cmd)
-                result.append(cmd)
-        return result
+        """Commands actually executed via Bash tool calls. Text mentions don't count."""
+        return self.events.commands_run
 
     @property
     def tool_calls(self) -> list[dict]:
@@ -69,9 +63,8 @@ class EvalRunner:
         return False
 
     def has_text(self, *fragments: str) -> bool:
-        """Check if response text OR executed commands contain ALL fragments."""
-        combined = (self.text + "\n" + "\n".join(self.events.commands_run)).lower()
-        return all(f.lower() in combined for f in fragments)
+        """Check if response text contains ALL fragments."""
+        return all(f.lower() in self.text.lower() for f in fragments)
 
     def has_no_text(self, *fragments: str) -> bool:
         """Check that NONE of the fragments appear in the response text."""
