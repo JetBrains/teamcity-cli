@@ -42,6 +42,28 @@ KNOWN_HALLUCINATIONS = [
 ]
 
 
+def ran_teamcity_commands(runner: EvalRunner) -> None:
+    """Claude must have actually executed teamcity commands, not just talked about them."""
+    tc_cmds = [c for c in runner.events.commands_run if "teamcity" in c]
+    if tc_cmds:
+        runner.passed(f"Executed {len(tc_cmds)} teamcity command(s)")
+    else:
+        runner.failed("Did not execute any teamcity commands")
+
+
+def no_auth_failure(runner: EvalRunner) -> None:
+    """Fail if Claude got stuck on authentication instead of completing the task."""
+    text = runner.text.lower()
+    auth_phrases = ["authentication failed", "not authenticated", "unauthorized",
+                    "401", "please provide", "need a token", "need credentials",
+                    "i don't have access", "i cannot access", "authentication issue",
+                    "could not authenticate"]
+    if any(p in text for p in auth_phrases) and not any("teamcity" in c for c in runner.events.commands_run):
+        runner.failed("Got stuck on authentication without completing the task")
+    else:
+        runner.passed("No auth failure blocking task completion")
+
+
 def valid_commands(runner: EvalRunner) -> None:
     invalid = []
     for cmd in runner.commands:
@@ -462,6 +484,8 @@ def produces_python(runner: EvalRunner) -> None:
 
 CHECK_REGISTRY: dict[str, callable] = {
     # shared
+    "ran_teamcity_commands": ran_teamcity_commands,
+    "no_auth_failure": no_auth_failure,
     "valid_commands": valid_commands,
     "no_hallucinations": no_hallucinations,
     "multi_step": multi_step,
