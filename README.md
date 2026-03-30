@@ -94,6 +94,12 @@ teamcity auth login
 # List recent builds
 teamcity run list --limit 10
 
+# List your favorite builds
+teamcity run list --favorites --limit 10
+
+# List my latest build for the current branch
+teamcity run list --user @me --branch @this --limit 1
+
 # Start a build and watch it run
 teamcity run start MyProject_Build --branch main --watch
 

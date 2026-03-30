@@ -16,6 +16,17 @@ teamcity run list
 
 <img src="run-list.gif" alt="Listing and filtering runs" border-effect="rounded"/>
 
+### Favorite runs
+
+Use `teamcity run list --favorites` to show the current user's favorite builds, including manually starred builds and builds TeamCity marked as important for you:
+
+```Shell
+teamcity run list --favorites
+teamcity run list --favorites --status failure --limit 10
+```
+
+`--favorites` works with the existing `run list` filters and output modes.
+
 ### Filtering
 
 Use flags to narrow results:
@@ -30,8 +41,20 @@ teamcity run list --project MyProject
 # Filter by branch
 teamcity run list --branch main
 
+# Auto-detect the current git branch
+teamcity run list --branch @this
+
 # Filter by status
 teamcity run list --status failure
+
+# Show only your favorite builds
+teamcity run list --favorites
+
+# Show only your own recent builds
+teamcity run list --user @me
+
+# Show only the latest matching run
+teamcity run list --user @me --branch @this --limit 1
 
 # Filter by user who triggered the build
 teamcity run list --user alice
@@ -123,7 +146,7 @@ Filter by project ID
 </td>
 <td>
 
-Filter by branch name
+Filter by branch name. Use `@this` to resolve the current git branch.
 
 </td>
 </tr>
@@ -136,6 +159,18 @@ Filter by branch name
 <td>
 
 Filter by status: `success`, `failure`, `running`, `queued`, `error`, or `unknown`
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--favorites`
+
+</td>
+<td>
+
+Show favorite builds for the current user.
 
 </td>
 </tr>

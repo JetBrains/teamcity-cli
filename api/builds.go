@@ -19,21 +19,24 @@ type BuildsOptions struct {
 	User        string
 	Project     string
 	Number      string
+	Favorites   bool
 	Limit       int
 	SinceDate   string
 	UntilDate   string
 	Fields      []string
 }
 
-// GetBuilds returns a list of builds
-func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
+const favoriteBuildTag = ".teamcity.star"
+
+// Locator builds the TeamCity locator used to fetch builds.
+func (opts BuildsOptions) Locator() *Locator {
 	locator := NewLocator().
 		Add("buildType", opts.BuildTypeID).
 		Add("defaultFilter", "false")
 	if opts.Branch != "" {
 		locator.Add("branch", opts.Branch)
 	} else {
-		locator.AddRaw("branch", "(default:any)")
+		locator.AddLocator("branch", NewLocator().Add("default", "any"))
 	}
 	locator.
 		AddUpper("status", opts.Status).
@@ -42,7 +45,26 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 		Add("affectedProject", opts.Project).
 		Add("number", opts.Number).
 		Add("sinceDate", opts.SinceDate).
-		Add("untilDate", opts.UntilDate).
+		Add("untilDate", opts.UntilDate)
+	if opts.Favorites {
+		locator.AddLocator("tag", currentUserFavoriteBuildsTagLocator())
+	}
+	return locator
+}
+
+func currentUserFavoriteBuildsTagLocator() *Locator {
+	return NewLocator().
+		Add("private", "true").
+		Add("owner", "current").
+		AddLocator("condition", NewLocator().
+			Add("value", favoriteBuildTag).
+			Add("matchType", "equals").
+			Add("ignoreCase", "false"))
+}
+
+// GetBuilds returns a list of builds
+func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
+	locator := opts.Locator().
 		AddIntDefault("count", opts.Limit, 30)
 
 	buildFields := opts.Fields

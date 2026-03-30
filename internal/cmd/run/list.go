@@ -14,11 +14,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var runListConfigCurrentUserFn = config.GetCurrentUser
+var runListAPICurrentUserFn = func(client api.ClientInterface) (*api.User, error) { return client.GetCurrentUser() }
+var runListIsGitRepoFn = isGitRepo
+var runListCurrentBranchFn = getCurrentBranch
+
 type runListOptions struct {
 	job        string
 	branch     string
 	status     string
 	user       string
+	favorites  bool
 	project    string
 	limit      int
 	since      string
@@ -37,9 +43,12 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List recent runs",
 		Example: `  teamcity run list
+  teamcity run list --favorites
+  teamcity run list --user @me --limit 1
   teamcity run list --job Falcon_Build
   teamcity run list --status failure --limit 10
   teamcity run list --project Falcon --branch main
+  teamcity run list --branch @this
   teamcity run list --since 24h
   teamcity run list --json
   teamcity run list --json=id,status,webUrl
@@ -50,9 +59,10 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
-	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Filter by branch name")
+	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Filter by branch name (or '@this' for current git branch)")
 	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running, queued, error, unknown)")
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
+	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorite runs for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of runs")
 	cmd.Flags().StringVar(&opts.since, "since", "", "Filter builds finished after this time (e.g., 24h, 2026-01-21)")
@@ -84,72 +94,17 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		return err
 	}
 
+	request, err := resolveRunListRequest(client, opts, jsonResult.Fields)
+	if err != nil {
+		return err
+	}
+
 	if opts.web {
-		url := config.GetServerURL() + "/builds"
+		url := config.GetServerURL() + request.webPath
 		return browser.OpenURL(url)
 	}
 
-	user := opts.user
-	if user == "@me" {
-		user = config.GetCurrentUser()
-		if user == "" {
-			u, err := client.GetCurrentUser()
-			if err != nil || u == nil {
-				return fmt.Errorf("@me requires login (username not found in config)")
-			}
-			user = u.Username
-		}
-	}
-
-	var statusFilter, stateFilter string
-	if opts.status != "" {
-		validValues := []string{"success", "failure", "running", "queued", "error", "unknown"}
-		v := strings.ToLower(opts.status)
-		if !slices.Contains(validValues, v) {
-			return fmt.Errorf("invalid status %q, must be one of: %s", opts.status, strings.Join(validValues, ", "))
-		}
-		switch v {
-		case "running", "queued":
-			stateFilter = v
-		default:
-			statusFilter = v
-		}
-	}
-
-	var sinceDate, untilDate string
-	if opts.since != "" {
-		sinceDate, err = api.ParseUserDate(opts.since)
-		if err != nil {
-			return fmt.Errorf("invalid --since date: %w", err)
-		}
-	}
-	if opts.until != "" {
-		untilDate, err = api.ParseUserDate(opts.until)
-		if err != nil {
-			return fmt.Errorf("invalid --until date: %w", err)
-		}
-	}
-
-	if sinceDate != "" && untilDate != "" {
-		sinceTime, err1 := api.ParseTeamCityTime(sinceDate)
-		untilTime, err2 := api.ParseTeamCityTime(untilDate)
-		if err1 == nil && err2 == nil && sinceTime.After(untilTime) {
-			return fmt.Errorf("--since (%s) is more recent than --until (%s), resulting in an empty range", opts.since, opts.until)
-		}
-	}
-
-	runs, err := client.GetBuilds(api.BuildsOptions{
-		BuildTypeID: opts.job,
-		Branch:      opts.branch,
-		Status:      statusFilter,
-		State:       stateFilter,
-		User:        user,
-		Project:     opts.project,
-		Limit:       opts.limit,
-		SinceDate:   sinceDate,
-		UntilDate:   untilDate,
-		Fields:      jsonResult.Fields,
-	})
+	runs, err := client.GetBuilds(request.builds)
 	if err != nil {
 		return err
 	}
@@ -159,7 +114,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	}
 
 	if runs.Count == 0 {
-		f.Printer.Info("No runs found")
+		f.Printer.Info(request.emptyMsg)
 		return nil
 	}
 
@@ -230,6 +185,148 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		p.PrintTable(headers, rows)
 	}
 	return nil
+}
+
+type runListRequest struct {
+	builds   api.BuildsOptions
+	webPath  string
+	emptyMsg string
+}
+
+func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fields []string) (*runListRequest, error) {
+	user, err := resolveRunListUser(client, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	branch, err := resolveRunListBranch(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	statusFilter, stateFilter, err := resolveRunListStatus(opts.status)
+	if err != nil {
+		return nil, err
+	}
+
+	sinceDate, untilDate, err := resolveRunListDateRange(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &runListRequest{
+		builds: api.BuildsOptions{
+			BuildTypeID: opts.job,
+			Branch:      branch,
+			Status:      statusFilter,
+			State:       stateFilter,
+			User:        user,
+			Project:     opts.project,
+			Favorites:   opts.favorites,
+			Limit:       opts.limit,
+			SinceDate:   sinceDate,
+			UntilDate:   untilDate,
+			Fields:      fields,
+		},
+		webPath:  resolveRunListWebPath(opts),
+		emptyMsg: resolveRunListEmptyMessage(opts),
+	}, nil
+}
+
+func resolveRunListUser(client api.ClientInterface, opts *runListOptions) (string, error) {
+	if strings.EqualFold(opts.user, "@me") {
+		return resolveCurrentAuthenticatedUser(client, "@me")
+	}
+	return opts.user, nil
+}
+
+func resolveCurrentAuthenticatedUser(client api.ClientInterface, source string) (string, error) {
+	user := runListConfigCurrentUserFn()
+	if user != "" {
+		return user, nil
+	}
+
+	u, err := runListAPICurrentUserFn(client)
+	if err != nil || u == nil || u.Username == "" {
+		return "", fmt.Errorf("%s requires login (username not found in config)", source)
+	}
+
+	return u.Username, nil
+}
+
+func resolveRunListBranch(opts *runListOptions) (string, error) {
+	if strings.EqualFold(opts.branch, "@this") {
+		return resolveAutoBranch(true)
+	}
+	return opts.branch, nil
+}
+
+func resolveAutoBranch(required bool) (string, error) {
+	if !runListIsGitRepoFn() {
+		if required {
+			return "", fmt.Errorf("--branch @this requires a git repository")
+		}
+		return "", nil
+	}
+	return runListCurrentBranchFn()
+}
+
+func resolveRunListStatus(status string) (statusFilter, stateFilter string, err error) {
+	if status == "" {
+		return "", "", nil
+	}
+
+	validValues := []string{"success", "failure", "running", "queued", "error", "unknown"}
+	v := strings.ToLower(status)
+	if !slices.Contains(validValues, v) {
+		return "", "", fmt.Errorf("invalid status %q, must be one of: %s", status, strings.Join(validValues, ", "))
+	}
+
+	switch v {
+	case "running", "queued":
+		return "", v, nil
+	default:
+		return v, "", nil
+	}
+}
+
+func resolveRunListDateRange(opts *runListOptions) (sinceDate, untilDate string, err error) {
+	if opts.since != "" {
+		sinceDate, err = api.ParseUserDate(opts.since)
+		if err != nil {
+			return "", "", fmt.Errorf("invalid --since date: %w", err)
+		}
+	}
+	if opts.until != "" {
+		untilDate, err = api.ParseUserDate(opts.until)
+		if err != nil {
+			return "", "", fmt.Errorf("invalid --until date: %w", err)
+		}
+	}
+
+	if sinceDate != "" && untilDate != "" {
+		sinceTime, err1 := api.ParseTeamCityTime(sinceDate)
+		untilTime, err2 := api.ParseTeamCityTime(untilDate)
+		if err1 == nil && err2 == nil && sinceTime.After(untilTime) {
+			return "", "", fmt.Errorf("--since (%s) is more recent than --until (%s), resulting in an empty range", opts.since, opts.until)
+		}
+	}
+
+	return sinceDate, untilDate, nil
+}
+
+func resolveRunListWebPath(opts *runListOptions) string {
+	if opts.favorites {
+		return "/favorite/builds"
+	}
+	return "/builds"
+}
+
+func resolveRunListEmptyMessage(opts *runListOptions) string {
+	if opts.favorites {
+		return "No favorite runs found"
+	}
+	return "No runs found"
 }
 
 func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {

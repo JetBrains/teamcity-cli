@@ -43,6 +43,14 @@ func (l *Locator) AddRaw(key, value string) *Locator {
 	return l
 }
 
+// AddLocator adds a nested locator as key:(...)
+func (l *Locator) AddLocator(key string, child *Locator) *Locator {
+	if child != nil && !child.IsEmpty() {
+		l.parts = append(l.parts, fmt.Sprintf("%s:%s", key, child.wrap()))
+	}
+	return l
+}
+
 func (l *Locator) AddUpper(key, value string) *Locator {
 	if value != "" {
 		l.parts = append(l.parts, fmt.Sprintf("%s:%s", key, strings.ToUpper(value)))
@@ -76,4 +84,8 @@ func (l *Locator) Encode() string {
 
 func (l *Locator) IsEmpty() bool {
 	return len(l.parts) == 0
+}
+
+func (l *Locator) wrap() string {
+	return "(" + l.String() + ")"
 }

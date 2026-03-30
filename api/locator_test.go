@@ -221,6 +221,25 @@ func TestLocator(T *testing.T) {
 			},
 			want: "project:MyProject",
 		},
+		{
+			name: "nested locator",
+			build: func() *Locator {
+				return NewLocator().
+					AddLocator("tag", NewLocator().
+						Add("private", "true").
+						AddLocator("condition", NewLocator().Add("value", ".teamcity.star")))
+			},
+			want: "tag:(private:true,condition:(value:.teamcity.star))",
+		},
+		{
+			name: "empty nested locator skipped",
+			build: func() *Locator {
+				return NewLocator().
+					Add("project", "MyProject").
+					AddLocator("tag", NewLocator())
+			},
+			want: "project:MyProject",
+		},
 	}
 
 	for _, tc := range tests {
