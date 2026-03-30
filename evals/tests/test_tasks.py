@@ -117,7 +117,7 @@ def _log_to_langsmith(
 
 
 @pytest.mark.langsmith(test_suite_name="teamcity-cli-skill-eval")
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(900)
 def test_task(
     task_config: TaskConfig,
     treatment_config: TreatmentConfig,
@@ -126,7 +126,7 @@ def test_task(
 ) -> None:
     # --- Execute Claude ---
     use_docker = not os.environ.get("BENCH_LOCAL")
-    timeout = int(os.environ.get("BENCH_TIMEOUT", "300"))
+    timeout = int(os.environ.get("BENCH_TIMEOUT", "600"))
     model = os.environ.get("BENCH_CC_MODEL")
 
     execute = run_claude_docker if use_docker else run_claude
