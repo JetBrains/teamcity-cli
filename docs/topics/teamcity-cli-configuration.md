@@ -62,7 +62,7 @@ The server URL used when no `TEAMCITY_URL` environment variable is set. Updated 
 </td>
 <td>
 
-A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access, `ro: true` for read-only mode, TLS certificate paths for mTLS (`client_cert`, `client_key`, `ca_cert`), or an OS certificate store thumbprint (`client_cert_thumbprint`). Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
+A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access, `ro: true` for read-only mode. Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
 
 </td>
 </tr>
@@ -160,48 +160,12 @@ Path to the Kotlin DSL directory. Overrides automatic detection of `.teamcity/` 
 <tr>
 <td>
 
-`TEAMCITY_CLIENT_CERT`
-
-</td>
-<td>
-
-Path to a PEM-encoded client certificate file for mutual TLS (mTLS). Must be used together with `TEAMCITY_CLIENT_KEY`. See [Mutual TLS (mTLS)](teamcity-cli-authentication.md#mtls).
-
-</td>
-</tr>
-<tr>
-<td>
-
-`TEAMCITY_CLIENT_KEY`
-
-</td>
-<td>
-
-Path to a PEM-encoded client private key file for mutual TLS (mTLS). Must be used together with `TEAMCITY_CLIENT_CERT`.
-
-</td>
-</tr>
-<tr>
-<td>
-
 `TEAMCITY_CA_CERT`
 
 </td>
 <td>
 
-Path to a PEM-encoded CA certificate file. Use this when the TeamCity server uses a certificate signed by a private or internal CA that is not in the system trust store. Can be used with or without client certificate settings.
-
-</td>
-</tr>
-<tr>
-<td>
-
-`TEAMCITY_CLIENT_CERT_THUMBPRINT`
-
-</td>
-<td>
-
-SHA-1 thumbprint of a client certificate in the OS certificate store (macOS Keychain or Windows Certificate Store). Loads the certificate and private key from the OS store instead of PEM files. macOS and Windows only. See [OS certificate store](teamcity-cli-authentication.md#certstore).
+Path to a PEM-encoded CA certificate file. Use this when the TeamCity server uses a certificate signed by a private or internal CA that is not in the system trust store.
 
 </td>
 </tr>
