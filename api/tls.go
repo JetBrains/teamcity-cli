@@ -42,19 +42,11 @@ func (t *pemFallbackTransport) RoundTrip(req *http.Request) (*http.Response, err
 	return resp, err
 }
 
-// loadRootCAs loads root CAs from PEM bundles and TEAMCITY_CA_CERT (nil if none found).
+// loadRootCAs loads root CAs from system PEM bundles (nil if none found).
 func loadRootCAs() *x509.CertPool {
 	var pool *x509.CertPool
 	for _, path := range certBundlePaths[runtime.GOOS] {
 		if data, err := os.ReadFile(path); err == nil {
-			if pool == nil {
-				pool = x509.NewCertPool()
-			}
-			pool.AppendCertsFromPEM(data)
-		}
-	}
-	if caFile := os.Getenv("TEAMCITY_CA_CERT"); caFile != "" {
-		if data, err := os.ReadFile(caFile); err == nil {
 			if pool == nil {
 				pool = x509.NewCertPool()
 			}

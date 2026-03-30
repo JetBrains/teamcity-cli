@@ -160,18 +160,6 @@ Path to the Kotlin DSL directory. Overrides automatic detection of `.teamcity/` 
 <tr>
 <td>
 
-`TEAMCITY_CA_CERT`
-
-</td>
-<td>
-
-Path to a PEM-encoded CA certificate file. Use this when the TeamCity server uses a certificate signed by a private or internal CA that is not in the system trust store.
-
-</td>
-</tr>
-<tr>
-<td>
-
 `NO_COLOR`
 
 </td>
