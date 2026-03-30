@@ -36,12 +36,13 @@ Login options:
 
 ### Flags for `teamcity run list`
 
-Shows all branches and all build states (including canceled, personal, composite sub-builds) by default — matching the TeamCity UI. Use `--branch` to narrow to a specific branch.
+Shows all branches and all build states (including canceled, personal, composite sub-builds) by default — matching the TeamCity UI. Use `--branch` to narrow to a specific branch, or `--branch @this` to use the current git branch.
 
 - `-j, --job <id>` - Filter by job
-- `-b, --branch <name>` - Filter by branch
+- `-b, --branch <name>` - Filter by branch (`@this` = current git branch)
 - `--status <status>` - Filter: success, failure, running, queued, error, unknown
 - `-u, --user <name>` - Filter by user
+- `--favorites` - Show favorite builds for the current user
 - `-p, --project <id>` - Filter by project
 - `-n, --limit <n>` - Limit results (default: 30)
 - `--since <time>` - Since time (e.g., 24h, 2026-01-01)

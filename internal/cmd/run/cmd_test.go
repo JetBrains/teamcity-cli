@@ -23,6 +23,8 @@ func TestRunList(T *testing.T) {
 	f := ts.Factory
 
 	cmdtest.RunCmdWithFactory(T, f, "run", "list", "--limit", "5")
+	cmdtest.RunCmdWithFactory(T, f, "run", "list", "--favorites", "--limit", "5")
+	cmdtest.RunCmdWithFactory(T, f, "run", "list", "--user", "@me", "--limit", "1")
 	cmdtest.RunCmdWithFactory(T, f, "run", "list", "--job", testJob, "--limit", "3")
 	cmdtest.RunCmdWithFactory(T, f, "run", "list", "--project", "TestProject", "--status", "success", "--limit", "2")
 	cmdtest.RunCmdWithFactory(T, f, "run", "list", "--json", "--limit", "2")
@@ -209,4 +211,30 @@ func TestStatusFilterLocator(T *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunListFavoritesLocator(T *testing.T) {
+	var capturedQuery string
+	ts := cmdtest.NewTestServer(T)
+	ts.Handle("GET /app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Server{VersionMajor: 2025, VersionMinor: 7, BuildNumber: "197398"})
+	})
+	ts.Handle("HEAD /app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
+		capturedQuery = r.URL.RawQuery
+		cmdtest.JSON(w, api.BuildList{Count: 0, Builds: []api.Build{}})
+	})
+
+	rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
+	rootCmd.SetArgs([]string{"run", "list", "--favorites", "--limit", "1"})
+	var out bytes.Buffer
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+	err := rootCmd.Execute()
+	require.NoError(T, err)
+
+	assert.Contains(T, capturedQuery, api.BuildsOptions{Favorites: true}.Locator().Encode())
+	assert.Contains(T, capturedQuery, "count%3A1")
 }
