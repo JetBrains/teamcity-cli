@@ -9,7 +9,7 @@ import (
 // GetCurrentUser returns the authenticated user
 func (c *Client) GetCurrentUser() (*User, error) {
 	var user User
-	if err := c.get("/app/rest/users/current", &user); err != nil {
+	if err := c.get("/app/rest/users/current?fields=username,name", &user); err != nil {
 		return nil, err
 	}
 	return &user, nil
