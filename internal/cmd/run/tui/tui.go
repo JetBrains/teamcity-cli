@@ -191,7 +191,11 @@ func (m watchModel) View() string {
 	if m.build == nil || m.build.State != "finished" {
 		spinnerView = " " + m.spinner.View()
 	}
-	b.WriteString(output.Faint("q quit" + spinnerView))
+	footer := output.Faint("q quit")
+	if m.build != nil && m.build.Agent != nil {
+		footer += output.Faint("  ·  ") + output.Cyan(fmt.Sprintf("teamcity agent term %d", m.build.Agent.ID))
+	}
+	b.WriteString(footer + output.Faint(spinnerView))
 
 	return b.String()
 }

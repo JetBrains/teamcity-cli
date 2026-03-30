@@ -284,8 +284,6 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	p.Info("  URL: %s", build.WebURL)
 	if opts.agent > 0 {
 		_, _ = fmt.Fprintf(p.Out, "  %s teamcity agent term %d\n", output.Faint("Agent terminal:"), opts.agent)
-	} else {
-		_, _ = fmt.Fprintf(p.Out, "  %s teamcity agent term <agent-id>\n", output.Faint("Agent terminal:"))
 	}
 
 	return afterQueue(f, build, opts.web, &opts.watchFlags)
