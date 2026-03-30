@@ -3,7 +3,6 @@ package api
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -11,61 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 )
-
-// TLSConfig builds a tls.Config for mTLS client certificate authentication.
-func TLSConfig(certFile, keyFile, caFile string) (*tls.Config, error) {
-	tlsCfg := &tls.Config{}
-
-	if certFile != "" && keyFile != "" {
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			return nil, fmt.Errorf("load client certificate: %w", err)
-		}
-		tlsCfg.Certificates = []tls.Certificate{cert}
-	}
-
-	if caFile != "" {
-		caCert, err := os.ReadFile(caFile)
-		if err != nil {
-			return nil, fmt.Errorf("read CA certificate: %w", err)
-		}
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM(caCert) {
-			return nil, fmt.Errorf("parse CA certificate: no valid certificates found in %s", caFile)
-		}
-		tlsCfg.RootCAs = pool
-	}
-
-	return tlsCfg, nil
-}
-
-// TLSConfigWithCert creates a tls.Config with the given certificate (private key may be keystore-backed).
-func TLSConfigWithCert(cert tls.Certificate, caFile string) (*tls.Config, error) {
-	tlsCfg := &tls.Config{
-		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-			return &cert, nil
-		},
-	}
-	if caFile != "" {
-		caCertPEM, err := os.ReadFile(caFile)
-		if err != nil {
-			return nil, fmt.Errorf("read CA certificate: %w", err)
-		}
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM(caCertPEM) {
-			return nil, fmt.Errorf("parse CA certificate: no valid certificates found in %s", caFile)
-		}
-		tlsCfg.RootCAs = pool
-	}
-	return tlsCfg, nil
-}
-
-// WithTransport sets a custom http.Transport on the client.
-func WithTransport(transport *http.Transport) ClientOption {
-	return func(c *Client) {
-		c.HTTPClient.Transport = transport
-	}
-}
 
 // defaultTransport returns a transport that uses the platform TLS verifier by default, auto-switching to PEM-based verification when the platform verifier is blocked (e.g. sandbox).
 var defaultTransport = sync.OnceValue(func() http.RoundTripper {
