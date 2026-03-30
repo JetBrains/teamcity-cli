@@ -89,6 +89,7 @@ def verify_env() -> None:
 
     import shutil
     assert shutil.which("teamcity"), "teamcity CLI not found on PATH"
+    assert shutil.which("claude"), "claude CLI not found on PATH"
 
     result = subprocess.run(
         ["teamcity", "auth", "status", "--no-input"],

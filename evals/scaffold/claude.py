@@ -10,6 +10,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+# Claude binary path. Set CLAUDE_BIN env var in CI if claude isn't on PATH.
+_CLAUDE_BIN = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or "claude"
+
 from typing import Protocol
 
 
@@ -95,7 +98,7 @@ def run_claude(
         env = _build_isolated_env(work_dir)
 
         cmd = [
-            "claude",
+            _CLAUDE_BIN,
             "-p", prompt,
             "--dangerously-skip-permissions",
             "--output-format", "stream-json",
