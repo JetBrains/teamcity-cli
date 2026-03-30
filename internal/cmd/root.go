@@ -21,16 +21,15 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/spf13/cobra"
 )
-
-var Version = "dev"
 
 func buildRootCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "teamcity",
 		Short: "TeamCity CLI",
-		Long: "TeamCity CLI v" + Version + `
+		Long: "TeamCity CLI v" + version.String() + `
 
 A command-line interface for interacting with TeamCity CI/CD server.
 
@@ -39,12 +38,12 @@ TeamCity runs, jobs, projects and more from the command line.
 
 Documentation:  https://jb.gg/tc/docs
 Report issues:  https://jb.gg/tc/issues`,
-		Version: Version,
+		Version: version.String(),
 		Run: func(cmd *cobra.Command, args []string) {
 			out := f.Printer.Out
 			output.PrintLogo(out)
 			_, _ = fmt.Fprintln(out)
-			_, _ = fmt.Fprintln(out, "TeamCity CLI "+output.Faint("v"+Version)+" - "+output.Faint("https://jb.gg/tc/docs"))
+			_, _ = fmt.Fprintln(out, "TeamCity CLI "+output.Faint("v"+version.String())+" - "+output.Faint("https://jb.gg/tc/docs"))
 			_, _ = fmt.Fprintln(out)
 			_, _ = fmt.Fprintln(out, "Usage: teamcity <command> [flags]")
 			_, _ = fmt.Fprintln(out)
