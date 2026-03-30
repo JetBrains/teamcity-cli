@@ -2,10 +2,8 @@ package cmdutil
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/JetBrains/teamcity-cli/internal/certstore"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 )
@@ -18,14 +16,6 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 	roOpt := api.WithReadOnly(config.IsReadOnly())
 
 	opts := []api.ClientOption{debugOpt, roOpt}
-
-	tlsOpt, err := f.tlsOption()
-	if err != nil {
-		return nil, err
-	}
-	if tlsOpt != nil {
-		opts = append(opts, tlsOpt)
-	}
 
 	if config.IsGuestAuth() {
 		if serverURL == "" {
@@ -53,50 +43,6 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 	}
 
 	return nil, NotAuthenticatedError(serverURL, keyringErr)
-}
-
-func (f *Factory) tlsOption() (api.ClientOption, error) {
-	if thumbprint := config.GetClientCertThumbprint(); thumbprint != "" {
-		return f.tlsFromCertStore(thumbprint)
-	}
-
-	certFile, keyFile, caFile := config.GetTLSPaths()
-
-	if certFile == "" && keyFile == "" && caFile == "" {
-		return nil, nil
-	}
-
-	if (certFile == "") != (keyFile == "") {
-		return nil, fmt.Errorf("both client certificate and key must be provided together")
-	}
-
-	tlsCfg, err := api.TLSConfig(certFile, keyFile, caFile)
-	if err != nil {
-		return nil, err
-	}
-
-	f.Printer.Debug("Using mTLS client certificate authentication (PEM files)")
-	return api.WithTransport(&http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: tlsCfg}), nil
-}
-
-func (f *Factory) tlsFromCertStore(thumbprint string) (api.ClientOption, error) {
-	tlsCert, err := certstore.LoadIdentity(thumbprint)
-	if err != nil {
-		return nil, fmt.Errorf("load certificate from OS store: %w", err)
-	}
-
-	_, _, caFile := config.GetTLSPaths()
-	tlsCfg, err := api.TLSConfigWithCert(tlsCert, caFile)
-	if err != nil {
-		return nil, err
-	}
-
-	cn := ""
-	if tlsCert.Leaf != nil {
-		cn = tlsCert.Leaf.Subject.CommonName
-	}
-	f.Printer.Debug("Using mTLS client certificate from OS store (%s)", cn)
-	return api.WithTransport(&http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: tlsCfg}), nil
 }
 
 // ProbeGuestAccess checks whether the server at serverURL supports guest access.

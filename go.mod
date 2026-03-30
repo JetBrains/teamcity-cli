@@ -28,9 +28,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/tiulpin/instill v0.0.0-20260326161152-a164e118f826
 	github.com/zalando/go-keyring v0.2.6
-	golang.org/x/sys v0.41.0
 	golang.org/x/term v0.40.0
-	lds.li/keychain v0.1.0
 )
 
 require (
@@ -114,6 +112,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
