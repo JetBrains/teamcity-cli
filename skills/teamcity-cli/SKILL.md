@@ -1,6 +1,6 @@
 ---
 name: teamcity-cli
-version: "0.8.2"
+version: "0.8.3"
 author: JetBrains
 description: Use when working with TeamCity CI/CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, and agents.
 ---
@@ -12,10 +12,17 @@ description: Use when working with TeamCity CI/CD or when user provides a TeamCi
 ```bash
 teamcity auth status                    # Check authentication
 teamcity run list --status failure      # Find failed builds
-teamcity run log <id> --failed          # Full failure diagnostics
+teamcity run log <id> --failed --raw    # Full failure diagnostics
 ```
 
 **Do not guess flags or syntax.** Use the [Command Reference](references/commands.md) or `teamcity <command> --help`. Fall back to `teamcity api '/app/rest/...'` when needed. Builds are **runs** (`teamcity run`), build configurations are **jobs** (`teamcity job`).
+
+## Important
+
+- **Build logs:** Always use `teamcity run log <id> --raw` to avoid interactive terminal formatting. Dump the output to a temp file so you can re-read it as needed.
+- **Starting builds:** Always use `teamcity run start <job-id> --watch` to wait until the build finishes before proceeding.
+- **Branch names:** Always verify you are passing the correct branch when using `teamcity run start <job-id> --branch <branch>`. Do not guess branch names.
+- **Local changes and Kotlin DSL:** When using `teamcity run start <job-id> --local-changes`, local changes to Kotlin DSL (`.teamcity/`) are **not** included in the remote run. Always push Kotlin DSL changes before running the build.
 
 ## Core Commands
 
@@ -33,7 +40,7 @@ teamcity run log <id> --failed          # Full failure diagnostics
 
 ## Quick Workflows
 
-**Investigate failure:** `teamcity run list --status failure` → `teamcity run log <id> --failed` → `teamcity run tests <id> --failed`
+**Investigate failure:** `teamcity run list --status failure` → `teamcity run log <id> --failed --raw` → `teamcity run tests <id> --failed`
 **From a URL:** Extract build ID from `https://host/buildConfiguration/ConfigId/12345` → `teamcity run view 12345`
 **Start build:** `teamcity run start <job-id> --branch <branch> --watch`
 **Find jobs:** `teamcity project list` → `teamcity job list --project <id>`
