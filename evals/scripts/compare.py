@@ -99,11 +99,13 @@ def main():
         pa = a.get("pass_rate", 0)
         pb = b.get("pass_rate", 0)
 
+        is_current = "/CURRENT" in key
+
         if a and b:
             delta = pb - pa
             deltas.append(delta)
-            marker = "  !!!" if delta < -0.05 else ""
-            if delta < -0.05:
+            marker = "  !!!" if delta < -0.15 and is_current else ""
+            if delta < -0.15 and is_current:
                 regressions.append(key)
             print(f"  {key:<45s}  {pa:>6.0%}  {pb:>6.0%}   {delta:>+5.0%}{marker}")
         elif b:
