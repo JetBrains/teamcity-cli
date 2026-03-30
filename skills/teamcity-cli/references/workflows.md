@@ -9,7 +9,7 @@ When a user provides a TeamCity URL, parse it and map to `teamcity` commands.
 # Extract build ID (last numeric path segment): 12345
 teamcity run view 12345
 # If failed:
-teamcity run log 12345 --failed
+teamcity run log 12345 --failed --raw
 teamcity run tests 12345 --failed
 ```
 
@@ -45,8 +45,10 @@ For **composite/matrix builds** (snapshot dependencies, no agent), find failed c
 
 3. **Check the build log:**
    ```bash
-   teamcity run log <run-id>
+   teamcity run log <run-id> --raw
    ```
+
+   Always use `--raw` to avoid interactive terminal formatting. Dump the output to a temp file to re-read it as needed.
 
    For failed steps only:
    ```bash
@@ -70,14 +72,17 @@ For **composite/matrix builds** (snapshot dependencies, no agent), find failed c
 
 ## Starting and Monitoring Builds
 
+> **Always use `--watch`** when starting builds to wait until the build finishes before proceeding.
+> **Always verify the branch name** — do not guess. Check with `git branch` or `teamcity run list --job <job-id>` to see valid branches.
+
 **Start a build:**
 ```bash
-teamcity run start <job-id>
+teamcity run start <job-id> --watch
 ```
 
 **Start with specific branch:**
 ```bash
-teamcity run start <job-id> --branch feature/my-branch
+teamcity run start <job-id> --branch feature/my-branch --watch
 ```
 
 **Start with parameters:**
@@ -133,6 +138,8 @@ teamcity run watch <run-id> --json
 ```
 
 ## Personal Builds (Local Changes)
+
+> **Kotlin DSL caveat:** `--local-changes` does **not** include changes to Kotlin DSL (`.teamcity/`). Always push Kotlin DSL changes to the remote before running the build.
 
 **Run build with uncommitted git changes:**
 ```bash
