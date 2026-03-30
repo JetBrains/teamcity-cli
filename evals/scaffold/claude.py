@@ -87,7 +87,7 @@ def run_claude(
     treatment: Treatment,
     *,
     model: str | None = None,
-    timeout: int = 300,
+    timeout: int = 600,
 ) -> ClaudeResult:
     """Run Claude Code CLI locally in a temp directory with isolated config."""
     model = model or os.environ.get("BENCH_CC_MODEL", "claude-sonnet-4-5-20250929")
@@ -136,7 +136,7 @@ def run_claude_docker(
     treatment: Treatment,
     *,
     model: str | None = None,
-    timeout: int = 300,
+    timeout: int = 600,
     image: str = "tc-skill-eval",
 ) -> ClaudeResult:
     """Run Claude Code CLI inside a Docker container (fully isolated)."""
