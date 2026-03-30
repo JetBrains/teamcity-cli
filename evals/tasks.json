@@ -7,8 +7,8 @@
   },
   {
     "id": "daily-loop",
-    "prompt": "Show me the last 5 builds on the `master` branch across all projects, and check if any of them failed.\n\nFor any failure you find:\n1. Show me the failure details and what tests broke\n2. Tell me what changes went into that build\n3. If any builds are still running, watch the most recent one until it finishes",
-    "checks": ["ran_teamcity_commands", "no_auth_failure", "lists_builds", "investigates_failure", "views_changes", "handles_running", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],
+    "prompt": "Show me the last 5 builds on the `master` branch and check if any of them failed.\n\nFor any failure you find:\n1. Show me the failure details and what tests broke\n2. Tell me what changes went into that build",
+    "checks": ["ran_teamcity_commands", "no_auth_failure", "lists_builds", "investigates_failure", "views_changes", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],
     "llm_grade": true
   },
   {

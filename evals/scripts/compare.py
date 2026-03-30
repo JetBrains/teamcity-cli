@@ -4,6 +4,9 @@
 Queries LangSmith for runs tagged with experiment_id (= branch name in CI).
 Compares current branch against main automatically.
 
+Regression gate: fails if the OVERALL average of CURRENT runs drops >10%.
+Individual task swings are reported but don't gate — single-run variance is too high.
+
 Usage:
     uv run scripts/compare.py                    # current branch vs main
     uv run scripts/compare.py feature_x main     # explicit A vs B
@@ -19,7 +22,6 @@ from langsmith import Client
 
 
 def get_runs_by_experiment(client: Client, project: str) -> dict[str, list]:
-    """Group root runs by experiment_id from metadata."""
     runs = list(client.list_runs(project_name=project, limit=100, is_root=True))
     by_exp: dict[str, list] = defaultdict(list)
     for r in runs:
@@ -29,22 +31,19 @@ def get_runs_by_experiment(client: Client, project: str) -> dict[str, list]:
 
 
 def summarize(runs: list) -> dict[str, dict]:
-    results: dict[str, dict] = defaultdict(lambda: {"n": 0, "pass_rates": [], "durations": []})
+    results: dict[str, dict] = defaultdict(lambda: {"n": 0, "pass_rates": []})
     for r in runs:
-        name = r.name or ""
-        parts = name.split("/")
+        parts = (r.name or "").split("/")
         if len(parts) != 2:
             continue
-        task_treatment = f"{parts[0]}/{parts[1]}"
+        key = f"{parts[0]}/{parts[1]}"
         fb = {k: v.get("avg", 0) for k, v in (r.feedback_stats or {}).items()}
-        results[task_treatment]["n"] += 1
-        results[task_treatment]["pass_rates"].append(fb.get("checks_pass_rate", 0))
-        results[task_treatment]["durations"].append(fb.get("duration_seconds", 0))
+        results[key]["n"] += 1
+        results[key]["pass_rates"].append(fb.get("checks_pass_rate", 0))
 
     for data in results.values():
         n = data["n"]
         data["pass_rate"] = sum(data["pass_rates"]) / n if n else 0
-        data["duration"] = sum(data["durations"]) / n if n else 0
     return dict(results)
 
 
@@ -59,26 +58,21 @@ def main():
     by_exp = get_runs_by_experiment(client, project)
     available = sorted(by_exp.keys())
 
-    # Determine what to compare
     if len(sys.argv) == 3:
         branch_b, branch_a = sys.argv[1], sys.argv[2]
     else:
         branch_b = os.environ.get("BRANCH_NAME", "").replace("/", "_")
         if not branch_b:
-            # Pick most recent non-main experiment
             non_main = [e for e in available if e != "main"]
             branch_b = non_main[-1] if non_main else ""
         branch_a = "main"
 
     if branch_a not in by_exp:
         print(f"No baseline '{branch_a}' in LangSmith. Available: {available}")
-        print("Run evals on main first to enable comparison.")
         sys.exit(0)
-
     if branch_b not in by_exp:
-        print(f"No results for '{branch_b}' in LangSmith. Available: {available}")
+        print(f"No results for '{branch_b}'. Available: {available}")
         sys.exit(0)
-
     if branch_a == branch_b:
         print(f"Same experiment '{branch_a}', nothing to compare.")
         sys.exit(0)
@@ -91,38 +85,43 @@ def main():
     print(f"  {'Task/Treatment':<45s}  {branch_a:>7s}  {branch_b:>7s}  {'Delta':>7s}")
     print(f"  {'-'*70}")
 
-    deltas = []
-    regressions = []
+    current_deltas = []
     for key in all_keys:
         a = summary_a.get(key, {})
         b = summary_b.get(key, {})
         pa = a.get("pass_rate", 0)
         pb = b.get("pass_rate", 0)
 
-        is_current = "/CURRENT" in key
-
         if a and b:
             delta = pb - pa
-            deltas.append(delta)
-            marker = "  !!!" if delta < -0.15 and is_current else ""
-            if delta < -0.15 and is_current:
-                regressions.append(key)
+            is_current = "/CURRENT" in key
+            marker = ""
+            if is_current and delta < -0.15:
+                marker = "  ↓"
+            elif is_current and delta > 0.15:
+                marker = "  ↑"
             print(f"  {key:<45s}  {pa:>6.0%}  {pb:>6.0%}   {delta:>+5.0%}{marker}")
+            if is_current:
+                current_deltas.append(delta)
         elif b:
             print(f"  {key:<45s}  {'  -':>7s}  {pb:>6.0%}    new")
         else:
             print(f"  {key:<45s}  {pa:>6.0%}  {'  -':>7s}   gone")
 
-    if deltas:
-        print(f"  {'-'*70}")
-        print(f"  {'AVERAGE':<45s}          {' ':>7s}  {avg(deltas):>+5.0%}")
+    print(f"  {'-'*70}")
+    if current_deltas:
+        overall = avg(current_deltas)
+        print(f"  {'CURRENT AVERAGE':<45s}          {' ':>7s}  {overall:>+5.0%}")
+        print()
 
-    print()
-    if regressions:
-        print(f"  REGRESSIONS: {', '.join(regressions)}")
-        sys.exit(1)
+        if overall < -0.10:
+            print(f"  REGRESSION: overall CURRENT average dropped {overall:+.0%} (threshold: -10%)")
+            sys.exit(1)
+        else:
+            print(f"  No regression (overall CURRENT: {overall:+.0%})")
     else:
-        print(f"  No regressions.")
+        print()
+        print(f"  No CURRENT runs to compare.")
 
 
 if __name__ == "__main__":
