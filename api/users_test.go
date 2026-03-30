@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,6 +22,32 @@ func TestGetUser(t *testing.T) {
 	user, err := client.GetUser("admin")
 	require.NoError(t, err)
 	assert.Equal(t, "admin", user.Username)
+}
+
+func TestGetCurrentUserUsesMinimalFields(t *testing.T) {
+	t.Parallel()
+
+	client := NewClient("https://teamcity.example.com", "test-token")
+	client.HTTPClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		assert.Equal(t, "/app/rest/users/current", r.URL.Path)
+		assert.Equal(t, "fields=username,name", r.URL.RawQuery)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(strings.NewReader(`{"username":"admin","name":"Administrator"}`)),
+		}, nil
+	})
+
+	user, err := client.GetCurrentUser()
+	require.NoError(t, err)
+	assert.Equal(t, "admin", user.Username)
+	assert.Equal(t, "Administrator", user.Name)
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
 }
 
 func TestUserExists(t *testing.T) {
