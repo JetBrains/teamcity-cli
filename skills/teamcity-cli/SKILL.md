@@ -16,6 +16,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 ```
 
 **Do not guess flags or syntax.** Use the [Command Reference](references/commands.md) or `teamcity <command> --help`. Fall back to `teamcity api '/app/rest/...'` when needed. Builds are **runs** (`teamcity run`), build configurations are **jobs** (`teamcity job`).
+**Never use `--count`.** The TeamCity CLI uses `--limit` (or `-n`) for list-style limits. `--count` is not a valid substitute.
 
 ## Important
 
