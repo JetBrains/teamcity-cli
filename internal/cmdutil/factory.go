@@ -39,6 +39,9 @@ type Factory struct {
 
 	// ClientFunc returns an API client. Override in tests to inject mocks.
 	ClientFunc func() (api.ClientInterface, error)
+
+	// UpdateNotice is called after command execution to print update notices.
+	UpdateNotice func()
 }
 
 // NewFactory creates a Factory with production defaults.
