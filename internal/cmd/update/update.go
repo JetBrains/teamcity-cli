@@ -26,11 +26,6 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 func runUpdate(f *cmdutil.Factory) error {
 	p := f.Printer
 
-	if version.Version == "dev" {
-		p.Warn("Development build — version checking is not available.")
-		return nil
-	}
-
 	p.Info("Checking for updates...")
 
 	release, err := update.LatestRelease(context.Background())

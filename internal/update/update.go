@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	EnvNoUpdateCheck = "TC_NO_UPDATE_CHECK"
+	EnvNoUpdateCheck = "TEAMCITY_NO_UPDATE"
 	CheckInterval    = 24 * time.Hour
 	stateFileName    = "update-check.json"
 )
