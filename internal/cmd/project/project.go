@@ -51,7 +51,9 @@ func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity project list
   teamcity project list --parent Falcon
   teamcity project list --json
-  teamcity project list --json=id,name,webUrl`,
+  teamcity project list --json=id,name,webUrl
+  teamcity project list --plain
+  teamcity project list --plain --no-header`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.ProjectFields, opts.fetch)
 		},

@@ -10,12 +10,23 @@ import (
 type ListFlags struct {
 	Limit      int
 	JSONFields string
+	Plain      bool
+	NoHeader   bool
 }
 
-// AddListFlags registers --limit and --json flags on a command.
+// AddListFlags registers --limit, --json, --plain, and --no-header flags on a command.
 func AddListFlags(cmd *cobra.Command, flags *ListFlags, defaultLimit int) {
 	cmd.Flags().IntVarP(&flags.Limit, "limit", "n", defaultLimit, "Maximum number of items")
 	AddJSONFieldsFlag(cmd, &flags.JSONFields)
+	AddPlainFlags(cmd, flags)
+}
+
+// AddPlainFlags registers --plain and --no-header flags on a command.
+// Use this for list commands that already register --json separately.
+func AddPlainFlags(cmd *cobra.Command, flags *ListFlags) {
+	cmd.Flags().BoolVar(&flags.Plain, "plain", false, "Output in plain text format for scripting")
+	cmd.Flags().BoolVar(&flags.NoHeader, "no-header", false, "Omit header row (use with --plain)")
+	cmd.MarkFlagsMutuallyExclusive("json", "plain")
 }
 
 // ListTable holds the data needed to print a table.
@@ -79,9 +90,13 @@ func RunList(
 		return nil
 	}
 
-	if len(result.Table.FlexCols) > 0 {
-		output.AutoSizeColumns(result.Table.Headers, result.Table.Rows, 2, result.Table.FlexCols...)
+	if flags.Plain {
+		f.Printer.PrintPlainTable(result.Table.Headers, result.Table.Rows, flags.NoHeader)
+	} else {
+		if len(result.Table.FlexCols) > 0 {
+			output.AutoSizeColumns(result.Table.Headers, result.Table.Rows, 2, result.Table.FlexCols...)
+		}
+		f.Printer.PrintTable(result.Table.Headers, result.Table.Rows)
 	}
-	f.Printer.PrintTable(result.Table.Headers, result.Table.Rows)
 	return nil
 }

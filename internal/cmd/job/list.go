@@ -23,7 +23,9 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity job list
   teamcity job list --project Falcon
   teamcity job list --json
-  teamcity job list --json=id,name,webUrl`,
+  teamcity job list --json=id,name,webUrl
+  teamcity job list --plain
+  teamcity job list --plain --no-header`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.BuildTypeFields, opts.fetch)
 		},

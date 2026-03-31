@@ -24,7 +24,9 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity queue list
   teamcity queue list --job Falcon_Build
   teamcity queue list --json
-  teamcity queue list --json=id,state,webUrl`,
+  teamcity queue list --json=id,state,webUrl
+  teamcity queue list --plain
+  teamcity queue list --plain --no-header`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.QueuedBuildFields, opts.fetch)
 		},
