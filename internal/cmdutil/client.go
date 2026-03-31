@@ -6,6 +6,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
+	"github.com/JetBrains/teamcity-cli/internal/version"
 )
 
 func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
@@ -14,8 +15,9 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 
 	debugOpt := api.WithDebugFunc(f.Printer.Debug)
 	roOpt := api.WithReadOnly(config.IsReadOnly())
+	verOpt := api.WithVersion(version.String())
 
-	opts := []api.ClientOption{debugOpt, roOpt}
+	opts := []api.ClientOption{debugOpt, roOpt, verOpt}
 
 	if config.IsGuestAuth() {
 		if serverURL == "" {

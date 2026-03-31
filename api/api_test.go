@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -1240,4 +1241,65 @@ func TestRawRequestInvalidField(T *testing.T) {
 	assert.NotEqual(T, 406, resp.StatusCode)
 	assert.Equal(T, 404, resp.StatusCode)
 	assert.Contains(T, string(resp.Body), "snapshot-dependencies")
+}
+
+// TestRequestHeadersServerSide checks the server receives and logs User-Agent and X-TeamCity-Client.
+func TestRequestHeadersServerSide(T *testing.T) {
+	if testEnvRef == nil || testEnvRef.server == nil {
+		T.Skip("requires testcontainers")
+	}
+
+	ctx := T.Context()
+
+	// Enable DEBUG on RequestDiagnosticProvider so it logs every request with full headers.
+	_, output, err := testEnvRef.server.Exec(ctx, []string{
+		"sh", "-c", `
+			for f in /opt/teamcity/conf/teamcity-server-log4j.xml \
+			          /opt/teamcity/conf/teamcity-server-log4j2.xml; do
+				if [ -f "$f" ] && ! grep -q 'RequestDiagnosticProvider' "$f"; then
+					sed -i 's|</Loggers>|  <Logger name="jetbrains.buildServer.diagnostic.web.RequestDiagnosticProvider" level="DEBUG"/>\n  </Loggers>|' "$f"
+					sed -i 's|</log4j:configuration>|  <category name="jetbrains.buildServer.diagnostic.web.RequestDiagnosticProvider"><priority value="DEBUG"/></category>\n</log4j:configuration>|' "$f"
+				fi
+			done
+		`,
+	})
+	require.NoError(T, err)
+	_, _ = io.ReadAll(output)
+
+	adminClient := api.NewClient(testEnvRef.URL, testEnvRef.Token)
+	_, _ = adminClient.RawRequest("POST",
+		"/app/rest/server/internals/diagnostics/threadDumps/reload", nil, nil)
+	time.Sleep(10 * time.Second)
+
+	c := api.NewClient(testEnvRef.URL, testEnvRef.Token,
+		api.WithVersion("42.0.0-test"),
+		api.WithCommandName("integration-test"),
+	)
+
+	for range 3 {
+		_, _ = c.GetServer()
+		time.Sleep(500 * time.Millisecond)
+	}
+	time.Sleep(3 * time.Second)
+
+	_, output, err = testEnvRef.server.Exec(ctx, []string{
+		"grep", "-r", "-a", "42.0.0-test", "/opt/teamcity/logs/",
+	})
+	require.NoError(T, err)
+	logContent, _ := io.ReadAll(output)
+	logs := string(logContent)
+
+	found := strings.Contains(logs, "42.0.0-test")
+	if !found {
+		reader, err := testEnvRef.server.Logs(ctx)
+		require.NoError(T, err)
+		defer reader.Close()
+		allLogs, _ := io.ReadAll(reader)
+		logs = string(allLogs)
+		found = strings.Contains(logs, "42.0.0-test")
+	}
+
+	require.True(T, found, "server logs must contain 'teamcity-cli/42.0.0-test'")
+	assert.Contains(T, logs, "user-agent")
+	assert.Contains(T, logs, "client: teamcity-cli/42.0.0-test")
 }

@@ -1,11 +1,13 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -46,6 +48,9 @@ type Client struct {
 
 	// Guest auth (no credentials, uses /guestAuth/ URL prefix)
 	guestAuth bool
+
+	version     string // CLI version for request headers
+	commandName string // CLI command name for X-TeamCity-Client header
 
 	// Cached server info
 	serverInfo     *Server
@@ -122,6 +127,20 @@ func WithDebugFunc(f func(format string, args ...any)) ClientOption {
 func WithReadOnly(readOnly bool) ClientOption {
 	return func(c *Client) {
 		c.ReadOnly = readOnly
+	}
+}
+
+// WithVersion sets the CLI version for request identification headers.
+func WithVersion(v string) ClientOption {
+	return func(c *Client) {
+		c.version = v
+	}
+}
+
+// WithCommandName sets the command name for X-TeamCity-Client header.
+func WithCommandName(name string) ClientOption {
+	return func(c *Client) {
+		c.commandName = name
 	}
 }
 
@@ -205,6 +224,27 @@ func (c *Client) apiPath(path string) string {
 	return path
 }
 
+func (c *Client) cliVersion() string {
+	return cmp.Or(c.version, "dev")
+}
+
+func (c *Client) userAgent() string {
+	return fmt.Sprintf("teamcity-cli/%s (%s; %s)", c.cliVersion(), runtime.GOOS, runtime.GOARCH)
+}
+
+func (c *Client) teamCityClientHeader() string {
+	h := "teamcity-cli/" + c.cliVersion()
+	if c.commandName != "" {
+		h += " (command: " + c.commandName + ")"
+	}
+	return h
+}
+
+// SetCommandName sets the command name for X-TeamCity-Client header.
+func (c *Client) SetCommandName(name string) {
+	c.commandName = name
+}
+
 func (c *Client) setAuth(req *http.Request) {
 	if c.guestAuth {
 		return
@@ -283,6 +323,8 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 
 	c.setAuth(req)
 	req.Header.Set("Accept", accept)
+	req.Header.Set("User-Agent", c.userAgent())
+	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())
 	if body != nil {
 		req.Header.Set("Content-Type", contentType)
 	}
@@ -559,6 +601,8 @@ func (c *Client) doRawRequest(method, path string, body io.Reader, headers map[s
 
 	c.setAuth(req)
 	req.Header.Set("Accept", accept)
+	req.Header.Set("User-Agent", c.userAgent())
+	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
