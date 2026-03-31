@@ -473,6 +473,28 @@ teamcity pool link <pool-id> <project-id>
 teamcity pool unlink <pool-id> <project-id>
 ```
 
+## Discovering Commands and Flags
+
+**Get the full command schema (all commands, flags, types, defaults):**
+```bash
+teamcity help --json
+```
+
+**Get schema for a specific command:**
+```bash
+teamcity help --json run list
+```
+
+**Find all commands that have a --json flag:**
+```bash
+teamcity help --json | jq '[.[] | select(.flags[]?.name == "json") | .command]'
+```
+
+**List available JSON output fields for a command:**
+```bash
+teamcity help --json run list | jq '.json_fields'
+```
+
 ## Tips
 
 1. **Use `--json` for programmatic access** - Parse with `jq` for complex queries

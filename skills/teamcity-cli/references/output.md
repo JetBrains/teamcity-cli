@@ -45,7 +45,7 @@ teamcity run list --json=id,buildType.name,triggered.user.username
 | `agent list`   | `id`, `name`, `connected`, `enabled`, `authorized`, `pool.name`, `webUrl`                                                                                                                             |
 | `pool list`    | `id`, `name`, `maxAgents`                                                                                                                                                                             |
 
-Run `teamcity <command> --json=` to see all available fields for that command.
+Run `teamcity <command> --json=` to see all available fields for that command, or `teamcity help --json <command>` to get them programmatically in the schema's `json_fields` object.
 
 ## Scripting Examples
 
