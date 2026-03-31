@@ -146,16 +146,20 @@ Example fields
 
 ## Plain text output
 
-Use `--plain` for tab-separated output that is easy to parse with standard Unix tools:
+Use `--plain` for tab-separated output that is easy to parse with standard Unix tools. This flag is available on all list commands and on `agent jobs` and `param list`:
 
 ```Shell
 teamcity run list --plain
+teamcity agent list --plain
+teamcity agent jobs 1 --plain
+teamcity project param list MyProject --plain
 ```
 
 Omit the header row for cleaner piping:
 
 ```Shell
 teamcity run list --plain --no-header
+teamcity agent list --plain --no-header | awk '{print $1}'
 ```
 
 ## Scripting examples

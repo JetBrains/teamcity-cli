@@ -360,3 +360,10 @@ Available on all commands:
 - `--verbose` - Show detailed output including debug info
 - `--no-input` - Disable interactive prompts
 - `-w, --web` - Open in browser (on view commands)
+
+## List Output Flags
+
+Available on all list commands (`run list`, `agent list`, `job list`, `pool list`, `project list`, `queue list`) and on `agent jobs`, `project param list`, `job param list`:
+
+- `--plain` - Tab-separated plain text output for scripting (mutually exclusive with `--json`)
+- `--no-header` - Omit header row (use with `--plain`)
