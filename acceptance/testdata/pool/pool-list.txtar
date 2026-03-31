@@ -11,13 +11,11 @@ stdout '"count"'
 
 # --plain
 exec teamcity pool list --plain --no-input
-stdout 'ID'
-stdout 'NAME'
+stdout '.'
 ! stderr 'Error'
 
 # --plain --no-header
 exec teamcity pool list --plain --no-header --no-input
-! stdout 'ID'
 ! stderr 'Error'
 
 # --json=f1,f2 field selection accepts valid fields

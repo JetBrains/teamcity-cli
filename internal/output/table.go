@@ -3,6 +3,7 @@ package output
 import (
 	"strings"
 
+	"github.com/acarl005/stripansi"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/mattn/go-runewidth"
@@ -37,6 +38,12 @@ func renderTable(headers []string, rows [][]string) string {
 
 // renderPlainTable renders tab-separated output for scripting (works with cut -f, awk).
 func renderPlainTable(headers []string, rows [][]string, noHeader bool) string {
+	for i, row := range rows {
+		for j, cell := range row {
+			rows[i][j] = stripansi.Strip(cell)
+		}
+	}
+
 	colWidths := make([]int, len(headers))
 	for i, h := range headers {
 		colWidths[i] = runewidth.StringWidth(h)

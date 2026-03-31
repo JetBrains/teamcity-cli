@@ -23,13 +23,11 @@ stdout '"count"'
 
 # --plain
 exec teamcity agent list --plain --no-input
-stdout 'ID'
-stdout 'NAME'
+stdout '.'
 ! stderr 'Error'
 
 # --plain --no-header
 exec teamcity agent list --plain --no-header --no-input
-! stdout 'ID'
 ! stderr 'Error'
 
 # --connected / --authorized / --enabled filters

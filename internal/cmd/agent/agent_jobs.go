@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -56,7 +57,7 @@ func runAgentJobs(f *cmdutil.Factory, nameOrID string, opts *agentJobsOptions) e
 
 	p := f.Printer
 	if opts.incompatible {
-		return showIncompatibleJobs(p, client, agentID, opts.json)
+		return showIncompatibleJobs(p, client, agentID, opts)
 	}
 	return showCompatibleJobs(p, client, agentID, opts)
 }
@@ -100,19 +101,23 @@ func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID i
 	return nil
 }
 
-func showIncompatibleJobs(p *output.Printer, client api.ClientInterface, agentID int, jsonOutput bool) error {
+func showIncompatibleJobs(p *output.Printer, client api.ClientInterface, agentID int, opts *agentJobsOptions) error {
 	compat, err := client.GetAgentIncompatibleBuildTypes(agentID)
 	if err != nil {
 		return err
 	}
 
-	if jsonOutput {
+	if opts.json {
 		return p.PrintJSON(compat)
 	}
 
 	if compat.Count == 0 {
 		_, _ = fmt.Fprintln(p.Out, "No incompatible jobs found")
 		return nil
+	}
+
+	if opts.plain {
+		return showIncompatibleJobsPlain(p, compat, opts.noHeader)
 	}
 
 	_, _ = fmt.Fprintf(p.Out, "%s (%d)\n\n", output.Yellow("Incompatible Jobs"), compat.Count)
@@ -134,5 +139,29 @@ func showIncompatibleJobs(p *output.Printer, client api.ClientInterface, agentID
 		_, _ = fmt.Fprintln(p.Out)
 	}
 
+	return nil
+}
+
+func showIncompatibleJobsPlain(p *output.Printer, compat *api.CompatibilityList, noHeader bool) error {
+	headers := []string{"ID", "NAME", "PROJECT", "REASONS"}
+	var rows [][]string
+
+	for _, c := range compat.Compatibility {
+		if c.BuildType == nil {
+			continue
+		}
+		reasons := ""
+		if c.Reasons != nil {
+			reasons = strings.Join(c.Reasons.Reasons, "; ")
+		}
+		rows = append(rows, []string{
+			c.BuildType.ID,
+			c.BuildType.Name,
+			c.BuildType.ProjectName,
+			reasons,
+		})
+	}
+
+	p.PrintPlainTable(headers, rows, noHeader)
 	return nil
 }
