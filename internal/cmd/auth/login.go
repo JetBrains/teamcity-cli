@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"crypto/subtle"
-	"errors"
 	"fmt"
 	"time"
 
@@ -172,17 +171,8 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 	user, err := client.GetCurrentUser()
 	if err != nil {
 		p.Info("%s", output.Red("✗"))
-		if errors.Is(err, api.ErrAuthentication) {
-			return tcerrors.AuthenticationFailed()
-		}
-		var netErr *api.NetworkError
-		if errors.As(err, &netErr) {
-			return tcerrors.WithSuggestion(
-				fmt.Sprintf("Cannot connect to %s", serverURL),
-				"Check your network connection, proxy settings, and TLS certificates. Use --verbose for details",
-			)
-		}
-		return fmt.Errorf("login failed: %w", err)
+		p.Debug("validation error: %v", err)
+		return err
 	}
 
 	p.Info("%s", output.Green("✓"))

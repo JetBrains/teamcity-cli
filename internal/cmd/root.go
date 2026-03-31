@@ -92,6 +92,7 @@ func Execute() error {
 
 	RegisterAliases(rootCmd, f.Printer)
 	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
 	err := rootCmd.Execute()
 	if err != nil && errors.Is(err, api.ErrAuthentication) {
 		tryAutoReauth(f)

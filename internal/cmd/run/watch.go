@@ -39,12 +39,7 @@ func newRunWatchCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run watch 12345 --interval 10
   teamcity run watch 12345 --logs`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := doRunWatch(f, args[0], opts)
-			if _, ok := errors.AsType[*cmdutil.ExitError](err); ok {
-				cmd.SilenceErrors = true
-				cmd.SilenceUsage = true
-			}
-			return err
+			return doRunWatch(f, args[0], opts)
 		},
 	}
 
