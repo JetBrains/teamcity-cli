@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	EnvServerURL       = "TEAMCITY_URL"
-	EnvToken           = "TEAMCITY_TOKEN"
-	EnvGuestAuth       = "TEAMCITY_GUEST"
-	EnvReadOnly        = "TEAMCITY_RO"
-	EnvDSLDir = "TEAMCITY_DSL_DIR"
+	EnvServerURL = "TEAMCITY_URL"
+	EnvToken     = "TEAMCITY_TOKEN"
+	EnvGuestAuth = "TEAMCITY_GUEST"
+	EnvReadOnly  = "TEAMCITY_RO"
+	EnvDSLDir    = "TEAMCITY_DSL_DIR"
 
 	DefaultDSLDirTeamCity = ".teamcity"
 	DefaultDSLDirTC       = ".tc"
@@ -26,10 +26,10 @@ const (
 )
 
 type ServerConfig struct {
-	Token           string `mapstructure:"token"`
-	User            string `mapstructure:"user"`
-	Guest           bool   `mapstructure:"guest,omitempty"`
-	RO              bool   `mapstructure:"ro,omitempty"`
+	Token       string `mapstructure:"token"`
+	User        string `mapstructure:"user"`
+	Guest       bool   `mapstructure:"guest,omitempty"`
+	RO          bool   `mapstructure:"ro,omitempty"`
 	TokenExpiry string `mapstructure:"token_expiry,omitempty"`
 }
 

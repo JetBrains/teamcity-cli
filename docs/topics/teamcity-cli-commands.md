@@ -988,6 +988,35 @@ Update the teamcity-cli skill for AI coding agents
 </tr>
 </table>
 
+### Update {id="update-commands"}
+
+<table>
+<tr>
+<td>
+
+Command
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity update`
+
+</td>
+<td>
+
+Check for new CLI versions and show how to upgrade
+
+</td>
+</tr>
+</table>
+
 <!-- COMMANDS_END -->
 
 <seealso>

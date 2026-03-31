@@ -17,10 +17,12 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmd/queue"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/run"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/skill"
+	updatecmd "github.com/JetBrains/teamcity-cli/internal/cmd/update"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/JetBrains/teamcity-cli/internal/update"
 	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -70,6 +72,9 @@ Report issues:  https://jb.gg/tc/issues`,
 
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		f.InitOutput()
+		if cmd.Name() != "update" && f.UpdateNotice == nil {
+			f.UpdateNotice = update.CheckInBackground(f.Printer.ErrOut, f.Quiet)
+		}
 	}
 
 	cmd.AddCommand(auth.NewCmd(f))
@@ -82,6 +87,7 @@ Report issues:  https://jb.gg/tc/issues`,
 	cmd.AddCommand(apicmd.NewCmd(f))
 	cmd.AddCommand(skill.NewCmd(f))
 	cmd.AddCommand(alias.NewCmd(f))
+	cmd.AddCommand(updatecmd.NewCmd(f))
 
 	return cmd
 }
@@ -94,6 +100,9 @@ func Execute() error {
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
 	err := rootCmd.Execute()
+	if f.UpdateNotice != nil {
+		f.UpdateNotice()
+	}
 	if err != nil && errors.Is(err, api.ErrAuthentication) {
 		tryAutoReauth(f)
 	}

@@ -169,6 +169,18 @@ Disable colored output. Follows the [NO_COLOR standard](https://no-color.org/).
 
 </td>
 </tr>
+<tr>
+<td>
+
+`TEAMCITY_NO_UPDATE`
+
+</td>
+<td>
+
+Set to `1`, `true`, or `yes` to disable automatic update checks. Update checks are also disabled automatically in CI environments and non-interactive terminals.
+
+</td>
+</tr>
 </table>
 
 Examples:
