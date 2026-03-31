@@ -20,6 +20,9 @@ dev = ["ruff>=0.8"]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
