@@ -3,8 +3,13 @@ package agent_test
 import (
 	"testing"
 
+	"github.com/fatih/color"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 )
+
+func init() { color.NoColor = true }
 
 func TestAgentList(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
@@ -17,6 +22,15 @@ func TestAgentList(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, f, "agent", "list", "--authorized")
 	cmdtest.RunCmdWithFactory(T, f, "agent", "list", "--json")
 	cmdtest.RunCmdWithFactory(T, f, "agent", "list", "--limit", "10")
+}
+
+func TestAgentList_plain(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	got := cmdtest.CaptureOutput(t, ts.Factory, "agent", "list", "--plain")
+	want := "ID\tNAME   \tPOOL   \tSTATUS      \n" +
+		"1 \tAgent 1\tDefault\tConnected   \n" +
+		"2 \tAgent 2\tDefault\tDisconnected\n"
+	assert.Equal(t, want, got)
 }
 
 func TestAgentView(T *testing.T) {
