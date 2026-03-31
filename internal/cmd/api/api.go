@@ -94,6 +94,7 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	if err != nil {
 		return err
 	}
+	client.SetCommandName("api")
 
 	headers := make(map[string]string)
 	for _, h := range opts.headers {

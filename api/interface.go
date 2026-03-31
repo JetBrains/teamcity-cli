@@ -109,6 +109,9 @@ type ClientInterface interface {
 
 	// Raw API access
 	RawRequest(method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)
+
+	// Client metadata
+	SetCommandName(name string)
 }
 
 // Verify *Client implements ClientInterface at compile time
