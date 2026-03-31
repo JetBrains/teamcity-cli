@@ -1,0 +1,68 @@
+name: Eval Task
+description: Report a scenario that should be in the AI skill benchmark
+labels: ["eval"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report a real-world scenario where the AI agent handled a TeamCity task incorrectly. We'll turn it into an automated eval test to prevent regressions.
+
+  - type: textarea
+    id: prompt
+    attributes:
+      label: Prompt
+      description: What did you ask the agent to do? Write it as you would tell an AI assistant. We'll adapt this into the eval task.
+      placeholder: |
+        Build 916102494 on buildserver.labs.intellij.net is failing with
+        BrokenBuildLogException. Investigate what's wrong — check the internal
+        artifacts under .teamcity/logs to find the corrupted log file.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What the agent did
+      description: |
+        Describe what went wrong. Paste relevant parts of the conversation — commands the agent ran, errors it hit, wrong conclusions it reached.
+      placeholder: |
+        The agent ran `teamcity run artifacts 916102494 --path internal --json` and saw
+        only public artifacts. It then tried the REST API directly and got a 404.
+        It never attempted to browse .teamcity/ as an artifact path, even though
+        that's where TeamCity stores internal build logs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: correct-behavior
+    attributes:
+      label: Correct behavior
+      description: |
+        What should the agent have done? List specific commands, steps, or conclusions.
+        Each concrete assertion here becomes a test check in our eval.
+      placeholder: |
+        1. Run `teamcity run artifacts 916102494 --path .teamcity --json` to access internal artifacts
+        2. Navigate into .teamcity/logs/ to find buildLog.msg files
+        3. Recognize that BrokenBuildLogException points to corrupted log storage, not a test failure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: failure-type
+    attributes:
+      label: What went wrong?
+      description: Select all that apply
+      options:
+        - label: Hallucinated flags or commands that don't exist
+        - label: Used wrong command for the task
+        - label: Missed a critical step in the workflow
+        - label: Gave incorrect diagnosis or explanation
+        - label: Failed to recover from an error
+        - label: Didn't use the CLI at all (just talked about it)
+
+  - type: input
+    id: server
+    attributes:
+      label: TeamCity server URL
+      description: Where did you observe this? Helps us check reproducibility.
+      placeholder: https://buildserver.labs.intellij.net
