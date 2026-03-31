@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net/http"
 	"os"
 	"runtime"
@@ -11,7 +12,7 @@ import (
 	"sync/atomic"
 )
 
-// defaultTransport returns a transport that uses the platform TLS verifier by default, auto-switching to PEM-based verification when the platform verifier is blocked (e.g. sandbox).
+// defaultTransport returns a transport with PEM fallback when the platform TLS verifier is blocked.
 var defaultTransport = sync.OnceValue(func() http.RoundTripper {
 	platform := http.DefaultTransport.(*http.Transport).Clone()
 	pool := loadRootCAs()
@@ -23,7 +24,7 @@ var defaultTransport = sync.OnceValue(func() http.RoundTripper {
 	return &pemFallbackTransport{platform: platform, pem: pem}
 })
 
-// pemFallbackTransport uses the platform verifier until a macOS Security.framework error is seen, then permanently switches to PEM-based verification.
+// pemFallbackTransport tries the platform verifier first, switching permanently to PEM on TLS errors.
 type pemFallbackTransport struct {
 	platform http.RoundTripper
 	pem      http.RoundTripper
@@ -35,11 +36,22 @@ func (t *pemFallbackTransport) RoundTrip(req *http.Request) (*http.Response, err
 		return t.pem.RoundTrip(req)
 	}
 	resp, err := t.platform.RoundTrip(req)
-	if err != nil && strings.Contains(err.Error(), "OSStatus") {
+	if err != nil && isPlatformTLSError(err) {
 		t.usePEM.Store(true)
 		return t.pem.RoundTrip(req)
 	}
 	return resp, err
+}
+
+// isPlatformTLSError reports whether err is a TLS error where the PEM fallback may help.
+func isPlatformTLSError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if _, ok := errors.AsType[x509.UnknownAuthorityError](err); ok {
+		return true
+	}
+	return strings.Contains(err.Error(), "OSStatus")
 }
 
 // loadRootCAs loads root CAs from system PEM bundles (nil if none found).
