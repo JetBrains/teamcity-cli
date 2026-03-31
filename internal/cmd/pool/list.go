@@ -20,13 +20,15 @@ func newPoolListCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"ls"},
 		Example: `  teamcity pool list
   teamcity pool list --json
-  teamcity pool list --json=id,name,maxAgents`,
+  teamcity pool list --json=id,name,maxAgents
+  teamcity pool list --plain`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, flags, &api.PoolFields, fetchPools)
 		},
 	}
 
 	cmdutil.AddJSONFieldsFlag(cmd, &flags.JSONFields)
+	cmdutil.AddPlainFlags(cmd, flags)
 
 	return cmd
 }

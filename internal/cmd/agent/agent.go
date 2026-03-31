@@ -53,7 +53,9 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity agent list --pool Default
   teamcity agent list --connected
   teamcity agent list --json
-  teamcity agent list --json=id,name,connected,enabled`,
+  teamcity agent list --json=id,name,connected,enabled
+  teamcity agent list --plain
+  teamcity agent list --plain --no-header`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.AgentFields, opts.fetch)
 		},
