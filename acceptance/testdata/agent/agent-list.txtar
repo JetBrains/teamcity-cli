@@ -21,6 +21,17 @@ exec teamcity agent list --limit 1 --json=id,name --no-input
 stdout '"count"'
 ! stderr 'Error'
 
+# --plain
+exec teamcity agent list --plain --no-input
+stdout 'ID'
+stdout 'NAME'
+! stderr 'Error'
+
+# --plain --no-header
+exec teamcity agent list --plain --no-header --no-input
+! stdout 'ID'
+! stderr 'Error'
+
 # --connected / --authorized / --enabled filters
 exec teamcity agent list --connected --no-input
 ! stderr 'Error'

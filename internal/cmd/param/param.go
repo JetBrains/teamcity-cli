@@ -60,7 +60,9 @@ func NewCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *cobra.Comma
 }
 
 type paramListOptions struct {
-	json bool
+	json     bool
+	plain    bool
+	noHeader bool
 }
 
 func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *cobra.Command {
@@ -72,13 +74,17 @@ func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *co
 		Long:  fmt.Sprintf("List all parameters for a %s.", resource),
 		Args:  cobra.ExactArgs(1),
 		Example: fmt.Sprintf(`  teamcity %s param list MyID
-  teamcity %s param list MyID --json`, resource, resource),
+  teamcity %s param list MyID --json
+  teamcity %s param list MyID --plain`, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runParamList(f, args[0], opts, paramAPI)
 		},
 	}
 
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
+	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
+	cmd.MarkFlagsMutuallyExclusive("json", "plain")
 
 	return cmd
 }
@@ -119,8 +125,12 @@ func runParamList(f *cmdutil.Factory, id string, opts *paramListOptions, paramAP
 		})
 	}
 
-	output.AutoSizeColumns(headers, rows, 2, 0, 1)
-	p.PrintTable(headers, rows)
+	if opts.plain {
+		p.PrintPlainTable(headers, rows, opts.noHeader)
+	} else {
+		output.AutoSizeColumns(headers, rows, 2, 0, 1)
+		p.PrintTable(headers, rows)
+	}
 	return nil
 }
 
