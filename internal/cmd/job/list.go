@@ -33,6 +33,7 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.AnnotateJSONFields(cmd, &api.BuildTypeFields)
 
 	return cmd
 }

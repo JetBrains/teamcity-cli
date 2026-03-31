@@ -74,6 +74,9 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.MarkFlagsMutuallyExclusive("json", "plain")
 
+	cmdutil.AnnotateJSONFields(cmd, &api.BuildFields)
+	cmdutil.AnnotateEnum(cmd, "status", []string{"success", "failure", "running", "queued", "error", "unknown"})
+
 	return cmd
 }
 

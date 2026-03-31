@@ -66,6 +66,7 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.enabled, "enabled", false, "Show only enabled agents")
 	cmd.Flags().BoolVar(&opts.authorized, "authorized", false, "Show only authorized agents")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AnnotateJSONFields(cmd, &api.AgentFields)
 
 	return cmd
 }

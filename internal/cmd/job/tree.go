@@ -28,6 +28,7 @@ func newJobTreeCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().IntVarP(&depth, "depth", "d", 0, "Limit tree depth (0 = unlimited)")
 	cmd.Flags().StringVar(&only, "only", "", "Show only 'dependents' or 'dependencies'")
+	cmdutil.AnnotateEnum(cmd, "only", []string{"dependents", "dependencies"})
 
 	return cmd
 }

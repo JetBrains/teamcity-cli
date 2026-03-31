@@ -89,6 +89,9 @@ Report issues:  https://jb.gg/tc/issues`,
 	cmd.AddCommand(alias.NewCmd(f))
 	cmd.AddCommand(updatecmd.NewCmd(f))
 
+	helpCmd := newHelpCmd(cmd)
+	cmd.SetHelpCommand(helpCmd)
+
 	return cmd
 }
 

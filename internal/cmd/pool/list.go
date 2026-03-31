@@ -29,6 +29,7 @@ func newPoolListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmdutil.AddJSONFieldsFlag(cmd, &flags.JSONFields)
 	cmdutil.AddPlainFlags(cmd, flags)
+	cmdutil.AnnotateJSONFields(cmd, &api.PoolFields)
 
 	return cmd
 }

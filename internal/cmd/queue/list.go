@@ -34,6 +34,7 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.AnnotateJSONFields(cmd, &api.QueuedBuildFields)
 
 	return cmd
 }

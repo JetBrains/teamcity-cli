@@ -61,6 +61,7 @@ func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.parent, "parent", "p", "", "Filter by parent project ID")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AnnotateJSONFields(cmd, &api.ProjectFields)
 
 	return cmd
 }
