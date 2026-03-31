@@ -9,10 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"math"
+
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -155,16 +158,42 @@ func RunCmd(t *testing.T, args ...string) {
 	require.NoError(t, err, "Execute(%v)", args)
 }
 
+// CaptureOutput executes a CLI command and returns the combined stdout/stderr.
+func CaptureOutput(t *testing.T, f *cmdutil.Factory, args ...string) string {
+	t.Helper()
+	var buf bytes.Buffer
+	f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
+
+	rootCmd := cmd.NewRootCmdWithFactory(f)
+	rootCmd.SetArgs(args)
+	rootCmd.SetOut(&buf)
+	rootCmd.SetErr(&buf)
+
+	err := rootCmd.Execute()
+	require.NoError(t, err, "Execute(%v)", args)
+	return buf.String()
+}
+
+// CaptureErr executes a CLI command, asserts it errors, and returns the error.
+func CaptureErr(t *testing.T, f *cmdutil.Factory, args ...string) error {
+	t.Helper()
+	var buf bytes.Buffer
+	f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
+
+	rootCmd := cmd.NewRootCmdWithFactory(f)
+	rootCmd.SetArgs(args)
+	rootCmd.SetOut(&buf)
+	rootCmd.SetErr(&buf)
+
+	err := rootCmd.Execute()
+	require.Error(t, err, "expected error for Execute(%v)", args)
+	return err
+}
+
 // RunCmdWithFactory executes a CLI command using a specific factory and asserts no error.
 func RunCmdWithFactory(t *testing.T, f *cmdutil.Factory, args ...string) {
 	t.Helper()
-	rootCmd := cmd.NewRootCmdWithFactory(f)
-	rootCmd.SetArgs(args)
-	var out bytes.Buffer
-	rootCmd.SetOut(&out)
-	rootCmd.SetErr(&out)
-	err := rootCmd.Execute()
-	require.NoError(t, err, "Execute(%v)", args)
+	CaptureOutput(t, f, args...)
 }
 
 // RunCmdExpectErr executes a CLI command and asserts an error containing want.
@@ -183,12 +212,38 @@ func RunCmdExpectErr(t *testing.T, want string, args ...string) {
 // RunCmdWithFactoryExpectErr executes a CLI command using a specific factory and asserts an error containing want.
 func RunCmdWithFactoryExpectErr(t *testing.T, f *cmdutil.Factory, want string, args ...string) {
 	t.Helper()
-	rootCmd := cmd.NewRootCmdWithFactory(f)
-	rootCmd.SetArgs(args)
-	var out bytes.Buffer
-	rootCmd.SetOut(&out)
-	rootCmd.SetErr(&out)
-	err := rootCmd.Execute()
-	require.Error(t, err, "expected error for Execute(%v)", args)
+	err := CaptureErr(t, f, args...)
 	assert.Contains(t, err.Error(), want)
+}
+
+// Dedent strips the common leading whitespace from a multi-line string.
+// Leading/trailing blank lines are also trimmed. This allows writing
+// expected output indented inside test functions.
+func Dedent(s string) string {
+	s = strings.TrimRight(s, " \t\n")
+	if len(s) > 0 && s[0] == '\n' {
+		s = s[1:]
+	}
+
+	lines := strings.Split(s, "\n")
+	minIndent := math.MaxInt
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		indent := len(line) - len(strings.TrimLeft(line, " \t"))
+		if indent < minIndent {
+			minIndent = indent
+		}
+	}
+	if minIndent == math.MaxInt {
+		minIndent = 0
+	}
+
+	for i, line := range lines {
+		if len(line) >= minIndent {
+			lines[i] = line[minIndent:]
+		}
+	}
+	return strings.Join(lines, "\n") + "\n"
 }
