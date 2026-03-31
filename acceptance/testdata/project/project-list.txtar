@@ -19,6 +19,17 @@ stdout '"id"'
 stdout '"name"'
 ! stderr 'Error'
 
+# --plain
+exec teamcity project list --plain --no-input
+stdout 'ID'
+stdout 'NAME'
+! stderr 'Error'
+
+# --plain --no-header
+exec teamcity project list --plain --no-header --no-input
+! stdout 'ID'
+! stderr 'Error'
+
 # --limit validation
 exec teamcity project list --limit 1 --no-input
 ! stderr 'Error'

@@ -12,6 +12,8 @@ import (
 type agentJobsOptions struct {
 	incompatible bool
 	json         bool
+	plain        bool
+	noHeader     bool
 }
 
 func newAgentJobsCmd(f *cmdutil.Factory) *cobra.Command {
@@ -25,7 +27,8 @@ func newAgentJobsCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity agent jobs 1
   teamcity agent jobs Agent-Linux-01
   teamcity agent jobs Agent-Linux-01 --incompatible
-  teamcity agent jobs 1 --json`,
+  teamcity agent jobs 1 --json
+  teamcity agent jobs 1 --plain`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentJobs(f, args[0], opts)
 		},
@@ -33,6 +36,9 @@ func newAgentJobsCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().BoolVar(&opts.incompatible, "incompatible", false, "Show incompatible jobs with reasons")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
+	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
+	cmd.MarkFlagsMutuallyExclusive("json", "plain")
 
 	return cmd
 }
@@ -52,16 +58,16 @@ func runAgentJobs(f *cmdutil.Factory, nameOrID string, opts *agentJobsOptions) e
 	if opts.incompatible {
 		return showIncompatibleJobs(p, client, agentID, opts.json)
 	}
-	return showCompatibleJobs(p, client, agentID, opts.json)
+	return showCompatibleJobs(p, client, agentID, opts)
 }
 
-func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID int, jsonOutput bool) error {
+func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID int, opts *agentJobsOptions) error {
 	jobs, err := client.GetAgentCompatibleBuildTypes(agentID)
 	if err != nil {
 		return err
 	}
 
-	if jsonOutput {
+	if opts.json {
 		return p.PrintJSON(jobs)
 	}
 
@@ -70,7 +76,9 @@ func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID i
 		return nil
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "%s (%d)\n\n", output.Green("Compatible Jobs"), jobs.Count)
+	if !opts.plain {
+		_, _ = fmt.Fprintf(p.Out, "%s (%d)\n\n", output.Green("Compatible Jobs"), jobs.Count)
+	}
 
 	headers := []string{"ID", "NAME", "PROJECT"}
 	var rows [][]string
@@ -83,9 +91,12 @@ func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID i
 		})
 	}
 
-	output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
-
-	p.PrintTable(headers, rows)
+	if opts.plain {
+		p.PrintPlainTable(headers, rows, opts.noHeader)
+	} else {
+		output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
+		p.PrintTable(headers, rows)
+	}
 	return nil
 }
 

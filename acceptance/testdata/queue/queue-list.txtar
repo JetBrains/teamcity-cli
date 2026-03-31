@@ -14,6 +14,14 @@ exec teamcity queue list --json=id,state --no-input
 stdout '"count"'
 ! stderr 'Error'
 
+# --plain
+exec teamcity queue list --plain --no-input
+! stderr 'Error'
+
+# --plain --no-header
+exec teamcity queue list --plain --no-header --no-input
+! stderr 'Error'
+
 # --limit
 exec teamcity queue list --limit 10 --no-input
 ! stderr 'Error'
