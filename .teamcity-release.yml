@@ -42,4 +42,5 @@ secrets:
   env.TEAMCITY_TOKEN: credentialsJSON:1410f1df-7623-4958-85d0-2bb102c0bd63
   env.GORELEASER_KEY: credentialsJSON:0277c80e-aafd-4fd2-af03-1fc840713709
   env.AUR_SSH_KEY: credentialsJSON:181a83e3-258a-421b-a590-228634d41261
-  env.NPM_TOKEN: credentialsJSON:8685b378-b6b3-4af6-8c55-08de9a66143e
+  env.NPM_TOKEN: credentialsJSON:a6597164-005d-44b6-80ed-f11bd4cd1342
+
