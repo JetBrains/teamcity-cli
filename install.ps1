@@ -21,6 +21,7 @@ $repo = "JetBrains/teamcity-cli"
 $binName = "teamcity.exe"
 $Release = if ($env:TC_INSTALL_RELEASE) { $env:TC_INSTALL_RELEASE } else { "" }
 $OutDir = if ($env:TC_INSTALL_DIR) { $env:TC_INSTALL_DIR } else { "$HOME\.local\bin" }
+$UseJbCdn = $env:JETBRAINS_CDN -eq "1"
 $tempZip = $null
 $tempExtract = $null
 $stagedBin = $null
@@ -45,6 +46,11 @@ function Fail {
 }
 
 function Resolve-LatestRelease {
+    if ($UseJbCdn) {
+        $tag = (& curl.exe -fsSL "https://download.jetbrains.com/resources/teamcity-cli/latest" 2>$null).Trim()
+        if (-not $tag) { Fail "failed to resolve latest TeamCity CLI release from JetBrains CDN" }
+        return $tag
+    }
     $location = & curl.exe -s -o NUL -w "%{redirect_url}" "https://github.com/$repo/releases/latest"
     if (-not $location) {
         Fail "failed to resolve latest TeamCity CLI release"
@@ -67,7 +73,9 @@ Write-Host "
 
 Write-Host "This script will download TeamCity CLI to $OutDir\$binName`n"
 Write-Host "To install a specific version:"
-Write-Host "  `$env:TC_INSTALL_RELEASE='v0.7.0'; irm https://jb.gg/tc/install.ps1 | iex`n"
+Write-Host "  `$env:TC_INSTALL_RELEASE='v0.8.3'; irm https://jb.gg/tc/install.ps1 | iex`n"
+Write-Host "If GitHub is down, use JetBrains CDN directly:"
+Write-Host "  `$env:JETBRAINS_CDN=1; irm https://jb.gg/tc/install.ps1 | iex`n"
 
 try {
     if (-not $Release) {
@@ -77,9 +85,10 @@ try {
     $version = $Release.TrimStart('v')
     $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "x86_64" }
     $assetName = "teamcity_$($version)_windows_$($arch).zip"
-    $downloadUrl = "https://github.com/$repo/releases/download/$Release/$assetName"
+    $ghUrl = "https://github.com/$repo/releases/download/$Release/$assetName"
+    $jbUrl = "https://download.jetbrains.com/resources/teamcity-cli/$version/$assetName"
 
-    Write-Host "Installing teamcity ($Release) from $downloadUrl`n"
+    Write-Host "Installing teamcity ($Release)`n"
 
     if (-not (Test-Path $OutDir)) {
         New-Item -ItemType Directory -Path $OutDir | Out-Null
@@ -91,10 +100,18 @@ try {
     $tempZip = Join-Path $env:TEMP "teamcity_$([guid]::NewGuid().ToString('N')).zip"
     $tempExtract = Join-Path $env:TEMP "teamcity_extract_$([guid]::NewGuid().ToString('N'))"
 
-    try {
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip
-    } catch {
-        Fail "download failed for $assetName"
+    if ($UseJbCdn) {
+        try {
+            Invoke-WebRequest -Uri $jbUrl -OutFile $tempZip
+        } catch {
+            Fail "download failed: $_"
+        }
+    } else {
+        try {
+            Invoke-WebRequest -Uri $ghUrl -OutFile $tempZip
+        } catch {
+            Fail "download failed for $assetName`n`nIf GitHub is unreachable, retry using the JetBrains CDN:`n  `$env:JETBRAINS_CDN=1; irm https://jb.gg/tc/install.ps1 | iex"
+        }
     }
 
     New-Item -ItemType Directory -Path $tempExtract | Out-Null
