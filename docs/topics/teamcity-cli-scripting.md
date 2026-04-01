@@ -241,7 +241,7 @@ set TEAMCITY_TOKEN=your-access-token
 </tab>
 </tabs>
 
-See [Authentication](teamcity-cli-authentication.md#Environment+variables) for details.
+See [Authentication](teamcity-cli-authentication.md#auth-env-vars) for details.
 
 ### Non-interactive mode
 

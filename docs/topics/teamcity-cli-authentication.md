@@ -41,7 +41,8 @@ To pass the token directly (for example, from a password manager):
 teamcity auth login --server https://teamcity.example.com --token <token>
 ```
 
-### Browser-based login (PKCE) {id="pkce"}
+### Browser-based login (PKCE)
+{id="pkce"}
 
 When PKCE is enabled on the TeamCity server, `teamcity auth login` authenticates via the browser automatically:
 
@@ -207,6 +208,7 @@ teamcity auth login --insecure-storage
 {style="warning"}
 
 ## Environment variables
+{id="auth-env-vars" help-id="auth-env-vars"}
 
 For CI/CD pipelines and scripted environments, use environment variables instead of interactive login:
 

@@ -1,8 +1,14 @@
-[//]: # (title: AI Agent Integration)
+[//]: # (title: AI Agent Skill)
 
 <show-structure for="chapter" depth="2"/>
 
 TeamCity CLI includes a built-in skill that teaches AI coding agents how to use `teamcity` commands for common TeamCity workflows. The skill follows the [Agent Skills specification](https://agentskills.io), so it works with any compatible agent (for example, Claude Code, Cursor, and others).
+
+<tip>
+
+You can also integrate TeamCity with AI agents via the [MCP server](ai-agent-integration.md#TeamCity+MCP).
+
+</tip>
 
 ## Installing the skill
 
