@@ -35,6 +35,7 @@ brew install jetbrains/utils/teamcity
 curl -fsSL https://jb.gg/tc/install | bash
 ```
 
+
 </tab>
 <tab title="Windows">
 
@@ -52,6 +53,12 @@ irm https://jb.gg/tc/install.ps1 | iex
 
 </tab>
 </tabs>
+
+**npm (cross-platform):**
+
+```bash
+npm install -g @jetbrains/teamcity-cli
+```
 
 For other methods (Scoop, Chocolatey, deb/rpm packages, building from source), see the [getting started guide](teamcity-cli-get-started.md).
 
