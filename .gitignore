@@ -132,7 +132,6 @@ tc/tc
 docs-out/
 
 # Environment files
-evals/.env
 .env
 .env.local
 .env.backup

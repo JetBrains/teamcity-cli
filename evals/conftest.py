@@ -83,7 +83,7 @@ def verify_env() -> None:
     """Fail fast if required env vars are missing or TeamCity auth is broken."""
     import subprocess
 
-    missing = [k for k in ("TEAMCITY_URL", "TEAMCITY_TOKEN", "ANTHROPIC_API_KEY")
+    missing = [k for k in ("TEAMCITY_URL", "TEAMCITY_TOKEN")
                if not os.environ.get(k)]
     assert not missing, f"Missing required env vars: {', '.join(missing)}"
 

@@ -154,16 +154,22 @@ eval *args:
     #!/usr/bin/env bash
     set -euo pipefail
     cd evals
-    set -a; [ -f .env ] && source .env; set +a
-    uv run pytest tests/test_tasks.py -v {{args}}
+    if command -v op &>/dev/null && [ -z "${CI:-}" ]; then
+        op run --env-file=.env -- uv run pytest tests/test_tasks.py -v {{args}}
+    else
+        uv run pytest tests/test_tasks.py -v {{args}}
+    fi
 
 # Compare experiments via LangSmith (auto-picks current branch vs main)
 eval-diff *args:
     #!/usr/bin/env bash
     set -euo pipefail
     cd evals
-    set -a; [ -f .env ] && source .env; set +a
-    uv run python scripts/compare.py {{args}}
+    if command -v op &>/dev/null && [ -z "${CI:-}" ]; then
+        op run --env-file=.env -- uv run python scripts/compare.py {{args}}
+    else
+        uv run python scripts/compare.py {{args}}
+    fi
 
 # Install JetBrains codesign client (requires JB employee VPN)
 install-codesign:

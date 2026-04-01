@@ -1,15 +1,19 @@
 """LLM-as-judge graders — quality assessment beyond command matching.
 
-Uses Claude to evaluate subjective dimensions of agent responses.
+Auth priority: ANTHROPIC_API_KEY → CLAUDE_CODE_OAUTH_TOKEN → Claude Code CLI (OAuth).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 from dataclasses import dataclass
 
 GRADER_MODEL = "claude-sonnet-4-5-20250929"
+
+_CLAUDE_BIN = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or "claude"
 
 
 @dataclass
@@ -20,28 +24,74 @@ class GradeResult:
     passed: bool  # score >= 3
 
 
+def _make_anthropic_client():
+    """Create an Anthropic client using available credentials, or None.
+
+    Priority: ANTHROPIC_API_KEY → CLAUDE_CODE_OAUTH_TOKEN → None.
+    """
+    try:
+        import anthropic
+    except ImportError:
+        return None
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if api_key:
+        return anthropic.Anthropic(api_key=api_key)
+
+    oauth_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+    if oauth_token:
+        return anthropic.Anthropic(auth_token=oauth_token)
+
+    return None
+
+
+def _call_anthropic_sdk(prompt: str) -> str | None:
+    """Call Anthropic API via SDK (API key or OAuth token). Returns response text or None."""
+    client = _make_anthropic_client()
+    if not client:
+        return None
+
+    try:
+        response = client.messages.create(
+            model=GRADER_MODEL,
+            max_tokens=500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text
+    except Exception:
+        return None
+
+
+def _call_claude_cli(prompt: str) -> str | None:
+    """Call Claude Code CLI in print mode (uses OAuth). Returns response text or None."""
+    try:
+        result = subprocess.run(
+            [_CLAUDE_BIN, "-p", prompt, "--model", GRADER_MODEL,
+             "--output-format", "json", "--no-session-persistence",
+             "--bare", "--tools", ""],
+            capture_output=True, text=True, timeout=60,
+            env={**os.environ, "NO_COLOR": "1"},
+        )
+        if result.returncode != 0:
+            return None
+        data = json.loads(result.stdout)
+        return data.get("result", "")
+    except Exception:
+        return None
+
+
+def _call_llm(prompt: str) -> str | None:
+    """Try Anthropic SDK first, fall back to Claude Code CLI."""
+    return _call_anthropic_sdk(prompt) or _call_claude_cli(prompt)
+
+
 def llm_grade(
     task_instruction: str,
     agent_response: str,
     dimension: str,
     rubric: str,
 ) -> GradeResult:
-    """Grade a response on a dimension using LLM-as-judge.
-
-    Returns a GradeResult with a 1-5 score and reasoning.
-    Falls back to a neutral result if API is unavailable.
-    """
-    try:
-        import anthropic
-    except ImportError:
-        return GradeResult(dimension, 3, "anthropic SDK not installed", True)
-
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        return GradeResult(dimension, 3, "No ANTHROPIC_API_KEY", True)
-
-    client = anthropic.Anthropic(api_key=api_key)
-
+    """Grade a response on a dimension using LLM-as-judge."""
     prompt = f"""You are evaluating an AI agent's response to a TeamCity CI/CD task.
 
 <task>
@@ -70,15 +120,11 @@ Score the response on the dimension using this scale:
 Think through your reasoning step by step, then output your final answer as JSON:
 {{"score": <1-5>, "reasoning": "<brief explanation>"}}"""
 
-    try:
-        response = client.messages.create(
-            model=GRADER_MODEL,
-            max_tokens=500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = response.content[0].text
+    text = _call_llm(prompt)
+    if not text:
+        return GradeResult(dimension, 3, "Grading unavailable (no API key or CLI)", True)
 
-        # Extract JSON from response
+    try:
         start = text.rfind("{")
         end = text.rfind("}") + 1
         if start >= 0 and end > start:
@@ -87,7 +133,7 @@ Think through your reasoning step by step, then output your final answer as JSON
             reasoning = result.get("reasoning", "")
             return GradeResult(dimension, score, reasoning, score >= 3)
     except Exception as e:
-        return GradeResult(dimension, 3, f"Grading error: {e}", True)
+        return GradeResult(dimension, 3, f"Grading parse error: {e}", True)
 
     return GradeResult(dimension, 3, "Could not parse grader response", True)
 

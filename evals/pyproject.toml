@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Skill evaluation pipeline for the TeamCity CLI agent skill"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=0.40",
     "langsmith>=0.3",
     "pytest>=8.0",
     "pytest-xdist>=3.5",
@@ -14,6 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+api = ["anthropic>=0.40"]
 dev = ["ruff>=0.8"]
 
 [tool.pytest.ini_options]

@@ -30,6 +30,7 @@ class ClaudeResult:
 # Env vars to propagate into Claude's subprocess
 _PROPAGATE_KEYS = (
     "ANTHROPIC_API_KEY",
+    "CLAUDE_CODE_OAUTH_TOKEN",
     "TEAMCITY_URL",
     "TEAMCITY_TOKEN",
     "LANGSMITH_TRACING",
@@ -39,11 +40,38 @@ _PROPAGATE_KEYS = (
 )
 
 
+_REAL_CLAUDE_DIR = Path.home() / ".claude"
+_AUTH_COPY = ("settings.json", "settings.local.json", "plugins")
+
+
+def _copy_auth_config(work_dir: Path) -> None:
+    """Copy auth-related config from real ~/.claude/ into the workspace.
+
+    Claude Code uses the system keychain for OAuth tokens, but needs
+    settings and plugins from ~/.claude/ to initialize properly.
+    Skill dirs are intentionally excluded for treatment isolation.
+    """
+    if not _REAL_CLAUDE_DIR.exists():
+        return
+    dest = work_dir / ".claude"
+    dest.mkdir(parents=True, exist_ok=True)
+    for name in _AUTH_COPY:
+        src = _REAL_CLAUDE_DIR / name
+        if not src.exists():
+            continue
+        dst = dest / name
+        if src.is_dir():
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src, dst)
+
+
 def _setup_workspace(
     work_dir: Path,
     treatment: Treatment,
 ) -> None:
-    """Write skill files into the workspace."""
+    """Write skill files and auth config into the workspace."""
+    _copy_auth_config(work_dir)
     if treatment.skill_dir and treatment.skill_dir.exists():
         dest = work_dir / ".claude" / "skills" / "teamcity-cli"
         shutil.copytree(treatment.skill_dir, dest)
