@@ -117,6 +117,15 @@ scoop install teamcity
 ```
 
 </tab>
+<tab title="npm">
+
+**npm (cross-platform):**
+
+```Shell
+npm install -g @jetbrains/teamcity-cli
+```
+
+</tab>
 </tabs>
 
 <chapter title="Build from source (advanced)" collapsible="true" default-state="collapsed">

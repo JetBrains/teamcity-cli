@@ -76,6 +76,11 @@ scoop bucket add jetbrains https://github.com/JetBrains/scoop-utils
 scoop install teamcity
 ```
 
+**npm:**
+```bash
+npm install -g @jetbrains/teamcity-cli
+```
+
 **Build from source:**
 ```bash
 go install github.com/JetBrains/teamcity-cli/tc@latest
