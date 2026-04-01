@@ -36,6 +36,11 @@ curl -fsSL https://jb.gg/tc/install | bash
 winget install JetBrains.TeamCityCLI
 ```
 
+**npm:**
+```bash
+npm install -g @jetbrains/teamcity-cli
+```
+
 <details>
 <summary>More installation methods (deb, rpm, Chocolatey, Scoop, build from source)</summary>
 
@@ -74,11 +79,6 @@ choco install teamcitycli
 ```powershell
 scoop bucket add jetbrains https://github.com/JetBrains/scoop-utils
 scoop install teamcity
-```
-
-**npm:**
-```bash
-npm install -g @jetbrains/teamcity-cli
 ```
 
 **Build from source:**
