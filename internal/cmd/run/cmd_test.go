@@ -67,6 +67,19 @@ func TestRunStartWithOptions(T *testing.T) {
 	)
 }
 
+func TestRunStartDryRun(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "start", testJob, "--dry-run")
+	assert.Contains(T, got, "Would trigger run for")
+	assert.Contains(T, got, testJob)
+}
+
+func TestRunStartDryRunNonExistentJob(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "start", "NonExistentJob123456", "--dry-run")
+	assert.Contains(T, err.Error(), "not found")
+}
+
 func TestRunCancel(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 

@@ -138,6 +138,16 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	p := f.Printer
 	opts.resolve()
 	if opts.dryRun {
+		client, err := f.Client()
+		if err != nil {
+			return err
+		}
+		if !client.BuildTypeExists(jobID) {
+			return tcerrors.WithSuggestion(
+				fmt.Sprintf("job %q not found", jobID),
+				"Check the job ID with: teamcity job list",
+			)
+		}
 		_, _ = fmt.Fprintf(p.Out, "%s Would trigger run for %s\n", output.Faint("[dry-run]"), output.Cyan(jobID))
 		if opts.branch != "" {
 			_, _ = fmt.Fprintf(p.Out, "  Branch: %s\n", opts.branch)
