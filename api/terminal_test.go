@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/terminal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,20 +20,6 @@ func getTerminalClient() *terminal.Client {
 	}
 	noop := func(string, ...any) {}
 	return terminal.NewClient(client.BaseURL, user, pass, noop)
-}
-
-func getTerminalAgent(t *testing.T) api.Agent {
-	t.Helper()
-	agents, err := client.GetAgents(api.AgentsOptions{})
-	require.NoError(t, err)
-
-	for _, a := range agents.Agents {
-		if a.Connected && a.Authorized && a.Enabled {
-			return a
-		}
-	}
-	t.Fatal("no connected/authorized/enabled agent available")
-	return api.Agent{}
 }
 
 // openTerminalConn opens a terminal session and WebSocket connection with retries.
@@ -64,22 +49,26 @@ func openTerminalConn(t *testing.T, agentID int) *terminal.Conn {
 }
 
 func TestTerminalSession(T *testing.T) {
-	agent := getTerminalAgent(T)
+	agent := requireIdleAgent(T)
 
 	T.Run("open session", func(t *testing.T) {
 		termClient := getTerminalClient()
 		session, err := termClient.OpenSession(agent.ID)
 		require.NoError(t, err)
 		assert.NotEmpty(t, session.Token)
+
+		// Attach once and close immediately so the session is fully torn down.
+		conn, err := termClient.Connect(session, 80, 24)
+		require.NoError(t, err)
+		conn.Close()
 	})
 
 	T.Run("connect websocket", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
 
-		// Properly terminate the shell to avoid leaving server-side zombie sessions
 		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 		defer cancel()
-		_ = conn.Exec(ctx, "true") // Run trivial command which sends exit
+		_ = conn.Exec(ctx, "true")
 
 		conn.Close()
 		conn.Close() // idempotent
@@ -93,8 +82,7 @@ func TestTerminalSession(T *testing.T) {
 }
 
 func TestTerminalExec(T *testing.T) {
-	waitForIdleAgent(T)
-	agent := getTerminalAgent(T)
+	agent := requireIdleAgent(T)
 
 	T.Run("simple command", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
@@ -142,7 +130,7 @@ func TestTerminalExec(T *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
 		defer cancel()
 
-		err := conn.Exec(ctx, "sleep 10")
+		err := conn.Exec(ctx, "sleep 2")
 		require.Error(t, err)
 	})
 }
