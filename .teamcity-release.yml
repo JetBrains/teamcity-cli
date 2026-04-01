@@ -12,7 +12,8 @@ jobs:
           git config --global --add safe.directory "$(pwd)"
           git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/JetBrains/teamcity-cli.git" /tmp/repo
           cp -a /tmp/repo/.git .
-          git checkout "$(git tag --sort=-v:refname | head -1)"
+          RELEASE_TAG=$(git tag --sort=-v:refname | head -1)
+          git checkout "$RELEASE_TAG"
           apk add --no-cache just mono openssh-client npm
           mkdir -p ~/.ssh
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
@@ -28,6 +29,7 @@ jobs:
           aws s3 cp install.sh s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.sh --content-type text/plain --region eu-west-1 --no-guess-mime-type
           aws s3 cp install.ps1 s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.ps1 --content-type text/plain --region eu-west-1 --no-guess-mime-type
           aws s3 cp install.cmd s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.cmd --content-type text/plain --region eu-west-1 --no-guess-mime-type
+          grep -o '"tag":"[^"]*"' dist/metadata.json | grep -o 'v[^"]*' | aws s3 cp - s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/latest --content-type text/plain --region eu-west-1 --no-guess-mime-type
 parameters:
   env.SIGN: 'true'
   env.FINGERPRINT: B46DC71E03FEEB7F89D1F2491F7A8F87B9D8F501

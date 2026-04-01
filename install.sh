@@ -18,12 +18,22 @@
 
 set -Eeuo pipefail
 
-RELEASE="${1:-}"
-OUT_DIR="${2:-/usr/local/bin}"
 PROG="teamcity"
 CHECK_MARK=$'\033[1;32m✓\033[0m'
 TMP_DIR=""
 STAGED_BIN=""
+JETBRAINS_CDN=0
+
+_POSITIONAL=()
+for _arg in "$@"; do
+    case "$_arg" in
+        --jetbrains-cdn) JETBRAINS_CDN=1 ;;
+        *) _POSITIONAL+=("$_arg") ;;
+    esac
+done
+RELEASE="${_POSITIONAL[0]:-}"
+OUT_DIR="${_POSITIONAL[1]:-/usr/local/bin}"
+unset _arg _POSITIONAL
 
 cleanup() {
     if [[ -n "${TMP_DIR:-}" && -d "$TMP_DIR" ]]; then
@@ -82,6 +92,14 @@ download_to_stdout() {
 }
 
 resolve_latest_release() {
+    if [[ "$JETBRAINS_CDN" == 1 ]]; then
+        local tag
+        tag="$(download_to_stdout "https://download.jetbrains.com/resources/teamcity-cli/latest" 2>/dev/null | tr -d '[:space:]')"
+        [[ -n "$tag" ]] || fail "failed to resolve latest TeamCity CLI release from JetBrains CDN"
+        printf '%s' "$tag"
+        return
+    fi
+
     local location tag
 
     if command -v curl >/dev/null 2>&1; then
@@ -117,14 +135,15 @@ install_teamcity() {
 
     [[ "$RELEASE" =~ ^v?[0-9A-Za-z._-]+$ ]] || fail "invalid release: $RELEASE"
 
-    local os arch version url tmp_bin target
+    local os arch version gh_url jb_url tmp_bin target
     os="$(detect_os)"
     arch="$(detect_arch)"
     version="${RELEASE#v}"
-    url="https://github.com/JetBrains/teamcity-cli/releases/download/${RELEASE}/${PROG}_${version}_${os}_${arch}.tar.gz"
+    gh_url="https://github.com/JetBrains/teamcity-cli/releases/download/${RELEASE}/${PROG}_${version}_${os}_${arch}.tar.gz"
+    jb_url="https://download.jetbrains.com/resources/teamcity-cli/${version}/${PROG}_${version}_${os}_${arch}.tar.gz"
     target="${OUT_DIR}/${PROG}"
 
-    echo -e "\033[0;90m\nInstalling $PROG ($RELEASE) from $url\033[0m\n"
+    echo -e "\033[0;90m\nInstalling $PROG ($RELEASE)\033[0m\n"
 
     mkdir -p "$OUT_DIR" || fail "failed to create output directory: $OUT_DIR"
     [[ -d "$OUT_DIR" ]] || fail "output path is not a directory: $OUT_DIR"
@@ -133,7 +152,14 @@ install_teamcity() {
     TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/${PROG}.XXXXXX")" || fail "failed to create temp directory"
     cd "$TMP_DIR"
 
-    download_to_stdout "$url" | tar -xzf - || fail "download or extract failed"
+    if [[ "$JETBRAINS_CDN" == 1 ]]; then
+        download_to_stdout "$jb_url" | tar -xzf - || fail "download or extract failed"
+    else
+        download_to_stdout "$gh_url" | tar -xzf - || fail "download or extract failed
+
+If GitHub is unreachable, retry using the JetBrains CDN:
+  curl -fsSL https://jb.gg/tc/install | bash -s -- ${RELEASE:+$RELEASE }--jetbrains-cdn"
+    fi
 
     tmp_bin="$(find . -type f -name "$PROG" -print -quit)"
     [[ -n "$tmp_bin" && -f "$tmp_bin" ]] || fail "could not find ${PROG} binary in archive"
@@ -177,7 +203,10 @@ If you get 'permission denied' error:
   - Or run with sudo
 
 To install a specific version:
-  \033[4mcurl -fsSL https://jb.gg/tc/install | bash -s -- v0.7.0\033[0m
+  \033[4mcurl -fsSL https://jb.gg/tc/install | bash -s -- v0.8.3\033[0m
+
+If GitHub is down, use JetBrains CDN directly:
+  \033[4mcurl -fsSL https://jb.gg/tc/install | bash -s -- --jetbrains-cdn\033[0m
 "
 
 install_teamcity

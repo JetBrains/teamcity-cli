@@ -31,16 +31,16 @@ jobs:
           10m
       - type: script
         name: Verify install.ps1
-        script-content: >-
+        script-content: |-
           set "TC_INSTALL_DIR=%%TEMP%%\tc-install-ps1"
-          powershell -ExecutionPolicy Bypass -Command "iex (Get-Content
-          install.ps1 -Raw -Encoding UTF8)"
+          set "JETBRAINS_CDN=1"
+          powershell -ExecutionPolicy Bypass -Command "iex (Get-Content install.ps1 -Raw -Encoding UTF8)"
           "%%TEMP%%\tc-install-ps1\teamcity.exe" --version
           rmdir /s /q "%%TEMP%%\tc-install-ps1"
       - type: script
         name: Verify install.cmd
         script-content: |-
-          call install.cmd "" "%%TEMP%%\tc-install-cmd"
+          call install.cmd "" "%%TEMP%%\tc-install-cmd" --jetbrains-cdn
           "%%TEMP%%\tc-install-cmd\teamcity.exe" --version
           rmdir /s /q "%%TEMP%%\tc-install-cmd"
   test_linux:
@@ -89,7 +89,7 @@ jobs:
         name: Verify install.sh
         script-content: |-
           INSTALL_DIR=$(mktemp -d)
-          bash install.sh "" "$INSTALL_DIR"
+          bash install.sh --jetbrains-cdn "" "$INSTALL_DIR"
           "$INSTALL_DIR/teamcity" --version
           rm -rf "$INSTALL_DIR"
   test_linux_arm64:
