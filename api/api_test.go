@@ -41,52 +41,50 @@ func skipIfGuest(t *testing.T) {
 	}
 }
 
-// waitForIdleAgent waits until no builds are running or queued, so the single
-// testcontainer agent is free. This absorbs flakiness from prior tests that may
-// have left the agent busy (slow cancel, stuck build, etc.).
-func waitForIdleAgent(t *testing.T) {
+// requireIdleAgent polls until an agent is ready and no builds are running/queued.
+func requireIdleAgent(t *testing.T) api.Agent {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Minute)
-	for time.Now().Before(deadline) {
-		running, _ := client.GetBuilds(api.BuildsOptions{State: "running", Limit: 1})
-		queued, _ := client.GetBuildQueue(api.QueueOptions{Limit: 1})
+	deadline := time.Now().Add(2 * time.Minute)
+	for time.Until(deadline) > 0 {
+		agents, err := client.GetAgents(api.AgentsOptions{
+			Authorized: true, Connected: true, Enabled: true, Limit: 1,
+		})
+		if err != nil || len(agents.Agents) == 0 {
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		running, _ := client.GetBuilds(api.BuildsOptions{State: "running", Limit: 10})
+		queued, _ := client.GetBuildQueue(api.QueueOptions{Limit: 10})
 		if (running == nil || running.Count == 0) && (queued == nil || queued.Count == 0) {
-			return
+			return agents.Agents[0]
 		}
 		if running != nil {
 			for _, b := range running.Builds {
-				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "Waiting for idle agent")
+				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "test cleanup")
 			}
 		}
 		if queued != nil {
 			for _, b := range queued.Builds {
-				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "Waiting for idle agent")
+				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "test cleanup")
 			}
 		}
 		time.Sleep(2 * time.Second)
 	}
-	t.Logf("waitForIdleAgent: agent still busy after 3m")
+	t.Fatal("no idle agent available within 2m")
+	return api.Agent{}
 }
 
-// cancelAndWait cancels a build and waits for it to reach a terminal state so the
-// single testcontainer agent is free for subsequent tests.
+// cancelAndWait cancels a build and polls until it finishes.
 func cancelAndWait(t *testing.T, buildID string) {
 	t.Helper()
-	if err := client.CancelBuild(buildID, "Test cleanup"); err != nil {
-		t.Logf("cancelAndWait: initial cancel of %s: %v", buildID, err)
-	}
+	_ = client.CancelBuild(buildID, "test cleanup")
 	deadline := time.Now().Add(60 * time.Second)
-	for time.Now().Before(deadline) {
+	for time.Until(deadline) > 0 {
 		b, err := client.GetBuild(buildID)
-		if err != nil {
-			return // build removed from queue or no longer accessible
-		}
-		if b.State == "finished" {
+		if err != nil || b.State == "finished" {
 			return
 		}
-		if err := client.CancelBuild(buildID, "Test cleanup"); err != nil {
-			t.Logf("cancelAndWait: retry cancel of %s (state=%s): %v", buildID, b.State, err)
-		}
+		_ = client.CancelBuild(buildID, "test cleanup")
 		time.Sleep(time.Second)
 	}
 	t.Logf("cancelAndWait: build %s did not finish within 60s", buildID)
@@ -244,6 +242,7 @@ func TestResolveBuildID_Integration(T *testing.T) {
 
 func TestRunBuildAndCancel(T *testing.T) {
 	skipIfGuest(T)
+	requireIdleAgent(T)
 	// Run with various options
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{
 		Comment:      "Integration test build",
@@ -455,6 +454,7 @@ func TestBuildComment(T *testing.T) {
 
 func TestQueueOperations(T *testing.T) {
 	skipIfGuest(T)
+	requireIdleAgent(T)
 	// Queue a build
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{Comment: "Queue ops test"})
 	require.NoError(T, err)
@@ -474,6 +474,7 @@ func TestQueueOperations(T *testing.T) {
 
 func TestRemoveFromQueue(T *testing.T) {
 	skipIfGuest(T)
+	requireIdleAgent(T)
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{Comment: "Queue remove test"})
 	require.NoError(T, err)
 
@@ -691,6 +692,7 @@ func TestUploadDiffChanges(T *testing.T) {
 
 func TestPersonalBuildWithLocalChanges(T *testing.T) {
 	skipIfGuest(T)
+	requireIdleAgent(T)
 	patch := []byte(`--- a/test.txt
 +++ b/test.txt
 @@ -1 +1 @@
@@ -759,7 +761,7 @@ func TestBuildLevelAuth(T *testing.T) {
 	if testEnvRef == nil || len(testEnvRef.agents) == 0 {
 		T.Skip("test requires testcontainers agent")
 	}
-	waitForIdleAgent(T)
+	requireIdleAgent(T)
 
 	configID := "Sandbox_BuildAuthTest"
 
@@ -877,6 +879,7 @@ func TestExportProjectSettings(T *testing.T) {
 
 func TestPoolOperations(T *testing.T) {
 	skipIfGuest(T)
+	requireIdleAgent(T)
 	// Not parallel - modifies pool state
 
 	T.Run("list pools", func(t *testing.T) {
@@ -987,6 +990,7 @@ func TestGetParameterValue(T *testing.T) {
 
 func TestRunBuildAdvancedOptions(T *testing.T) {
 	skipIfGuest(T)
+	requireIdleAgent(T)
 	T.Run("rebuild dependencies and queue at top", func(t *testing.T) {
 		build, err := client.RunBuild(testConfig, api.RunBuildOptions{
 			Comment:             "Test rebuild deps + queue at top",
@@ -1063,6 +1067,7 @@ func TestCancelBuildNonExistent(T *testing.T) {
 
 func TestGetBuildLogEmpty(T *testing.T) {
 	skipIfGuest(T)
+	requireIdleAgent(T)
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{Comment: "Empty log test"})
 	require.NoError(T, err)
 
@@ -1121,6 +1126,7 @@ func TestGetBuildQueueWithFilter(T *testing.T) {
 // TestAgentOperations exercises the full agent API.
 func TestAgentOperations(T *testing.T) {
 	skipIfGuest(T)
+	requireIdleAgent(T)
 	// Not parallel - modifies agent state
 
 	T.Run("list agents", func(t *testing.T) {
@@ -1188,16 +1194,16 @@ func TestAgentOperations(T *testing.T) {
 		err = client.EnableAgent(agentID, true)
 		require.NoError(t, err)
 
-		agent, err = client.GetAgent(agentID)
-		require.NoError(t, err)
-		assert.True(t, agent.Enabled, "agent should be enabled")
+		readyAgent := requireIdleAgent(t)
+		assert.Equal(t, agentID, readyAgent.ID)
+		assert.True(t, readyAgent.Enabled, "agent should be enabled")
 	})
 
 }
 
 func TestWaitForBuild_Integration(T *testing.T) {
 	skipIfGuest(T)
-	waitForIdleAgent(T)
+	requireIdleAgent(T)
 
 	build, err := client.RunBuild(testConfig, api.RunBuildOptions{
 		Comment: "WaitForBuild integration test",
