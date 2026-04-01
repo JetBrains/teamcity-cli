@@ -6,32 +6,28 @@ jobs:
       - type: script
         name: Release
         docker-image: goreleaser/goreleaser-pro:latest
-        script-content: >-
+        script-content: |-
           set -e
-
           export PATH="$HOME/.local/bin:$PATH"
-
           git config --global --add safe.directory "$(pwd)"
-
-          git clone
-          "https://x-access-token:${GITHUB_TOKEN}@github.com/JetBrains/teamcity-cli.git"
-          /tmp/repo
-
+          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/JetBrains/teamcity-cli.git" /tmp/repo
           cp -a /tmp/repo/.git .
-
           git checkout "$(git tag --sort=-v:refname | head -1)"
-
           apk add --no-cache just mono openssh-client npm
-
           mkdir -p ~/.ssh
-
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
-
           just install-choco
-
           just install-codesign
-
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           goreleaser release --clean
+      - type: script
+        name: Upload install scripts
+        docker-image: amazon/aws-cli
+        script-content: |-
+          set -e
+          aws s3 cp install.sh s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.sh --content-type text/plain --region eu-west-1 --no-guess-mime-type
+          aws s3 cp install.ps1 s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.ps1 --content-type text/plain --region eu-west-1 --no-guess-mime-type
+          aws s3 cp install.cmd s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.cmd --content-type text/plain --region eu-west-1 --no-guess-mime-type
 parameters:
   env.SIGN: 'true'
   env.FINGERPRINT: B46DC71E03FEEB7F89D1F2491F7A8F87B9D8F501
@@ -44,3 +40,4 @@ secrets:
   env.TEAMCITY_TOKEN: credentialsJSON:1410f1df-7623-4958-85d0-2bb102c0bd63
   env.GORELEASER_KEY: credentialsJSON:0277c80e-aafd-4fd2-af03-1fc840713709
   env.AUR_SSH_KEY: credentialsJSON:181a83e3-258a-421b-a590-228634d41261
+  env.NPM_TOKEN: credentialsJSON:8685b378-b6b3-4af6-8c55-08de9a66143e

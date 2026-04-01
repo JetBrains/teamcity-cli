@@ -215,6 +215,14 @@ winget:
       email: bot@goreleaser.com
     commit_msg_template: "New version: JetBrains.TeamCityCLI version {{.Version}}"
 
+blobs:
+  - provider: s3
+    bucket: download-prod-cdn.jetbrains.com
+    region: eu-west-1
+    directory: resources/teamcity-cli/{{ .Version }}
+    extra_files:
+      - glob: dist/checksums.txt
+
 checksum:
   name_template: checksums.txt
   algorithm: sha256
