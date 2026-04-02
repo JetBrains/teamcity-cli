@@ -115,11 +115,17 @@ func TestConfigGetServerNotFound(t *testing.T) {
 
 func TestConfigSetDefaultServer(t *testing.T) {
 	setupWithServer(t)
-	out := capture(t, "config", "set", "default_server", "staging.example.com")
+	out := capture(t, "config", "set", "default_server", "tc.example.com")
 	assert.Contains(t, out, "Set default_server")
 
 	got := capture(t, "config", "get", "default_server")
-	assert.Contains(t, got, "https://staging.example.com")
+	assert.Contains(t, got, "https://tc.example.com")
+}
+
+func TestConfigSetDefaultServerRejectsUnknown(t *testing.T) {
+	setupWithServer(t)
+	err := captureErr(t, "config", "set", "default_server", "typo.example.com")
+	assert.Contains(t, err.Error(), "not found in configuration")
 }
 
 func TestConfigSetRO(t *testing.T) {

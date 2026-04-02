@@ -50,7 +50,11 @@ func SetField(key, value, serverURL string) error {
 		if value == "" {
 			return fmt.Errorf("value cannot be empty")
 		}
-		cfg.DefaultServer = NormalizeURL(value)
+		normalized := NormalizeURL(value)
+		if _, ok := cfg.Servers[normalized]; !ok {
+			return fmt.Errorf("server %q not found in configuration; run 'teamcity auth login --server %s' first", normalized, value)
+		}
+		cfg.DefaultServer = normalized
 		return writeConfig()
 	}
 	serverURL, err := resolveServerForConfig(serverURL)
