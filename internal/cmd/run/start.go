@@ -309,6 +309,9 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	}
 
 	if reused {
+		if opts.web {
+			_ = browser.OpenURL(build.WebURL)
+		}
 		return nil
 	}
 	return afterQueue(f, build, opts.web, &opts.watchFlags)
