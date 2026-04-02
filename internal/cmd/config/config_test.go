@@ -143,22 +143,6 @@ func TestConfigSetInvalidBool(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid boolean")
 }
 
-func TestConfigResetRO(t *testing.T) {
-	setupWithServer(t)
-	capture(t, "config", "set", "ro", "true", "--server", "https://tc.example.com")
-	out := capture(t, "config", "reset", "ro", "--server", "https://tc.example.com")
-	assert.Contains(t, out, "Reset ro")
-
-	got := capture(t, "config", "get", "ro", "--server", "https://tc.example.com")
-	assert.Contains(t, got, "false")
-}
-
-func TestConfigResetDefaultServer(t *testing.T) {
-	setupWithServer(t)
-	out := capture(t, "config", "reset", "default_server")
-	assert.Contains(t, out, "Reset default_server")
-}
-
 func TestConfigSetTokenExpiry(t *testing.T) {
 	setupWithServer(t)
 	capture(t, "config", "set", "token_expiry", "2026-01-01T00:00:00Z", "--server", "https://tc.example.com")

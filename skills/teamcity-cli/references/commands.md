@@ -326,7 +326,6 @@ Shows all branches and all build states (including canceled, personal, composite
 | `teamcity config list`                | List all configuration values  |
 | `teamcity config get <key>`           | Get a configuration value      |
 | `teamcity config set <key> <value>`   | Set a configuration value      |
-| `teamcity config reset <key>`         | Reset a value to default       |
 
 Valid keys: `default_server`, `guest`, `ro`, `token_expiry`.
 
@@ -336,7 +335,7 @@ Per-server keys (`guest`, `ro`, `token_expiry`) use `--server <url>` to target a
 
 - `--json` - Output as JSON
 
-### Flags for `teamcity config get`, `set`, `reset`
+### Flags for `teamcity config get` and `set`
 
 - `-s, --server <url>` - Server URL for per-server settings
 

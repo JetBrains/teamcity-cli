@@ -41,5 +41,9 @@ func newJobStateCmd(f *cmdutil.Factory, a jobStateAction) *cobra.Command {
 	}
 }
 
-func newJobPauseCmd(f *cmdutil.Factory) *cobra.Command  { return newJobStateCmd(f, jobStateActions["pause"]) }
-func newJobResumeCmd(f *cmdutil.Factory) *cobra.Command { return newJobStateCmd(f, jobStateActions["resume"]) }
+func newJobPauseCmd(f *cmdutil.Factory) *cobra.Command {
+	return newJobStateCmd(f, jobStateActions["pause"])
+}
+func newJobResumeCmd(f *cmdutil.Factory) *cobra.Command {
+	return newJobStateCmd(f, jobStateActions["resume"])
+}

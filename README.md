@@ -129,7 +129,7 @@ teamcity queue list
 | **agent**   | `list`, `view`, `term`, `exec`, `jobs`, `authorize`/`deauthorize`, `enable`/`disable`, `move`, `reboot`                                            |
 | **pool**    | `list`, `view`, `link`/`unlink`                                                                                                                    |
 | **api**     | Raw REST API access                                                                                                                                |
-| **config**  | `list`, `get`, `set`, `reset`                                                                                                                      |
+| **config**  | `list`, `get`, `set`                                                                                                                               |
 | **alias**   | `set`, `list`, `delete`                                                                                                                            |
 | **skill**   | `install`, `remove`, `update`                                                                                                                      |
 
