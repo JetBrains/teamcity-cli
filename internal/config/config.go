@@ -221,12 +221,42 @@ func GetTokenExpiry() string {
 	return ""
 }
 
-func writeConfig() error {
-	vi.Set("default_server", cfg.DefaultServer)
-	vi.Set("servers", cfg.Servers)
-	vi.Set("aliases", cfg.Aliases)
+func serverConfigToMap(sc ServerConfig) map[string]any {
+	m := map[string]any{}
+	if sc.Token != "" {
+		m["token"] = sc.Token
+	}
+	if sc.User != "" {
+		m["user"] = sc.User
+	}
+	if sc.Guest {
+		m["guest"] = true
+	}
+	if sc.RO {
+		m["ro"] = true
+	}
+	if sc.TokenExpiry != "" {
+		m["token_expiry"] = sc.TokenExpiry
+	}
+	return m
+}
 
-	if err := vi.WriteConfigAs(configPath); err != nil {
+func writeConfig() error {
+	// Use a fresh viper instance for writing to avoid stale keys from the
+	// initial file read (viper merges rather than replaces nested maps).
+	w := viper.NewWithOptions(viper.KeyDelimiter("::"))
+	w.SetConfigType("yaml")
+
+	w.Set("default_server", cfg.DefaultServer)
+
+	servers := make(map[string]any, len(cfg.Servers))
+	for url, sc := range cfg.Servers {
+		servers[url] = serverConfigToMap(sc)
+	}
+	w.Set("servers", servers)
+	w.Set("aliases", cfg.Aliases)
+
+	if err := w.WriteConfigAs(configPath); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	if err := os.Chmod(configPath, 0600); err != nil {
