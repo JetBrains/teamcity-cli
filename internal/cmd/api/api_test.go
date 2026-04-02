@@ -12,6 +12,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,6 +27,18 @@ func createTestRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().Bool("verbose", false, "")
 	rootCmd.PersistentFlags().Bool("no-input", false, "")
 	rootCmd.AddCommand(NewCmd(cmdutil.NewFactory()))
+	return rootCmd
+}
+
+func createTestRootCmdWithFactory(f *cmdutil.Factory) *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use: "teamcity",
+	}
+	rootCmd.PersistentFlags().Bool("no-color", false, "")
+	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "")
+	rootCmd.PersistentFlags().Bool("verbose", false, "")
+	rootCmd.PersistentFlags().Bool("no-input", false, "")
+	rootCmd.AddCommand(NewCmd(f))
 	return rootCmd
 }
 
@@ -732,4 +745,72 @@ func TestPrettyPrintJSON(T *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAPICommandFieldWarnOnGET(T *testing.T) {
+setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+assert.Equal(T, "GET", r.Method)
+w.WriteHeader(http.StatusOK)
+json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+})
+
+f := cmdutil.NewFactory()
+var buf bytes.Buffer
+f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
+
+rootCmd := createTestRootCmdWithFactory(f)
+rootCmd.SetArgs([]string{"api", "/app/rest/server", "-f", "key=value"})
+rootCmd.SetOut(&buf)
+rootCmd.SetErr(&buf)
+
+err := rootCmd.Execute()
+require.NoError(T, err)
+assert.Contains(T, buf.String(), "--field is ignored for GET requests")
+}
+
+func TestAPICommandInputWarnOnGET(T *testing.T) {
+setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+assert.Equal(T, "GET", r.Method)
+w.WriteHeader(http.StatusOK)
+json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+})
+
+f := cmdutil.NewFactory()
+var buf bytes.Buffer
+f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
+
+tmpFile, err := os.CreateTemp(T.TempDir(), "input*.json")
+require.NoError(T, err)
+_, _ = tmpFile.WriteString(`{"key":"value"}`)
+_ = tmpFile.Close()
+
+rootCmd := createTestRootCmdWithFactory(f)
+rootCmd.SetArgs([]string{"api", "/app/rest/server", "--input", tmpFile.Name()})
+rootCmd.SetOut(&buf)
+rootCmd.SetErr(&buf)
+
+err = rootCmd.Execute()
+require.NoError(T, err)
+assert.Contains(T, buf.String(), "--input is ignored for GET requests")
+}
+
+func TestAPICommandFieldNoWarnOnPOST(T *testing.T) {
+setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+assert.Equal(T, "POST", r.Method)
+w.WriteHeader(http.StatusCreated)
+json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+})
+
+f := cmdutil.NewFactory()
+var buf bytes.Buffer
+f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
+
+rootCmd := createTestRootCmdWithFactory(f)
+rootCmd.SetArgs([]string{"api", "/app/rest/builds", "-X", "POST", "-f", "key=value"})
+rootCmd.SetOut(&buf)
+rootCmd.SetErr(&buf)
+
+err := rootCmd.Execute()
+require.NoError(T, err)
+assert.NotContains(T, buf.String(), "--field is ignored")
 }

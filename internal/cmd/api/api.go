@@ -89,6 +89,12 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	if opts.slurp && !opts.paginate {
 		return fmt.Errorf("--slurp requires --paginate")
 	}
+	if opts.method == "GET" && len(opts.fields) > 0 {
+		f.Printer.Warn("--field is ignored for GET requests. Use -X POST to send a request body.")
+	}
+	if opts.method == "GET" && opts.input != "" {
+		f.Printer.Warn("--input is ignored for GET requests. Use -X POST to send a request body.")
+	}
 
 	client, err := f.Client()
 	if err != nil {
