@@ -72,6 +72,8 @@ type Build struct {
 	Pinned             bool        `json:"pinned,omitempty"`
 	Tags               *TagList    `json:"tags,omitempty"`
 	LastChanges        *ChangeList `json:"lastChanges,omitempty"`
+	WaitReason         string      `json:"waitReason,omitempty"`
+	UsedByOtherBuilds  bool        `json:"usedByOtherBuilds,omitempty"`
 }
 
 // BuildList represents a list of builds
@@ -157,6 +159,7 @@ type QueuedBuild struct {
 	BuildType   *BuildType `json:"buildType,omitempty"`
 	Triggered   *Triggered `json:"triggered,omitempty"`
 	QueuedDate  string     `json:"queuedDate,omitempty"`
+	WaitReason  string     `json:"waitReason,omitempty"`
 }
 
 // BuildQueue represents the build queue

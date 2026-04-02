@@ -48,7 +48,7 @@ func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string)
 		return nil, err
 	}
 
-	headers := []string{"ID", "JOB", "BRANCH", "STATE"}
+	headers := []string{"ID", "JOB", "BRANCH", "STATE", "WAIT REASON"}
 	var rows [][]string
 
 	for _, r := range queue.Builds {
@@ -57,17 +57,23 @@ func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string)
 			branch = "<default>"
 		}
 
+		waitReason := r.WaitReason
+		if waitReason == "" {
+			waitReason = "-"
+		}
+
 		rows = append(rows, []string{
 			fmt.Sprintf("%d", r.ID),
 			r.BuildTypeID,
 			branch,
 			r.State,
+			waitReason,
 		})
 	}
 
 	return &cmdutil.ListResult{
 		JSON:     queue,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2, 4}},
 		EmptyMsg: "No runs in queue",
 	}, nil
 }

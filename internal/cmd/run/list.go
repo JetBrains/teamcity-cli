@@ -399,8 +399,16 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 		_, _ = fmt.Fprintln(p.Out)
 	}
 
+	if build.UsedByOtherBuilds {
+		_, _ = fmt.Fprintf(p.Out, "\n%s Results shared with other builds in chain\n", output.Yellow("⟳"))
+	}
+
 	if build.StatusText != "" && build.StatusText != build.Status {
 		_, _ = fmt.Fprintf(p.Out, "\nStatus: %s\n", build.StatusText)
+	}
+
+	if build.State == "queued" && build.WaitReason != "" {
+		_, _ = fmt.Fprintf(p.Out, "\nWait reason: %s\n", output.Yellow(build.WaitReason))
 	}
 
 	if build.State == "running" && build.PercentageComplete > 0 {
