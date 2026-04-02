@@ -984,6 +984,41 @@ teamcity run changes 12345 --no-files
 teamcity run changes 12345 --json
 ```
 
+## Comparing runs
+
+Compare two runs to see what changed between them:
+
+```Shell
+teamcity run diff 123 124
+```
+
+If only one ID is given, compares against the previous finished run of the same job:
+
+```Shell
+teamcity run diff 456
+```
+
+Compare build logs with a normalized unified diff:
+
+```Shell
+teamcity run diff 123 124 --log
+teamcity run diff 123 124 --log -U5
+```
+
+Pipe to external tools for side-by-side views:
+
+```Shell
+teamcity run diff 123 124 --log --no-color | delta --side-by-side
+teamcity run diff 123 124 --log --no-color | diff-so-fancy
+```
+
+| Flag | Description |
+|------|-------------|
+| `--log` | Compare build logs with colored unified diff |
+| `-U`, `--unified` | Number of context lines in log diff (default 3) |
+| `--json` | Output structured diff as JSON |
+| `-w`, `--web` | Open both runs in browser |
+
 ## Pinning runs
 
 Pin a run to prevent it from being cleaned up by retention policies:

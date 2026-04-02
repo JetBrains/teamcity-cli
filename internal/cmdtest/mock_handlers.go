@@ -573,6 +573,28 @@ func SetupMockClient(t *testing.T) *TestServer {
 		})
 	})
 
+	// Resulting properties (for run diff)
+	ts.Handle("GET /app/rest/builds/id:1/resulting-properties", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.ParameterList{
+			Count: 2,
+			Property: []api.Parameter{
+				{Name: "version", Value: "1.0.0"},
+				{Name: "env.JAVA_HOME", Value: "/usr/lib/jvm/java-11"},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/builds/id:2/resulting-properties", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.ParameterList{
+			Count: 3,
+			Property: []api.Parameter{
+				{Name: "version", Value: "1.0.1"},
+				{Name: "env.JAVA_HOME", Value: "/usr/lib/jvm/java-17"},
+				{Name: "new.feature", Value: "enabled"},
+			},
+		})
+	})
+
 	ts.Handle("GET /app/rest/cloud/images/", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, api.CloudImage{
 			ID: "id:img-1,profileId:aws-prod", Name: "ubuntu-22-large",

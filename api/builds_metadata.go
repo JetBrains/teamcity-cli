@@ -237,6 +237,22 @@ func (c *Client) GetBuildTests(buildID string, failedOnly bool, limit int) (*Tes
 	return &summary, nil
 }
 
+func (c *Client) GetBuildResultingProperties(buildID string) (*ParameterList, error) {
+	id, err := c.ResolveBuildID(buildID)
+	if err != nil {
+		return nil, err
+	}
+
+	path := fmt.Sprintf("/app/rest/builds/id:%s/resulting-properties", id)
+
+	var params ParameterList
+	if err := c.get(path, &params); err != nil {
+		return nil, err
+	}
+
+	return &params, nil
+}
+
 func (c *Client) GetBuildProblems(buildID string) (*ProblemOccurrences, error) {
 	id, err := c.ResolveBuildID(buildID)
 	if err != nil {
