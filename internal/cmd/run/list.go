@@ -364,8 +364,13 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	}
 
 	if opts.JSON {
+		reused, _ := client.GetBuildUsedByOtherBuilds(fmt.Sprintf("%d", build.ID))
+		build.UsedByOtherBuilds = reused
 		return p.PrintJSON(build)
 	}
+
+	reused, _ := client.GetBuildUsedByOtherBuilds(fmt.Sprintf("%d", build.ID))
+	build.UsedByOtherBuilds = reused
 
 	icon := output.StatusIcon(build.Status, build.State)
 	jobName := build.BuildTypeID
