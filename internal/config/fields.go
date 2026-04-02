@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -61,10 +62,10 @@ func SetField(key, value, serverURL string) error {
 	if err != nil {
 		return err
 	}
-	if cfg.Servers == nil {
-		cfg.Servers = make(map[string]ServerConfig)
+	sc, ok := cfg.Servers[serverURL]
+	if !ok {
+		return fmt.Errorf("server %q not found in configuration", serverURL)
 	}
-	sc := cfg.Servers[serverURL]
 	switch key {
 	case "guest":
 		b, err := parseBoolValue(value)
@@ -91,9 +92,8 @@ func ResetField(key, serverURL string) error {
 	}
 	if key == "default_server" {
 		cfg.DefaultServer = ""
-		for url := range cfg.Servers {
-			cfg.DefaultServer = url
-			break
+		if urls := slices.Sorted(maps.Keys(cfg.Servers)); len(urls) > 0 {
+			cfg.DefaultServer = urls[0]
 		}
 		return writeConfig()
 	}

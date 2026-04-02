@@ -3,9 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -274,9 +276,8 @@ func RemoveServer(serverURL string) error {
 
 	if cfg.DefaultServer == serverURL {
 		cfg.DefaultServer = ""
-		for url := range cfg.Servers {
-			cfg.DefaultServer = url
-			break
+		if urls := slices.Sorted(maps.Keys(cfg.Servers)); len(urls) > 0 {
+			cfg.DefaultServer = urls[0]
 		}
 	}
 
