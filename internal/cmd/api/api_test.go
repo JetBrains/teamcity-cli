@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -18,6 +19,10 @@ import (
 )
 
 func createTestRootCmd() *cobra.Command {
+	return createTestRootCmdWithFactory(cmdutil.NewFactory())
+}
+
+func createTestRootCmdWithFactory(f *cmdutil.Factory) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use: "teamcity",
 	}
@@ -25,7 +30,7 @@ func createTestRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "")
 	rootCmd.PersistentFlags().Bool("verbose", false, "")
 	rootCmd.PersistentFlags().Bool("no-input", false, "")
-	rootCmd.AddCommand(NewCmd(cmdutil.NewFactory()))
+	rootCmd.AddCommand(NewCmd(f))
 	return rootCmd
 }
 
@@ -330,16 +335,11 @@ func TestAPICommandFromStdin(T *testing.T) {
 		w.WriteHeader(http.StatusCreated)
 	})
 
-	oldStdin := os.Stdin
-	T.Cleanup(func() { os.Stdin = oldStdin })
-
-	r, w, _ := os.Pipe()
-	os.Stdin = r
-	w.Write([]byte(`{"test":"stdin"}`))
-	w.Close()
+	f := cmdutil.NewFactory()
+	f.IOStreams.In = strings.NewReader(`{"test":"stdin"}`)
 
 	var out bytes.Buffer
-	rootCmd := createTestRootCmd()
+	rootCmd := createTestRootCmdWithFactory(f)
 	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "-X", "POST", "--input", "-"})
 	rootCmd.SetOut(&out)
 	rootCmd.SetErr(&out)

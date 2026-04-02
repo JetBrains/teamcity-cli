@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"io"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -40,7 +41,7 @@ func TestParseJSONFields(T *testing.T) {
 				_ = cmd.Flags().Set("json", tc.flagValue)
 			}
 
-			result, showHelp, err := ParseJSONFields(cmd, tc.flagValue, spec)
+			result, showHelp, err := ParseJSONFields(cmd, tc.flagValue, spec, io.Discard)
 
 			if tc.wantErr {
 				assert.Error(t, err)

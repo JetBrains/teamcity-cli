@@ -1,7 +1,6 @@
 package alias
 
 import (
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -103,7 +102,7 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 			aliases := config.GetAllAliases()
 
 			if len(aliases) == 0 {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "No aliases configured. Use \"teamcity alias set\" to create one.")
+				_, _ = fmt.Fprintln(f.Printer.Out, "No aliases configured. Use \"teamcity alias set\" to create one.")
 				return nil
 			}
 
@@ -119,7 +118,7 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 						Shell:     isShell,
 					})
 				}
-				return json.NewEncoder(cmd.OutOrStdout()).Encode(entries)
+				return f.Printer.PrintJSON(entries)
 			}
 
 			headers := []string{"NAME", "EXPANSION", "TYPE"}
