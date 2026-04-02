@@ -18,6 +18,7 @@ type runLogOptions struct {
 	failed bool
 	raw    bool
 	web    bool
+	json   bool
 }
 
 func newRunLogCmd(f *cmdutil.Factory) *cobra.Command {
@@ -40,6 +41,7 @@ Use --raw to bypass the pager.`,
 		},
 		Example: `  teamcity run log 12345
   teamcity run log 12345 --failed
+  teamcity run log 12345 --json
   teamcity run log --job Falcon_Build`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var runID string
@@ -54,8 +56,26 @@ Use --raw to bypass the pager.`,
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show failure summary (problems and failed tests)")
 	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Show raw log without formatting")
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open build log in browser")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+
+	cmd.MarkFlagsMutuallyExclusive("json", "raw")
+	cmd.MarkFlagsMutuallyExclusive("json", "web")
 
 	return cmd
+}
+
+type buildLogJSON struct {
+	RunID string `json:"run_id"`
+	Log   string `json:"log"`
+}
+
+type failureSummaryJSON struct {
+	RunID    string                  `json:"run_id"`
+	Number   string                  `json:"number"`
+	Status   string                  `json:"status"`
+	WebURL   string                  `json:"web_url"`
+	Problems []api.ProblemOccurrence `json:"problems"`
+	Tests    *api.TestOccurrences    `json:"failed_tests,omitempty"`
 }
 
 func formatLogLine(line string) string {
@@ -117,7 +137,9 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 			return fmt.Errorf("no runs found for job %s", opts.job)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
-		f.Printer.Info("Showing log for run %s  #%s", runID, runs.Builds[0].Number)
+		if !opts.json {
+			f.Printer.Info("Showing log for run %s  #%s", runID, runs.Builds[0].Number)
+		}
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
@@ -131,21 +153,19 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 	}
 
 	if opts.failed {
-		build, err := client.GetBuild(runID)
-		if err != nil {
-			return fmt.Errorf("failed to get build: %w", err)
-		}
-		if build.Status == "SUCCESS" {
-			f.Printer.Success("Build %d  #%s succeeded", build.ID, build.Number)
-			return nil
-		}
-		cmdutil.PrintFailureSummary(f.Printer, client, runID, build.Number, build.WebURL, build.StatusText)
-		return nil
+		return runLogFailed(f, client, runID, opts.json)
 	}
 
 	log, err := client.GetBuildLog(runID)
 	if err != nil {
 		return fmt.Errorf("failed to get run log: %w", err)
+	}
+
+	if opts.json {
+		return f.Printer.PrintJSON(buildLogJSON{
+			RunID: runID,
+			Log:   log,
+		})
 	}
 
 	if log == "" {
@@ -167,5 +187,39 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 			}
 		}
 	})
+	return nil
+}
+
+func runLogFailed(f *cmdutil.Factory, client api.ClientInterface, runID string, jsonOut bool) error {
+	build, err := client.GetBuild(runID)
+	if err != nil {
+		return fmt.Errorf("failed to get build: %w", err)
+	}
+
+	if jsonOut {
+		summary := failureSummaryJSON{
+			RunID:  runID,
+			Number: build.Number,
+			Status: build.Status,
+			WebURL: build.WebURL,
+		}
+
+		summary.Problems = []api.ProblemOccurrence{}
+		if problems, err := client.GetBuildProblems(runID); err == nil && len(problems.ProblemOccurrence) > 0 {
+			summary.Problems = problems.ProblemOccurrence
+		}
+		if build.Status != "SUCCESS" {
+			if tests, err := client.GetBuildTests(runID, true, 0); err == nil {
+				summary.Tests = tests
+			}
+		}
+		return f.Printer.PrintJSON(summary)
+	}
+
+	if build.Status == "SUCCESS" {
+		f.Printer.Success("Build %d  #%s succeeded", build.ID, build.Number)
+		return nil
+	}
+	cmdutil.PrintFailureSummary(f.Printer, client, runID, build.Number, build.WebURL, build.StatusText)
 	return nil
 }

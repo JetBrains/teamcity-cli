@@ -149,6 +149,7 @@ func runRunUntag(f *cmdutil.Factory, runID string, tags []string) error {
 
 type runCommentOptions struct {
 	delete bool
+	json   bool
 }
 
 func newRunCommentCmd(f *cmdutil.Factory) *cobra.Command {
@@ -164,6 +165,7 @@ With a comment argument, sets the comment.
 Use --delete to remove the comment.`,
 		Args: cobra.RangeArgs(1, 2),
 		Example: `  teamcity run comment 12345
+  teamcity run comment 12345 --json
   teamcity run comment 12345 "Deployed to production"
   teamcity run comment 12345 --delete`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -176,6 +178,7 @@ Use --delete to remove the comment.`,
 	}
 
 	cmd.Flags().BoolVar(&opts.delete, "delete", false, "Delete the comment")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 
 	return cmd
 }
@@ -190,6 +193,9 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 		if err := client.DeleteBuildComment(runID); err != nil {
 			return fmt.Errorf("failed to delete comment: %w", err)
 		}
+		if opts.json {
+			return f.Printer.PrintJSON(map[string]string{"run_id": runID, "comment": ""})
+		}
 		f.Printer.Success("Deleted comment from run #%s", runID)
 		return nil
 	}
@@ -197,6 +203,9 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 	if comment != "" {
 		if err := client.SetBuildComment(runID, comment); err != nil {
 			return fmt.Errorf("failed to set comment: %w", err)
+		}
+		if opts.json {
+			return f.Printer.PrintJSON(map[string]string{"run_id": runID, "comment": comment})
 		}
 		f.Printer.Success("Set comment on run #%s", runID)
 		f.Printer.Info("  Comment: %s", comment)
@@ -206,6 +215,10 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 	existingComment, err := client.GetBuildComment(runID)
 	if err != nil {
 		return fmt.Errorf("failed to get comment: %w", err)
+	}
+
+	if opts.json {
+		return f.Printer.PrintJSON(map[string]string{"run_id": runID, "comment": existingComment})
 	}
 
 	p := f.Printer

@@ -73,6 +73,17 @@ Run `just` with no arguments to see all available recipes.
 
 All new features and bug fixes must include tests. We have a solid integration test setup with testcontainers that spins up a real TeamCity server — please use it. If your change touches API behavior or user-facing commands, an integration test is expected, not just unit tests.
 
+### JSON output contract
+
+All commands that produce data output must support `--json`. When `--json` is active:
+
+- **Success output** goes to stdout as the resource data (object or array).
+- **Error output** goes to stderr using the structured `{"error": {"code": "...", "message": "...", "suggestion": "..."}}` envelope. Error classification happens automatically in `root.go` for any command with a `--json` flag.
+- **No field removals or renames** without a deprecation period. Additive fields are always safe.
+- **New commands** must include `--json` from day one if they produce data output.
+
+See `internal/output/json_error.go` for the error codes and `docs/topics/teamcity-cli-scripting.md` for the full policy.
+
 ## Acceptance tests
 
 Acceptance tests are end-to-end blackbox tests that exercise the real CLI binary against a live TeamCity server ([cli.teamcity.com](https://cli.teamcity.com)). They use the [testscript](https://pkg.go.dev/github.com/rogpeppe/go-internal/testscript) framework with declarative `.txtar` scripts in `acceptance/testdata/`.

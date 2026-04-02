@@ -28,4 +28,6 @@ teamcity <command>
 - [ ] Linter passes (`just lint`)
 - [ ] Acceptance tests pass (`just acceptance`)
 - [ ] If adding a new command/flag: added `.txtar` test in `acceptance/testdata/`
+- [ ] If adding a data-producing command: includes `--json` support
+- [ ] If modifying `--json` output: no field removals/renames (additive only)
 - [ ] If changing docs-visible behavior: updated `docs/`, `skills/`, and `README.md`

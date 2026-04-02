@@ -48,11 +48,14 @@ teamcity run list --json=id,status,buildType.name,triggered.user.username
 
 ```Shell
 teamcity run view 12345 --json
+teamcity run log 12345 --json
+teamcity run log 12345 --json --failed
 teamcity run changes 12345 --json
 teamcity run tests 12345 --json
 teamcity run artifacts 12345 --json
 teamcity agent view Agent-Linux-01 --json
 teamcity project settings status MyProject --json
+teamcity auth status --json
 ```
 
 ### Available fields by command
@@ -296,6 +299,45 @@ case $? in
   *) echo "Unknown error" ;;
 esac
 ```
+
+## Structured errors
+
+When `--json` is active and a command fails, the error is written to stderr as structured JSON instead of plain text:
+
+```json
+{
+  "error": {
+    "code": "auth_expired",
+    "message": "Authentication failed: invalid or expired token",
+    "suggestion": "teamcity auth login"
+  }
+}
+```
+
+Error codes:
+
+| Code | Meaning |
+|------|---------|
+| `auth_expired` | Token is invalid or expired |
+| `permission_denied` | Insufficient permissions |
+| `not_found` | Requested resource does not exist |
+| `network_error` | Cannot reach the server |
+| `read_only` | Write operation blocked by `TEAMCITY_RO` |
+| `validation_error` | Invalid input (flags, arguments) |
+| `internal_error` | Unexpected error |
+
+The `suggestion` field is omitted when there is no actionable fix. The `code` field is always present and is safe for programmatic matching.
+
+## JSON compatibility policy
+
+The `--json` output is a machine-readable contract. The following rules apply:
+
+- **No field removals or renames** without a deprecation period in a prior release.
+- **Additive fields are always allowed** — new keys may appear in any release.
+- **Error codes are stable** — existing codes will not change meaning.
+- **Envelope structure is fixed** — success output is the resource data; error output uses the `{"error": {...}}` envelope on stderr.
+
+Consumers should ignore unknown fields and avoid relying on field ordering.
 
 ## Raw API access
 

@@ -165,6 +165,7 @@ func sortedServerURLs(c *cfg.Config) []string {
 
 func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 	var serverURL string
+	var jsonOutput bool
 
 	cmd := &cobra.Command{
 		Use:   "get <key>",
@@ -179,12 +180,16 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if jsonOutput {
+				return f.Printer.PrintJSON(map[string]string{"key": args[0], "value": value})
+			}
 			_, _ = fmt.Fprintln(f.Printer.Out, value)
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&serverURL, "server", "s", "", "Server URL for per-server settings")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output as JSON")
 	return cmd
 }
 

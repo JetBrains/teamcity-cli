@@ -92,6 +92,45 @@ func TestRunLog(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, ts.Factory, "run", "log", testBuildID)
 }
 
+func TestRunLogJSON(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "log", testBuildID, "--json")
+	assert.Contains(T, got, `"run_id"`)
+	assert.Contains(T, got, `"log"`)
+	assert.Contains(T, got, "Build started")
+}
+
+func TestRunLogJSON_failed(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /app/rest/builds/id:1", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{
+			ID:     1,
+			Number: "1",
+			Status: "FAILURE",
+			State:  "finished",
+			WebURL: ts.URL + "/viewLog.html?buildId=1",
+		})
+	})
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "log", testBuildID, "--json", "--failed")
+	assert.Contains(T, got, `"run_id"`)
+	assert.Contains(T, got, `"status"`)
+	assert.Contains(T, got, `"problems"`)
+	assert.Contains(T, got, "FAILURE")
+}
+
+func TestRunLogJSON_raw_mutually_exclusive(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "log", testBuildID, "--json", "--raw")
+	assert.Contains(T, err.Error(), "if any flags in the group [json raw] are set none of the others can be")
+}
+
+func TestRunLogJSON_job(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "log", "--job", testJob, "--json")
+	assert.Contains(T, got, `"run_id"`)
+	assert.Contains(T, got, `"log"`)
+}
+
 func TestRunArtifacts(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory
