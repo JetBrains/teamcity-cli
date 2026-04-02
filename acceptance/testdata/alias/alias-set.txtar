@@ -20,7 +20,7 @@ exec teamcity alias set myshell 'echo hello' --shell --no-input
 stdout 'Added alias'
 
 exec teamcity alias list --json --no-input
-stdout '"shell":true'
+stdout '"shell": true'
 
 # Built-in command name rejected
 ! exec teamcity alias set run 'project list' --no-input
