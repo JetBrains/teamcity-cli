@@ -48,5 +48,9 @@ func newQueueActionCmd(f *cmdutil.Factory, a queueAction) *cobra.Command {
 	}
 }
 
-func newQueueTopCmd(f *cmdutil.Factory) *cobra.Command     { return newQueueActionCmd(f, queueActions["top"]) }
-func newQueueApproveCmd(f *cmdutil.Factory) *cobra.Command { return newQueueActionCmd(f, queueActions["approve"]) }
+func newQueueTopCmd(f *cmdutil.Factory) *cobra.Command {
+	return newQueueActionCmd(f, queueActions["top"])
+}
+func newQueueApproveCmd(f *cmdutil.Factory) *cobra.Command {
+	return newQueueActionCmd(f, queueActions["approve"])
+}

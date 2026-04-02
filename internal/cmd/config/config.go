@@ -26,7 +26,6 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newListCmd(f))
 	cmd.AddCommand(newGetCmd(f))
 	cmd.AddCommand(newSetCmd(f))
-	cmd.AddCommand(newResetCmd(f))
 
 	return cmd
 }
@@ -211,30 +210,6 @@ func newSetCmd(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			f.Printer.Success("Set %s to %q", key, value)
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVarP(&serverURL, "server", "s", "", "Server URL for per-server settings")
-	return cmd
-}
-
-func newResetCmd(f *cmdutil.Factory) *cobra.Command {
-	var serverURL string
-
-	cmd := &cobra.Command{
-		Use:   "reset <key>",
-		Short: "Reset a configuration value to default",
-		Long:  "Reset a configuration key to its default value.\n\nValid keys: " + strings.Join(cfg.ValidKeys(), ", "),
-		Example: `  teamcity config reset ro
-  teamcity config reset guest --server tc.example.com`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			key := args[0]
-			if err := cfg.ResetField(key, serverURL); err != nil {
-				return err
-			}
-			f.Printer.Success("Reset %s", key)
 			return nil
 		},
 	}

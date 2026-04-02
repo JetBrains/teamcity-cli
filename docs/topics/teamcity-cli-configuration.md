@@ -35,13 +35,6 @@ teamcity config set ro true --server tc.example.com
 teamcity config set guest true
 ```
 
-### Reset a setting to default
-
-```Shell
-teamcity config reset ro --server tc.example.com
-teamcity config reset default_server
-```
-
 ### Available keys
 
 <table>

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 )
@@ -81,37 +80,6 @@ func SetField(key, value, serverURL string) error {
 		sc.RO = b
 	case "token_expiry":
 		sc.TokenExpiry = value
-	}
-	cfg.Servers[serverURL] = sc
-	return writeConfig()
-}
-
-func ResetField(key, serverURL string) error {
-	if !IsValidKey(key) {
-		return unknownKeyError(key)
-	}
-	if key == "default_server" {
-		cfg.DefaultServer = ""
-		if urls := slices.Sorted(maps.Keys(cfg.Servers)); len(urls) > 0 {
-			cfg.DefaultServer = urls[0]
-		}
-		return writeConfig()
-	}
-	serverURL, err := resolveServerForConfig(serverURL)
-	if err != nil {
-		return err
-	}
-	sc, ok := cfg.Servers[serverURL]
-	if !ok {
-		return fmt.Errorf("server %q not found in configuration", serverURL)
-	}
-	switch key {
-	case "guest":
-		sc.Guest = false
-	case "ro":
-		sc.RO = false
-	case "token_expiry":
-		sc.TokenExpiry = ""
 	}
 	cfg.Servers[serverURL] = sc
 	return writeConfig()

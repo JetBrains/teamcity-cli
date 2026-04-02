@@ -1,6 +1,6 @@
-# Test config get, set, reset, and list lifecycle.
+# Test config get, set, and list lifecycle.
 # CI may use env vars only (no server in config), so per-server
-# set/reset are tested in unit tests; here we test list, get, JSON,
+# set is tested in unit tests; here we test list, get, JSON,
 # and error paths that work regardless of config state.
 
 # List shows default_server key and JSON fields
@@ -21,13 +21,6 @@ stderr 'unknown key'
 
 ! exec teamcity config set nonexistent val --no-input
 stderr 'unknown key'
-
-! exec teamcity config reset nonexistent --no-input
-stderr 'unknown key'
-
-# Invalid bool
-! exec teamcity config set ro maybe --server https://example.com --no-input
-stderr 'not found in configuration'
 
 # Unknown server rejected for default_server
 ! exec teamcity config set default_server typo.example.com --no-input
