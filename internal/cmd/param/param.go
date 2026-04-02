@@ -135,6 +135,8 @@ func runParamList(f *cmdutil.Factory, id string, opts *paramListOptions, paramAP
 }
 
 func newParamGetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *cobra.Command {
+	var jsonOutput bool
+
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("get <%s-id> <name>", resource),
 		Short: fmt.Sprintf("Get a %s parameter value", resource),
@@ -143,14 +145,15 @@ func newParamGetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *cob
 		Example: fmt.Sprintf(`  teamcity %s param get MyID MY_PARAM
   teamcity %s param get MyID VERSION`, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runParamGet(f, args[0], args[1], paramAPI)
+			return runParamGet(f, args[0], args[1], jsonOutput, paramAPI)
 		},
 	}
 
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output as JSON")
 	return cmd
 }
 
-func runParamGet(f *cmdutil.Factory, id, name string, paramAPI ParamAPI) error {
+func runParamGet(f *cmdutil.Factory, id, name string, jsonOutput bool, paramAPI ParamAPI) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -159,6 +162,10 @@ func runParamGet(f *cmdutil.Factory, id, name string, paramAPI ParamAPI) error {
 	param, err := paramAPI.Get(client, id, name)
 	if err != nil {
 		return err
+	}
+
+	if jsonOutput {
+		return f.Printer.PrintJSON(param)
 	}
 
 	value := param.Value

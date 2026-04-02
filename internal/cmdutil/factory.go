@@ -29,6 +29,10 @@ type Factory struct {
 	Verbose bool
 	NoInput bool
 
+	// JSONOutput is set by commands that accept --json to signal that errors
+	// should be emitted as structured JSON instead of human-readable text.
+	JSONOutput bool
+
 	// IOStreams provides standard I/O handles. Override in tests to capture output.
 	IOStreams *IOStreams
 

@@ -301,6 +301,7 @@ func getSyncingStatus(message string) string {
 
 type projectSettingsValidateOptions struct {
 	verbose bool
+	json    bool
 	path    string
 }
 
@@ -328,8 +329,14 @@ Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.`,
 	}
 
 	cmd.Flags().BoolVarP(&opts.verbose, "verbose", "v", false, "Show full Maven output")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 
 	return cmd
+}
+
+type validateResultJSON struct {
+	Valid bool   `json:"valid"`
+	Path  string `json:"path"`
 }
 
 func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidateOptions) error {
@@ -359,7 +366,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 	}
 
 	p := f.Printer
-	if !p.Quiet {
+	if !p.Quiet && !opts.json {
 		_, _ = fmt.Fprintf(p.Out, "Validating %s\n", output.Faint(dslDir))
 	}
 
@@ -373,14 +380,18 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 	err = cmd.Run()
 	combinedOutput := stdout.String() + stderr.String()
 
-	if opts.verbose {
+	if opts.verbose && !opts.json {
 		_, _ = fmt.Fprintln(p.Out, combinedOutput)
 	}
 
 	if err != nil {
-		_, _ = fmt.Fprintf(p.Out, "%s Configuration invalid\n", output.Red("✗"))
-
+		if opts.json {
+			_ = f.Printer.PrintJSON(validateResultJSON{Valid: false, Path: dslDir})
+			return &cmdutil.ExitError{Code: cmdutil.ExitFailure}
+		}
 		errs := parseKotlinErrors(combinedOutput)
+
+		_, _ = fmt.Fprintf(p.Out, "%s Configuration invalid\n", output.Red("✗"))
 		if len(errs) > 0 {
 			_, _ = fmt.Fprintln(p.Out)
 			for _, e := range errs {
@@ -392,6 +403,10 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 			_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint("Hint: Run with --verbose for full compiler output"))
 		}
 		return fmt.Errorf("validation failed")
+	}
+
+	if opts.json {
+		return f.Printer.PrintJSON(validateResultJSON{Valid: true, Path: dslDir})
 	}
 
 	_, _ = fmt.Fprintf(p.Out, "%s Configuration valid\n", output.Green("✓"))

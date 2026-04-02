@@ -73,6 +73,11 @@ Report issues:  https://jb.gg/tc/issues`,
 
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		f.InitOutput()
+		if jsonFlag := cmd.Flags().Lookup("json"); jsonFlag != nil && jsonFlag.Changed {
+			if jsonFlag.Value.Type() != "bool" || jsonFlag.Value.String() != "false" {
+				f.JSONOutput = true
+			}
+		}
 		if cmd.Name() != "update" && f.UpdateNotice == nil {
 			f.UpdateNotice = update.CheckInBackground(f.Printer.ErrOut, f.Quiet)
 		}
@@ -101,16 +106,30 @@ func Execute() error {
 	RegisterAliases(rootCmd, f)
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
-	err := rootCmd.Execute()
+	executedCmd, err := rootCmd.ExecuteC()
 	if f.UpdateNotice != nil {
 		f.UpdateNotice()
 	}
-	if err != nil && errors.Is(err, api.ErrAuthentication) {
+	// If PersistentPreRun didn't execute (e.g. arg validation failed before hooks),
+	// check the executed command's --json flag directly.
+	if !f.JSONOutput && executedCmd != nil {
+		if jsonFlag := executedCmd.Flags().Lookup("json"); jsonFlag != nil && jsonFlag.Changed {
+			if jsonFlag.Value.Type() != "bool" || jsonFlag.Value.String() != "false" {
+				f.JSONOutput = true
+			}
+		}
+	}
+	if err != nil && errors.Is(err, api.ErrAuthentication) && !f.JSONOutput {
 		tryAutoReauth(f)
 	}
 	if err != nil {
 		if _, ok := errors.AsType[*cmdutil.ExitError](err); !ok {
-			_, _ = fmt.Fprintf(f.Printer.ErrOut, "Error: %v\n", enrichAPIError(err))
+			if f.JSONOutput {
+				code, message, suggestion := classifyError(err)
+				output.PrintJSONError(f.Printer.ErrOut, code, message, suggestion)
+			} else {
+				_, _ = fmt.Fprintf(f.Printer.ErrOut, "Error: %v\n", enrichAPIError(err))
+			}
 		}
 	}
 	return err
@@ -163,6 +182,71 @@ func enrichAPIError(err error) error {
 	}
 
 	return err
+}
+
+func classifyError(err error) (output.JSONErrorCode, string, string) {
+	if errors.Is(err, api.ErrReadOnly) {
+		return output.ErrCodeReadOnly, err.Error(),
+			"Unset the TEAMCITY_RO environment variable to allow write operations"
+	}
+	if errors.Is(err, api.ErrAuthentication) {
+		return output.ErrCodeAuth,
+			"Authentication failed: invalid or expired token",
+			"teamcity auth login"
+	}
+	if _, ok := errors.AsType[*api.PermissionError](err); ok {
+		return output.ErrCodePermission, err.Error(),
+			"Check your TeamCity permissions or contact your administrator"
+	}
+	if _, ok := errors.AsType[*api.NotFoundError](err); ok {
+		return output.ErrCodeNotFound, err.Error(), notFoundHint(err.Error())
+	}
+	if netErr, ok := errors.AsType[*api.NetworkError](err); ok {
+		if api.IsSandboxBlockedError(netErr) {
+			return output.ErrCodeNetwork, "Network access blocked by sandbox",
+				"Add the server domain to the sandbox allowlist, or exclude teamcity from sandboxing"
+		}
+		return output.ErrCodeNetwork, err.Error(),
+			"Check your network connection and verify the server URL"
+	}
+	if ue, ok := errors.AsType[*tcerrors.UserError](err); ok {
+		return output.ErrCodeValidation, ue.Message, ue.Suggestion
+	}
+	if isInputError(err) {
+		return output.ErrCodeValidation, err.Error(), ""
+	}
+	return output.ErrCodeInternal, err.Error(), ""
+}
+
+func isInputError(err error) bool {
+	msg := err.Error()
+	for _, prefix := range []string{
+		"unknown command",
+		"unknown flag",
+		"required flag",
+		"invalid argument",
+		"invalid status",
+		"accepts ", // "accepts between 1 and 2 arg(s)"
+		"if any flags in the group",
+		"--limit must be",
+		"unknown fields:",
+		"unknown key",
+	} {
+		if strings.HasPrefix(msg, prefix) {
+			return true
+		}
+	}
+	for _, substr := range []string{
+		"flag needs an argument",
+		"mutually exclusive",
+		"required (or use",
+		"not found in configuration",
+	} {
+		if strings.Contains(msg, substr) {
+			return true
+		}
+	}
+	return false
 }
 
 func notFoundHint(message string) string {

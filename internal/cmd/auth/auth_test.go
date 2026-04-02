@@ -18,6 +18,15 @@ func TestAuthStatus(T *testing.T) {
 	cmdtest.RunCmd(T, "auth", "status")
 }
 
+func TestAuthStatusJSON(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	got := cmdtest.CaptureOutput(T, ts.Factory, "auth", "status", "--json")
+	assert.Contains(T, got, `"server"`)
+	assert.Contains(T, got, `"status"`)
+	assert.Contains(T, got, `"authenticated"`)
+	assert.Contains(T, got, `"user"`)
+}
+
 func TestBuildAuthFallback(T *testing.T) {
 	basicAuthUsed := false
 	ts := cmdtest.NewTestServer(T)
