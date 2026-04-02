@@ -4,35 +4,37 @@
 exec teamcity config list --no-input
 stdout 'default_server='
 
-# Set and get default_server
-exec teamcity config set default_server tc.example.com --no-input
-stdout 'Set default_server'
-
+# Get default_server
 exec teamcity config get default_server --no-input
-stdout 'https://tc.example.com'
+stdout '.'
 
-# Set per-server settings
-exec teamcity config set ro true --server https://tc.example.com --no-input
+# Set per-server settings on the current default server
+exec teamcity config get default_server --no-input
+stdout2env DEFAULT_SERVER
+
+exec teamcity config set ro true --server $DEFAULT_SERVER --no-input
 stdout 'Set ro'
 
-exec teamcity config get ro --server https://tc.example.com --no-input
+exec teamcity config get ro --server $DEFAULT_SERVER --no-input
 stdout 'true'
 
-exec teamcity config set guest true --server https://tc.example.com --no-input
+exec teamcity config set guest true --server $DEFAULT_SERVER --no-input
 stdout 'Set guest'
 
 # List shows the server settings
 exec teamcity config list --no-input
-stdout 'tc.example.com'
 stdout 'ro=true'
 stdout 'guest=true'
 
 # Reset ro
-exec teamcity config reset ro --server https://tc.example.com --no-input
+exec teamcity config reset ro --server $DEFAULT_SERVER --no-input
 stdout 'Reset ro'
 
-exec teamcity config get ro --server https://tc.example.com --no-input
+exec teamcity config get ro --server $DEFAULT_SERVER --no-input
 stdout 'false'
+
+# Reset guest
+exec teamcity config reset guest --server $DEFAULT_SERVER --no-input
 
 # JSON output
 exec teamcity config list --json --no-input
@@ -47,5 +49,9 @@ stderr 'unknown key'
 stderr 'unknown key'
 
 # Invalid bool
-! exec teamcity config set ro maybe --server https://tc.example.com --no-input
+! exec teamcity config set ro maybe --server $DEFAULT_SERVER --no-input
 stderr 'invalid boolean'
+
+# Unknown server rejected for default_server
+! exec teamcity config set default_server typo.example.com --no-input
+stderr 'not found in configuration'
