@@ -122,7 +122,7 @@ func (c *Client) GetBuild(ref string) (*Build, error) {
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/app/rest/builds/id:%s?fields=*,usedByOtherBuilds", id)
+	path := fmt.Sprintf("/app/rest/builds/id:%s", id)
 
 	var build Build
 	if err := c.get(path, &build); err != nil {
@@ -130,6 +130,19 @@ func (c *Client) GetBuild(ref string) (*Build, error) {
 	}
 
 	return &build, nil
+}
+
+// GetBuildUsedByOtherBuilds checks whether a build's results were shared with other builds.
+// This field is not included in TC's default response, so it requires a targeted request.
+func (c *Client) GetBuildUsedByOtherBuilds(id string) (bool, error) {
+	path := fmt.Sprintf("/app/rest/builds/id:%s?fields=usedByOtherBuilds", id)
+	var result struct {
+		UsedByOtherBuilds bool `json:"usedByOtherBuilds"`
+	}
+	if err := c.get(path, &result); err != nil {
+		return false, err
+	}
+	return result.UsedByOtherBuilds, nil
 }
 
 // buildState is a lightweight struct for polling build status with minimal fields.
