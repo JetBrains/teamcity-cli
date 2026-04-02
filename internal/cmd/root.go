@@ -96,7 +96,7 @@ func Execute() error {
 	f := cmdutil.NewFactory()
 	rootCmd := buildRootCmd(f)
 
-	RegisterAliases(rootCmd, f.Printer)
+	RegisterAliases(rootCmd, f)
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
 	err := rootCmd.Execute()
@@ -180,8 +180,8 @@ func notFoundHint(message string) string {
 }
 
 // RegisterAliases forwards to alias.RegisterAliases.
-func RegisterAliases(rootCmd *cobra.Command, p *output.Printer) {
-	alias.RegisterAliases(rootCmd, p)
+func RegisterAliases(rootCmd *cobra.Command, f *cmdutil.Factory) {
+	alias.RegisterAliases(rootCmd, f)
 }
 
 // RootCommand is an alias for cobra.Command for external access

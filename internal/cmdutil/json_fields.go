@@ -21,16 +21,12 @@ type JSONFieldsResult struct {
 }
 
 // ParseJSONFields parses the --json flag value, returns (result, showHelp, error).
-func ParseJSONFields(cmd *cobra.Command, flagValue string, spec *api.FieldSpec, out ...io.Writer) (JSONFieldsResult, bool, error) {
+func ParseJSONFields(cmd *cobra.Command, flagValue string, spec *api.FieldSpec, w io.Writer) (JSONFieldsResult, bool, error) {
 	if !cmd.Flags().Changed("json") {
 		return JSONFieldsResult{}, false, nil
 	}
 
 	if flagValue == "" || flagValue == "?" {
-		w := io.Writer(cmd.OutOrStdout())
-		if len(out) > 0 {
-			w = out[0]
-		}
 		_, _ = fmt.Fprintln(w, spec.Help())
 		return JSONFieldsResult{}, true, nil
 	}

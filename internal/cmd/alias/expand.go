@@ -2,11 +2,11 @@ package alias
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"slices"
 	"strings"
 
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/buildkite/shellwords"
@@ -17,16 +17,16 @@ const maxAliasDepth = 10
 
 var aliasDepth int
 
-func RegisterAliases(rootCmd *cobra.Command, p *output.Printer) {
+func RegisterAliases(rootCmd *cobra.Command, f *cmdutil.Factory) {
 	for name, expansion := range config.GetAllAliases() {
 		if isBuiltinCommand(rootCmd, name) {
-			p.Debug("skipping alias %q: conflicts with built-in command", name)
+			f.Printer.Debug("skipping alias %q: conflicts with built-in command", name)
 			continue
 		}
 		if exp, shell := config.ParseExpansion(expansion); shell {
-			rootCmd.AddCommand(newShellAliasCmd(name, exp))
+			rootCmd.AddCommand(newShellAliasCmd(f, name, exp))
 		} else {
-			rootCmd.AddCommand(newExpansionAliasCmd(name, exp))
+			rootCmd.AddCommand(newExpansionAliasCmd(f.Printer, name, exp))
 		}
 	}
 }
@@ -43,7 +43,7 @@ func isBuiltinCommand(rootCmd *cobra.Command, name string) bool {
 	return false
 }
 
-func newExpansionAliasCmd(name, expansion string) *cobra.Command {
+func newExpansionAliasCmd(p *output.Printer, name, expansion string) *cobra.Command {
 	return &cobra.Command{
 		Use:                name,
 		Short:              fmt.Sprintf("Alias for %q", expansion),
@@ -53,7 +53,7 @@ func newExpansionAliasCmd(name, expansion string) *cobra.Command {
 		SilenceErrors:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if hasHelpFlag(args) {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Alias for %q\n", expansion)
+				_, _ = fmt.Fprintf(p.Out, "Alias for %q\n", expansion)
 				return nil
 			}
 
@@ -74,7 +74,7 @@ func newExpansionAliasCmd(name, expansion string) *cobra.Command {
 	}
 }
 
-func newShellAliasCmd(name, expansion string) *cobra.Command {
+func newShellAliasCmd(f *cmdutil.Factory, name, expansion string) *cobra.Command {
 	return &cobra.Command{
 		Use:                name,
 		Short:              fmt.Sprintf("Shell alias for %q", expansion),
@@ -84,15 +84,15 @@ func newShellAliasCmd(name, expansion string) *cobra.Command {
 		SilenceErrors:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if hasHelpFlag(args) {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Shell alias for %q\n", expansion)
+				_, _ = fmt.Fprintf(f.Printer.Out, "Shell alias for %q\n", expansion)
 				return nil
 			}
 			expanded := expandShellArgs(expansion, args)
 			//nolint:gosec // shell aliases are user-defined, intentional shell execution
 			c := exec.Command("sh", "-c", expanded)
-			c.Stdin = os.Stdin
-			c.Stdout = os.Stdout
-			c.Stderr = os.Stderr
+			c.Stdin = f.IOStreams.In
+			c.Stdout = f.Printer.Out
+			c.Stderr = f.Printer.ErrOut
 			return c.Run()
 		},
 	}

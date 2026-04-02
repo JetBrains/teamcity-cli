@@ -62,5 +62,9 @@ func newPoolProjectCmd(f *cmdutil.Factory, a poolProjectAction) *cobra.Command {
 	}
 }
 
-func newPoolLinkCmd(f *cmdutil.Factory) *cobra.Command   { return newPoolProjectCmd(f, poolProjectActions["link"]) }
-func newPoolUnlinkCmd(f *cmdutil.Factory) *cobra.Command { return newPoolProjectCmd(f, poolProjectActions["unlink"]) }
+func newPoolLinkCmd(f *cmdutil.Factory) *cobra.Command {
+	return newPoolProjectCmd(f, poolProjectActions["link"])
+}
+func newPoolUnlinkCmd(f *cmdutil.Factory) *cobra.Command {
+	return newPoolProjectCmd(f, poolProjectActions["unlink"])
+}
