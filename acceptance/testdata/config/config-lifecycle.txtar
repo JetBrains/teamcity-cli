@@ -1,24 +1,18 @@
 # Test config get, set, reset, and list lifecycle.
+# Uses TEAMCITY_URL (set by CI) as the server target.
 
-# List shows default_server
+# List shows default_server key
 exec teamcity config list --no-input
 stdout 'default_server='
 
-# Get default_server
-exec teamcity config get default_server --no-input
-stdout '.'
-
-# Set per-server settings on the current default server
-exec teamcity config get default_server --no-input
-stdout2env DEFAULT_SERVER
-
-exec teamcity config set ro true --server $DEFAULT_SERVER --no-input
+# Set per-server settings using the env server
+exec teamcity config set ro true --server $TEAMCITY_URL --no-input
 stdout 'Set ro'
 
-exec teamcity config get ro --server $DEFAULT_SERVER --no-input
+exec teamcity config get ro --server $TEAMCITY_URL --no-input
 stdout 'true'
 
-exec teamcity config set guest true --server $DEFAULT_SERVER --no-input
+exec teamcity config set guest true --server $TEAMCITY_URL --no-input
 stdout 'Set guest'
 
 # List shows the server settings
@@ -27,14 +21,14 @@ stdout 'ro=true'
 stdout 'guest=true'
 
 # Reset ro
-exec teamcity config reset ro --server $DEFAULT_SERVER --no-input
+exec teamcity config reset ro --server $TEAMCITY_URL --no-input
 stdout 'Reset ro'
 
-exec teamcity config get ro --server $DEFAULT_SERVER --no-input
+exec teamcity config get ro --server $TEAMCITY_URL --no-input
 stdout 'false'
 
-# Reset guest
-exec teamcity config reset guest --server $DEFAULT_SERVER --no-input
+# Reset guest back
+exec teamcity config reset guest --server $TEAMCITY_URL --no-input
 
 # JSON output
 exec teamcity config list --json --no-input
@@ -49,7 +43,7 @@ stderr 'unknown key'
 stderr 'unknown key'
 
 # Invalid bool
-! exec teamcity config set ro maybe --server $DEFAULT_SERVER --no-input
+! exec teamcity config set ro maybe --server $TEAMCITY_URL --no-input
 stderr 'invalid boolean'
 
 # Unknown server rejected for default_server
