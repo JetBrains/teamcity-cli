@@ -2,7 +2,137 @@
 
 <show-structure for="chapter" depth="2"/>
 
-This page describes the configuration file format, environment variables, and shell completion setup for TeamCity CLI.
+This page describes the `config` command, configuration file format, environment variables, and shell completion setup for TeamCity CLI.
+
+## Managing configuration with `teamcity config`
+
+The `config` command lets you view and modify CLI settings without editing the YAML file directly.
+
+### List all settings
+
+```Shell
+teamcity config list
+teamcity config list --json
+```
+
+### Get a setting
+
+```Shell
+teamcity config get default_server
+teamcity config get ro --server tc.example.com
+```
+
+### Set a setting
+
+```Shell
+# Switch default server
+teamcity config set default_server tc.example.com
+
+# Enable read-only mode for a specific server
+teamcity config set ro true --server tc.example.com
+
+# Enable guest auth for the default server
+teamcity config set guest true
+```
+
+### Reset a setting to default
+
+```Shell
+teamcity config reset ro --server tc.example.com
+teamcity config reset default_server
+```
+
+### Available keys
+
+<table>
+<tr>
+<td>
+
+Key
+
+</td>
+<td>
+
+Scope
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`default_server`
+
+</td>
+<td>
+
+Global
+
+</td>
+<td>
+
+The default TeamCity server URL.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`guest`
+
+</td>
+<td>
+
+Per-server
+
+</td>
+<td>
+
+Enable guest authentication (no token needed). Use `--server` to target a specific server.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`ro`
+
+</td>
+<td>
+
+Per-server
+
+</td>
+<td>
+
+Enable read-only mode (blocks all write operations). Use `--server` to target a specific server.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`token_expiry`
+
+</td>
+<td>
+
+Per-server
+
+</td>
+<td>
+
+Token expiry timestamp (RFC 3339). Normally set by `auth login`.
+
+</td>
+</tr>
+</table>
+
+Authentication fields (`token`, `user`) are managed by `teamcity auth login` / `teamcity auth logout` and cannot be set via `config set`.
 
 ## Configuration file
 

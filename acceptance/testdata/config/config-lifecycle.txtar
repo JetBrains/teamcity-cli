@@ -1,0 +1,51 @@
+# Test config get, set, reset, and list lifecycle.
+
+# List shows default_server
+exec teamcity config list --no-input
+stdout 'default_server='
+
+# Set and get default_server
+exec teamcity config set default_server tc.example.com --no-input
+stdout 'Set default_server'
+
+exec teamcity config get default_server --no-input
+stdout 'https://tc.example.com'
+
+# Set per-server settings
+exec teamcity config set ro true --server https://tc.example.com --no-input
+stdout 'Set ro'
+
+exec teamcity config get ro --server https://tc.example.com --no-input
+stdout 'true'
+
+exec teamcity config set guest true --server https://tc.example.com --no-input
+stdout 'Set guest'
+
+# List shows the server settings
+exec teamcity config list --no-input
+stdout 'tc.example.com'
+stdout 'ro=true'
+stdout 'guest=true'
+
+# Reset ro
+exec teamcity config reset ro --server https://tc.example.com --no-input
+stdout 'Reset ro'
+
+exec teamcity config get ro --server https://tc.example.com --no-input
+stdout 'false'
+
+# JSON output
+exec teamcity config list --json --no-input
+stdout '"default_server"'
+stdout '"servers"'
+
+# Invalid key
+! exec teamcity config get nonexistent --no-input
+stderr 'unknown key'
+
+! exec teamcity config set nonexistent val --no-input
+stderr 'unknown key'
+
+# Invalid bool
+! exec teamcity config set ro maybe --server https://tc.example.com --no-input
+stderr 'invalid boolean'

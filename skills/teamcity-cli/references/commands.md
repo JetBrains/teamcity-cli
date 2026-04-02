@@ -319,6 +319,40 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
+## Configuration (`teamcity config`)
+
+| Command                               | Description                    |
+|---------------------------------------|--------------------------------|
+| `teamcity config list`                | List all configuration values  |
+| `teamcity config get <key>`           | Get a configuration value      |
+| `teamcity config set <key> <value>`   | Set a configuration value      |
+| `teamcity config reset <key>`         | Reset a value to default       |
+
+Valid keys: `default_server`, `guest`, `ro`, `token_expiry`.
+
+Per-server keys (`guest`, `ro`, `token_expiry`) use `--server <url>` to target a specific server. Without `--server`, the default server is used.
+
+### Flags for `teamcity config list`
+
+- `--json` - Output as JSON
+
+### Flags for `teamcity config get`, `set`, `reset`
+
+- `-s, --server <url>` - Server URL for per-server settings
+
+### Examples
+
+```bash
+# Switch default server
+teamcity config set default_server tc.example.com
+
+# Enable read-only mode
+teamcity config set ro true --server tc.example.com
+
+# Check current default server
+teamcity config get default_server
+```
+
 ## Direct API (`teamcity api`)
 
 For features not covered by specific commands. Endpoints always start with `/app/rest/`.

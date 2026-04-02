@@ -11,6 +11,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmd/alias"
 	apicmd "github.com/JetBrains/teamcity-cli/internal/cmd/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/auth"
+	configcmd "github.com/JetBrains/teamcity-cli/internal/cmd/config"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/job"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/pool"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/project"
@@ -86,6 +87,7 @@ Report issues:  https://jb.gg/tc/issues`,
 	cmd.AddCommand(pool.NewCmd(f))
 	cmd.AddCommand(apicmd.NewCmd(f))
 	cmd.AddCommand(skill.NewCmd(f))
+	cmd.AddCommand(configcmd.NewCmd(f))
 	cmd.AddCommand(alias.NewCmd(f))
 	cmd.AddCommand(updatecmd.NewCmd(f))
 
