@@ -169,7 +169,7 @@ func formatWatchLogLine(line string) string {
 		return ""
 	}
 
-	return fmt.Sprintf("[%s] %s", timestamp, rest)
+	return fmt.Sprintf("[%s] %s", timestamp, output.RestoreAnsi(rest))
 }
 
 func (m watchModel) View() string {
