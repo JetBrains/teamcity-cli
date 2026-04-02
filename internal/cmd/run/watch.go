@@ -117,6 +117,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 	}
 
 	lastState := ""
+	lastWaitReason := ""
 	lastPercent := 0
 	lastOvertimeMin := 0
 	var reachedComplete time.Time
@@ -156,6 +157,10 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 				}
 				lastState = build.State
 			}
+			if build.State == "queued" && build.WaitReason != "" && build.WaitReason != lastWaitReason {
+				_, _ = fmt.Fprintf(p.Out, "\rQueued (%s)", build.WaitReason)
+				lastWaitReason = build.WaitReason
+			}
 			if build.State == "running" {
 				pct := build.PercentageComplete
 				if pct > lastPercent && pct > 0 {
@@ -177,6 +182,9 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 			status := output.Yellow("Running")
 			if build.State == "queued" {
 				status = output.Faint("Queued")
+				if build.WaitReason != "" {
+					status = output.Faint(fmt.Sprintf("Queued · %s", build.WaitReason))
+				}
 			}
 			progress := ""
 			if build.PercentageComplete > 0 {

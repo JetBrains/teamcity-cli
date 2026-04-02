@@ -301,6 +301,65 @@ func TestRunView_output(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
+func TestRunView_usedByOtherBuilds(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/builds/id:55", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{
+			ID:                55,
+			Number:            "10",
+			Status:            "SUCCESS",
+			State:             "finished",
+			BuildTypeID:       "TestProject_Build",
+			BuildType:         &api.BuildType{ID: "TestProject_Build", Name: "Build"},
+			BranchName:        "main",
+			StartDate:         "20240101T120000+0000",
+			FinishDate:        "20240101T120000+0000",
+			WebURL:            "https://ci.example.com/viewLog.html?buildId=55",
+			Triggered:         &api.Triggered{Type: "snapshotDependency"},
+			UsedByOtherBuilds: true,
+		})
+	})
+	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "55")
+	assert.Contains(t, got, "Results shared with other builds in chain")
+}
+
+func TestRunView_waitReason(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/builds/id:60", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{
+			ID:          60,
+			Number:      "11",
+			Status:      "",
+			State:       "queued",
+			BuildTypeID: "TestProject_Build",
+			BuildType:   &api.BuildType{ID: "TestProject_Build", Name: "Build"},
+			BranchName:  "main",
+			WebURL:      "https://ci.example.com/viewLog.html?buildId=60",
+			Triggered:   &api.Triggered{Type: "user", User: &api.User{Name: "Bob"}},
+			WaitReason:  "No compatible agents available",
+		})
+	})
+	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "60")
+	assert.Contains(t, got, "Wait reason: No compatible agents available")
+}
+
+func TestRunStart_reused(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("POST /app/rest/buildQueue", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{
+			ID:          42,
+			Number:      "7",
+			State:       "finished",
+			Status:      "SUCCESS",
+			BuildTypeID: "TestProject_Build",
+			WebURL:      ts.URL + "/viewLog.html?buildId=42",
+		})
+	})
+	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "start", testJob)
+	assert.Contains(t, got, "Reused existing run")
+	assert.Contains(t, got, "build optimization")
+}
+
 func TestRunList_invalid_status(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	err := cmdtest.CaptureErr(t, ts.Factory, "run", "list", "--status", "bogus")

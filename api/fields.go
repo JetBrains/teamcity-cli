@@ -80,10 +80,11 @@ var BuildFields = FieldSpec{
 	Available: []string{
 		"id", "number", "status", "state", "href", "webUrl", "branchName", "defaultBranch",
 		"buildTypeId", "statusText", "queuedDate", "startDate", "finishDate", "percentageComplete",
-		"pinned", "tags.tag.name",
+		"pinned", "tags.tag.name", "waitReason",
 		"buildType.id", "buildType.name", "buildType.projectName", "buildType.projectId", "buildType.href", "buildType.webUrl",
 		"triggered.type", "triggered.date", "triggered.user.name", "triggered.user.username",
 		"agent.id", "agent.name", "agent.href", "agent.webUrl",
+		"usedByOtherBuilds",
 	},
 	Default: []string{
 		"id", "number", "status", "state", "branchName", "buildTypeId",
@@ -105,12 +106,12 @@ var ProjectFields = FieldSpec{
 
 var QueuedBuildFields = FieldSpec{
 	Available: []string{
-		"id", "buildTypeId", "state", "branchName", "href", "webUrl", "queuedDate",
+		"id", "buildTypeId", "state", "branchName", "href", "webUrl", "queuedDate", "waitReason",
 		"buildType.id", "buildType.name", "buildType.projectName",
 		"triggered.type", "triggered.date", "triggered.user.name", "triggered.user.username",
 	},
 	Default: []string{
-		"id", "buildTypeId", "state", "branchName", "href", "webUrl", "queuedDate",
+		"id", "buildTypeId", "state", "branchName", "href", "webUrl", "queuedDate", "waitReason",
 		"buildType.id", "buildType.name", "buildType.projectName",
 		"triggered.type", "triggered.user.name", "triggered.user.username",
 	},

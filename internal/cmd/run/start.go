@@ -280,7 +280,16 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		return p.PrintJSON(build)
 	}
 
-	printQueuedRun(p, build, jobID)
+	reused := build.State == "finished"
+	if reused {
+		ref := fmt.Sprintf("%d", build.ID)
+		if build.Number != "" {
+			ref = fmt.Sprintf("%d  #%s", build.ID, build.Number)
+		}
+		p.Info("Reused existing run %s for %s (build optimization)", ref, jobID)
+	} else {
+		printQueuedRun(p, build, jobID)
+	}
 
 	if opts.branch != "" {
 		p.Info("  Branch: %s", opts.branch)
@@ -295,6 +304,12 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	if opts.agent > 0 {
 		_, _ = fmt.Fprintf(p.Out, "  %s teamcity agent term %d\n", output.Faint("Agent terminal:"), opts.agent)
 	}
+	if build.WaitReason != "" {
+		p.Info("  Wait reason: %s", build.WaitReason)
+	}
 
+	if reused {
+		return nil
+	}
 	return afterQueue(f, build, opts.web, &opts.watchFlags)
 }

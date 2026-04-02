@@ -122,7 +122,7 @@ func (c *Client) GetBuild(ref string) (*Build, error) {
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/app/rest/builds/id:%s", id)
+	path := fmt.Sprintf("/app/rest/builds/id:%s?fields=*,usedByOtherBuilds", id)
 
 	var build Build
 	if err := c.get(path, &build); err != nil {
