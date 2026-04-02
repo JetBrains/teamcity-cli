@@ -133,11 +133,7 @@ func printEnvOverrides(p *output.Printer) {
 	}
 	_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint("Environment overrides:"))
 	for _, key := range slices.Sorted(maps.Keys(env)) {
-		val := env[key]
-		if key == cfg.EnvToken {
-			val = "****"
-		}
-		_, _ = fmt.Fprintf(p.Out, "  %s %s=%s\n", output.Yellow("!"), key, val)
+		_, _ = fmt.Fprintf(p.Out, "  %s %s=%s\n", output.Yellow("!"), key, env[key])
 	}
 }
 
@@ -145,6 +141,9 @@ func collectEnvOverrides() map[string]string {
 	env := map[string]string{}
 	for _, key := range []string{cfg.EnvServerURL, cfg.EnvToken, cfg.EnvGuestAuth, cfg.EnvReadOnly} {
 		if v := os.Getenv(key); v != "" {
+			if key == cfg.EnvToken {
+				v = "****"
+			}
 			env[key] = v
 		}
 	}
