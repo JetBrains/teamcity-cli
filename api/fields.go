@@ -122,6 +122,11 @@ var AgentFields = FieldSpec{
 	Default:   []string{"id", "name", "connected", "enabled", "authorized", "href", "webUrl", "pool.id", "pool.name"},
 }
 
+var VcsRootFields = FieldSpec{
+	Available: []string{"id", "name", "vcsName", "href", "project.id", "project.name"},
+	Default:   []string{"id", "name", "vcsName", "href", "project.id", "project.name"},
+}
+
 var PoolFields = FieldSpec{
 	Available: []string{"id", "name", "maxAgents", "href"},
 	Default:   []string{"id", "name", "maxAgents"},

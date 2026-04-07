@@ -526,6 +526,47 @@ func SetupMockClient(t *testing.T) *TestServer {
 		Error(w, http.StatusNotFound, "Versioned settings are not configured for this project")
 	})
 
+	// VCS Roots
+	ts.Handle("GET /app/rest/vcs-roots", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.VcsRootList{
+			Count: 1,
+			VcsRoot: []api.VcsRoot{
+				{
+					ID:      "TestProject_Repo",
+					Name:    "My Repo",
+					VcsName: "jetbrains.git",
+					Project: &api.Project{ID: "TestProject", Name: "Test Project"},
+				},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/vcs-roots/id:", func(w http.ResponseWriter, r *http.Request) {
+		id := ExtractID(r.URL.Path, "id:")
+		if id == "NonExistentVcsRoot123456" {
+			Error(w, http.StatusNotFound, "No VCS root found by locator 'id:NonExistentVcsRoot123456'")
+			return
+		}
+		JSON(w, api.VcsRoot{
+			ID:      id,
+			Name:    "My Repo",
+			VcsName: "jetbrains.git",
+			Project: &api.Project{ID: "TestProject", Name: "Test Project"},
+			Properties: &api.PropertyList{
+				Property: []api.Property{
+					{Name: "url", Value: "https://github.com/org/repo"},
+					{Name: "branch", Value: "refs/heads/main"},
+					{Name: "authMethod", Value: "PASSWORD"},
+					{Name: "secure:password"},
+				},
+			},
+		})
+	})
+
+	ts.Handle("DELETE /app/rest/vcs-roots/id:", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	config.SetUserForServer(ts.URL, "admin")
 
 	return ts

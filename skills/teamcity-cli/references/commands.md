@@ -185,6 +185,10 @@ Shows all branches and all build states (including canceled, personal, composite
 | `teamcity project list`                        | List projects                |
 | `teamcity project view <id>`                   | View project details         |
 | `teamcity project tree [id]`                   | Show project hierarchy tree  |
+| `teamcity project vcs list --project <id>`     | List VCS roots               |
+| `teamcity project vcs view <id>`              | View VCS root details        |
+| `teamcity project vcs create --project <id>`  | Open browser to add VCS root |
+| `teamcity project vcs delete <id>`            | Delete a VCS root            |
 | `teamcity project param list <id>`             | List parameters              |
 | `teamcity project param get <id> <name>`       | Get parameter                |
 | `teamcity project param set <id> <name> <val>` | Set parameter                |
@@ -210,6 +214,21 @@ Shows all branches and all build states (including canceled, personal, composite
 
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
+
+### Flags for `teamcity project vcs list`
+
+- `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
+- `-n, --limit <n>` - Maximum number of VCS roots
+- `-p, --project <id>` - Project ID (required)
+
+### Flags for `teamcity project vcs view`
+
+- `--json` - Output as JSON
+- `-w, --web` - Open in browser
+
+### Flags for `teamcity project vcs delete`
+
+- `-f, --force` - Skip confirmation prompt
 
 ### Flags for `teamcity project param list`
 
@@ -396,7 +415,7 @@ Available on all commands:
 
 ## List Output Flags
 
-Available on all list commands (`run list`, `agent list`, `job list`, `pool list`, `project list`, `queue list`) and on `agent jobs`, `project param list`, `job param list`:
+Available on all list commands (`run list`, `agent list`, `job list`, `pool list`, `project list`, `queue list`, `project vcs list`) and on `agent jobs`, `project param list`, `job param list`:
 
 - `--plain` - Tab-separated plain text output for scripting (mutually exclusive with `--json`)
 - `--no-header` - Omit header row (use with `--plain`)

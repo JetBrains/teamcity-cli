@@ -108,6 +108,11 @@ type ClientInterface interface {
 	RemoveProjectFromPool(poolID int, projectID string) error
 	SetAgentPool(agentID int, poolID int) error
 
+	// VCS Roots
+	GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error)
+	GetVcsRoot(id string) (*VcsRoot, error)
+	DeleteVcsRoot(id string) error
+
 	// Raw API access
 	RawRequest(method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)
 

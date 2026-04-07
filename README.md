@@ -124,7 +124,7 @@ teamcity queue list
 | **auth**    | `login`, `logout`, `status`                                                                                                                        |
 | **run**     | `list`, `start`, `view`, `watch`, `log`, `changes`, `tests`, `cancel`, `download`, `artifacts`, `restart`, `pin`/`unpin`, `tag`/`untag`, `comment` |
 | **job**     | `list`, `view`, `tree`, `pause`/`resume`, `param list`/`get`/`set`/`delete`                                                                        |
-| **project** | `list`, `view`, `tree`, `param`, `token get`/`put`, `settings export`/`status`/`validate`                                                          |
+| **project** | `list`, `view`, `tree`, `vcs list`/`view`/`create`/`delete`, `param`, `token get`/`put`, `settings export`/`status`/`validate`                     |
 | **queue**   | `list`, `approve`, `remove`, `top`                                                                                                                 |
 | **agent**   | `list`, `view`, `term`, `exec`, `jobs`, `authorize`/`deauthorize`, `enable`/`disable`, `move`, `reboot`                                            |
 | **pool**    | `list`, `view`, `link`/`unlink`                                                                                                                    |

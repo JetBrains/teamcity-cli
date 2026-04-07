@@ -2,7 +2,7 @@
 
 <show-structure for="chapter" depth="2"/>
 
-Projects organize build configurations and subprojects in TeamCity. The `teamcity project` command group lets you browse projects, manage parameters, handle secure tokens for versioned settings, and export or validate project configuration.
+Projects organize build configurations and subprojects in TeamCity. The `teamcity project` command group lets you browse projects, manage VCS roots, manage parameters, handle secure tokens for versioned settings, and export or validate project configuration.
 
 ## Listing projects
 
@@ -168,6 +168,43 @@ Output as JSON:
 
 ```Shell
 teamcity project view MyProject --json
+```
+
+## Managing VCS roots
+
+VCS roots define the connection between TeamCity and your version control repository. They are project-level entities, visible to child projects through inheritance.
+
+### Listing VCS roots
+
+```Shell
+teamcity project vcs list --project MyProject
+teamcity project vcs list --project MyProject --json
+teamcity project vcs list --project MyProject --plain
+```
+
+### Viewing VCS root details
+
+```Shell
+teamcity project vcs view MyProject_GitHubRepo
+teamcity project vcs view MyProject_GitHubRepo --json
+teamcity project vcs view MyProject_GitHubRepo --web
+```
+
+The view command shows all VCS root properties with human-readable labels. Secure properties (passwords, passphrases) are masked as `********`.
+
+### Creating a VCS root
+
+In the current version, VCS root creation opens the TeamCity UI in your browser:
+
+```Shell
+teamcity project vcs create --project MyProject
+```
+
+### Deleting a VCS root
+
+```Shell
+teamcity project vcs delete MyProject_GitHubRepo
+teamcity project vcs delete MyProject_GitHubRepo --force  # skip confirmation
 ```
 
 ## Managing project parameters

@@ -46,6 +46,8 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 **Start build:** `teamcity run start <job-id> --branch <branch> --watch`
 **Find jobs:** `teamcity project list` → `teamcity job list --project <id>`
 **Validate Kotlin DSL:** `teamcity project settings validate` (not `mvn compile` — see [Workflows](references/workflows.md))
+**List VCS roots:** `teamcity project vcs list --project <id>`
+**View VCS root:** `teamcity project vcs view <vcs-root-id>`
 
 ## References
 

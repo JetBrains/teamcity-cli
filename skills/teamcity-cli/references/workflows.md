@@ -341,6 +341,29 @@ If you need the raw Maven command (e.g., in CI without the CLI installed):
 mvn teamcity-configs:generate -f .teamcity/pom.xml       # fallback
 ```
 
+## VCS Roots
+
+**List VCS roots in a project:**
+```bash
+teamcity project vcs list --project <project-id>
+```
+
+**View VCS root details:**
+```bash
+teamcity project vcs view <vcs-root-id>
+```
+
+**Open browser to create a VCS root:**
+```bash
+teamcity project vcs create --project <project-id>
+```
+
+**Delete a VCS root:**
+```bash
+teamcity project vcs delete <vcs-root-id>
+teamcity project vcs delete <vcs-root-id> --force   # skip confirmation
+```
+
 ## Project Settings (Export & Status)
 
 **Check versioned settings sync status (requires server connection):**
