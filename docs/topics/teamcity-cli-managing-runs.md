@@ -672,10 +672,10 @@ teamcity run watch 12345 --interval 10
 teamcity run watch 12345 --timeout 30m
 ```
 
-Use `--quiet` for minimal output that shows only state changes and the final result:
+Use `--minimal` for minimal output that shows only state changes and the final result:
 
 ```Shell
-teamcity run watch 12345 --quiet
+teamcity run watch 12345 --minimal
 ```
 
 Use `--json` to wait for the build to complete and output the final result as JSON (useful for scripting):
@@ -726,7 +726,7 @@ Stream build logs while watching
 <tr>
 <td>
 
-`-Q`, `--quiet`
+`--minimal`
 
 </td>
 <td>
