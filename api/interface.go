@@ -54,6 +54,7 @@ type ClientInterface interface {
 	RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, error)
 	CancelBuild(buildID string, comment string) error
 	GetBuildLog(buildID string) (string, error)
+	GetBuildMessages(buildID string, opts BuildMessagesOptions) (*BuildMessagesResponse, error)
 	PinBuild(buildID string, comment string) error
 	UnpinBuild(buildID string) error
 	AddBuildTags(buildID string, tags []string) error

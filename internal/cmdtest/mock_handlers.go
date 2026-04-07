@@ -324,6 +324,20 @@ func SetupMockClient(t *testing.T) *TestServer {
 		Text(w, "[12:00:00] Build started\n[12:00:01] Compiling...\n[12:00:10] Build finished")
 	})
 
+	// Build messages (structured log API)
+	ts.Handle("GET /app/messages", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.BuildMessagesResponse{
+			Messages: []api.BuildMessage{
+				{ID: 1, Text: "Build started", Level: 1, Status: 1, Timestamp: "2026-04-07T12:00:00.000+0000"},
+				{ID: 2, Text: "Compiling...", Level: 2, Status: 1, Timestamp: "2026-04-07T12:00:01.000+0000"},
+				{ID: 3, Text: "Build finished", Level: 1, Status: 1, Timestamp: "2026-04-07T12:00:10.000+0000"},
+			},
+			LastMessageIndex:    3,
+			FocusIndex:          3,
+			LastMessageIncluded: true,
+		})
+	})
+
 	// Changes
 	ts.Handle("GET /app/rest/changes", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, api.ChangeList{

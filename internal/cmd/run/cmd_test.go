@@ -131,6 +131,43 @@ func TestRunLogJSON_job(T *testing.T) {
 	assert.Contains(T, got, `"log"`)
 }
 
+func TestRunLogTailAndHead(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	f := ts.Factory
+
+	got := cmdtest.CaptureOutput(T, f, "run", "log", testBuildID, "--tail", "10")
+	assert.Contains(T, got, "Build started")
+	assert.Contains(T, got, "Build finished")
+
+	got = cmdtest.CaptureOutput(T, f, "run", "log", testBuildID, "--tail", "10", "--json")
+	assert.Contains(T, got, `"messages"`)
+
+	got = cmdtest.CaptureOutput(T, f, "run", "log", testBuildID, "--head", "10")
+	assert.Contains(T, got, "Build started")
+
+	err := cmdtest.CaptureErr(T, f, "run", "log", testBuildID, "--tail", "10", "--head", "10")
+	assert.Contains(T, err.Error(), "if any flags in the group [head tail] are set none of the others can be")
+
+	err = cmdtest.CaptureErr(T, f, "run", "log", testBuildID, "--follow", "--head", "10")
+	assert.Contains(T, err.Error(), "if any flags in the group [head follow] are set none of the others can be")
+}
+
+func TestRunLogFollow(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /app/rest/builds/id:", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{
+			ID:     1,
+			Number: "1",
+			Status: "SUCCESS",
+			State:  "finished",
+			WebURL: ts.URL + "/viewLog.html?buildId=1",
+		})
+	})
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "log", testBuildID, "--follow")
+	assert.Contains(T, got, "Build started")
+	assert.Contains(T, got, "Build finished")
+}
+
 func TestRunArtifacts(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory
