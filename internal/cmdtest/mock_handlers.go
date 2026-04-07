@@ -540,6 +540,76 @@ func SetupMockClient(t *testing.T) *TestServer {
 		Error(w, http.StatusNotFound, "Versioned settings are not configured for this project")
 	})
 
+	// Cloud Profiles
+	ts.Handle("GET /app/rest/cloud/profiles", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.CloudProfileList{
+			Count: 2,
+			Profiles: []api.CloudProfile{
+				{ID: "aws-prod", Name: "AWS Production", CloudProviderID: "amazon", Project: &api.Project{ID: "TestProject", Name: "Test Project"}},
+				{ID: "azure-eu", Name: "Azure EU", CloudProviderID: "azure", Project: &api.Project{ID: "TestProject", Name: "Test Project"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/cloud/profiles/", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.CloudProfile{
+			ID: "aws-prod", Name: "AWS Production", CloudProviderID: "amazon", Project: &api.Project{ID: "TestProject", Name: "Test Project"},
+		})
+	})
+
+	// Cloud Images
+	ts.Handle("GET /app/rest/cloud/images", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.CloudImageList{
+			Count: 2,
+			Images: []api.CloudImage{
+				{ID: "id:img-1,profileId:aws-prod", Name: "ubuntu-22-large", Profile: &api.CloudProfile{ID: "aws-prod", Name: "AWS Production"}},
+				{ID: "id:img-2,profileId:azure-eu", Name: "windows-2022", Profile: &api.CloudProfile{ID: "azure-eu", Name: "Azure EU"}},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/cloud/images/", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.CloudImage{
+			ID: "id:img-1,profileId:aws-prod", Name: "ubuntu-22-large",
+			Profile: &api.CloudProfile{ID: "aws-prod", Name: "AWS Production"},
+		})
+	})
+
+	// Cloud Instances
+	ts.Handle("GET /app/rest/cloud/instances", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.CloudInstanceList{
+			Count: 1,
+			Instances: []api.CloudInstance{
+				{
+					ID: "i-0245b46070c443201", Name: "agent-cloud-1", State: "running",
+					StartDate: "20240101T120000+0000",
+					Image:     &api.CloudImage{ID: "id:img-1,profileId:aws-prod", Name: "ubuntu-22-large"},
+					Agent:     &api.Agent{ID: 10, Name: "agent-cloud-1"},
+				},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/cloud/instances/", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.CloudInstance{
+			ID: "i-0245b46070c443201", Name: "agent-cloud-1", State: "running",
+			StartDate: "20240101T120000+0000",
+			Image:     &api.CloudImage{ID: "id:img-1,profileId:aws-prod", Name: "ubuntu-22-large"},
+			Agent:     &api.Agent{ID: 10, Name: "agent-cloud-1"},
+		})
+	})
+
+	ts.Handle("POST /app/rest/cloud/instances", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/actions/") {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		JSON(w, api.CloudInstance{
+			ID: "i-new-instance", Name: "agent-cloud-new", State: "starting",
+			Image: &api.CloudImage{ID: "id:img-1,profileId:aws-prod", Name: "ubuntu-22-large"},
+		})
+	})
+
 	// VCS Roots
 	ts.Handle("GET /app/rest/vcs-roots", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, api.VcsRootList{
@@ -580,7 +650,6 @@ func SetupMockClient(t *testing.T) *TestServer {
 	ts.Handle("DELETE /app/rest/vcs-roots/id:", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
-
 	config.SetUserForServer(ts.URL, "admin")
 
 	return ts

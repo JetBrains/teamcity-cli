@@ -14,7 +14,7 @@ type BuildMessage struct {
 	Level            int    `json:"level"`
 	Status           int    `json:"status"`
 	Timestamp        string `json:"timestamp,omitempty"`
-	ServerTimestamp   string `json:"serverTimestamp,omitempty"`
+	ServerTimestamp  string `json:"serverTimestamp,omitempty"`
 	FlowID           int    `json:"flowId,omitempty"`
 	ParentID         int    `json:"parentId,omitempty"`
 	BlockType        string `json:"blockType,omitempty"`

@@ -131,3 +131,18 @@ var PoolFields = FieldSpec{
 	Available: []string{"id", "name", "maxAgents", "href"},
 	Default:   []string{"id", "name", "maxAgents"},
 }
+
+var CloudProfileFields = FieldSpec{
+	Available: []string{"id", "name", "cloudProviderId", "href", "project.id", "project.name"},
+	Default:   []string{"id", "name", "cloudProviderId", "href"},
+}
+
+var CloudImageFields = FieldSpec{
+	Available: []string{"id", "name", "href", "profile.id", "profile.name"},
+	Default:   []string{"id", "name", "href", "profile.id", "profile.name"},
+}
+
+var CloudInstanceFields = FieldSpec{
+	Available: []string{"id", "name", "state", "startDate", "href", "image.id", "image.name", "agent.id", "agent.name"},
+	Default:   []string{"id", "name", "state", "startDate", "href", "image.id", "image.name", "agent.id", "agent.name"},
+}

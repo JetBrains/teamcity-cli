@@ -109,6 +109,16 @@ type ClientInterface interface {
 	RemoveProjectFromPool(poolID int, projectID string) error
 	SetAgentPool(agentID int, poolID int) error
 
+	// Cloud
+	GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList, error)
+	GetCloudProfile(locator string) (*CloudProfile, error)
+	GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error)
+	GetCloudImage(locator string) (*CloudImage, error)
+	GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceList, error)
+	GetCloudInstance(locator string) (*CloudInstance, error)
+	StartCloudInstance(imageID string) (*CloudInstance, error)
+	StopCloudInstance(locator string, force bool) error
+
 	// VCS Roots
 	GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error)
 	GetVcsRoot(id string) (*VcsRoot, error)

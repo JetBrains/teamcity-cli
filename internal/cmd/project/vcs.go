@@ -145,7 +145,7 @@ var vcsPropertyLabels = map[string]string{
 	"usernameStyle":          "Username Style",
 	"reportTagRevisions":     "Report Tag Revisions",
 	"pipelines.connectionId": "Connection ID",
-	"tokenId":               "Token ID",
+	"tokenId":                "Token ID",
 }
 
 func runVcsView(f *cmdutil.Factory, id string, opts *cmdutil.ViewOptions) error {

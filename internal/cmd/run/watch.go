@@ -39,7 +39,7 @@ Shows build status with periodic polling. Use --logs for a full-screen TUI
 with live log output.
 
 For a simpler, pipe-friendly log stream, use "teamcity run log --follow" instead.`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		Example: `  teamcity run watch 12345
   teamcity run watch 12345 --interval 10
   teamcity run watch 12345 --logs`,
@@ -62,7 +62,6 @@ For a simpler, pipe-friendly log stream, use "teamcity run log --follow" instead
 
 func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 	p := f.Printer
-	// Global --quiet/-q also activates compact watch mode
 	if f.Quiet {
 		opts.quiet = true
 	}
