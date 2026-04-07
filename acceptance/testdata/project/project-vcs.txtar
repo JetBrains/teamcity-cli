@@ -28,9 +28,10 @@ exec teamcity project vcs list --project CLI --plain --no-input
 stdout '.'
 ! stderr 'Error'
 
-# List requires --project
-! exec teamcity project vcs list --no-input
-stderr 'required'
+# List without --project defaults to _Root
+exec teamcity project vcs list --limit 3 --no-input
+stdout 'ID'
+! stderr 'Error'
 
 # Find a VCS root ID for view test
 exec teamcity api '/app/rest/vcs-roots?locator=affectedProject:CLI,count:1&fields=vcs-root(id)' --raw --no-input

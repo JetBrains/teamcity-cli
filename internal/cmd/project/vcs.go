@@ -1,6 +1,7 @@
 package project
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 
@@ -42,25 +43,25 @@ func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
 		Short:   "List VCS roots",
 		Long:    `List VCS roots visible to a project, including inherited from parent projects.`,
 		Aliases: []string{"ls"},
-		Example: `  teamcity project vcs list --project MyProject
+		Example: `  teamcity project vcs list
+  teamcity project vcs list --project MyProject
   teamcity project vcs list --project MyProject --json
-  teamcity project vcs list --project MyProject --json=id,name
-  teamcity project vcs list --project MyProject --plain`,
+  teamcity project vcs list --plain`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.VcsRootFields, opts.fetch)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (required)")
-	_ = cmd.MarkFlagRequired("project")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
 
 	return cmd
 }
 
 func (opts *vcsListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
+	project := cmp.Or(opts.project, "_Root")
 	roots, err := client.GetVcsRoots(api.VcsRootsOptions{
-		Project: opts.project,
+		Project: project,
 		Limit:   opts.Limit,
 		Fields:  fields,
 	})
@@ -196,19 +197,20 @@ func newVcsCreateCmd(f *cmdutil.Factory) *cobra.Command {
 VCS root creation involves complex authentication configuration (OAuth connections,
 SSH keys, tokens) that the TeamCity UI handles well. A full CLI-based create flow
 may be added in a future release.`,
-		Example: `  teamcity project vcs create --project MyProject`,
+		Example: `  teamcity project vcs create
+  teamcity project vcs create --project MyProject`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runVcsCreate(f, project)
 		},
 	}
 
-	cmd.Flags().StringVarP(&project, "project", "p", "", "Project ID (required)")
-	_ = cmd.MarkFlagRequired("project")
+	cmd.Flags().StringVarP(&project, "project", "p", "", "Project ID (default: _Root)")
 
 	return cmd
 }
 
 func runVcsCreate(f *cmdutil.Factory, projectID string) error {
+	projectID = cmp.Or(projectID, "_Root")
 	serverURL := config.GetServerURL()
 	if serverURL == "" {
 		return fmt.Errorf("no server URL configured")

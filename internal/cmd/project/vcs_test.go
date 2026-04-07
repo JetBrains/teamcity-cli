@@ -5,7 +5,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestVcsList(T *testing.T) {
@@ -36,12 +35,12 @@ func TestVcsListPlain(T *testing.T) {
 	assert.Contains(T, out, "\t")
 }
 
-func TestVcsListRequiresProject(T *testing.T) {
+func TestVcsListDefaultProject(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory
 
-	err := cmdtest.CaptureErr(T, f, "project", "vcs", "list")
-	require.Error(T, err)
+	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "list")
+	assert.Contains(T, out, "TestProject_Repo")
 }
 
 func TestVcsView(T *testing.T) {
