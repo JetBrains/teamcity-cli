@@ -378,6 +378,60 @@ type SnapshotDependencyList struct {
 	SnapshotDependency []SnapshotDependency `json:"snapshot-dependency"`
 }
 
+// CloudProfile represents a cloud profile configured in a project
+type CloudProfile struct {
+	ID              string   `json:"id"`
+	Name            string   `json:"name,omitempty"`
+	CloudProviderID string   `json:"cloudProviderId,omitempty"`
+	Href            string   `json:"href,omitempty"`
+	Project         *Project `json:"project,omitempty"`
+}
+
+type CloudProfileList struct {
+	Count    int            `json:"count"`
+	Profiles []CloudProfile `json:"cloudProfile"`
+}
+
+// CloudImage represents a cloud image within a cloud profile
+type CloudImage struct {
+	ID      string        `json:"id"`
+	Name    string        `json:"name,omitempty"`
+	Href    string        `json:"href,omitempty"`
+	Profile *CloudProfile `json:"profile,omitempty"`
+	Project *Project      `json:"project,omitempty"`
+}
+
+type CloudImageList struct {
+	Count  int          `json:"count"`
+	Images []CloudImage `json:"cloudImage"`
+}
+
+// CloudInstance represents a running cloud instance
+type CloudInstance struct {
+	ID        string      `json:"id"`
+	Name      string      `json:"name,omitempty"`
+	State     string      `json:"state,omitempty"`
+	StartDate string      `json:"startDate,omitempty"`
+	Href      string      `json:"href,omitempty"`
+	Image     *CloudImage `json:"image,omitempty"`
+	Agent     *Agent      `json:"agent,omitempty"`
+}
+
+type CloudInstanceList struct {
+	Count     int             `json:"count"`
+	Instances []CloudInstance `json:"cloudInstance"`
+}
+
+// StartCloudInstanceRequest is the body for starting a cloud instance
+type StartCloudInstanceRequest struct {
+	Image CloudImageRef `json:"image"`
+}
+
+// CloudImageRef is a reference to a cloud image
+type CloudImageRef struct {
+	ID string `json:"id"`
+}
+
 // VcsRoot represents a TeamCity VCS root
 type VcsRoot struct {
 	ID         string        `json:"id"`

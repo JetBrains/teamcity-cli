@@ -369,12 +369,10 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		initialTail = opts.tail
 	}
 
-	// Wait for the build to leave the queue
 	if err := waitForBuildStart(ctx, p, client, runID, opts.json); err != nil {
 		return err
 	}
 
-	// Fetch initial batch
 	resp, err := client.GetBuildMessages(runID, api.BuildMessagesOptions{
 		Count:     -initialTail,
 		Tail:      true,
@@ -394,7 +392,6 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		printFollowMessage(p.Out, msg, showVerbose, opts.raw, opts.json)
 	}
 
-	// Check if build is already done
 	build, err := client.GetBuild(runID)
 	if err != nil {
 		return err
@@ -403,7 +400,6 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		return buildFinishedResult(p, client, build, opts.json)
 	}
 
-	// Poll for new messages
 	for {
 		select {
 		case <-ctx.Done():
@@ -417,7 +413,6 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 			ExpandAll: true,
 		})
 		if err != nil {
-			// Still check build state so we don't loop forever on persistent errors
 			if build, err := client.GetBuild(runID); err == nil && build.State == "finished" {
 				return buildFinishedResult(p, client, build, opts.json)
 			}

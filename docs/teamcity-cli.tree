@@ -16,6 +16,7 @@
             <toc-element topic="teamcity-cli-managing-build-queue.md"/>
             <toc-element topic="teamcity-cli-managing-agents.md"/>
             <toc-element topic="teamcity-cli-managing-agent-pools.md"/>
+            <toc-element topic="teamcity-cli-managing-cloud-agents.md"/>
         </toc-element>
         <toc-element toc-title="Advanced">
             <toc-element topic="teamcity-cli-rest-api-access.md"/>

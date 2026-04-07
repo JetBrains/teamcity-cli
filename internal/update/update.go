@@ -20,8 +20,6 @@ const (
 	stateFileName    = "update-check.json"
 )
 
-// --- CI detection ---
-
 func IsCI() bool {
 	for _, key := range []string{"CI", "BUILD_NUMBER", "TEAMCITY_VERSION"} {
 		if os.Getenv(key) != "" {
@@ -30,8 +28,6 @@ func IsCI() bool {
 	}
 	return false
 }
-
-// --- State persistence ---
 
 type State struct {
 	LastCheckedAt time.Time `json:"last_checked_at"`
@@ -79,8 +75,6 @@ func SaveState(s *State) {
 	_ = os.MkdirAll(filepath.Dir(path), 0700)
 	_ = os.WriteFile(path, data, 0600)
 }
-
-// --- Update check orchestration ---
 
 func IsDisabled() bool {
 	if v := os.Getenv(EnvNoUpdateCheck); v == "1" || v == "true" || v == "yes" {

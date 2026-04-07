@@ -110,8 +110,6 @@ func Execute() error {
 	if f.UpdateNotice != nil {
 		f.UpdateNotice()
 	}
-	// If PersistentPreRun didn't execute (e.g. arg validation failed before hooks),
-	// check the executed command's --json flag directly.
 	if !f.JSONOutput && executedCmd != nil {
 		if jsonFlag := executedCmd.Flags().Lookup("json"); jsonFlag != nil && jsonFlag.Changed {
 			if jsonFlag.Value.Type() != "bool" || jsonFlag.Value.String() != "false" {
