@@ -205,8 +205,8 @@ func newVcsCreateCmd(f *cmdutil.Factory) *cobra.Command {
 	var project string
 
 	cmd := &cobra.Command{
-		Use:     "create",
-		Short:   "Open TeamCity to add a VCS root",
+		Use:   "create",
+		Short: "Open TeamCity to add a VCS root",
 		Long: `Opens the TeamCity UI in a browser to create a new VCS root in the specified project.
 
 VCS root creation involves complex authentication configuration (OAuth connections,
@@ -214,6 +214,7 @@ SSH keys, tokens) that the TeamCity UI handles well. A full CLI-based create flo
 may be added in a future release.`,
 		Example: `  teamcity project vcs create
   teamcity project vcs create --project MyProject`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runVcsCreate(f, project)
 		},
