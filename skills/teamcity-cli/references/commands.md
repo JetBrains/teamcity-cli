@@ -232,7 +232,7 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ### Flags for `teamcity project settings validate`
 
-- `-v, --verbose` - Show full Maven output
+- `--verbose` - Show full Maven output
 
 ### Flags for `teamcity project token put`
 
