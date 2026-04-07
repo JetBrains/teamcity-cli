@@ -192,6 +192,8 @@ teamcity project vcs view MyProject_GitHubRepo --web
 
 The view command shows all VCS root properties with human-readable labels. Secure properties (passwords, passphrases) are masked as `********`.
 
+<img src="project-vcs.gif" alt="Listing and viewing VCS roots" border-effect="rounded"/>
+
 ### Creating a VCS root
 
 In the current version, VCS root creation opens the TeamCity UI in your browser:
