@@ -268,7 +268,7 @@ teamcity agent reboot Agent-Linux-01 --after-build
 Skip the confirmation prompt:
 
 ```Shell
-teamcity agent reboot Agent-Linux-01 --yes
+teamcity agent reboot Agent-Linux-01 --force
 ```
 
 > Local agents (running on the same machine as the server) cannot be rebooted through this command.
