@@ -18,7 +18,7 @@ func newRunCancelCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "cancel <run-id>",
-		Short: "Cancel a running build",
+		Short: "Cancel a run",
 		Long:  `Cancel a running or queued run.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run cancel 12345
