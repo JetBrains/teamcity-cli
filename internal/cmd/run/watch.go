@@ -17,7 +17,7 @@ import (
 type runWatchOptions struct {
 	interval int
 	logs     bool
-	minimal  bool
+	quiet    bool
 	json     bool
 	timeout  time.Duration
 }
@@ -45,18 +45,22 @@ func newRunWatchCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().IntVarP(&opts.interval, "interval", "i", 5, "Refresh interval in seconds")
 	cmd.Flags().BoolVar(&opts.logs, "logs", false, "Stream build logs while watching")
-	cmd.Flags().BoolVar(&opts.minimal, "minimal", false, "Minimal output, show only state changes and result")
+	cmd.Flags().BoolVar(&opts.quiet, "quiet", false, "Minimal output, show only state changes and result")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Wait for completion and output result as JSON")
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Timeout duration (e.g., 30m, 1h)")
-	cmd.MarkFlagsMutuallyExclusive("minimal", "logs")
+	cmd.MarkFlagsMutuallyExclusive("quiet", "logs")
 	cmd.MarkFlagsMutuallyExclusive("json", "logs")
-	cmd.MarkFlagsMutuallyExclusive("json", "minimal")
+	cmd.MarkFlagsMutuallyExclusive("json", "quiet")
 
 	return cmd
 }
 
 func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 	p := f.Printer
+	// Global --quiet/-q also activates compact watch mode
+	if f.Quiet {
+		opts.quiet = true
+	}
 	if opts.interval < 1 {
 		return fmt.Errorf("--interval must be at least 1 second, got %d", opts.interval)
 	}
@@ -66,7 +70,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		return err
 	}
 
-	if opts.logs && !opts.minimal {
+	if opts.logs && !opts.quiet {
 		if watchHasTTYFn() {
 			return runWatchTUIFn(client, runID, opts.interval)
 		}
@@ -91,7 +95,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 			if !opts.json {
 				_, _ = fmt.Fprintln(p.Out)
 			}
-			if !opts.minimal && !opts.json {
+			if !opts.quiet && !opts.json {
 				_, _ = fmt.Fprintln(p.Out)
 				_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
 				_, _ = fmt.Fprintf(p.Out, "%s Resume watching: teamcity run watch %s\n", output.Faint("Hint:"), runID)
@@ -110,7 +114,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 	switch {
 	case opts.json:
 		// silent until completion
-	case opts.minimal:
+	case opts.quiet:
 		_, _ = fmt.Fprintf(p.Out, "Watching: %s\n", build.WebURL)
 	default:
 		p.Info("Watching run #%s... %s\n", runID, output.Faint("(Ctrl-C to stop watching)"))
@@ -147,7 +151,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		switch {
 		case opts.json:
 			// silent polling — no output until completion
-		case opts.minimal:
+		case opts.quiet:
 			if build.State != lastState {
 				switch build.State {
 				case "queued":
@@ -216,11 +220,11 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 			}
 
 			_, _ = fmt.Fprintln(p.Out)
-			if !opts.minimal {
+			if !opts.quiet {
 				_, _ = fmt.Fprintln(p.Out)
 			}
 
-			return cmdutil.BuildResultError(p, client, build, !opts.minimal)
+			return cmdutil.BuildResultError(p, client, build, !opts.quiet)
 		}
 
 		select {
