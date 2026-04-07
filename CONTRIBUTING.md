@@ -191,6 +191,72 @@ When your change adds or modifies commands, flags, or user-facing behavior, upda
 
 **Keep docs in sync:** It's easy to forget one of the locations above. A good check: grep for the flag or command name you changed across `docs/`, `skills/`, and `README.md` to make sure nothing is stale.
 
+## Flags and short-flag conventions
+
+Follow these rules when adding flags:
+
+**Reserved short flags.** These are taken globally and must never be reused by subcommands:
+
+| Short | Global flag                  |
+|-------|------------------------------|
+| `-q`  | `--quiet`                    |
+| `-v`  | `--version` (Cobra built-in) |
+
+**Don't shadow globals.** A subcommand flag like `--verbose` with `-v` shadows Cobra's built-in `--version`. A subcommand `-q` shadows the global `--quiet`. If in doubt, skip the short flag entirely — a long flag with no shorthand is always safe.
+
+**Avoid ambiguous shorthands.** If a command has both `--limit` (`-n`) and `--dry-run`, don't give `-n` to `--dry-run` — it conflicts. When two flags could reasonably claim the same letter, neither gets it.
+
+**Use standard flag names.** Prefer these established names for consistency across commands:
+
+| Meaning                       | Flag name  | Short         |
+|-------------------------------|------------|---------------|
+| Limit number of results       | `--limit`  | `-n`          |
+| Filter by branch              | `--branch` | `-b`          |
+| Skip confirmation prompt      | `--force`  | `-f`          |
+| JSON output                   | `--json`   | —             |
+| Suppress non-essential output | `--quiet`  | `-q` (global) |
+
+## Deprecating flags and commands
+
+### Flags
+
+When renaming or retiring a flag, use `cmdutil.DeprecateFlag`:
+
+```go
+cmd.Flags().StringVar(&opts.job, "job", "", "Filter by job")
+cmd.Flags().StringVar(&opts.job, "build-type", "", "")
+cmdutil.DeprecateFlag(cmd, "build-type", "job", "v2.0")
+```
+
+Stderr when `--build-type` is used:
+```
+Flag --build-type has been deprecated, use --job instead (will be removed in v2.0)
+```
+
+Rules:
+- Register the old flag **before** calling `DeprecateFlag` — it panics if the flag is not found (catches typos at startup)
+- Bind the old flag to the **same variable** as the new flag so both work
+- Set the old flag's usage to `""` — Cobra hides deprecated flags from `--help` automatically
+- Pick a removal version at least one minor release out
+
+### Commands
+
+When retiring or replacing a command, use `cmdutil.DeprecateCommand`:
+
+```go
+cmd := &cobra.Command{Use: "old-cmd", ...}
+cmdutil.DeprecateCommand(cmd, "new-cmd", "v2.0")
+```
+
+Stderr when `old-cmd` is invoked:
+```
+Command old-cmd is deprecated, use "new-cmd" instead (will be removed in v2.0)
+```
+
+The command still runs — users are warned but not broken. Remove it in the target version.
+
+No flags or commands are deprecated today; these are the patterns for when the first deprecation is needed.
+
 ## Submit a pull request
 
 Push your branch and open a PR against `main`. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) will guide you through describing the change.
