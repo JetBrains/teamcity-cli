@@ -41,6 +41,9 @@ You can specify a run ID directly, or use --job to get the latest run's log.
 
 Use --tail or --head to show partial logs via the structured messages API.
 Use --follow to stream logs from a running build until it completes.
+Output is plain text and pipe-friendly (e.g., teamcity run log -f 123 | grep ERROR).
+
+For a full-screen interactive TUI, use "teamcity run watch --logs" instead.
 
 Pager: / search, n/N next/prev, g/G top/bottom, q quit.
 Use --raw to bypass the pager.`,

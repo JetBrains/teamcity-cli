@@ -33,7 +33,12 @@ func newRunWatchCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "watch <run-id>",
 		Short: "Watch a run until it completes",
-		Long:  `Watch a run in real-time until it completes.`,
+		Long: `Watch a run in real-time until it completes.
+
+Shows build status with periodic polling. Use --logs for a full-screen TUI
+with live log output.
+
+For a simpler, pipe-friendly log stream, use "teamcity run log --follow" instead.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run watch 12345
   teamcity run watch 12345 --interval 10
