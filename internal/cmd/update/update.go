@@ -14,9 +14,10 @@ import (
 
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "update",
-		Short: "Check for CLI updates and show how to upgrade",
-		Args:  cobra.NoArgs,
+		Use:     "update",
+		Short:   "Check for CLI updates and show how to upgrade",
+		Args:    cobra.NoArgs,
+		Example: `  teamcity update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUpdate(f)
 		},

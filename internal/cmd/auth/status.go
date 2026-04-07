@@ -55,6 +55,8 @@ func newAuthStatusCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show authentication status",
+		Example: `  teamcity auth status
+  teamcity auth status --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAuthStatus(f, opts)
 		},

@@ -38,6 +38,8 @@ func newListCmd(f *cmdutil.Factory) *cobra.Command {
 		Short:   "List configuration settings",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
+		Example: `  teamcity config list
+  teamcity config list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runList(f, jsonOutput)
 		},
