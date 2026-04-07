@@ -16,8 +16,9 @@ func newQueueRemoveCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &queueRemoveOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "remove <run-id>",
-		Short: "Remove a run from the queue",
+		Use:     "remove <run-id>",
+		Aliases: []string{"rm"},
+		Short:   "Remove a run from the queue",
 		Long:  `Remove a queued run from the TeamCity queue.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity queue remove 12345
