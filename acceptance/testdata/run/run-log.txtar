@@ -1,6 +1,7 @@
 # Test run log subcommand.
+# Use Sandbox_Build which has small, stable logs (not the latest server-wide build which may be huge).
 
-exec teamcity api '/app/rest/builds?locator=count:1&fields=build(id)' --raw --no-input
+exec teamcity api '/app/rest/builds?locator=buildType:Sandbox_Build,count:1,status:SUCCESS&fields=build(id)' --raw --no-input
 extract '"id":(\d+)' BUILD_ID
 
 exec teamcity run log $BUILD_ID --no-input
@@ -16,7 +17,7 @@ stdout '.'
 exec teamcity run log $BUILD_ID --failed --no-input
 ! stderr 'Error'
 
-# --job (by job ID — use Sandbox_Build which has stable completed builds)
+# --job (by job ID)
 exec teamcity run log --job Sandbox_Build --no-input
 stdout '.'
 ! stderr 'Error'
