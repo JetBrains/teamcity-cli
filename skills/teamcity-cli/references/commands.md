@@ -72,7 +72,7 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--rebuild-deps` - Rebuild all dependencies
 - `--rebuild-failed-deps` - Rebuild failed/incomplete dependencies
 - `--top` - Add to top of queue
-- `-n, --dry-run` - Show what would be triggered without running
+- `--dry-run` - Show what would be triggered without running
 - `--json` - Output as JSON (for scripting)
 - `-w, --web` - Open run in browser
 

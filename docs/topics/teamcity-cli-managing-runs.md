@@ -606,7 +606,7 @@ Timeout when watching (for example, `30m`, `1h`); implies `--watch`
 <tr>
 <td>
 
-`-n`, `--dry-run`
+`--dry-run`
 
 </td>
 <td>

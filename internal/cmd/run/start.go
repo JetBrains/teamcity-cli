@@ -128,7 +128,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().IntVar(&opts.agent, "agent", 0, "Run on specific agent (by ID)")
 	opts.addToCmd(cmd)
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open run in browser")
-	cmd.Flags().BoolVarP(&opts.dryRun, "dry-run", "n", false, "Show what would be triggered without running")
+	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", false, "Show what would be triggered without running")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON (for scripting)")
 
 	return cmd
