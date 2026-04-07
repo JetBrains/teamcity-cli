@@ -98,6 +98,8 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 		Short:   "List configured aliases",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
+		Example: `  teamcity alias list
+  teamcity alias list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			aliases := config.GetAllAliases()
 
@@ -147,6 +149,7 @@ func newAliasDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 		Short:   "Delete an alias",
 		Aliases: []string{"rm"},
 		Args:    cobra.ExactArgs(1),
+		Example: `  teamcity alias delete rl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			if err := config.DeleteAlias(name); err != nil {
