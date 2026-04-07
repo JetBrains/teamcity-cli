@@ -166,7 +166,7 @@ teamcity --version
    teamcity auth login
    ```
 
-2. Enter your server URL when prompted. If the server supports browser-based login (PKCE), the CLI opens your browser to approve access automatically. Otherwise, you'll be guided to create an access token manually.
+2. Enter your server URL when prompted. If browser-based login (PKCE) is available on the server, the CLI opens your browser to approve access automatically. Otherwise, you'll be guided to create an access token manually.
 
 3. Verify the login:
 
@@ -175,6 +175,8 @@ teamcity --version
    ```
 
 Tokens are stored in your system keyring (macOS Keychain, GNOME Keyring, or Windows Credential Manager) when available.
+
+If you prefer access token login, run `teamcity auth login --no-browser`. If you already have a token, use `teamcity auth login --server https://teamcity.example.com --token <token>`.
 
 > If your system does not have a keyring, the CLI falls back to storing the token in the configuration file. You can force this behavior with `--insecure-storage`.
 >
