@@ -290,7 +290,7 @@ Most commands return exit code `0` on success and `1` on failure. The `teamcity 
 - `124` on timeout
 
 ```Shell
-teamcity run start MyProject_Build --watch --quiet --timeout 30m
+teamcity run start MyProject_Build --watch --minimal --timeout 30m
 case $? in
   0) echo "Build succeeded" ;;
   1) echo "Build failed" ;;
