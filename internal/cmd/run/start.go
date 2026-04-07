@@ -307,6 +307,9 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	if build.WaitReason != "" {
 		p.Info("  Wait reason: %s", build.WaitReason)
 	}
+	if !reused && !opts.watch {
+		_, _ = fmt.Fprintf(p.Out, "  %s teamcity run log -f %d\n", output.Faint("Follow logs:"), build.ID)
+	}
 
 	if reused {
 		if opts.web {
