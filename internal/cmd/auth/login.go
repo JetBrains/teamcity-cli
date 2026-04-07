@@ -32,13 +32,16 @@ func newAuthLoginCmd(f *cmdutil.Factory) *cobra.Command {
 
 This will:
 1. Prompt for your TeamCity server URL
-2. Automatically authenticate via browser (if PKCE is enabled)
-3. Or open your browser to generate an access token manually
+2. Automatically authenticate via browser with PKCE when browser-based login is available
+3. Or use manual token entry to generate and paste an access token
 4. Validate and store the token securely
 
 The token is stored in your system keyring (macOS Keychain, GNOME Keyring,
 Windows Credential Manager) when available. Use --insecure-storage to store
 the token in plain text in the config file instead.
+
+To skip browser-based login and use manual token entry:
+  teamcity auth login -s https://teamcity.example.com --no-browser
 
 For guest access (read-only, no token needed; must be enabled on the server):
   teamcity auth login -s https://teamcity.example.com --guest
@@ -111,7 +114,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 		enabled, _ := api.IsPkceEnabled(ctx, serverURL)
 		cancel()
 		if enabled {
-			p.Info("Secure browser login enabled on this server")
+			p.Info("Secure browser login available on this server")
 			if tokenResp, err := runPkceLogin(p, serverURL); err != nil {
 				p.Warn("Browser auth failed: %v", err)
 				p.Info("Falling back to manual token entry...")
@@ -131,7 +134,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 
 		_, _ = fmt.Fprintln(p.Out)
 		if pkceChecked {
-			_, _ = fmt.Fprintln(p.Out, output.Faint("Tip: Server admins can enable secure browser login for easier authentication"))
+			_, _ = fmt.Fprintln(p.Out, output.Faint("Tip: Use --no-browser to skip browser login and enter a token manually"))
 			_, _ = fmt.Fprintln(p.Out)
 		}
 		_, _ = fmt.Fprintln(p.Out, output.Yellow("!"), "To authenticate, you need an access token.")
