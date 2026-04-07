@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -55,6 +56,9 @@ func TerminalWidth() int {
 var pagerCmdFn = func() (*exec.Cmd, error) {
 	if pager := os.Getenv("PAGER"); pager != "" {
 		parts := strings.Fields(pager)
+		if len(parts) == 0 {
+			return nil, fmt.Errorf("PAGER is set but empty")
+		}
 		bin, err := exec.LookPath(parts[0])
 		if err != nil {
 			return nil, err
