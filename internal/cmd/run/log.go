@@ -414,6 +414,19 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 			continue
 		}
 
+		if len(resp.Messages) > 0 && resp.Messages[0].ID > lastSeenID+1 {
+			allNew := true
+			for _, msg := range resp.Messages {
+				if msg.ID <= lastSeenID {
+					allNew = false
+					break
+				}
+			}
+			if allNew && !opts.json {
+				_, _ = fmt.Fprintf(p.Out, "%s some log messages may have been skipped\n", output.Faint("..."))
+			}
+		}
+
 		for _, msg := range resp.Messages {
 			if msg.ID <= lastSeenID {
 				continue
@@ -461,7 +474,7 @@ func waitForBuildStart(ctx context.Context, p *output.Printer, client api.Client
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		case <-time.After(followPollInterval):
 		}
 
