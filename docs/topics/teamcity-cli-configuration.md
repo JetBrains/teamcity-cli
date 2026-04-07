@@ -295,6 +295,18 @@ Disable colored output. Follows the [NO_COLOR standard](https://no-color.org/).
 <tr>
 <td>
 
+`TEAMCITY_NO_COLOR`
+
+</td>
+<td>
+
+App-specific alternative to `NO_COLOR` for disabling colored output.
+
+</td>
+</tr>
+<tr>
+<td>
+
 `TEAMCITY_NO_UPDATE`
 
 </td>

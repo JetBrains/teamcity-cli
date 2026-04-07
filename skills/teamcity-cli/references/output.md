@@ -98,6 +98,12 @@ teamcity run list
 
 Environment variables always take precedence over config file settings.
 
+Other supported variables:
+- `TEAMCITY_GUEST=1` — use guest authentication
+- `TEAMCITY_RO=1` — read-only mode (block write operations)
+- `TEAMCITY_NO_UPDATE=1` — disable automatic update checks
+- `NO_COLOR` or `TEAMCITY_NO_COLOR` — disable colored output
+
 ## Combining with Other Tools
 
 **Open in browser:**
