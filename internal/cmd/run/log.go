@@ -417,6 +417,10 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 			ExpandAll: true,
 		})
 		if err != nil {
+			// Still check build state so we don't loop forever on persistent errors
+			if build, err := client.GetBuild(runID); err == nil && build.State == "finished" {
+				return buildFinishedResult(p, client, build, opts.json)
+			}
 			continue
 		}
 
