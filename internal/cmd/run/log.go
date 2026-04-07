@@ -241,11 +241,17 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 		return runLogFollow(f, client, runID, opts)
 	}
 
-	if opts.tail > 0 {
+	if opts.tail != 0 {
+		if opts.tail < 1 {
+			return fmt.Errorf("--tail must be a positive number, got %d", opts.tail)
+		}
 		return runLogTail(f, client, runID, opts)
 	}
 
-	if opts.head > 0 {
+	if opts.head != 0 {
+		if opts.head < 1 {
+			return fmt.Errorf("--head must be a positive number, got %d", opts.head)
+		}
 		return runLogHead(f, client, runID, opts)
 	}
 
@@ -511,7 +517,14 @@ func printFollowMessage(w io.Writer, msg api.BuildMessage, showVerbose, raw, jso
 
 func buildFinishedResult(p *output.Printer, client api.ClientInterface, build *api.Build, jsonOut bool) error {
 	if jsonOut {
-		return nil
+		switch build.Status {
+		case "SUCCESS":
+			return nil
+		case "FAILURE":
+			return &cmdutil.ExitError{Code: cmdutil.ExitFailure}
+		default:
+			return &cmdutil.ExitError{Code: cmdutil.ExitCancelled}
+		}
 	}
 	_, _ = fmt.Fprintln(p.Out)
 	return cmdutil.BuildResultError(p, client, build, true)
