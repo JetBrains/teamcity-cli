@@ -71,6 +71,7 @@ func (f *Factory) Client() (api.ClientInterface, error) {
 // Called once after flags are parsed (in PersistentPreRun).
 func (f *Factory) InitOutput() {
 	noColor := os.Getenv("NO_COLOR") != "" ||
+		os.Getenv("TEAMCITY_NO_COLOR") != "" ||
 		os.Getenv("TERM") == "dumb" ||
 		f.NoColor ||
 		!isatty.IsTerminal(os.Stdout.Fd())
