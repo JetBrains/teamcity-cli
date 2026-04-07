@@ -103,7 +103,6 @@ Other supported variables:
 - `TEAMCITY_RO=1` — read-only mode (block write operations)
 - `TEAMCITY_NO_UPDATE=1` — disable automatic update checks
 - `NO_COLOR` or `TEAMCITY_NO_COLOR` — disable colored output
-- `PAGER` — pager program for long output (default: `less -FIRX`)
 
 ## Combining with Other Tools
 

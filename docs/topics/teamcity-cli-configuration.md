@@ -307,18 +307,6 @@ App-specific alternative to `NO_COLOR` for disabling colored output.
 <tr>
 <td>
 
-`PAGER`
-
-</td>
-<td>
-
-Pager program for long output (e.g., `less`, `more`). Defaults to `less -FIRX` if unset.
-
-</td>
-</tr>
-<tr>
-<td>
-
 `TEAMCITY_NO_UPDATE`
 
 </td>
