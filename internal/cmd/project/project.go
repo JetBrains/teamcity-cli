@@ -11,6 +11,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/param"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -224,6 +225,13 @@ func runProjectTokenPut(f *cmdutil.Factory, projectID, value string, opts *proje
 			return fmt.Errorf("failed to read from stdin: %w", err)
 		}
 		value = strings.TrimSuffix(string(data), "\n")
+	}
+
+	if value == "" && !f.IsInteractive() {
+		return tcerrors.WithSuggestion(
+			"value is required",
+			"Provide value as argument or use --stdin",
+		)
 	}
 
 	if value == "" {
