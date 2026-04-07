@@ -81,7 +81,7 @@ func (opts *vcsListOptions) fetch(client api.ClientInterface, fields []string) (
 		rows = append(rows, []string{
 			r.ID,
 			r.Name,
-			r.VcsName,
+			vcsTypeName(r.VcsName),
 			projectID,
 		})
 	}
@@ -112,6 +112,21 @@ func newVcsViewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmdutil.AddViewFlags(cmd, opts)
 
 	return cmd
+}
+
+var vcsTypeNames = map[string]string{
+	"jetbrains.git": "Git",
+	"perforce":      "Perforce Helix Core",
+	"svn":           "Subversion",
+	"mercurial":     "Mercurial",
+	"tfs":           "Team Foundation Version Control",
+}
+
+func vcsTypeName(vcsName string) string {
+	if name, ok := vcsTypeNames[vcsName]; ok {
+		return name
+	}
+	return vcsName
 }
 
 var vcsPropertyLabels = map[string]string{
@@ -156,7 +171,7 @@ func runVcsView(f *cmdutil.Factory, id string, opts *cmdutil.ViewOptions) error 
 	webURL := vcsRootEditURL(root.ID)
 	f.Printer.PrintViewHeader(root.Name, webURL, func() {
 		f.Printer.PrintField("ID", root.ID)
-		f.Printer.PrintField("Type", root.VcsName)
+		f.Printer.PrintField("Type", vcsTypeName(root.VcsName))
 		if root.Project != nil {
 			f.Printer.PrintField("Project", root.Project.ID)
 		}

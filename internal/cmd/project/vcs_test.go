@@ -14,7 +14,7 @@ func TestVcsList(T *testing.T) {
 	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "list", "--project", "TestProject")
 	assert.Contains(T, out, "TestProject_Repo")
 	assert.Contains(T, out, "My Repo")
-	assert.Contains(T, out, "jetbrains.git")
+	assert.Contains(T, out, "Git")
 }
 
 func TestVcsListJSON(T *testing.T) {
@@ -50,7 +50,7 @@ func TestVcsView(T *testing.T) {
 	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "view", "TestProject_Repo")
 	assert.Contains(T, out, "My Repo")
 	assert.Contains(T, out, "ID: TestProject_Repo")
-	assert.Contains(T, out, "Type: jetbrains.git")
+	assert.Contains(T, out, "Type: Git")
 	assert.Contains(T, out, "Project: TestProject")
 	assert.Contains(T, out, "URL: https://github.com/org/repo")
 	assert.Contains(T, out, "Branch: refs/heads/main")
