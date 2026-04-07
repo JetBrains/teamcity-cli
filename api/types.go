@@ -378,6 +378,29 @@ type SnapshotDependencyList struct {
 	SnapshotDependency []SnapshotDependency `json:"snapshot-dependency"`
 }
 
+// VcsRoot represents a TeamCity VCS root
+type VcsRoot struct {
+	ID         string        `json:"id"`
+	Name       string        `json:"name,omitempty"`
+	VcsName    string        `json:"vcsName,omitempty"`
+	Href       string        `json:"href,omitempty"`
+	Project    *Project      `json:"project,omitempty"`
+	Properties *PropertyList `json:"properties,omitempty"`
+}
+
+// VcsRootList represents a list of VCS roots
+type VcsRootList struct {
+	Count   int       `json:"count"`
+	VcsRoot []VcsRoot `json:"vcs-root"`
+}
+
+// VcsRootsOptions represents options for listing VCS roots
+type VcsRootsOptions struct {
+	Project string // affectedProject locator
+	Limit   int
+	Fields  []string
+}
+
 // APIError represents an error from TeamCity's REST API
 type APIError struct {
 	Message string `json:"message"`

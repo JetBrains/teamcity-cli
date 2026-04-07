@@ -18,7 +18,7 @@ env TEAMCITY_RO=1
 
 # ---- Discover real IDs for GET-first command tests ----
 
-exec teamcity api '/app/rest/agents?locator=connected:true,count:1&fields=agent(id)' --raw --no-input
+exec teamcity api '/app/rest/agents?locator=authorized:true,count:1&fields=agent(id)' --raw --no-input
 extract '"id":(\d+)' AGENT_ID
 
 exec teamcity api '/app/rest/builds?locator=count:1&fields=build(id)' --raw --no-input

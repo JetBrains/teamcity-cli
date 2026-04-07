@@ -431,6 +431,54 @@ List projects
 <tr>
 <td>
 
+`teamcity project vcs list`
+
+</td>
+<td>
+
+List VCS roots in a project
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project vcs view`
+
+</td>
+<td>
+
+View VCS root details
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project vcs create`
+
+</td>
+<td>
+
+Open browser to add a VCS root
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project vcs delete`
+
+</td>
+<td>
+
+Delete a VCS root
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project param delete`
 
 </td>

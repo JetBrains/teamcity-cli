@@ -31,6 +31,7 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newProjectTreeCmd(f))
 	cmd.AddCommand(newProjectTokenCmd(f))
 	cmd.AddCommand(newProjectSettingsCmd(f))
+	cmd.AddCommand(newVcsCmd(f))
 	cmd.AddCommand(param.NewCmd(f, "project", param.ProjectParamAPI))
 
 	return cmd
