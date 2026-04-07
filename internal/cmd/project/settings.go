@@ -328,7 +328,7 @@ Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.`,
 		},
 	}
 
-	cmd.Flags().BoolVarP(&opts.verbose, "verbose", "v", false, "Show full Maven output")
+	cmd.Flags().BoolVar(&opts.verbose, "verbose", false, "Show full Maven output")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 
 	return cmd
