@@ -57,7 +57,7 @@ Report issues:  https://jb.gg/tc/issues`,
 			_, _ = fmt.Fprintln(out, "  run view <id>           View run details")
 			_, _ = fmt.Fprintln(out, "  job list                List jobs")
 			_, _ = fmt.Fprintln(out)
-			_, _ = fmt.Fprintln(out, output.Faint("Run 'teamcity --help' for full command list, or 'teamcity <command> --help' for details"))
+			_, _ = fmt.Fprintln(out, output.Faint("Run 'teamcity -h' for full command list, or 'teamcity <command> -h' for details"))
 		},
 	}
 

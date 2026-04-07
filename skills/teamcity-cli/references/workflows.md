@@ -128,7 +128,7 @@ teamcity run watch <run-id> --logs
 
 **Watch with timeout:**
 ```bash
-teamcity run watch <run-id> --timeout 30m --minimal
+teamcity run watch <run-id> --timeout 30m --quiet
 ```
 
 **Wait for completion and get JSON result (for scripting):**
