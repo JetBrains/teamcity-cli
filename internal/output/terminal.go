@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
@@ -52,6 +53,14 @@ func TerminalWidth() int {
 
 // pagerCmdFn creates the pager command. Tests can override this.
 var pagerCmdFn = func() (*exec.Cmd, error) {
+	if pager := os.Getenv("PAGER"); pager != "" {
+		parts := strings.Fields(pager)
+		bin, err := exec.LookPath(parts[0])
+		if err != nil {
+			return nil, err
+		}
+		return exec.Command(bin, parts[1:]...), nil
+	}
 	lessPath, err := exec.LookPath("less")
 	if err != nil {
 		return nil, err
