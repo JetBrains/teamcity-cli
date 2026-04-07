@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -11,6 +12,14 @@ import (
 )
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "panic: %v\n\n%s\n", r, debug.Stack())
+			fmt.Fprintln(os.Stderr, "This is a bug. Please report it at https://jb.gg/tc/issues")
+			os.Exit(1)
+		}
+	}()
+
 	if err := config.Init(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error initializing config: %v\n", err)
 		os.Exit(1)
