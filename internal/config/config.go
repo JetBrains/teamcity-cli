@@ -65,7 +65,11 @@ func Init() error {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	configDir := filepath.Join(home, ".config", "tc")
+	configHome := os.Getenv("XDG_CONFIG_HOME")
+	if configHome == "" {
+		configHome = filepath.Join(home, ".config")
+	}
+	configDir := filepath.Join(configHome, "tc")
 	configPath = filepath.Join(configDir, "config.yml")
 
 	if err := os.MkdirAll(configDir, 0700); err != nil {
