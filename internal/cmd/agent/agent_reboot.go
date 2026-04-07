@@ -50,7 +50,7 @@ func runAgentMove(f *cmdutil.Factory, nameOrID string, poolID int) error {
 
 type agentRebootOptions struct {
 	afterBuild bool
-	yes        bool
+	force      bool
 }
 
 func newAgentRebootCmd(f *cmdutil.Factory) *cobra.Command {
@@ -69,14 +69,14 @@ Note: Local agents (running on the same machine as the server) cannot be reboote
 		Example: `  teamcity agent reboot 1
   teamcity agent reboot Agent-Linux-01
   teamcity agent reboot Agent-Linux-01 --after-build
-  teamcity agent reboot Agent-Linux-01 --yes`,
+  teamcity agent reboot Agent-Linux-01 --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentReboot(f, cmd.Context(), args[0], opts)
 		},
 	}
 
 	cmd.Flags().BoolVar(&opts.afterBuild, "after-build", false, "Wait for current build to finish before rebooting")
-	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
 
 	return cmd
 }
@@ -92,7 +92,7 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 		return err
 	}
 
-	needsConfirmation := !opts.yes && f.IsInteractive()
+	needsConfirmation := !opts.force && f.IsInteractive()
 	if needsConfirmation {
 		var confirm bool
 		prompt := &survey.Confirm{

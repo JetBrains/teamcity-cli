@@ -299,7 +299,7 @@ Shows all branches and all build states (including canceled, personal, composite
 ### Flags for `teamcity agent reboot`
 
 - `--after-build` - Wait for current build to finish before rebooting
-- `-y, --yes` - Skip confirmation prompt
+- `-f, --force` - Skip confirmation prompt
 
 ## Agent Pools (`teamcity pool`)
 
