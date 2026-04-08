@@ -14,11 +14,12 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "skill",
 		Short: "Manage AI coding agent skills",
-		Long:  "Install, update, or remove the teamcity-cli skill for AI coding agents (Claude Code, Cursor, etc.).",
+		Long:  "Install, update, or remove TeamCity skills for AI coding agents (Claude Code, Cursor, etc.).",
 		Args:  cobra.NoArgs,
 		RunE:  cmdutil.SubcommandRequired,
 	}
 
+	cmd.AddCommand(newSkillListCmd(f))
 	cmd.AddCommand(newSkillInstallCmd(f))
 	cmd.AddCommand(newSkillUpdateCmd(f))
 	cmd.AddCommand(newSkillRemoveCmd(f))
@@ -27,25 +28,60 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 type skillOptions struct {
-	agents  []string
+	agents []string
+	all    bool
 	project bool
+}
+
+func newSkillListCmd(f *cmdutil.Factory) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List available skills bundled with this release",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runSkillList(f.Printer)
+		},
+	}
+}
+
+func runSkillList(p *output.Printer) error {
+	skills := teamcitycli.ListSkills()
+	if len(skills) == 0 {
+		p.Info("No skills bundled")
+		return nil
+	}
+
+	rows := make([][]string, len(skills))
+	for i, s := range skills {
+		def := ""
+		if s.Name == teamcitycli.DefaultSkill {
+			def = "(default)"
+		}
+		rows[i] = []string{s.Name, s.Version, s.Description, def}
+	}
+	p.PrintTable([]string{"Name", "Version", "Description", ""}, rows)
+	return nil
 }
 
 func newSkillInstallCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &skillOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "install",
-		Short: "Install the teamcity-cli skill for AI coding agents",
-		Long: `Install the teamcity-cli skill so AI coding agents can use teamcity commands.
+		Use:   "install [skill-name...]",
+		Short: "Install skills for AI coding agents",
+		Long: `Install TeamCity skills so AI coding agents can use teamcity commands.
 
+When no skill name is given, installs the default skill (teamcity-cli).
+Use --all to install every bundled skill.
 Installs globally by default. Use --project to install to the current project only.
 Auto-detects installed agents when --agent is not specified.`,
 		Example: `  teamcity skill install
+  teamcity skill install teamcity-cli
+  teamcity skill install --all
   teamcity skill install --agent claude-code --agent cursor
   teamcity skill install --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillInstall(f.Printer, opts, false)
+			return runSkillInstall(f.Printer, opts, args, false)
 		},
 	}
 
@@ -57,17 +93,20 @@ func newSkillUpdateCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &skillOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "update",
-		Short: "Update the teamcity-cli skill for AI coding agents",
-		Long: `Update the teamcity-cli skill to the latest version bundled with this teamcity release.
+		Use:   "update [skill-name...]",
+		Short: "Update skills for AI coding agents",
+		Long: `Update TeamCity skills to the latest version bundled with this release.
 
+When no skill name is given, updates the default skill (teamcity-cli).
+Use --all to update every bundled skill.
 Skips if the installed version already matches.
 Auto-detects installed agents when --agent is not specified.`,
 		Example: `  teamcity skill update
+  teamcity skill update --all
   teamcity skill update --agent claude-code
   teamcity skill update --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillInstall(f.Printer, opts, true)
+			return runSkillInstall(f.Printer, opts, args, true)
 		},
 	}
 
@@ -77,10 +116,11 @@ Auto-detects installed agents when --agent is not specified.`,
 
 func addSkillFlags(cmd *cobra.Command, opts *skillOptions) {
 	cmd.Flags().StringSliceVarP(&opts.agents, "agent", "a", nil, "Target agent(s); auto-detects if omitted")
+	cmd.Flags().BoolVar(&opts.all, "all", false, "Install/update all bundled skills")
 	cmd.Flags().BoolVar(&opts.project, "project", false, "Install to current project instead of globally")
 }
 
-func runSkillInstall(p *output.Printer, opts *skillOptions, checkVersion bool) error {
+func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, checkVersion bool) error {
 	agents, err := resolveSkillAgents(opts.agents, !opts.project)
 	if err != nil {
 		return err
@@ -92,34 +132,46 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, checkVersion bool) e
 		Global:     !opts.project,
 	}
 
-	bundled := instill.SkillVersion(teamcitycli.SkillsFS)
-
-	if checkVersion && bundled != "" {
-		installed, err := instill.InstalledVersion("teamcity-cli", instillOpts)
-		if err != nil {
-			return err
-		}
-		if installed == bundled {
-			p.Success("Already up to date (%s)", bundled)
-			return nil
-		}
-	}
-
-	results, err := instill.Install(teamcitycli.SkillsFS, instillOpts)
+	names, err := resolveSkillNames(opts.all, args)
 	if err != nil {
 		return err
 	}
 
-	for _, r := range results {
-		switch {
-		case !r.Existed:
-			p.Success("Installed for %s (%s)", r.Agent, bundled)
-		case r.PriorVersion != "" && r.PriorVersion != bundled:
-			p.Success("Updated for %s (%s → %s)", r.Agent, r.PriorVersion, bundled)
-		case r.PriorVersion == "":
-			p.Success("Updated for %s (unversioned → %s)", r.Agent, bundled)
-		default:
-			p.Success("Reinstalled for %s (%s)", r.Agent, bundled)
+	for _, name := range names {
+		skillFS, ok := teamcitycli.SkillSubFS(name)
+		if !ok {
+			return fmt.Errorf("unknown skill %q; run 'teamcity skill list' to see available skills", name)
+		}
+
+		bundled := instill.SkillVersion(skillFS)
+
+		if checkVersion && bundled != "" {
+			installed, err := instill.InstalledVersion(name, instillOpts)
+			if err != nil {
+				return err
+			}
+			if installed == bundled {
+				p.Success("%s: already up to date (%s)", name, bundled)
+				continue
+			}
+		}
+
+		results, err := instill.Install(skillFS, instillOpts)
+		if err != nil {
+			return err
+		}
+
+		for _, r := range results {
+			switch {
+			case !r.Existed:
+				p.Success("%s: installed for %s (%s)", name, r.Agent, bundled)
+			case r.PriorVersion != "" && r.PriorVersion != bundled:
+				p.Success("%s: updated for %s (%s → %s)", name, r.Agent, r.PriorVersion, bundled)
+			case r.PriorVersion == "":
+				p.Success("%s: updated for %s (unversioned → %s)", name, r.Agent, bundled)
+			default:
+				p.Success("%s: reinstalled for %s (%s)", name, r.Agent, bundled)
+			}
 		}
 	}
 	return nil
@@ -129,13 +181,18 @@ func newSkillRemoveCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &skillOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "remove",
-		Short: "Remove the teamcity-cli skill from AI coding agents",
+		Use:   "remove [skill-name...]",
+		Short: "Remove skills from AI coding agents",
+		Long: `Remove TeamCity skills from AI coding agents.
+
+When no skill name is given, removes the default skill (teamcity-cli).
+Use --all to remove every bundled skill.`,
 		Example: `  teamcity skill remove
+  teamcity skill remove --all
   teamcity skill remove --agent claude-code
   teamcity skill remove --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillRemove(f.Printer, opts)
+			return runSkillRemove(f.Printer, opts, args)
 		},
 	}
 
@@ -143,29 +200,62 @@ func newSkillRemoveCmd(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func runSkillRemove(p *output.Printer, opts *skillOptions) error {
+func runSkillRemove(p *output.Printer, opts *skillOptions, args []string) error {
 	agents, err := resolveSkillAgents(opts.agents, !opts.project)
 	if err != nil {
 		return err
 	}
 
-	results, err := instill.Remove("teamcity-cli", instill.Options{
-		Agents:     agents,
-		ProjectDir: ".",
-		Global:     !opts.project,
-	})
+	names, err := resolveSkillNames(opts.all, args)
 	if err != nil {
 		return err
 	}
 
-	for _, r := range results {
-		if r.Existed {
-			p.Success("Removed from %s", r.Agent)
-		} else {
-			p.Info("Not installed for %s, nothing to remove", r.Agent)
+	for _, name := range names {
+		if _, ok := teamcitycli.SkillSubFS(name); !ok {
+			return fmt.Errorf("unknown skill %q; run 'teamcity skill list' to see available skills", name)
+		}
+
+		results, err := instill.Remove(name, instill.Options{
+			Agents:     agents,
+			ProjectDir: ".",
+			Global:     !opts.project,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, r := range results {
+			if r.Existed {
+				p.Success("%s: removed from %s", name, r.Agent)
+			} else {
+				p.Info("%s: not installed for %s, nothing to remove", name, r.Agent)
+			}
 		}
 	}
 	return nil
+}
+
+func resolveSkillNames(all bool, args []string) ([]string, error) {
+	if all && len(args) > 0 {
+		return nil, fmt.Errorf("cannot specify both --all and skill names")
+	}
+	if all {
+		return allSkillNames(), nil
+	}
+	if len(args) == 0 {
+		return []string{teamcitycli.DefaultSkill}, nil
+	}
+	return args, nil
+}
+
+func allSkillNames() []string {
+	skills := teamcitycli.ListSkills()
+	names := make([]string, len(skills))
+	for i, s := range skills {
+		names[i] = s.Name
+	}
+	return names
 }
 
 func resolveSkillAgents(explicit []string, global bool) ([]string, error) {
@@ -198,3 +288,4 @@ func formatAgentList() string {
 	}
 	return fmt.Sprintf("%v", names)
 }
+
