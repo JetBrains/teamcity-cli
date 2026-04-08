@@ -33,6 +33,22 @@ func getCurrentBranch() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+func getHeadRevision() (string, error) {
+	return resolveRevision("HEAD")
+}
+
+func resolveRevision(rev string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", rev)
+	out, err := cmd.Output()
+	if err != nil {
+		return "", tcerrors.WithSuggestion(
+			"failed to resolve revision '"+rev+"'",
+			"Ensure you are in a git repository and the revision exists",
+		)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 func branchExistsOnRemote(branch string) bool {
 	remote := getRemoteForBranch(branch)
 	cmd := exec.Command("git", "ls-remote", "--heads", remote, branch)

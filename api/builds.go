@@ -19,6 +19,7 @@ type BuildsOptions struct {
 	User        string
 	Project     string
 	Number      string
+	Revision    string
 	Favorites   bool
 	Limit       int
 	SinceDate   string
@@ -44,6 +45,7 @@ func (opts BuildsOptions) Locator() *Locator {
 		Add("user", opts.User).
 		Add("affectedProject", opts.Project).
 		Add("number", opts.Number).
+		Add("revision", opts.Revision).
 		Add("sinceDate", opts.SinceDate).
 		Add("untilDate", opts.UntilDate)
 	if opts.Favorites {

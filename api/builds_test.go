@@ -27,6 +27,15 @@ func TestBuildsOptionsLocator(T *testing.T) {
 			},
 		},
 		{
+			name: "revision filter adds revision dimension",
+			opts: BuildsOptions{
+				Revision: "abc1234def5678",
+			},
+			want: []string{
+				"revision:abc1234def5678",
+			},
+		},
+		{
 			name: "favorites use current user star tag locator",
 			opts: BuildsOptions{
 				BuildTypeID: "MyBuild",

@@ -73,3 +73,36 @@ func TestResolveRunListRequestBranchThisRequiresGitRepo(T *testing.T) {
 	require.Error(T, err)
 	assert.Contains(T, err.Error(), "git repository")
 }
+
+func TestResolveRunListRequestRevisionAtHead(T *testing.T) {
+	oldIsGitRepo := runListIsGitRepoFn
+	oldHeadRevision := runListHeadRevisionFn
+	T.Cleanup(func() {
+		runListIsGitRepoFn = oldIsGitRepo
+		runListHeadRevisionFn = oldHeadRevision
+	})
+
+	runListIsGitRepoFn = func() bool { return true }
+	runListHeadRevisionFn = func() (string, error) { return "deadbeef12345678", nil }
+
+	req, err := resolveRunListRequest(nil, &runListOptions{
+		revision: "@head",
+		limit:    30,
+	}, nil)
+	require.NoError(T, err)
+	assert.Equal(T, "deadbeef12345678", req.builds.Revision)
+}
+
+func TestResolveRunListRequestRevisionAtHeadRequiresGitRepo(T *testing.T) {
+	oldIsGitRepo := runListIsGitRepoFn
+	T.Cleanup(func() { runListIsGitRepoFn = oldIsGitRepo })
+
+	runListIsGitRepoFn = func() bool { return false }
+
+	_, err := resolveRunListRequest(nil, &runListOptions{
+		revision: "@head",
+		limit:    30,
+	}, nil)
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "git repository")
+}

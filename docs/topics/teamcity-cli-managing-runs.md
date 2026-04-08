@@ -66,6 +66,23 @@ teamcity run list --job MyProject_Build --status failure --branch main
 
 > The `@me` shortcut substitutes the currently authenticated username.
 
+### Filtering by revision
+
+Use `--revision` to find all builds that include a specific VCS commit:
+
+```Shell
+# All builds for a commit
+teamcity run list --revision abc1234
+
+# Scoped to a specific job
+teamcity run list --revision abc1234 --job MyProject_Build
+
+# Auto-detect the current HEAD commit
+teamcity run list --revision @head
+```
+
+> The `@head` shortcut resolves to the current `HEAD` commit SHA via `git rev-parse`.
+
 ### Time-based filtering
 
 Use `--since` and `--until` to filter by time:
@@ -183,6 +200,18 @@ Show favorite builds for the current user.
 <td>
 
 Filter by the user who triggered the build. Use `@me` for the current user.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--revision`
+
+</td>
+<td>
+
+Filter by VCS revision (commit SHA). Use `@head` to resolve the current git HEAD.
 
 </td>
 </tr>
