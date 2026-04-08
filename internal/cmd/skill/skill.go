@@ -131,13 +131,12 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, check
 		return err
 	}
 
+	versions := skillVersions()
 	for _, name := range names {
-		if !teamcitycli.HasSkill(name) {
+		if _, ok := versions[name]; !ok {
 			return fmt.Errorf("unknown skill %q; run 'teamcity skill list' to see available skills", name)
 		}
 	}
-
-	bundled := instill.SkillVersion(teamcitycli.SkillsFS)
 
 	instillOpts := instill.Options{
 		Agents:     agents,
@@ -146,9 +145,14 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, check
 		Global:     !opts.project,
 	}
 
-	if checkVersion && bundled != "" {
+	if checkVersion {
 		allUpToDate := true
 		for _, name := range names {
+			bundled := versions[name]
+			if bundled == "" {
+				allUpToDate = false
+				break
+			}
 			installed, err := instill.InstalledVersion(name, instillOpts)
 			if err != nil {
 				return err
@@ -160,7 +164,7 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, check
 		}
 		if allUpToDate {
 			for _, name := range names {
-				p.Success("Skill %s already up to date (%s)", name, bundled)
+				p.Success("Skill %s already up to date (%s)", name, versions[name])
 			}
 			return nil
 		}
@@ -172,6 +176,7 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, check
 	}
 
 	for _, r := range results {
+		bundled := versions[r.Skill]
 		switch {
 		case !r.Existed:
 			p.Success("Installed %s for %s (%s)", r.Skill, r.Agent, bundled)
@@ -265,6 +270,15 @@ func allSkillNames() []string {
 		names[i] = s.Name
 	}
 	return names
+}
+
+func skillVersions() map[string]string {
+	skills := teamcitycli.ListSkills()
+	m := make(map[string]string, len(skills))
+	for _, s := range skills {
+		m[s.Name] = s.Version
+	}
+	return m
 }
 
 func resolveSkillAgents(explicit []string, global bool) ([]string, error) {
