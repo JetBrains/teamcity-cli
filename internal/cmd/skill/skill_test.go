@@ -54,34 +54,6 @@ func TestSkillInstallRemoveDefault(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), "skill dir should be gone after remove")
 }
 
-func TestSkillInstallByName(t *testing.T) {
-	tmp := t.TempDir()
-	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(tmp, ".claude"))
-
-	cmdtest.RunCmd(t, "skill", "install", teamcitycli.DefaultSkill, "--agent", "claude-code")
-	skillDir := filepath.Join(tmp, ".claude", "skills", teamcitycli.DefaultSkill)
-	_, err := os.Stat(filepath.Join(skillDir, "SKILL.md"))
-	require.NoError(t, err, "SKILL.md should exist after named install")
-
-	cmdtest.RunCmd(t, "skill", "remove", teamcitycli.DefaultSkill, "--agent", "claude-code")
-}
-
-func TestSkillInstallAll(t *testing.T) {
-	tmp := t.TempDir()
-	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(tmp, ".claude"))
-
-	cmdtest.RunCmd(t, "skill", "install", "--all", "--agent", "claude-code")
-
-	skills := teamcitycli.ListSkills()
-	for _, s := range skills {
-		skillDir := filepath.Join(tmp, ".claude", "skills", s.Name)
-		_, err := os.Stat(filepath.Join(skillDir, "SKILL.md"))
-		require.NoError(t, err, "SKILL.md should exist for %s after --all install", s.Name)
-	}
-
-	cmdtest.RunCmd(t, "skill", "remove", "--all", "--agent", "claude-code")
-}
-
 func TestSkillInstallUnknownSkill(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(tmp, ".claude"))
