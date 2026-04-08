@@ -137,6 +137,16 @@ var PipelineFields = FieldSpec{
 	Default:   []string{"id", "name", "parentProject.id", "parentProject.name", "headBuildType.id", "jobs.count"},
 }
 
+var SSHKeyFields = FieldSpec{
+	Available: []string{"name", "encrypted", "publicKey"},
+	Default:   []string{"name", "encrypted", "publicKey"},
+}
+
+var ConnectionFields = FieldSpec{
+	Available: []string{"id", "type", "properties"},
+	Default:   []string{"id", "type", "properties"},
+}
+
 var CloudProfileFields = FieldSpec{
 	Available: []string{"id", "name", "cloudProviderId", "href", "project.id", "project.name"},
 	Default:   []string{"id", "name", "cloudProviderId", "href"},

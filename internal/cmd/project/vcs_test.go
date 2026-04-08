@@ -81,3 +81,46 @@ func TestVcsDelete(T *testing.T) {
 	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "delete", "TestProject_Repo", "--force")
 	assert.Contains(T, out, "Deleted VCS root TestProject_Repo")
 }
+
+func TestVcsCreateAnonymous(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	f := ts.Factory
+
+	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "create",
+		"--url", "https://github.com/org/repo.git",
+		"--auth", "anonymous",
+		"--project", "TestProject",
+	)
+	assert.Contains(T, out, "Testing connection...")
+	assert.Contains(T, out, "Created VCS root")
+	assert.Contains(T, out, "TestProject_NewRoot")
+}
+
+func TestVcsCreateNoTest(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	f := ts.Factory
+
+	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "create",
+		"--url", "https://github.com/org/repo.git",
+		"--auth", "anonymous",
+		"--no-test",
+	)
+	assert.NotContains(T, out, "Testing connection")
+	assert.Contains(T, out, "Created VCS root")
+}
+
+func TestVcsCreateMissingURL(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	f := ts.Factory
+
+	cmdtest.RunCmdWithFactoryExpectErr(T, f, "url", "project", "vcs", "create", "--auth", "anonymous")
+}
+
+func TestVcsTest(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	f := ts.Factory
+
+	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "test", "TestProject_Repo")
+	assert.Contains(T, out, "Testing connection...")
+	assert.Contains(T, out, "Connection to")
+}

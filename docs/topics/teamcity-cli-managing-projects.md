@@ -196,10 +196,70 @@ The view command shows all VCS root properties with human-readable labels. Secur
 
 ### Creating a VCS root
 
-In the current version, VCS root creation opens the TeamCity UI in your browser:
+Create a Git VCS root with an interactive wizard or flags:
 
 ```Shell
 teamcity project vcs create --project MyProject
+```
+
+The wizard prompts for the repository URL, display name, and authentication method. Six auth methods are supported:
+
+```Shell
+# Anonymous (public repos)
+teamcity project vcs create --url https://github.com/org/repo.git --auth anonymous
+
+# Password / Personal Access Token
+teamcity project vcs create --url https://github.com/org/repo.git \
+  --auth password --username oauth2 --password ghp_xxx
+
+# SSH key uploaded to TeamCity
+teamcity project vcs create --url git@github.com:org/repo.git \
+  --auth ssh-key --ssh-key-name my-deploy-key
+
+# SSH key from the build agent's default key
+teamcity project vcs create --url git@github.com:org/repo.git --auth ssh-agent
+
+# SSH key at a custom path on the build agent
+teamcity project vcs create --url git@github.com:org/repo.git \
+  --auth ssh-file --key-path /path/to/key
+
+# Access token via a project connection
+teamcity project vcs create --url https://github.com/org/repo.git \
+  --auth token --connection-id PROJECT_EXT_1
+```
+
+By default, the command tests the connection before creating. Skip with `--no-test`:
+
+```Shell
+teamcity project vcs create --url https://github.com/org/repo.git --auth anonymous --no-test
+```
+
+#### vcs create flags
+
+<table>
+<tr><td>Flag</td><td>Description</td></tr>
+<tr><td><code>--url</code></td><td>Repository URL</td></tr>
+<tr><td><code>--name</code></td><td>Display name (auto-generated from URL if omitted)</td></tr>
+<tr><td><code>-p</code>, <code>--project</code></td><td>Project ID (default: _Root)</td></tr>
+<tr><td><code>--auth</code></td><td>Auth method: <code>password</code>, <code>ssh-key</code>, <code>ssh-agent</code>, <code>ssh-file</code>, <code>token</code>, <code>anonymous</code></td></tr>
+<tr><td><code>--username</code></td><td>Username (for password auth)</td></tr>
+<tr><td><code>--password</code></td><td>Password or personal access token</td></tr>
+<tr><td><code>--stdin</code></td><td>Read password from stdin</td></tr>
+<tr><td><code>--ssh-key-name</code></td><td>Name of SSH key uploaded to TeamCity</td></tr>
+<tr><td><code>--key-path</code></td><td>Path to SSH key file on the build agent</td></tr>
+<tr><td><code>--passphrase</code></td><td>SSH key passphrase</td></tr>
+<tr><td><code>--connection-id</code></td><td>OAuth connection ID</td></tr>
+<tr><td><code>--branch</code></td><td>Default branch (default: <code>refs/heads/main</code>)</td></tr>
+<tr><td><code>--branch-spec</code></td><td>Branch specification</td></tr>
+<tr><td><code>--no-test</code></td><td>Skip connection test before creating</td></tr>
+</table>
+
+### Testing a VCS root connection
+
+Test whether an existing VCS root can connect to the repository:
+
+```Shell
+teamcity project vcs test MyProject_GitHubRepo
 ```
 
 ### Deleting a VCS root
@@ -207,6 +267,53 @@ teamcity project vcs create --project MyProject
 ```Shell
 teamcity project vcs delete MyProject_GitHubRepo
 teamcity project vcs delete MyProject_GitHubRepo --force  # skip confirmation
+```
+
+## Managing SSH keys
+
+SSH keys uploaded to a project can be used for VCS root authentication (`TEAMCITY_SSH_KEY` auth method). Keys are inherited by child projects.
+
+### Listing SSH keys
+
+```Shell
+teamcity project ssh list --project MyProject
+teamcity project ssh list --project MyProject --json
+```
+
+### Generating an SSH key pair
+
+Generate an ed25519 or RSA key pair directly in TeamCity and print the public key:
+
+```Shell
+teamcity project ssh generate --name deploy-key --project MyProject
+teamcity project ssh generate --name deploy-key --type rsa --project MyProject
+```
+
+Add the printed public key as a deploy key in your Git hosting provider.
+
+### Uploading an SSH key
+
+```Shell
+teamcity project ssh upload ~/.ssh/id_ed25519 --project MyProject
+teamcity project ssh upload key.pem --name my-deploy-key --project MyProject
+```
+
+### Deleting an SSH key
+
+```Shell
+teamcity project ssh delete my-deploy-key --project MyProject
+teamcity project ssh delete my-deploy-key --project MyProject --force
+```
+
+## Project connections
+
+Connections (OAuth providers, Docker registries, cloud integrations) are configured at the project level. The CLI can list them for use with `vcs create --auth token`.
+
+### Listing connections
+
+```Shell
+teamcity project connection list --project MyProject
+teamcity project connection list --project MyProject --json
 ```
 
 ## Managing project parameters

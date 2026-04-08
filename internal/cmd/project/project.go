@@ -33,6 +33,8 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newProjectSettingsCmd(f))
 	cmd.AddCommand(newCloudCmd(f))
 	cmd.AddCommand(newVcsCmd(f))
+	cmd.AddCommand(newSSHCmd(f))
+	cmd.AddCommand(newConnectionCmd(f))
 	cmd.AddCommand(param.NewCmd(f, "project", param.ProjectParamAPI))
 
 	return cmd

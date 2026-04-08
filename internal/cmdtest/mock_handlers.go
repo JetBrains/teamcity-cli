@@ -647,9 +647,81 @@ func SetupMockClient(t *testing.T) *TestServer {
 		})
 	})
 
+	ts.Handle("POST /app/rest/vcs-roots", func(w http.ResponseWriter, r *http.Request) {
+		var root api.VcsRoot
+		if err := json.NewDecoder(r.Body).Decode(&root); err != nil {
+			Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		root.ID = "TestProject_NewRoot"
+		root.Href = "/app/rest/vcs-roots/id:TestProject_NewRoot"
+		JSON(w, root)
+	})
+
 	ts.Handle("DELETE /app/rest/vcs-roots/id:", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
+
+	// Test VCS Connection
+	ts.Handle("POST /app/pipeline/repository/testConnection", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.TestConnectionResult{Status: "OK"})
+	})
+
+	// SSH Keys
+	ts.Handle("GET /app/rest/projects/id:TestProject/sshKeys", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.SSHKeyList{
+			SSHKey: []api.SSHKey{
+				{Name: "deploy-key", Encrypted: false, PublicKey: "ssh-ed25519 AAAAC3..."},
+				{Name: "backup-key", Encrypted: true, PublicKey: "ssh-rsa AAAAB3..."},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/projects/id:_Root/sshKeys", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.SSHKeyList{SSHKey: []api.SSHKey{}})
+	})
+
+	ts.Handle("POST /app/rest/projects/id:TestProject/sshKeys/generated", func(w http.ResponseWriter, r *http.Request) {
+		keyName := r.URL.Query().Get("keyName")
+		JSON(w, api.SSHKey{
+			Name:      keyName,
+			Encrypted: false,
+			PublicKey: "ssh-ed25519 AAAAC3_generated_key",
+			Project:   &api.Project{ID: "TestProject", Name: "Test Project"},
+		})
+	})
+
+	ts.Handle("POST /app/rest/projects/id:TestProject/sshKeys/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ts.Handle("DELETE /app/rest/projects/id:TestProject/sshKeys/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	// Project Connections
+	ts.Handle("GET /app/rest/projects/id:TestProject/projectFeatures", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.ProjectFeatureList{
+			Count: 1,
+			ProjectFeature: []api.ProjectFeature{
+				{
+					ID:   "PROJECT_EXT_1",
+					Type: "OAuthProvider",
+					Properties: &api.PropertyList{
+						Property: []api.Property{
+							{Name: "displayName", Value: "GitHub App"},
+							{Name: "providerType", Value: "GitHubApp"},
+						},
+					},
+				},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/projects/id:_Root/projectFeatures", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.ProjectFeatureList{Count: 0, ProjectFeature: []api.ProjectFeature{}})
+	})
+
 	// Pipelines
 	ts.Handle("GET /app/rest/pipelines", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, api.PipelineList{
