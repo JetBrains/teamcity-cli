@@ -1,0 +1,21 @@
+# Test pipeline list subcommand.
+
+exec teamcity pipeline list --limit 5 --no-input
+stdout 'ID'
+stdout 'NAME'
+stdout 'PROJECT'
+stdout 'JOBS'
+! stderr 'Error'
+
+# --json
+exec teamcity pipeline list --limit 2 --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --plain
+exec teamcity pipeline list --plain --no-input
+! stderr 'Error'
+
+# --plain --no-header
+exec teamcity pipeline list --plain --no-header --no-input
+! stderr 'Error'

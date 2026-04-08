@@ -91,6 +91,7 @@ var typeMapping = map[string]string{
 // - AgentRef: simplified reference type we created for requests
 // - BuildTypeRef: simplified reference type we created for requests
 // - APIError, APIErrorResponse: error parsing types, not in swagger
+
 func TestAPIDrift(t *testing.T) {
 	serverURL := os.Getenv("TEAMCITY_URL")
 	if serverURL == "" {
