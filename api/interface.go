@@ -132,7 +132,18 @@ type ClientInterface interface {
 	// VCS Roots
 	GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error)
 	GetVcsRoot(id string) (*VcsRoot, error)
+	CreateVcsRoot(root VcsRoot) (*VcsRoot, error)
 	DeleteVcsRoot(id string) error
+	TestVcsConnection(req TestConnectionRequest, projectID string) (*TestConnectionResult, error)
+
+	// SSH Keys
+	GetSSHKeys(projectID string) (*SSHKeyList, error)
+	UploadSSHKey(projectID, name string, privateKey []byte) error
+	GenerateSSHKey(projectID, name, keyType string) (*SSHKey, error)
+	DeleteSSHKey(projectID, name string) error
+
+	// Project Connections
+	GetProjectConnections(projectID string) (*ProjectFeatureList, error)
 
 	// Raw API access
 	RawRequest(method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)

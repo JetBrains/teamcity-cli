@@ -587,12 +587,72 @@ Display project hierarchy as a tree
 <tr>
 <td>
 
+`teamcity project connection list`
+
+</td>
+<td>
+
+List project connections
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project ssh delete`
+
+</td>
+<td>
+
+Delete an SSH key
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project ssh generate`
+
+</td>
+<td>
+
+Generate an SSH key pair
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project ssh list`
+
+</td>
+<td>
+
+List SSH keys in a project
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project ssh upload`
+
+</td>
+<td>
+
+Upload an SSH private key
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project vcs create`
 
 </td>
 <td>
 
-Open TeamCity to add a VCS root
+Create a Git VCS root with auth configuration
 
 </td>
 </tr>
@@ -617,6 +677,18 @@ Delete a VCS root
 <td>
 
 List VCS roots
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project vcs test`
+
+</td>
+<td>
+
+Test a VCS root connection
 
 </td>
 </tr>

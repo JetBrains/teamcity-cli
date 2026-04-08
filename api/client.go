@@ -292,6 +292,9 @@ func (c *Client) SupportsFeature(feature string) bool {
 		return server.VersionMajor >= 2020
 	case "pipelines":
 		return server.VersionMajor >= 2024
+	case "vcs_test_connection":
+		return server.VersionMajor > 2024 ||
+			(server.VersionMajor == 2024 && server.VersionMinor >= 12)
 	default:
 		return true
 	}

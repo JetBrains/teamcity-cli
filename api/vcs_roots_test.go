@@ -69,3 +69,55 @@ func TestDeleteVcsRoot(t *testing.T) {
 	err := client.DeleteVcsRoot("vcs1")
 	require.NoError(t, err)
 }
+
+func TestCreateVcsRoot(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/app/rest/vcs-roots", r.URL.Path)
+
+		var root VcsRoot
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&root))
+		assert.Equal(t, "My New Root", root.Name)
+		assert.Equal(t, "jetbrains.git", root.VcsName)
+
+		root.ID = "TestProject_MyNewRoot"
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(root)
+	})
+
+	root, err := client.CreateVcsRoot(VcsRoot{
+		Name:    "My New Root",
+		VcsName: "jetbrains.git",
+		Project: &Project{ID: "TestProject"},
+		Properties: &PropertyList{
+			Property: []Property{
+				{Name: "url", Value: "https://github.com/org/repo.git"},
+				{Name: "branch", Value: "refs/heads/main"},
+				{Name: "authMethod", Value: "ANONYMOUS"},
+			},
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "TestProject_MyNewRoot", root.ID)
+	assert.Equal(t, "My New Root", root.Name)
+}
+
+func TestTestVcsConnection(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Contains(t, r.URL.Path, "/app/pipeline/repository/testConnection")
+		assert.Equal(t, "P1", r.URL.Query().Get("parentProjectExtId"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(TestConnectionResult{Status: "OK"})
+	})
+
+	result, err := client.TestVcsConnection(TestConnectionRequest{
+		URL:     "https://github.com/org/repo.git",
+		VcsName: "jetbrains.git",
+	}, "P1")
+	require.NoError(t, err)
+	assert.Equal(t, "OK", result.Status)
+}
+

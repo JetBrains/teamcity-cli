@@ -434,7 +434,7 @@ type CloudImageRef struct {
 
 // VcsRoot represents a TeamCity VCS root
 type VcsRoot struct {
-	ID         string        `json:"id"`
+	ID         string        `json:"id,omitempty"`
 	Name       string        `json:"name,omitempty"`
 	VcsName    string        `json:"vcsName,omitempty"`
 	Href       string        `json:"href,omitempty"`
@@ -453,6 +453,61 @@ type VcsRootsOptions struct {
 	Project string // affectedProject locator
 	Limit   int
 	Fields  []string
+}
+
+// SSHKey represents an SSH key uploaded to a TeamCity project
+type SSHKey struct {
+	Name      string   `json:"name"`
+	Encrypted bool     `json:"encrypted"`
+	PublicKey string   `json:"publicKey,omitempty"`
+	Project   *Project `json:"project,omitempty"`
+}
+
+// SSHKeyList represents a list of SSH keys
+type SSHKeyList struct {
+	SSHKey []SSHKey `json:"sshKey"`
+}
+
+// ProjectFeature represents a project-level feature (connection, etc.)
+type ProjectFeature struct {
+	ID         string        `json:"id"`
+	Type       string        `json:"type"`
+	Properties *PropertyList `json:"properties,omitempty"`
+}
+
+// ProjectFeatureList represents a list of project features
+type ProjectFeatureList struct {
+	Count          int              `json:"count"`
+	ProjectFeature []ProjectFeature `json:"projectFeature"`
+}
+
+// SSHKeyRef references an SSH key by name for test connection requests
+type SSHKeyRef struct {
+	Name string `json:"name"`
+}
+
+// TestConnectionRequest represents a request to test a VCS connection
+type TestConnectionRequest struct {
+	URL          string     `json:"url"`
+	VcsName      string     `json:"vcsName"`
+	IsPrivate    bool       `json:"isPrivate"`
+	ConnectionID string     `json:"connectionId,omitempty"`
+	Username     string     `json:"username,omitempty"`
+	Password     string     `json:"password,omitempty"`
+	SSHKey       *SSHKeyRef `json:"sshKey,omitempty"`
+}
+
+// TestConnectionResult represents the result of a VCS connection test
+type TestConnectionResult struct {
+	Status string                `json:"status"`
+	Errors []TestConnectionError `json:"errors"`
+}
+
+// TestConnectionError represents an error from a connection test
+type TestConnectionError struct {
+	Message           string `json:"message"`
+	StackTrace        string `json:"stackTrace,omitempty"`
+	AdditionalMessage string `json:"additionalMessage,omitempty"`
 }
 
 // Pipeline represents a TeamCity pipeline (YAML configuration)

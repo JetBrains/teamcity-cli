@@ -1,7 +1,11 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 )
 
@@ -40,4 +44,56 @@ func (c *Client) GetVcsRoot(id string) (*VcsRoot, error) {
 func (c *Client) DeleteVcsRoot(id string) error {
 	path := fmt.Sprintf("/app/rest/vcs-roots/id:%s", id)
 	return c.doNoContent("DELETE", path, nil, "")
+}
+
+// CreateVcsRoot creates a new VCS root
+func (c *Client) CreateVcsRoot(root VcsRoot) (*VcsRoot, error) {
+	body, err := json.Marshal(root)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal VCS root: %w", err)
+	}
+
+	var result VcsRoot
+	if err := c.post("/app/rest/vcs-roots", bytes.NewReader(body), &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// TestVcsConnection tests a VCS connection before creating a root.
+// Uses the pipeline endpoint which returns HTTP 200 with status/errors in the body.
+func (c *Client) TestVcsConnection(req TestConnectionRequest, projectID string) (*TestConnectionResult, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	path := fmt.Sprintf("/app/pipeline/repository/testConnection?parentProjectExtId=%s", projectID)
+	resp, err := c.doRequest("POST", path, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		msg := ExtractErrorMessage(respBody)
+		if msg == "" {
+			msg = fmt.Sprintf("connection test failed (status %d)", resp.StatusCode)
+		}
+		return &TestConnectionResult{
+			Status: "ERROR",
+			Errors: []TestConnectionError{{Message: msg}},
+		}, nil
+	}
+
+	var result TestConnectionResult
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse test connection response: %w", err)
+	}
+	return &result, nil
 }
