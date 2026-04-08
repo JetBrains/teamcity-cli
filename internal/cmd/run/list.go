@@ -18,12 +18,14 @@ var runListConfigCurrentUserFn = config.GetCurrentUser
 var runListAPICurrentUserFn = func(client api.ClientInterface) (*api.User, error) { return client.GetCurrentUser() }
 var runListIsGitRepoFn = isGitRepo
 var runListCurrentBranchFn = getCurrentBranch
+var runListHeadRevisionFn = getHeadRevision // used in tests
 
 type runListOptions struct {
 	job        string
 	branch     string
 	status     string
 	user       string
+	revision   string
 	favorites  bool
 	project    string
 	limit      int
@@ -49,6 +51,8 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run list --status failure --limit 10
   teamcity run list --project Falcon --branch main
   teamcity run list --branch @this
+  teamcity run list --revision abc1234
+  teamcity run list --revision @head --job Falcon_Build
   teamcity run list --since 24h
   teamcity run list --json
   teamcity run list --json=id,status,webUrl
@@ -62,6 +66,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Filter by branch name (or '@this' for current git branch)")
 	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running, queued, error, unknown)")
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
+	cmd.Flags().StringVar(&opts.revision, "revision", "", "Filter by VCS revision/commit SHA (or '@head' for current HEAD)")
 	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorite runs for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of runs")
@@ -214,6 +219,11 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 		return nil, err
 	}
 
+	revision, err := resolveRunListRevision(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	return &runListRequest{
 		builds: api.BuildsOptions{
 			BuildTypeID: opts.job,
@@ -222,6 +232,7 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 			State:       stateFilter,
 			User:        user,
 			Project:     opts.project,
+			Revision:    revision,
 			Favorites:   opts.favorites,
 			Limit:       opts.limit,
 			SinceDate:   sinceDate,
@@ -313,6 +324,21 @@ func resolveRunListDateRange(opts *runListOptions) (sinceDate, untilDate string,
 	}
 
 	return sinceDate, untilDate, nil
+}
+
+var runListResolveRevisionFn = resolveRevision
+
+func resolveRunListRevision(opts *runListOptions) (string, error) {
+	if strings.EqualFold(opts.revision, "@head") {
+		if !runListIsGitRepoFn() {
+			return "", fmt.Errorf("--revision @head requires a git repository")
+		}
+		return runListHeadRevisionFn()
+	}
+	if opts.revision != "" && len(opts.revision) < 40 && runListIsGitRepoFn() {
+		return runListResolveRevisionFn(opts.revision)
+	}
+	return opts.revision, nil
 }
 
 func resolveRunListWebPath(opts *runListOptions) string {
