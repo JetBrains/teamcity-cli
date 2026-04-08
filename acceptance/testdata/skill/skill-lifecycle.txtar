@@ -2,7 +2,7 @@
 
 # Install skill to project directory for claude-code agent
 exec teamcity skill install --agent claude-code --project --no-input
-stdout 'installed'
+stdout 'Installed'
 ! stderr 'Error'
 
 # Update should report already up to date
@@ -12,7 +12,7 @@ stdout 'up to date'
 
 # Remove the skill
 exec teamcity skill remove --agent claude-code --project --no-input
-stdout 'removed'
+stdout 'Removed'
 ! stderr 'Error'
 
 # Remove again should say not installed

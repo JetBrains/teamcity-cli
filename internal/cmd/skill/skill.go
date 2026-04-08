@@ -151,7 +151,7 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, check
 				return err
 			}
 			if installed == bundled {
-				p.Success("%s: already up to date (%s)", name, bundled)
+				p.Success("Skill %s already up to date (%s)", name, bundled)
 				continue
 			}
 		}
@@ -164,13 +164,13 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, check
 		for _, r := range results {
 			switch {
 			case !r.Existed:
-				p.Success("%s: installed for %s (%s)", name, r.Agent, bundled)
+				p.Success("Installed %s for %s (%s)", name, r.Agent, bundled)
 			case r.PriorVersion != "" && r.PriorVersion != bundled:
-				p.Success("%s: updated for %s (%s → %s)", name, r.Agent, r.PriorVersion, bundled)
+				p.Success("Updated %s for %s (%s → %s)", name, r.Agent, r.PriorVersion, bundled)
 			case r.PriorVersion == "":
-				p.Success("%s: updated for %s (unversioned → %s)", name, r.Agent, bundled)
+				p.Success("Updated %s for %s (unversioned → %s)", name, r.Agent, bundled)
 			default:
-				p.Success("%s: reinstalled for %s (%s)", name, r.Agent, bundled)
+				p.Success("Reinstalled %s for %s (%s)", name, r.Agent, bundled)
 			}
 		}
 	}
@@ -227,9 +227,9 @@ func runSkillRemove(p *output.Printer, opts *skillOptions, args []string) error 
 
 		for _, r := range results {
 			if r.Existed {
-				p.Success("%s: removed from %s", name, r.Agent)
+				p.Success("Removed %s from %s", name, r.Agent)
 			} else {
-				p.Info("%s: not installed for %s, nothing to remove", name, r.Agent)
+				p.Info("Skill %s not installed for %s, nothing to remove", name, r.Agent)
 			}
 		}
 	}
