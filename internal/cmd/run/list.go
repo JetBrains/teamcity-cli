@@ -372,9 +372,13 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	reused, _ := client.GetBuildUsedByOtherBuilds(fmt.Sprintf("%d", build.ID))
 	build.UsedByOtherBuilds = reused
 
+	pipelineRun, _ := client.GetBuildPipelineRun(fmt.Sprintf("%d", build.ID))
+
 	icon := output.StatusIcon(build.Status, build.State)
 	jobName := build.BuildTypeID
-	if build.BuildType != nil {
+	if pipelineRun != nil && pipelineRun.Pipeline != nil && pipelineRun.Pipeline.Name != "" {
+		jobName = pipelineRun.Pipeline.Name + " ⬡"
+	} else if build.BuildType != nil {
 		jobName = build.BuildType.Name
 	}
 
@@ -438,6 +442,24 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 			tagNames = append(tagNames, t.Name)
 		}
 		_, _ = fmt.Fprintf(p.Out, "\nTags: %s\n", strings.Join(tagNames, ", "))
+	}
+
+	if pipelineRun != nil && pipelineRun.Jobs != nil && len(pipelineRun.Jobs.Job) > 0 {
+		maxIDLen := 0
+		for _, j := range pipelineRun.Jobs.Job {
+			if len(j.ID) > maxIDLen {
+				maxIDLen = len(j.ID)
+			}
+		}
+		_, _ = fmt.Fprintf(p.Out, "\n%s:\n", output.Cyan("Pipeline Jobs"))
+		for _, j := range pipelineRun.Jobs.Job {
+			padded := fmt.Sprintf("%-*s", maxIDLen+2, j.ID)
+			buildInfo := ""
+			if j.Build != nil && j.Build.ID > 0 {
+				buildInfo = fmt.Sprintf(" (build %d)", j.Build.ID)
+			}
+			_, _ = fmt.Fprintf(p.Out, "  %s %s%s\n", output.Faint(padded), j.Name, output.Faint(buildInfo))
+		}
 	}
 
 	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), output.Green(build.WebURL))

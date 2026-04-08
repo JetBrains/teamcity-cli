@@ -132,6 +132,11 @@ var PoolFields = FieldSpec{
 	Default:   []string{"id", "name", "maxAgents"},
 }
 
+var PipelineFields = FieldSpec{
+	Available: []string{"id", "name", "webUrl", "parentProject.id", "parentProject.name", "headBuildType.id", "jobs.count"},
+	Default:   []string{"id", "name", "parentProject.id", "parentProject.name", "headBuildType.id", "jobs.count"},
+}
+
 var CloudProfileFields = FieldSpec{
 	Available: []string{"id", "name", "cloudProviderId", "href", "project.id", "project.name"},
 	Default:   []string{"id", "name", "cloudProviderId", "href"},

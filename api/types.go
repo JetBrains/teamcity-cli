@@ -455,6 +455,91 @@ type VcsRootsOptions struct {
 	Fields  []string
 }
 
+// Pipeline represents a TeamCity pipeline (YAML configuration)
+type Pipeline struct {
+	ID            string        `json:"id"`
+	Name          string        `json:"name,omitempty"`
+	WebURL        string        `json:"webUrl,omitempty"`
+	HeadBuildType *BuildTypeRef `json:"headBuildType,omitempty"`
+	Jobs          *PipelineJobs `json:"jobs,omitempty"`
+	ParentProject *ProjectRef   `json:"parentProject,omitempty"`
+	YAML          string        `json:"yaml,omitempty"`
+}
+
+// PipelineJobs represents the jobs within a pipeline
+type PipelineJobs struct {
+	Count int           `json:"count"`
+	Job   []PipelineJob `json:"job,omitempty"`
+}
+
+// PipelineJob represents a single job in a pipeline (uses YAML keys, not generated IDs)
+type PipelineJob struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// PipelineList represents a list of pipelines
+type PipelineList struct {
+	Count     int        `json:"count"`
+	Pipelines []Pipeline `json:"pipeline,omitempty"`
+}
+
+// ProjectRef is a lightweight reference to a project
+type ProjectRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name,omitempty"`
+}
+
+// CreatePipelineRequest represents a request to create a pipeline
+type CreatePipelineRequest struct {
+	Name    string                    `json:"name"`
+	YAML    string                    `json:"yaml"`
+	VcsRoot *PipelineVcsRootRef       `json:"vcsRoot,omitempty"`
+}
+
+// PipelineVcsRootRef references an existing VCS root for pipeline creation
+type PipelineVcsRootRef struct {
+	ExternalVcsRootID string `json:"externalVcsRootId"`
+}
+
+// PipelinesOptions represents options for listing pipelines
+type PipelinesOptions struct {
+	Project string
+	Limit   int
+	Fields  []string
+}
+
+// PipelineRun represents pipeline execution metadata on a build
+type PipelineRun struct {
+	Number   string           `json:"number,omitempty"`
+	Pipeline *PipelineRef     `json:"pipeline,omitempty"`
+	Jobs     *PipelineRunJobs `json:"jobs,omitempty"`
+}
+
+// PipelineRef is a lightweight reference to a pipeline
+type PipelineRef struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+// PipelineRunJobs represents jobs within a pipeline run
+type PipelineRunJobs struct {
+	Count int              `json:"count,omitempty"`
+	Job   []PipelineRunJob `json:"job,omitempty"`
+}
+
+// PipelineRunJob represents a job within a pipeline run
+type PipelineRunJob struct {
+	ID    string    `json:"id,omitempty"`
+	Name  string    `json:"name,omitempty"`
+	Build *BuildRef `json:"build,omitempty"`
+}
+
+// BuildRef is a lightweight reference to a build
+type BuildRef struct {
+	ID int `json:"id,omitempty"`
+}
+
 // APIError represents an error from TeamCity's REST API
 type APIError struct {
 	Message string `json:"message"`

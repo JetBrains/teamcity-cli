@@ -650,6 +650,57 @@ func SetupMockClient(t *testing.T) *TestServer {
 	ts.Handle("DELETE /app/rest/vcs-roots/id:", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
+	// Pipelines
+	ts.Handle("GET /app/rest/pipelines", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.PipelineList{
+			Count: 1,
+			Pipelines: []api.Pipeline{
+				{
+					ID:   "TestProject_CI",
+					Name: "CI",
+					ParentProject: &api.ProjectRef{
+						ID:   "TestProject",
+						Name: "Test Project",
+					},
+					HeadBuildType: &api.BuildTypeRef{ID: "TestProject_CI"},
+					Jobs: &api.PipelineJobs{
+						Count: 2,
+						Job: []api.PipelineJob{
+							{ID: "build", Name: "Build"},
+							{ID: "test", Name: "Test"},
+						},
+					},
+				},
+			},
+		})
+	})
+
+	ts.Handle("GET /app/rest/pipelines/", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.Pipeline{
+			ID:   "TestProject_CI",
+			Name: "CI",
+			ParentProject: &api.ProjectRef{
+				ID:   "TestProject",
+				Name: "Test Project",
+			},
+			HeadBuildType: &api.BuildTypeRef{ID: "TestProject_CI"},
+			Jobs: &api.PipelineJobs{
+				Count: 2,
+				Job: []api.PipelineJob{
+					{ID: "build", Name: "Build"},
+					{ID: "test", Name: "Test"},
+				},
+			},
+		})
+	})
+
+	ts.Handle("POST /app/pipeline/schema/generate", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, map[string]any{
+			"type":       "object",
+			"properties": map[string]any{},
+		})
+	})
+
 	config.SetUserForServer(ts.URL, "admin")
 
 	return ts

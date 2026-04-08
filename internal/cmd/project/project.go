@@ -358,6 +358,28 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int) e
 	}
 
 	var jobsByProject map[string][]api.BuildType
+	var pipelinesByProject map[string][]api.Pipeline
+	pipelineProjectIDs := map[string]bool{}
+	pipelineHeadJobIDs := map[string]bool{}
+
+	pipelines, pipelineErr := client.GetPipelines(api.PipelinesOptions{Limit: 10000})
+	if pipelineErr == nil && len(pipelines.Pipelines) > 0 {
+		pipelinesByProject = map[string][]api.Pipeline{}
+		for _, p := range pipelines.Pipelines {
+			projectID := ""
+			if p.ParentProject != nil {
+				projectID = p.ParentProject.ID
+			}
+			if projectID != "" {
+				pipelinesByProject[projectID] = append(pipelinesByProject[projectID], p)
+			}
+			pipelineProjectIDs[p.ID] = true
+			if p.HeadBuildType != nil {
+				pipelineHeadJobIDs[p.HeadBuildType.ID] = true
+			}
+		}
+	}
+
 	if !noJobs {
 		buildTypes, err := client.GetBuildTypes(api.BuildTypesOptions{Limit: 10000})
 		if err != nil {
@@ -373,11 +395,11 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int) e
 	if depth > 0 {
 		depth++
 	}
-	f.Printer.PrintTree(buildProjectTree(children, jobsByProject, rootID, root.Name, depth))
+	f.Printer.PrintTree(buildProjectTree(children, jobsByProject, pipelinesByProject, pipelineProjectIDs, pipelineHeadJobIDs, rootID, root.Name, depth))
 	return nil
 }
 
-func buildProjectTree(children map[string][]api.Project, jobs map[string][]api.BuildType, id, name string, depth int) output.TreeNode {
+func buildProjectTree(children map[string][]api.Project, jobs map[string][]api.BuildType, pipelines map[string][]api.Pipeline, hiddenProjects, hiddenJobs map[string]bool, id, name string, depth int) output.TreeNode {
 	node := output.TreeNode{Label: output.Cyan(name) + " " + output.Faint(id)}
 	if depth == 1 {
 		return node
@@ -385,10 +407,26 @@ func buildProjectTree(children map[string][]api.Project, jobs map[string][]api.B
 	next := max(depth-1, 0)
 	slices.SortFunc(children[id], func(a, b api.Project) int { return cmp.Compare(a.Name, b.Name) })
 	for _, p := range children[id] {
-		node.Children = append(node.Children, buildProjectTree(children, jobs, p.ID, p.Name, next))
+		if hiddenProjects[p.ID] {
+			continue
+		}
+		node.Children = append(node.Children, buildProjectTree(children, jobs, pipelines, hiddenProjects, hiddenJobs, p.ID, p.Name, next))
 	}
+
+	slices.SortFunc(pipelines[id], func(a, b api.Pipeline) int { return cmp.Compare(a.Name, b.Name) })
+	for _, p := range pipelines[id] {
+		label := output.Cyan(p.Name) + " " + output.Faint(p.ID) + " " + output.Faint("⬡ pipeline")
+		if p.Jobs != nil && p.Jobs.Count > 0 {
+			label += output.Faint(fmt.Sprintf(" · %d jobs", p.Jobs.Count))
+		}
+		node.Children = append(node.Children, output.TreeNode{Label: label})
+	}
+
 	slices.SortFunc(jobs[id], func(a, b api.BuildType) int { return cmp.Compare(a.Name, b.Name) })
 	for _, j := range jobs[id] {
+		if hiddenJobs[j.ID] {
+			continue
+		}
 		node.Children = append(node.Children, output.TreeNode{Label: output.Faint(j.Name) + " " + output.Faint(j.ID)})
 	}
 	return node

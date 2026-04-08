@@ -119,6 +119,16 @@ type ClientInterface interface {
 	StartCloudInstance(imageID string) (*CloudInstance, error)
 	StopCloudInstance(locator string, force bool) error
 
+	// Pipelines
+	GetBuildPipelineRun(buildID string) (*PipelineRun, error)
+	GetPipelines(opts PipelinesOptions) (*PipelineList, error)
+	GetPipeline(id string) (*Pipeline, error)
+	GetPipelineYAML(id string) (string, error)
+	CreatePipeline(parentProjectID, name, yaml, vcsRootID string) (*Pipeline, error)
+	UpdatePipelineYAML(id string, yaml string) error
+	DeletePipeline(id string) error
+	GetPipelineSchema() ([]byte, error)
+
 	// VCS Roots
 	GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error)
 	GetVcsRoot(id string) (*VcsRoot, error)

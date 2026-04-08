@@ -1,6 +1,9 @@
 package job
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -10,6 +13,7 @@ import (
 
 type jobListOptions struct {
 	project string
+	all     bool
 	cmdutil.ListFlags
 }
 
@@ -32,19 +36,54 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
+	cmd.Flags().BoolVar(&opts.all, "all", false, "Include pipeline-generated build types")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
 
 	return cmd
 }
 
 func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
+	pipelineProjectIDs := map[string]bool{}
+	if !opts.all && client.SupportsFeature("pipelines") {
+		if pipelines, err := client.GetPipelines(api.PipelinesOptions{Limit: 10000}); err == nil {
+			for _, p := range pipelines.Pipelines {
+				pipelineProjectIDs[p.ID] = true
+			}
+		}
+	}
+
+	limit := opts.Limit
+	if len(pipelineProjectIDs) > 0 {
+		limit += limit
+	}
+
+	fetchFields := fields
+	if len(pipelineProjectIDs) > 0 && len(fields) > 0 && !slices.Contains(fields, "projectId") {
+		fetchFields = append(slices.Clone(fields), "projectId")
+	}
+
 	jobs, err := client.GetBuildTypes(api.BuildTypesOptions{
 		Project: opts.project,
-		Limit:   opts.Limit,
-		Fields:  fields,
+		Limit:   limit,
+		Fields:  fetchFields,
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if len(pipelineProjectIDs) > 0 {
+		filtered := jobs.BuildTypes[:0]
+		for _, j := range jobs.BuildTypes {
+			if !isPipelineOwned(j.ProjectID, pipelineProjectIDs) {
+				filtered = append(filtered, j)
+			}
+		}
+		jobs.BuildTypes = filtered
+		jobs.Count = len(filtered)
+	}
+	if len(jobs.BuildTypes) > opts.Limit {
+		jobs.BuildTypes = jobs.BuildTypes[:opts.Limit]
+		jobs.Count = opts.Limit
 	}
 
 	headers := []string{"ID", "NAME", "PROJECT", "STATUS"}
@@ -119,4 +158,16 @@ func runJobView(f *cmdutil.Factory, jobID string, opts *cmdutil.ViewOptions) err
 	})
 
 	return nil
+}
+
+func isPipelineOwned(projectID string, pipelineProjectIDs map[string]bool) bool {
+	if pipelineProjectIDs[projectID] {
+		return true
+	}
+	for pid := range pipelineProjectIDs {
+		if strings.HasPrefix(projectID, pid+"_") {
+			return true
+		}
+	}
+	return false
 }
