@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	teamcitycli "github.com/JetBrains/teamcity-cli"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,7 +36,7 @@ func TestSkillInstallRemoveDefault(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(tmp, ".claude"))
 
-	skillDir := filepath.Join(tmp, ".claude", "skills", teamcitycli.DefaultSkill)
+	skillDir := filepath.Join(tmp, ".claude", "skills", "teamcity-cli")
 
 	cmdtest.RunCmd(t, "skill", "install", "--agent", "claude-code")
 	_, err := os.Stat(filepath.Join(skillDir, "SKILL.md"))
@@ -63,7 +62,7 @@ func TestSkillInstallUnknownSkill(t *testing.T) {
 
 func TestSkillInstallAllAndNameConflict(t *testing.T) {
 	t.Parallel()
-	cmdtest.RunCmdExpectErr(t, "cannot specify both", "skill", "install", "--all", teamcitycli.DefaultSkill, "--agent", "claude-code")
+	cmdtest.RunCmdExpectErr(t, "cannot specify both", "skill", "install", "--all", "teamcity-cli", "--agent", "claude-code")
 }
 
 func TestSkillRemoveNotInstalled(t *testing.T) {
@@ -92,7 +91,7 @@ func TestSkillProjectMode(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(tmp, ".claude"))
 	cmdtest.RunCmd(t, "skill", "install", "--agent", "claude-code")
-	_, err := os.Stat(filepath.Join(tmp, ".claude", "skills", teamcitycli.DefaultSkill, "SKILL.md"))
+	_, err := os.Stat(filepath.Join(tmp, ".claude", "skills", "teamcity-cli", "SKILL.md"))
 	require.NoError(t, err, "global install should write to CLAUDE_CONFIG_DIR")
 	cmdtest.RunCmd(t, "skill", "remove", "--agent", "claude-code")
 }

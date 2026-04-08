@@ -2,6 +2,8 @@ package skill
 
 import (
 	"fmt"
+	"io/fs"
+	"strings"
 
 	teamcitycli "github.com/JetBrains/teamcity-cli"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -9,6 +11,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tiulpin/instill"
 )
+
+const defaultSkill = "teamcity-cli"
+
+type skillInfo struct {
+	Name        string
+	Version     string
+	Description string
+}
 
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -28,8 +38,8 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 type skillOptions struct {
-	agents []string
-	all    bool
+	agents  []string
+	all     bool
 	project bool
 }
 
@@ -45,7 +55,7 @@ func newSkillListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runSkillList(p *output.Printer) error {
-	skills := teamcitycli.ListSkills()
+	skills := listSkills()
 	if len(skills) == 0 {
 		p.Info("No skills bundled")
 		return nil
@@ -54,7 +64,7 @@ func runSkillList(p *output.Printer) error {
 	rows := make([][]string, len(skills))
 	for i, s := range skills {
 		def := ""
-		if s.Name == teamcitycli.DefaultSkill {
+		if s.Name == defaultSkill {
 			def = "(default)"
 		}
 		rows[i] = []string{s.Name, s.Version, s.Description, def}
@@ -225,8 +235,9 @@ func runSkillRemove(p *output.Printer, opts *skillOptions, args []string) error 
 		return err
 	}
 
+	versions := skillVersions()
 	for _, name := range names {
-		if !teamcitycli.HasSkill(name) {
+		if _, ok := versions[name]; !ok {
 			return fmt.Errorf("unknown skill %q; run 'teamcity skill list' to see available skills", name)
 		}
 
@@ -255,30 +266,71 @@ func resolveSkillNames(all bool, args []string) ([]string, error) {
 		return nil, fmt.Errorf("cannot specify both --all and skill names")
 	}
 	if all {
-		return allSkillNames(), nil
+		skills := listSkills()
+		names := make([]string, len(skills))
+		for i, s := range skills {
+			names[i] = s.Name
+		}
+		return names, nil
 	}
 	if len(args) == 0 {
-		return []string{teamcitycli.DefaultSkill}, nil
+		return []string{defaultSkill}, nil
 	}
 	return args, nil
 }
 
-func allSkillNames() []string {
-	skills := teamcitycli.ListSkills()
-	names := make([]string, len(skills))
-	for i, s := range skills {
-		names[i] = s.Name
-	}
-	return names
-}
-
 func skillVersions() map[string]string {
-	skills := teamcitycli.ListSkills()
+	skills := listSkills()
 	m := make(map[string]string, len(skills))
 	for _, s := range skills {
 		m[s.Name] = s.Version
 	}
 	return m
+}
+
+func listSkills() []skillInfo {
+	var skills []skillInfo
+	_ = fs.WalkDir(teamcitycli.SkillsFS, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || d.Name() != "SKILL.md" {
+			return err
+		}
+		data, err := fs.ReadFile(teamcitycli.SkillsFS, p)
+		if err != nil {
+			return err
+		}
+		if info, ok := parseSkillInfo(data); ok {
+			skills = append(skills, info)
+		}
+		return fs.SkipDir
+	})
+	return skills
+}
+
+func parseSkillInfo(data []byte) (skillInfo, bool) {
+	s := strings.TrimSpace(string(data))
+	if !strings.HasPrefix(s, "---") {
+		return skillInfo{}, false
+	}
+	parts := strings.SplitN(s, "---", 3)
+	if len(parts) < 3 {
+		return skillInfo{}, false
+	}
+	fields := map[string]string{}
+	for line := range strings.SplitSeq(parts[1], "\n") {
+		k, v, ok := strings.Cut(line, ":")
+		if ok {
+			fields[strings.TrimSpace(k)] = strings.TrimSpace(v)
+		}
+	}
+	name := fields["name"]
+	if name == "" {
+		return skillInfo{}, false
+	}
+	return skillInfo{
+		Name:        name,
+		Version:     strings.Trim(fields["version"], `"'`),
+		Description: fields["description"],
+	}, true
 }
 
 func resolveSkillAgents(explicit []string, global bool) ([]string, error) {
@@ -287,7 +339,6 @@ func resolveSkillAgents(explicit []string, global bool) ([]string, error) {
 	}
 
 	detected, err := instill.Detect(".", global)
-
 	if err != nil {
 		return nil, fmt.Errorf("detecting agents: %w", err)
 	}
@@ -311,4 +362,3 @@ func formatAgentList() string {
 	}
 	return fmt.Sprintf("%v", names)
 }
-
