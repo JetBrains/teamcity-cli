@@ -131,7 +131,15 @@ func GetServerURL() string {
 		return url
 	}
 
-	return cfg.DefaultServer
+	if cfg.DefaultServer != "" {
+		return cfg.DefaultServer
+	}
+
+	if buildAuth, ok := GetBuildAuth(); ok && buildAuth.ServerURL != "" {
+		return NormalizeURL(buildAuth.ServerURL)
+	}
+
+	return ""
 }
 
 func GetToken() string {
