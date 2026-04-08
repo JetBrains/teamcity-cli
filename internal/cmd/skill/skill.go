@@ -126,52 +126,61 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, check
 		return err
 	}
 
-	instillOpts := instill.Options{
-		Agents:     agents,
-		ProjectDir: ".",
-		Global:     !opts.project,
-	}
-
 	names, err := resolveSkillNames(opts.all, args)
 	if err != nil {
 		return err
 	}
 
 	for _, name := range names {
-		skillFS, ok := teamcitycli.SkillSubFS(name)
-		if !ok {
+		if !teamcitycli.HasSkill(name) {
 			return fmt.Errorf("unknown skill %q; run 'teamcity skill list' to see available skills", name)
 		}
+	}
 
-		bundled := instill.SkillVersion(skillFS)
+	bundled := instill.SkillVersion(teamcitycli.SkillsFS)
 
-		if checkVersion && bundled != "" {
+	instillOpts := instill.Options{
+		Agents:     agents,
+		Skills:     names,
+		ProjectDir: ".",
+		Global:     !opts.project,
+	}
+
+	if checkVersion && bundled != "" {
+		allUpToDate := true
+		for _, name := range names {
 			installed, err := instill.InstalledVersion(name, instillOpts)
 			if err != nil {
 				return err
 			}
-			if installed == bundled {
+			if installed != bundled {
+				allUpToDate = false
+				break
+			}
+		}
+		if allUpToDate {
+			for _, name := range names {
 				p.Success("Skill %s already up to date (%s)", name, bundled)
-				continue
 			}
+			return nil
 		}
+	}
 
-		results, err := instill.Install(skillFS, instillOpts)
-		if err != nil {
-			return err
-		}
+	results, err := instill.Install(teamcitycli.SkillsFS, instillOpts)
+	if err != nil {
+		return err
+	}
 
-		for _, r := range results {
-			switch {
-			case !r.Existed:
-				p.Success("Installed %s for %s (%s)", name, r.Agent, bundled)
-			case r.PriorVersion != "" && r.PriorVersion != bundled:
-				p.Success("Updated %s for %s (%s → %s)", name, r.Agent, r.PriorVersion, bundled)
-			case r.PriorVersion == "":
-				p.Success("Updated %s for %s (unversioned → %s)", name, r.Agent, bundled)
-			default:
-				p.Success("Reinstalled %s for %s (%s)", name, r.Agent, bundled)
-			}
+	for _, r := range results {
+		switch {
+		case !r.Existed:
+			p.Success("Installed %s for %s (%s)", r.Skill, r.Agent, bundled)
+		case r.PriorVersion != "" && r.PriorVersion != bundled:
+			p.Success("Updated %s for %s (%s → %s)", r.Skill, r.Agent, r.PriorVersion, bundled)
+		case r.PriorVersion == "":
+			p.Success("Updated %s for %s (unversioned → %s)", r.Skill, r.Agent, bundled)
+		default:
+			p.Success("Reinstalled %s for %s (%s)", r.Skill, r.Agent, bundled)
 		}
 	}
 	return nil
@@ -212,7 +221,7 @@ func runSkillRemove(p *output.Printer, opts *skillOptions, args []string) error 
 	}
 
 	for _, name := range names {
-		if _, ok := teamcitycli.SkillSubFS(name); !ok {
+		if !teamcitycli.HasSkill(name) {
 			return fmt.Errorf("unknown skill %q; run 'teamcity skill list' to see available skills", name)
 		}
 
