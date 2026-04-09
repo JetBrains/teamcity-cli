@@ -227,7 +227,9 @@ func runSkillRemove(p *output.Printer, opts *skillOptions, args []string) error 
 		if _, ok := versions[name]; !ok {
 			return fmt.Errorf("unknown skill %q; run 'teamcity skill list' to see available skills", name)
 		}
+	}
 
+	for _, name := range names {
 		results, err := instill.Remove(name, instill.Options{
 			Agents:     agents,
 			ProjectDir: ".",
