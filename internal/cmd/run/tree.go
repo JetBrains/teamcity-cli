@@ -1,8 +1,10 @@
 package run
 
 import (
+	"fmt"
 	"maps"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -79,8 +81,75 @@ func runRunTree(f *cmdutil.Factory, runID string, depth int, jsonOut bool) error
 	if jsonOut {
 		return f.Printer.PrintJSON(node)
 	}
+
+	pipelineRun, _ := client.GetBuildPipelineRun(strconv.Itoa(build.ID))
+	if pipelineRun != nil && pipelineRun.Pipeline != nil && pipelineRun.Pipeline.Name != "" {
+		printPipelineTree(f.Printer, build, pipelineRun, node)
+		return nil
+	}
+
 	f.Printer.PrintTree(node.toDisplayNode())
 	return nil
+}
+
+func printPipelineTree(p *output.Printer, build *api.Build, pr *api.PipelineRun, node RunTreeNode) {
+	icon := output.StatusIcon(build.Status, build.State)
+	header := fmt.Sprintf("%s %s ⬡  %d  #%s", icon, output.Cyan(pr.Pipeline.Name), build.ID, build.Number)
+	if build.BranchName != "" {
+		header += "  · " + build.BranchName
+	}
+	_, _ = fmt.Fprintln(p.Out, header)
+
+	summary := buildStatusSummary(node.Dependencies)
+	if summary != "" {
+		_, _ = fmt.Fprintf(p.Out, "  %s\n", summary)
+	}
+
+	_, _ = fmt.Fprintln(p.Out)
+
+	maxNameLen := 0
+	for _, dep := range node.Dependencies {
+		if len(dep.Name) > maxNameLen {
+			maxNameLen = len(dep.Name)
+		}
+	}
+
+	for _, dep := range node.Dependencies {
+		icon := output.StatusIcon(dep.Status, dep.State)
+		padded := fmt.Sprintf("%-*s", maxNameLen+2, dep.Name)
+		_, _ = fmt.Fprintf(p.Out, "  %s %s %s\n", icon, padded, output.Faint(strconv.Itoa(dep.ID)))
+	}
+}
+
+func buildStatusSummary(deps []RunTreeNode) string {
+	var failed, passed, running, queued int
+	for _, d := range deps {
+		switch {
+		case d.State == "running":
+			running++
+		case d.State == "queued":
+			queued++
+		case strings.EqualFold(d.Status, "SUCCESS"):
+			passed++
+		case strings.EqualFold(d.Status, "FAILURE") || strings.EqualFold(d.Status, "ERROR"):
+			failed++
+		}
+	}
+
+	var parts []string
+	if failed > 0 {
+		parts = append(parts, output.Red(fmt.Sprintf("%d failed", failed)))
+	}
+	if passed > 0 {
+		parts = append(parts, output.Green(fmt.Sprintf("%d passed", passed)))
+	}
+	if running > 0 {
+		parts = append(parts, output.Yellow(fmt.Sprintf("%d running", running)))
+	}
+	if queued > 0 {
+		parts = append(parts, output.Faint(fmt.Sprintf("%d queued", queued)))
+	}
+	return strings.Join(parts, " · ")
 }
 
 func buildRunTree(client api.ClientInterface, b api.Build, depth int, path map[string]bool) (RunTreeNode, error) {
