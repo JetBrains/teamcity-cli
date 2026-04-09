@@ -305,6 +305,16 @@ Pipeline Jobs:
   goreleaser           GoReleaser (build 5806)
 ```
 
+### Run tree
+
+`teamcity run tree` detects pipeline runs and displays a flat job list with a status summary instead of a generic dependency tree:
+
+```Shell
+teamcity run tree 6708
+```
+
+<img src="run-tree-pipeline.gif" alt="Pipeline run tree" border-effect="rounded"/>
+
 ### Job list
 
 `teamcity job list` hides pipeline head build types by default. Use `--all` to show them:
