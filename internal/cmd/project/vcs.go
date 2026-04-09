@@ -580,10 +580,10 @@ func inferAuthFromURL(repoURL string) string {
 
 func newVcsTestCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "test <vcs-root-id>",
-		Short: "Test a VCS root connection",
-		Long:  `Test the connection for an existing VCS root.`,
-		Args:  cobra.ExactArgs(1),
+		Use:     "test <vcs-root-id>",
+		Short:   "Test a VCS root connection",
+		Long:    `Test the connection for an existing VCS root.`,
+		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity project vcs test MyProject_GitHubRepo`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runVcsTest(f, args[0])

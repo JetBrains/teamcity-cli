@@ -1,6 +1,7 @@
 package run
 
 import (
+	"maps"
 	"strconv"
 	"sync"
 
@@ -131,9 +132,7 @@ func buildRunTree(client api.ClientInterface, b api.Build, depth int, path map[s
 			continue
 		}
 		childPath := make(map[string]bool, len(path)+1)
-		for k, v := range path {
-			childPath[k] = v
-		}
+		maps.Copy(childPath, path)
 		childPath[sid] = true
 		wg.Add(1)
 		go func(i int, dep api.Build, childPath map[string]bool) {
