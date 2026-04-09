@@ -45,9 +45,9 @@ See [Workflows](references/workflows.md) for full details on each.
 
 **Investigate failure:** `teamcity run list --status failure` → `teamcity run log <id> --failed --raw` → `teamcity run tests <id> --failed`
 **Debug build chain:** `teamcity run tree <run-id>` → find deepest failed child → investigate that build
-**Fix build failure:** diagnose → classify → fix → verify with `--local-changes` → push
+**Fix build failure:** diagnose → classify → fix (code: `--local-changes`, DSL: `settings validate`, pipeline: `pipeline validate`) → push
 **Monitor until green:** start → watch → fix if failed → push → watch new build → repeat (max 3 attempts)
-**Pipeline:** `teamcity pipeline create <name> -p <project>` / `teamcity pipeline validate` / `teamcity pipeline pull` → edit → `teamcity pipeline push`
+**Pipeline:** `teamcity pipeline create <name> -p <project>` / `teamcity pipeline validate [file]` / `teamcity pipeline pull <pipeline-id>` → edit → `teamcity pipeline push <pipeline-id> [file]`
 
 ## References
 

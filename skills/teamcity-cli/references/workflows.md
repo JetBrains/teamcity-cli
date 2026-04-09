@@ -593,6 +593,22 @@ Use the [Failure Classification](#failure-classification) decision tree above.
    ```
 3. Push the fix (cannot use `--local-changes` for DSL).
 
+**For pipeline YAML failures:**
+- **Server-stored pipelines:** pull → fix → validate → push:
+  ```bash
+  teamcity pipeline pull <pipeline-id> -o /tmp/pipeline.yml
+  # edit /tmp/pipeline.yml
+  teamcity pipeline validate /tmp/pipeline.yml
+  teamcity pipeline push <pipeline-id> /tmp/pipeline.yml
+  ```
+- **VCS-stored pipelines** (`.teamcity.yml` in repo): edit the file directly, validate, then commit and push:
+  ```bash
+  # edit .teamcity.yml
+  teamcity pipeline validate .teamcity.yml
+  git add .teamcity.yml && git commit -m "fix: ..." && git push
+  ```
+  (`pull`/`push` commands fail for VCS-backed pipelines — edit the repo file instead.)
+
 **For server config failures:**
 1. Identify the misconfiguration from the logs.
 2. Fix via TeamCity UI or `teamcity api`.
@@ -629,11 +645,13 @@ Loop workflow for watching a build, fixing failures, and retrying. Equivalent to
 3. **If the build fails:** run the [Fixing a Build Failure](#fixing-a-build-failure) workflow above.
 
 4. **After pushing the fix:**
-   - If the job has a VCS trigger, a new build starts automatically. Watch it:
+   - If the job has a VCS trigger, a new build starts automatically. Poll until a build with a higher ID than the failed one appears, then watch it:
      ```bash
-     teamcity run list --job <job-id> --branch <branch> -n 1 --json
-     # Get the new run ID, then:
-     teamcity run watch <new-run-id>
+     # Poll for a build on the pushed commit:
+     teamcity run list --job <job-id> --branch <branch> --revision @head -n 1 --json
+     # Repeat until a result appears (or ~30s pass).
+     # If no new build appears, start one manually:
+     teamcity run start <job-id> --branch <branch> --watch
      ```
    - If no VCS trigger, start a new build manually:
      ```bash
@@ -713,14 +731,11 @@ teamcity pipeline view <pipeline-id> --web   # open in browser
 
 **Create a pipeline from YAML:**
 ```bash
-# Uses .teamcity.yml in current directory by default
-teamcity pipeline create my-pipeline --project <project-id>
+# --vcs-root is required in non-interactive (agent) usage
+teamcity pipeline create my-pipeline --project <project-id> --vcs-root <vcs-root-id>
 
 # From a specific file
-teamcity pipeline create my-pipeline --project <project-id> --file pipeline.yml
-
-# With a specific VCS root (otherwise interactive selection)
-teamcity pipeline create my-pipeline --project <project-id> --vcs-root <vcs-root-id>
+teamcity pipeline create my-pipeline --project <project-id> --vcs-root <vcs-root-id> --file pipeline.yml
 ```
 
 **Validate pipeline YAML before pushing:**
@@ -758,7 +773,7 @@ teamcity pipeline delete <pipeline-id> --force   # skip confirmation
 **Gotchas:**
 - If the pipeline stores YAML in VCS (versioned settings), `pull` and `push` will return an error — edit the YAML directly in the repo instead.
 - `pipeline push` does NOT validate — always run `pipeline validate` first.
-- `pipeline create` requires `--project` — pipelines always belong to a parent project.
+- `pipeline create` requires `--project` and `--vcs-root` in non-interactive mode — pipelines always belong to a parent project and VCS root.
 - The default YAML file is `.teamcity.yml` in the current directory.
 
 ## Tips
