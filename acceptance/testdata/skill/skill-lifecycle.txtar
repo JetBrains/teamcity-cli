@@ -17,5 +17,5 @@ stdout 'Removed'
 
 # Remove again should say not installed
 exec teamcity skill remove --agent claude-code --project --no-input
-stdout 'Not installed'
+stdout 'not installed'
 ! stderr 'Error'

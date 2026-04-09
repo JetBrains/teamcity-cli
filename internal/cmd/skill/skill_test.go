@@ -15,6 +15,7 @@ func TestSkillHelp(t *testing.T) {
 
 	for _, args := range [][]string{
 		{"skill", "--help"},
+		{"skill", "list", "--help"},
 		{"skill", "install", "--help"},
 		{"skill", "update", "--help"},
 		{"skill", "remove", "--help"},
@@ -26,7 +27,12 @@ func TestSkillHelp(t *testing.T) {
 	}
 }
 
-func TestSkillInstallRemove(t *testing.T) {
+func TestSkillList(t *testing.T) {
+	t.Parallel()
+	cmdtest.RunCmd(t, "skill", "list")
+}
+
+func TestSkillInstallRemoveDefault(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(tmp, ".claude"))
 
@@ -45,6 +51,18 @@ func TestSkillInstallRemove(t *testing.T) {
 	cmdtest.RunCmd(t, "skill", "remove", "--agent", "claude-code")
 	_, err = os.Stat(skillDir)
 	assert.True(t, os.IsNotExist(err), "skill dir should be gone after remove")
+}
+
+func TestSkillInstallUnknownSkill(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(tmp, ".claude"))
+
+	cmdtest.RunCmdExpectErr(t, "unknown skill", "skill", "install", "nonexistent-skill", "--agent", "claude-code")
+}
+
+func TestSkillInstallAllAndNameConflict(t *testing.T) {
+	t.Parallel()
+	cmdtest.RunCmdExpectErr(t, "cannot specify both", "skill", "install", "--all", "teamcity-cli", "--agent", "claude-code")
 }
 
 func TestSkillRemoveNotInstalled(t *testing.T) {
