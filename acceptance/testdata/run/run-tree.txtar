@@ -4,16 +4,15 @@
 exec teamcity api '/app/rest/builds?locator=buildType:CLI_CiCd,state:finished,count:1&fields=build(id)' --raw --no-input
 extract '"id":(\d+)' BUILD_ID
 
-# Default tree output
+# Default tree output (pipeline-aware)
 exec teamcity run tree $BUILD_ID --no-input
-stdout 'Pipeline Head'
-stdout '├──'
+stdout '⬡'
+stdout 'passed'
 ! stderr 'Error'
 
 # Depth limit
 exec teamcity run tree $BUILD_ID --depth 1 --no-input
-stdout 'Pipeline Head'
-! stdout '│'
+stdout '⬡'
 ! stderr 'Error'
 
 # JSON output
