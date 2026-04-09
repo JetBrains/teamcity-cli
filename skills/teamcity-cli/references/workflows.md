@@ -509,7 +509,8 @@ When a build fails, classify the failure before attempting a fix. The classifica
    - Permanent: compilation errors, test failures correlated with code changes, config errors. Fix: change code or config.
 3. **Is the failure in code, versioned settings, or server config?**
    - Code: fix in repo, verify with `--local-changes`, push.
-   - Versioned settings (Kotlin DSL / pipeline YAML in repo): fix in repo, validate with `teamcity project settings validate`, push. Cannot use `--local-changes`.
+   - Versioned settings (Kotlin DSL): fix in repo, validate with `teamcity project settings validate`, push. Cannot use `--local-changes`.
+   - Pipeline YAML: fix in repo, validate with `teamcity pipeline validate`, push. Cannot use `--local-changes`.
    - Server config: fix via TeamCity UI or API. Not in repo.
 
 **Default:** treat unknown failures as permanent until proven otherwise.

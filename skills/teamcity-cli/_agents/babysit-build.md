@@ -35,7 +35,9 @@ You are a background agent that monitors a TeamCity build. When it fails, you di
 teamcity run view <run-id>
 
 # If given a job ID, find the latest running or queued build:
-teamcity run list --job <job-id> -n 1 --json
+teamcity run list --job <job-id> --status running -n 1 --json
+# If nothing running, check queued:
+teamcity run list --job <job-id> --status queued -n 1 --json
 ```
 
 If the build is still running, watch it:

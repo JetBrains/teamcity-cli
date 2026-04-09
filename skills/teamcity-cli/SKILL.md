@@ -43,11 +43,11 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 
 See [Workflows](references/workflows.md) for full details on each.
 
-**Investigate failure:** `run list --status failure` → `run log <id> --failed --raw` → `run tests <id> --failed`
-**Debug build chain:** `run tree <run-id>` → find deepest failed child → investigate that build
+**Investigate failure:** `teamcity run list --status failure` → `teamcity run log <id> --failed --raw` → `teamcity run tests <id> --failed`
+**Debug build chain:** `teamcity run tree <run-id>` → find deepest failed child → investigate that build
 **Fix build failure:** diagnose → classify → fix → verify with `--local-changes` → push
 **Monitor until green:** start → watch → fix if failed → push → watch new build → repeat (max 3 attempts)
-**Pipeline:** `pipeline create <name> -p <project>` / `pipeline validate` / `pipeline pull` → edit → `pipeline push`
+**Pipeline:** `teamcity pipeline create <name> -p <project>` / `teamcity pipeline validate` / `teamcity pipeline pull` → edit → `teamcity pipeline push`
 
 ## References
 
