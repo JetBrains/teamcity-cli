@@ -98,7 +98,7 @@ List run artifacts
 </td>
 <td>
 
-Cancel a running build
+Cancel a run
 
 </td>
 </tr>
@@ -419,60 +419,48 @@ Description
 <tr>
 <td>
 
+`teamcity project cloud image`
+
+</td>
+<td>
+
+Manage cloud images
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project cloud instance`
+
+</td>
+<td>
+
+Manage cloud instances
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project cloud profile`
+
+</td>
+<td>
+
+Manage cloud profiles
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project list`
 
 </td>
 <td>
 
 List projects
-
-</td>
-</tr>
-<tr>
-<td>
-
-`teamcity project vcs list`
-
-</td>
-<td>
-
-List VCS roots in a project
-
-</td>
-</tr>
-<tr>
-<td>
-
-`teamcity project vcs view`
-
-</td>
-<td>
-
-View VCS root details
-
-</td>
-</tr>
-<tr>
-<td>
-
-`teamcity project vcs create`
-
-</td>
-<td>
-
-Open browser to add a VCS root
-
-</td>
-</tr>
-<tr>
-<td>
-
-`teamcity project vcs delete`
-
-</td>
-<td>
-
-Delete a VCS root
 
 </td>
 </tr>
@@ -593,6 +581,54 @@ Store a secret and get a secure token
 <td>
 
 Display project hierarchy as a tree
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project vcs create`
+
+</td>
+<td>
+
+Open TeamCity to add a VCS root
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project vcs delete`
+
+</td>
+<td>
+
+Delete a VCS root
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project vcs list`
+
+</td>
+<td>
+
+List VCS roots
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project vcs view`
+
+</td>
+<td>
+
+View VCS root details
 
 </td>
 </tr>
@@ -981,6 +1017,160 @@ Create a command alias
 </tr>
 </table>
 
+## Configs
+
+<table>
+<tr>
+<td>
+
+Command
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity config get`
+
+</td>
+<td>
+
+Get a configuration value
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity config list`
+
+</td>
+<td>
+
+List configuration settings
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity config set`
+
+</td>
+<td>
+
+Set a configuration value
+
+</td>
+</tr>
+</table>
+
+## Pipelines
+
+<table>
+<tr>
+<td>
+
+Command
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity pipeline create`
+
+</td>
+<td>
+
+Create a new pipeline from YAML
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity pipeline delete`
+
+</td>
+<td>
+
+Delete a pipeline
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity pipeline list`
+
+</td>
+<td>
+
+List pipelines
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity pipeline pull`
+
+</td>
+<td>
+
+Download pipeline YAML
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity pipeline push`
+
+</td>
+<td>
+
+Upload pipeline YAML
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity pipeline validate`
+
+</td>
+<td>
+
+Validate pipeline YAML against server schema
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity pipeline view`
+
+</td>
+<td>
+
+View pipeline details
+
+</td>
+</tr>
+</table>
+
 ## Skills
 
 Manage AI agent integration. See [AI agent integration](teamcity-cli-ai-agent-integration.md) for details.
@@ -1006,7 +1196,19 @@ Description
 </td>
 <td>
 
-Install the teamcity-cli skill for AI coding agents
+Install skills for AI coding agents
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity skill list`
+
+</td>
+<td>
+
+List available skills bundled with this release
 
 </td>
 </tr>
@@ -1018,7 +1220,7 @@ Install the teamcity-cli skill for AI coding agents
 </td>
 <td>
 
-Remove the teamcity-cli skill from AI coding agents
+Remove skills from AI coding agents
 
 </td>
 </tr>
@@ -1030,13 +1232,13 @@ Remove the teamcity-cli skill from AI coding agents
 </td>
 <td>
 
-Update the teamcity-cli skill for AI coding agents
+Update skills for AI coding agents
 
 </td>
 </tr>
 </table>
 
-### Update {id="update-commands"}
+## Updates
 
 <table>
 <tr>
@@ -1059,7 +1261,7 @@ Description
 </td>
 <td>
 
-Check for new CLI versions and show how to upgrade
+Check for CLI updates and show how to upgrade
 
 </td>
 </tr>
