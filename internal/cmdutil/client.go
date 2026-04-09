@@ -52,7 +52,7 @@ func ProbeGuestAccess(serverURL string) bool {
 	if serverURL == "" {
 		return false
 	}
-	guest := api.NewGuestClient(serverURL)
+	guest := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
 	_, err := guest.GetServer()
 	return err == nil
 }

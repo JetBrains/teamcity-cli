@@ -13,6 +13,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
@@ -124,7 +125,7 @@ func collectAuthStatuses(f *cmdutil.Factory) []authStatus {
 
 func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "guest", IsDefault: isDefault}
-	client := api.NewGuestClient(serverURL, api.WithDebugFunc(f.Printer.Debug))
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()))
 	server, err := client.GetServer()
 	if err != nil {
 		s.Status = "error"
@@ -141,7 +142,7 @@ func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) au
 
 func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "token", TokenSource: tokenSource, IsDefault: isDefault}
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug))
+	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()))
 	user, err := client.GetCurrentUser()
 	if err != nil {
 		s.Status = "error"
@@ -177,7 +178,7 @@ func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string
 
 func collectBuildStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth) authStatus {
 	s := authStatus{Server: buildAuth.ServerURL, AuthMethod: "build"}
-	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(f.Printer.Debug))
+	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()))
 	server, err := client.GetServer()
 	if err != nil {
 		s.Status = "error"

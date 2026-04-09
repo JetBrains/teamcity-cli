@@ -12,6 +12,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
@@ -170,7 +171,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 	f.WarnInsecureHTTP(serverURL, "authentication token")
 	p.Infof("Validating... ")
 
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(p.Debug))
+	client := api.NewClient(serverURL, token, api.WithDebugFunc(p.Debug), api.WithVersion(version.String()))
 	user, err := client.GetCurrentUser()
 	if err != nil {
 		p.Info("%s", output.Red("✗"))
@@ -229,7 +230,7 @@ func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 	f.WarnInsecureHTTP(serverURL, "guest access")
 	p.Infof("Validating guest access... ")
 
-	client := api.NewGuestClient(serverURL, api.WithDebugFunc(p.Debug))
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(p.Debug), api.WithVersion(version.String()))
 	server, err := client.GetServer()
 	if err != nil {
 		p.Info("%s", output.Red("✗"))
