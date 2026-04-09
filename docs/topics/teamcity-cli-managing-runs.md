@@ -678,6 +678,69 @@ teamcity run view 12345 --web
 teamcity run view 12345 --json
 ```
 
+## Snapshot dependency tree
+
+Visualize the snapshot dependency chain for a run with `teamcity run tree`:
+
+```Shell
+teamcity run tree 12345
+```
+
+<img src="run-tree.gif" alt="Viewing run snapshot dependency tree" border-effect="rounded"/>
+
+Limit the depth of the tree:
+
+```Shell
+teamcity run tree 12345 --depth 2
+```
+
+Output as JSON:
+
+```Shell
+teamcity run tree 12345 --json
+```
+
+### run tree flags
+
+<table>
+<tr>
+<td>
+
+Flag
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`-d`, `--depth`
+
+</td>
+<td>
+
+Limit tree depth (0 = unlimited)
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--json`
+
+</td>
+<td>
+
+Output as JSON
+
+</td>
+</tr>
+</table>
+
 ## Watching a run
 
 Monitor a running build with live updates:

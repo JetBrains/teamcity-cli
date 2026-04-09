@@ -3,6 +3,7 @@ package run_test
 import (
 	"bytes"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/fatih/color"
@@ -211,6 +212,40 @@ func TestRunChanges(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, f, "run", "changes", testBuildID)
 	cmdtest.RunCmdWithFactory(T, f, "run", "changes", testBuildID, "--no-files")
 	cmdtest.RunCmdWithFactory(T, f, "run", "changes", testBuildID, "--json")
+}
+
+func TestRunTree(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	cmdtest.RunCmdWithFactory(T, ts.Factory, "run", "tree", testBuildID)
+	cmdtest.RunCmdWithFactory(T, ts.Factory, "run", "tree", testBuildID, "--depth", "2")
+}
+
+func TestRunTreeWithDeps(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.RawQuery, "snapshotDependency") {
+			cmdtest.JSON(w, api.BuildList{
+				Count: 1,
+				Builds: []api.Build{
+					{
+						ID:          2,
+						Number:      "2",
+						Status:      "SUCCESS",
+						State:       "finished",
+						BuildTypeID: "TestProject_UnitTests",
+						BuildType:   &api.BuildType{ID: "TestProject_UnitTests", Name: "Unit Tests"},
+					},
+				},
+			})
+			return
+		}
+		cmdtest.JSON(w, api.BuildList{Count: 0, Builds: []api.Build{}})
+	})
+
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "tree", testBuildID)
+	assert.Contains(T, got, "Unit Tests")
 }
 
 func TestRunTests(T *testing.T) {

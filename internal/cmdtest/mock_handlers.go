@@ -215,6 +215,11 @@ func SetupMockClient(t *testing.T) *TestServer {
 			return
 		}
 
+		if strings.Contains(r.URL.Path, "/snapshot-dependencies") {
+			JSON(w, api.BuildList{Count: 0, Builds: []api.Build{}})
+			return
+		}
+
 		if strings.Contains(r.URL.Path, "/tags") {
 			JSON(w, api.TagList{Tag: []api.Tag{{Name: "cli-test-tag"}, {Name: "another-tag"}}})
 			return

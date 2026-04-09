@@ -30,6 +30,7 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newRunCommentCmd(f))
 	cmd.AddCommand(newRunChangesCmd(f))
 	cmd.AddCommand(newRunTestsCmd(f))
+	cmd.AddCommand(newRunTreeCmd(f))
 
 	return cmd
 }

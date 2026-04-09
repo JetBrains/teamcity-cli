@@ -63,6 +63,7 @@ type ClientInterface interface {
 	SetBuildComment(buildID string, comment string) error
 	GetBuildComment(buildID string) (string, error)
 	DeleteBuildComment(buildID string) error
+	GetBuildSnapshotDependencies(buildID string) (*BuildList, error)
 	GetBuildChanges(buildID string) (*ChangeList, error)
 	GetBuildTests(buildID string, failedOnly bool, limit int) (*TestOccurrences, error)
 	GetBuildProblems(buildID string) (*ProblemOccurrences, error)
