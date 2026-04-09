@@ -496,6 +496,270 @@ teamcity pool link <pool-id> <project-id>
 teamcity pool unlink <pool-id> <project-id>
 ```
 
+## Failure Classification
+
+When a build fails, classify the failure before attempting a fix. The classification determines the fix strategy.
+
+**Decision tree:**
+
+1. **Is the build composite (no agent, has snapshot dependencies)?**
+   - Yes → The composite build itself has no logs. Drill into child builds to find the actual failure. Use `teamcity run list --status failure` filtered to the relevant job tree.
+2. **Is the failure transient or permanent?**
+   - Transient: infrastructure timeouts, agent disconnects, OOM on agent, flaky tests (same code passes on retry). Fix: retry with `teamcity run restart <id>`.
+   - Permanent: compilation errors, test failures correlated with code changes, config errors. Fix: change code or config.
+3. **Is the failure in code, versioned settings, or server config?**
+   - Code: fix in repo, verify with `--local-changes`, push.
+   - Versioned settings (Kotlin DSL / pipeline YAML in repo): fix in repo, validate with `teamcity project settings validate`, push. Cannot use `--local-changes`.
+   - Server config: fix via TeamCity UI or API. Not in repo.
+
+**Default:** treat unknown failures as permanent until proven otherwise.
+
+**Gotchas:**
+- Composite builds have empty logs — always drill to child failures first.
+- A build can fail with "no compatible agents" — this is server config, not code.
+- `--local-changes` does NOT include Kotlin DSL or pipeline YAML stored in repo.
+
+## Build Chain Debugging
+
+TeamCity's snapshot dependency chains are unique — no competitor has this. When a build in a chain fails, the failure cascades upstream, so multiple builds may show as failed.
+
+**Find the root failure:**
+
+```bash
+# View the dependency tree for a specific build run (shows statuses)
+teamcity run tree <run-id>
+
+# Use --json for programmatic analysis
+teamcity run tree <run-id> --json
+```
+
+`run tree` shows the actual build runs with their statuses, so you can immediately see which dependency failed. Use `job tree` if you need the job-level (build configuration) dependency structure instead.
+
+**Key principle:** The first failure in the chain (the deepest dependency that failed) is the root cause, not the last. Work bottom-up.
+
+**Steps:**
+1. Start from the build the user reported.
+2. Run `teamcity run tree <run-id>` to see the full dependency tree with statuses.
+3. Find the deepest build in the tree that has a failure status (not just "Snapshot dependency build failed").
+4. That's your root cause. Investigate its logs: `teamcity run log <id> --failed --raw`
+
+**Gotchas:**
+- Builds that fail only because a dependency failed show "Snapshot dependency build failed" — skip these and go deeper.
+- Restarting the top-level build won't help if the root child is still broken.
+- Use `run tree` (shows actual builds with statuses) for debugging failures. Use `job tree` (shows build configuration structure) for understanding the dependency graph.
+
+## Fixing a Build Failure
+
+End-to-end workflow for diagnosing and fixing a CI failure. Equivalent to GitHub's `gh-fix-ci`.
+
+### Step 1: Find and diagnose
+
+```bash
+# Get the failed build details
+teamcity run view <run-id>
+
+# Get the failure log (always use --raw, dump to temp file)
+teamcity run log <run-id> --failed --raw > /tmp/build-failure.log
+
+# Check failed tests
+teamcity run tests <run-id> --failed
+
+# See what changes triggered the build
+teamcity run changes <run-id>
+```
+
+### Step 2: Classify the failure
+
+Use the [Failure Classification](#failure-classification) decision tree above.
+
+### Step 3: Fix
+
+**For code failures:**
+1. Read the relevant source files and understand the error.
+2. Make the fix.
+3. Verify locally if possible (run tests, compile, lint).
+4. Verify on TeamCity without committing:
+   ```bash
+   teamcity run start <job-id> --local-changes --watch
+   ```
+5. Once green, commit and push.
+
+**For versioned settings failures (Kotlin DSL):**
+1. Fix the DSL code in `.teamcity/`.
+2. Validate locally:
+   ```bash
+   teamcity project settings validate
+   ```
+3. Push the fix (cannot use `--local-changes` for DSL).
+
+**For server config failures:**
+1. Identify the misconfiguration from the logs.
+2. Fix via TeamCity UI or `teamcity api`.
+3. Restart the build: `teamcity run restart <run-id>`
+
+### Guardrails
+
+- Never delete or skip failing tests to make the build green.
+- Never disable linting or static analysis steps.
+- Never force-push to fix a build.
+- If the fix requires changes outside your expertise, document the diagnosis and escalate.
+
+**Gotchas:**
+- Always use `--raw` for logs and dump to a temp file — build logs can be very large and lose formatting without `--raw`.
+- `--local-changes` does NOT include Kotlin DSL or pipeline YAML stored in repo. Always push DSL changes before running.
+- Composite builds have no logs of their own — drill to the child that actually failed.
+- If the build fails with a different error after your fix, that's a new failure — re-diagnose from step 1.
+
+## Monitoring Builds Until Green
+
+Loop workflow for watching a build, fixing failures, and retrying. Equivalent to the `babysit-pr` pattern.
+
+### Loop
+
+1. **Start or watch the build:**
+   ```bash
+   teamcity run start <job-id> --branch <branch> --watch
+   # or watch an existing build:
+   teamcity run watch <run-id>
+   ```
+
+2. **If the build succeeds:** done.
+
+3. **If the build fails:** run the [Fixing a Build Failure](#fixing-a-build-failure) workflow above.
+
+4. **After pushing the fix:**
+   - If the job has a VCS trigger, a new build starts automatically. Watch it:
+     ```bash
+     teamcity run list --job <job-id> --branch <branch> -n 1 --json
+     # Get the new run ID, then:
+     teamcity run watch <new-run-id>
+     ```
+   - If no VCS trigger, start a new build manually:
+     ```bash
+     teamcity run start <job-id> --branch <branch> --watch
+     ```
+
+5. **Repeat** from step 2.
+
+### Stop conditions
+
+- **Success:** the build is green.
+- **Max attempts reached:** stop after 3 fix attempts. Each attempt must make different changes — if you're repeating the same fix, something deeper is wrong.
+- **Unfixable issue:** server config problem, missing agent, infrastructure failure, or a failure outside the scope of code changes.
+- **Same failure after fix:** if the exact same error appears after your fix, re-examine the diagnosis — the fix may not have addressed the root cause.
+
+**Gotchas:**
+- A VCS trigger fires only when new commits are pushed to a monitored branch. If the job doesn't have a VCS trigger configured, you must start builds manually with `teamcity run start`.
+- After pushing, wait a few seconds before listing runs — the trigger needs time to pick up the change.
+- Watch for "build already running" — if a build is queued or running for the same branch, watch it instead of starting a new one.
+
+## Test Reliability Analysis
+
+Identify flaky tests by cross-referencing failures across builds. Equivalent to CircleCI's `find_flaky_tests`.
+
+### Identify potentially flaky tests
+
+```bash
+# Get failed tests from the current build
+teamcity run tests <run-id> --failed --json > /tmp/failed-tests.json
+
+# Check if the same tests failed in recent builds
+teamcity run list --job <job-id> --status failure -n 5 --json
+
+# For each recent failed build, get its failed tests
+teamcity run tests <other-run-id> --failed --json
+```
+
+### Cross-reference with code changes
+
+```bash
+# Check what changed between builds
+teamcity run changes <run-id>
+```
+
+**Flaky test indicators:**
+- Test fails intermittently across builds without corresponding code changes.
+- Test passes on retry (restart) without any code change.
+- Test fails on one agent but passes on another (environment-dependent).
+
+### What to do with flaky tests
+
+1. Document the flaky test: name, frequency, suspected cause.
+2. If `teamcity test mute` becomes available, use it to mute the test with a comment explaining why.
+3. Otherwise, flag the test in the codebase (e.g., add a skip annotation with a tracking issue).
+4. Never silently delete a flaky test — it may be catching real intermittent bugs.
+
+**Gotchas:**
+- A test that fails only on certain agents may be environment-dependent, not flaky. Check agent properties with `teamcity agent view <id>`.
+- Some test frameworks report different test names on failure vs success (e.g., parameterized tests). Normalize test names before comparing.
+- Large test suites may need `--json` output piped through `jq` for efficient filtering.
+
+## Working with Pipelines
+
+Pipelines are YAML-first build configurations. Unlike jobs (build configs) that are configured via UI or Kotlin DSL, pipelines are defined in a `.teamcity.yml` file. Each pipeline is a TeamCity project containing multiple jobs.
+
+**List pipelines:**
+```bash
+teamcity pipeline list
+teamcity pipeline list --project <project-id>
+```
+
+**View pipeline details:**
+```bash
+teamcity pipeline view <pipeline-id>
+teamcity pipeline view <pipeline-id> --web   # open in browser
+```
+
+**Create a pipeline from YAML:**
+```bash
+# Uses .teamcity.yml in current directory by default
+teamcity pipeline create my-pipeline --project <project-id>
+
+# From a specific file
+teamcity pipeline create my-pipeline --project <project-id> --file pipeline.yml
+
+# With a specific VCS root (otherwise interactive selection)
+teamcity pipeline create my-pipeline --project <project-id> --vcs-root <vcs-root-id>
+```
+
+**Validate pipeline YAML before pushing:**
+```bash
+# Validates against server schema (cached locally for 24h)
+teamcity pipeline validate
+
+# Validate a specific file
+teamcity pipeline validate my-pipeline.yml
+
+# Force re-fetch schema from server
+teamcity pipeline validate --refresh-schema
+```
+
+**Pull/push pipeline YAML (edit-in-place workflow):**
+```bash
+# Download current YAML
+teamcity pipeline pull <pipeline-id> -o .teamcity.yml
+
+# Edit the file...
+
+# Validate before pushing
+teamcity pipeline validate .teamcity.yml
+
+# Upload changes
+teamcity pipeline push <pipeline-id> .teamcity.yml
+```
+
+**Delete a pipeline:**
+```bash
+teamcity pipeline delete <pipeline-id>
+teamcity pipeline delete <pipeline-id> --force   # skip confirmation
+```
+
+**Gotchas:**
+- If the pipeline stores YAML in VCS (versioned settings), `pull` and `push` will return an error — edit the YAML directly in the repo instead.
+- `pipeline push` does NOT validate — always run `pipeline validate` first.
+- `pipeline create` requires `--project` — pipelines always belong to a parent project.
+- The default YAML file is `.teamcity.yml` in the current directory.
+
 ## Tips
 
 1. **Use `--json` for programmatic access** - Parse with `jq` for complex queries
