@@ -1,0 +1,28 @@
+# Test run tree subcommand.
+# Uses CLI_CiCd (Pipeline Head) which always has snapshot dependencies.
+
+exec teamcity api '/app/rest/builds?locator=buildType:CLI_CiCd,state:finished,count:1&fields=build(id)' --raw --no-input
+extract '"id":(\d+)' BUILD_ID
+
+# Default tree output
+exec teamcity run tree $BUILD_ID --no-input
+stdout 'Pipeline Head'
+stdout '├──'
+! stderr 'Error'
+
+# Depth limit
+exec teamcity run tree $BUILD_ID --depth 1 --no-input
+stdout 'Pipeline Head'
+! stdout '│'
+! stderr 'Error'
+
+# JSON output
+exec teamcity run tree $BUILD_ID --json --no-input
+stdout '"id"'
+stdout '"name"'
+stdout '"dependencies"'
+! stderr 'Error'
+
+# Nonexistent build
+! exec teamcity run tree 999999999 --no-input
+stderr '.'

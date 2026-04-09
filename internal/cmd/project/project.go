@@ -302,9 +302,29 @@ func runProjectTokenGet(f *cmdutil.Factory, projectID, token string) error {
 	return nil
 }
 
+type ProjectTreeNode struct {
+	ID        string            `json:"id"`
+	Name      string            `json:"name"`
+	Children  []ProjectTreeNode `json:"children"`
+	Pipelines []pipelineRef     `json:"pipelines,omitempty"`
+	Jobs      []jobRef          `json:"jobs,omitempty"`
+}
+
+type pipelineRef struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	JobCount int    `json:"jobCount,omitempty"`
+}
+
+type jobRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 func newProjectTreeCmd(f *cmdutil.Factory) *cobra.Command {
 	var noJobs bool
 	var depth int
+	var jsonOut bool
 
 	cmd := &cobra.Command{
 		Use:   "tree [project-id]",
@@ -312,24 +332,26 @@ func newProjectTreeCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity project tree
   teamcity project tree MyProject
   teamcity project tree --no-jobs
-  teamcity project tree --depth 2`,
+  teamcity project tree --depth 2
+  teamcity project tree --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rootID := "_Root"
 			if len(args) > 0 {
 				rootID = args[0]
 			}
-			return runProjectTree(f, rootID, noJobs, depth)
+			return runProjectTree(f, rootID, noJobs, depth, jsonOut)
 		},
 	}
 
 	cmd.Flags().BoolVar(&noJobs, "no-jobs", false, "Hide build configurations")
 	cmd.Flags().IntVarP(&depth, "depth", "d", 0, "Limit tree depth (0 = unlimited)")
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "Output as JSON")
 
 	return cmd
 }
 
-func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int) error {
+func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int, jsonOut bool) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -397,12 +419,35 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int) e
 	if depth > 0 {
 		depth++
 	}
-	f.Printer.PrintTree(buildProjectTree(children, jobsByProject, pipelinesByProject, pipelineProjectIDs, pipelineHeadJobIDs, rootID, root.Name, depth))
+
+	node := buildProjectTreeData(children, jobsByProject, pipelinesByProject, pipelineProjectIDs, pipelineHeadJobIDs, rootID, root.Name, depth)
+	if jsonOut {
+		return f.Printer.PrintJSON(node)
+	}
+	f.Printer.PrintTree(node.toDisplayNode())
 	return nil
 }
 
-func buildProjectTree(children map[string][]api.Project, jobs map[string][]api.BuildType, pipelines map[string][]api.Pipeline, hiddenProjects, hiddenJobs map[string]bool, id, name string, depth int) output.TreeNode {
-	node := output.TreeNode{Label: output.Cyan(name) + " " + output.Faint(id)}
+func (n ProjectTreeNode) toDisplayNode() output.TreeNode {
+	node := output.TreeNode{Label: output.Cyan(n.Name) + " " + output.Faint(n.ID)}
+	for _, child := range n.Children {
+		node.Children = append(node.Children, child.toDisplayNode())
+	}
+	for _, p := range n.Pipelines {
+		label := output.Cyan(p.Name) + " " + output.Faint(p.ID) + " " + output.Faint("⬡ pipeline")
+		if p.JobCount > 0 {
+			label += output.Faint(fmt.Sprintf(" · %d jobs", p.JobCount))
+		}
+		node.Children = append(node.Children, output.TreeNode{Label: label})
+	}
+	for _, j := range n.Jobs {
+		node.Children = append(node.Children, output.TreeNode{Label: output.Faint(j.Name) + " " + output.Faint(j.ID)})
+	}
+	return node
+}
+
+func buildProjectTreeData(children map[string][]api.Project, jobs map[string][]api.BuildType, pipelines map[string][]api.Pipeline, hiddenProjects, hiddenJobs map[string]bool, id, name string, depth int) ProjectTreeNode {
+	node := ProjectTreeNode{ID: id, Name: name, Children: []ProjectTreeNode{}}
 	if depth == 1 {
 		return node
 	}
@@ -412,16 +457,16 @@ func buildProjectTree(children map[string][]api.Project, jobs map[string][]api.B
 		if hiddenProjects[p.ID] {
 			continue
 		}
-		node.Children = append(node.Children, buildProjectTree(children, jobs, pipelines, hiddenProjects, hiddenJobs, p.ID, p.Name, next))
+		node.Children = append(node.Children, buildProjectTreeData(children, jobs, pipelines, hiddenProjects, hiddenJobs, p.ID, p.Name, next))
 	}
 
 	slices.SortFunc(pipelines[id], func(a, b api.Pipeline) int { return cmp.Compare(a.Name, b.Name) })
 	for _, p := range pipelines[id] {
-		label := output.Cyan(p.Name) + " " + output.Faint(p.ID) + " " + output.Faint("⬡ pipeline")
-		if p.Jobs != nil && p.Jobs.Count > 0 {
-			label += output.Faint(fmt.Sprintf(" · %d jobs", p.Jobs.Count))
+		jobCount := 0
+		if p.Jobs != nil {
+			jobCount = p.Jobs.Count
 		}
-		node.Children = append(node.Children, output.TreeNode{Label: label})
+		node.Pipelines = append(node.Pipelines, pipelineRef{ID: p.ID, Name: p.Name, JobCount: jobCount})
 	}
 
 	slices.SortFunc(jobs[id], func(a, b api.BuildType) int { return cmp.Compare(a.Name, b.Name) })
@@ -429,7 +474,7 @@ func buildProjectTree(children map[string][]api.Project, jobs map[string][]api.B
 		if hiddenJobs[j.ID] {
 			continue
 		}
-		node.Children = append(node.Children, output.TreeNode{Label: output.Faint(j.Name) + " " + output.Faint(j.ID)})
+		node.Jobs = append(node.Jobs, jobRef{ID: j.ID, Name: j.Name})
 	}
 	return node
 }

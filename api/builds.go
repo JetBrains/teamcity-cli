@@ -363,3 +363,31 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 
 	return c.doNoContent("POST", path, bytes.NewReader(bodyBytes), "")
 }
+
+// GetBuildSnapshotDependencies returns all immediate dependency builds in a snapshot dependency chain.
+func (c *Client) GetBuildSnapshotDependencies(buildID string) (*BuildList, error) {
+	locator := fmt.Sprintf("snapshotDependency:(to:(id:%s),recursive:false),defaultFilter:false", buildID)
+	fields := "count,nextHref,build(id,number,status,state,buildTypeId,buildType(id,name))"
+	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(fields))
+
+	var combined BuildList
+	for path != "" {
+		var page BuildList
+		if err := c.get(path, &page); err != nil {
+			return nil, err
+		}
+		combined.Builds = append(combined.Builds, page.Builds...)
+		combined.Count += page.Count
+		path = page.NextHref
+		if next, err := url.Parse(path); err == nil && next.IsAbs() {
+			path = next.RequestURI()
+		}
+		if base, err := url.Parse(c.BaseURL); err == nil && len(base.Path) > 1 {
+			path = strings.TrimPrefix(path, base.Path)
+		}
+		if c.APIVersion != "" && strings.HasPrefix(path, "/app/rest/") {
+			path = strings.Replace(path, "/app/rest/"+c.APIVersion+"/", "/app/rest/", 1)
+		}
+	}
+	return &combined, nil
+}
