@@ -67,6 +67,7 @@ type ClientInterface interface {
 	GetBuildChanges(buildID string) (*ChangeList, error)
 	GetBuildTests(buildID string, failedOnly bool, limit int) (*TestOccurrences, error)
 	GetBuildProblems(buildID string) (*ProblemOccurrences, error)
+	GetBuildResultingProperties(buildID string) (*ParameterList, error)
 	UploadDiffChanges(patch []byte, description string) (string, error)
 
 	// Artifacts

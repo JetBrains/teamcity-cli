@@ -133,6 +133,7 @@ func formatLogLine(line string) string {
 	} else if len(rest) >= 3 && rest[0] == ' ' && rest[1] == ':' {
 		content = rest[2:]
 	}
+	content = output.RestoreAnsi(content)
 	content = strings.TrimPrefix(content, " ")
 
 	switch msgType {

@@ -26,6 +26,7 @@ Login options:
 | `teamcity run log <id>`          | View build log           |
 | `teamcity run tests <id>`        | View test results        |
 | `teamcity run changes <id>`      | View VCS changes         |
+| `teamcity run diff <id> [id2]`   | Compare two runs         |
 | `teamcity run artifacts <id>`    | List artifacts           |
 | `teamcity run download <id>`     | Download artifacts       |
 | `teamcity run pin <id>`          | Pin build                |
@@ -108,6 +109,13 @@ Shows all branches and all build states (including canceled, personal, composite
 
 - `--json` - Output as JSON
 - `--no-files` - Hide file list, show commits only
+
+### Flags for `teamcity run diff`
+
+- `--log` - Compare build logs with colored unified diff
+- `-U, --unified <n>` - Context lines in log diff (default 3)
+- `--json` - Output structured diff as JSON
+- `-w, --web` - Open both runs in browser
 
 ### Flags for `teamcity run artifacts`
 

@@ -111,6 +111,10 @@ teamcity run start MyProject_Build --branch main --watch
 # View logs from the latest build of a job
 teamcity run log --job MyProject_Build
 
+# Compare two runs to see what changed
+teamcity run diff 123 124
+teamcity run diff 123 124 --log --no-color | delta
+
 # Check what's in the queue
 teamcity queue list
 ```
