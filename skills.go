@@ -2,5 +2,5 @@ package teamcitycli
 
 import "embed"
 
-//go:embed skills
+//go:embed all:skills
 var SkillsFS embed.FS

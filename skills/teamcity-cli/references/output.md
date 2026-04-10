@@ -44,6 +44,7 @@ teamcity run list --json=id,buildType.name,triggered.user.username
 | `queue list`   | `id`, `buildTypeId`, `state`, `branchName`, `queuedDate`, `buildType.name`, `triggered.user.name`, `webUrl`                                                                                           |
 | `agent list`   | `id`, `name`, `connected`, `enabled`, `authorized`, `pool.name`, `webUrl`                                                                                                                             |
 | `pool list`    | `id`, `name`, `maxAgents`                                                                                                                                                                             |
+| `pipeline list`| `id`, `name`, `webUrl`, `parentProject.id`, `parentProject.name`, `headBuildType.id`, `jobs.count`                                                                                                    |
 
 Run `teamcity <command> --json=` to see all available fields for that command.
 

@@ -33,6 +33,7 @@ Login options:
 | `teamcity run tag <id> <tags>`   | Add tags                 |
 | `teamcity run untag <id> <tags>` | Remove tags              |
 | `teamcity run comment <id>`      | Manage comments          |
+| `teamcity run tree <id>`        | Show snapshot dependency tree for a run |
 
 ### Flags for `teamcity run list`
 
@@ -139,6 +140,11 @@ Shows all branches and all build states (including canceled, personal, composite
 ### Flags for `teamcity run comment`
 
 - `--delete` - Delete the comment
+
+### Flags for `teamcity run tree`
+
+- `-d, --depth <n>` - Limit tree depth (0 = unlimited)
+- `--json` - Output as JSON
 
 ## Jobs (`teamcity job`)
 
@@ -338,6 +344,52 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
+## Pipelines (`teamcity pipeline`)
+
+Pipelines are YAML-first build configurations. Each pipeline is a project that can contain multiple jobs defined in a `.teamcity.yml` file. Pipelines differ from jobs/build configs: they use YAML for configuration and can be stored in VCS or on the server.
+
+| Command                                  | Description                              |
+|------------------------------------------|------------------------------------------|
+| `teamcity pipeline list`                 | List pipelines                           |
+| `teamcity pipeline view <id>`            | View pipeline details                    |
+| `teamcity pipeline create <name>`        | Create pipeline from YAML                |
+| `teamcity pipeline validate [file]`      | Validate pipeline YAML against schema    |
+| `teamcity pipeline pull <id>`            | Download pipeline YAML                   |
+| `teamcity pipeline push <id> [file]`     | Upload pipeline YAML                     |
+| `teamcity pipeline delete <id>`          | Delete a pipeline                        |
+
+### Flags for `teamcity pipeline list`
+
+- `-p, --project <id>` - Filter by project ID
+- `-n, --limit <n>` - Maximum number of items (default: 30)
+- `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
+- `--plain` - Plain text output for scripting
+- `--no-header` - Omit header row
+
+### Flags for `teamcity pipeline view`
+
+- `--json` - Output as JSON
+- `-w, --web` - Open in browser
+
+### Flags for `teamcity pipeline create`
+
+- `-p, --project <id>` - Parent project ID **(required)**
+- `--vcs-root <id>` - VCS root ID (interactive selection if omitted)
+- `-f, --file <path>` - Pipeline YAML file (default: `.teamcity.yml`)
+
+### Flags for `teamcity pipeline validate`
+
+- `--schema <path>` - Local JSON schema file (overrides server schema)
+- `--refresh-schema` - Force re-fetch schema from server
+
+### Flags for `teamcity pipeline pull`
+
+- `-o, --output <path>` - Write YAML to file instead of stdout
+
+### Flags for `teamcity pipeline delete`
+
+- `--force` - Skip confirmation prompt
+
 ## Configuration (`teamcity config`)
 
 | Command                               | Description                    |
@@ -415,7 +467,7 @@ Available on all commands:
 
 ## List Output Flags
 
-Available on all list commands (`run list`, `agent list`, `job list`, `pool list`, `project list`, `queue list`, `project vcs list`) and on `agent jobs`, `project param list`, `job param list`:
+Available on all list commands (`run list`, `agent list`, `job list`, `pool list`, `project list`, `queue list`, `project vcs list`, `pipeline list`) and on `agent jobs`, `project param list`, `job param list`:
 
 - `--plain` - Tab-separated plain text output for scripting (mutually exclusive with `--json`)
 - `--no-header` - Omit header row (use with `--plain`)

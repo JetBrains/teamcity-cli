@@ -26,7 +26,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.41.0
-	github.com/tiulpin/instill v0.0.0-20260408221256-9648b74386c1
+	github.com/tiulpin/instill v0.0.0-20260409102126-21f299ecb245
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/term v0.41.0
 )
