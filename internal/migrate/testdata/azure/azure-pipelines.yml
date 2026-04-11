@@ -1,0 +1,70 @@
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - src/**
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: Release
+  dotnetVersion: '8.0.x'
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildApp
+        displayName: 'Build Application'
+        steps:
+          - task: UseDotNet@2
+            displayName: 'Install .NET SDK'
+            inputs:
+              packageType: 'sdk'
+              version: '$(dotnetVersion)'
+
+          - script: dotnet restore
+            displayName: 'Restore packages'
+
+          - script: dotnet build --configuration $(buildConfiguration) --no-restore
+            displayName: 'Build'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Run tests'
+            inputs:
+              command: 'test'
+              projects: '**/*Tests.csproj'
+              arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage"'
+
+          - task: PublishTestResults@2
+            displayName: 'Publish test results'
+            inputs:
+              testResultsFormat: 'VSTest'
+              testResultsFiles: '**/*.trx'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish artifact'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+
+  - stage: Deploy
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: DeployApp
+        displayName: 'Deploy to Azure'
+        steps:
+          - task: AzureWebApp@1
+            displayName: 'Deploy to App Service'
+            inputs:
+              appName: 'my-web-app'
+              package: '$(Build.ArtifactStagingDirectory)/drop'

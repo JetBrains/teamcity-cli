@@ -547,9 +547,9 @@ type ProjectRef struct {
 
 // CreatePipelineRequest represents a request to create a pipeline
 type CreatePipelineRequest struct {
-	Name    string              `json:"name"`
-	YAML    string              `json:"yaml"`
-	VcsRoot *PipelineVcsRootRef `json:"vcsRoot,omitempty"`
+	Name    string                    `json:"name"`
+	YAML    string                    `json:"yaml"`
+	VcsRoot *PipelineVcsRootRef       `json:"vcsRoot,omitempty"`
 }
 
 // PipelineVcsRootRef references an existing VCS root for pipeline creation

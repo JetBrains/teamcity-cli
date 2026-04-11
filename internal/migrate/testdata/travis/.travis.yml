@@ -1,0 +1,64 @@
+language: go
+go:
+  - "1.22"
+
+os: linux
+
+services:
+  - docker
+  - redis
+
+cache:
+  directories:
+    - $HOME/.cache/go-build
+    - $GOPATH/pkg/mod
+
+addons:
+  apt:
+    packages:
+      - protobuf-compiler
+
+env:
+  global:
+    - CGO_ENABLED=0
+    - GO111MODULE=on
+
+jobs:
+  include:
+    - stage: lint
+      name: "Lint"
+      install: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      script: golangci-lint run ./...
+
+    - stage: test
+      name: "Unit Tests"
+      script:
+        - go test -v -race -coverprofile=coverage.out ./...
+        - go tool cover -func=coverage.out
+
+    - stage: build
+      name: "Build Binary"
+      script:
+        - go build -o bin/app ./cmd/app
+        - ls -la bin/
+
+    - stage: deploy
+      name: "Deploy"
+      script: echo "Deploying..."
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file: bin/app
+        skip_cleanup: true
+        on:
+          tags: true
+
+branches:
+  only:
+    - main
+    - /^v\d+\.\d+\.\d+$/
+
+notifications:
+  slack:
+    rooms:
+      - secure: "encrypted-slack-token"

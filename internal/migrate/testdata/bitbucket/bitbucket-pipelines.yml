@@ -1,0 +1,64 @@
+image: node:20
+
+definitions:
+  services:
+    postgres:
+      image: postgres:15
+      environment:
+        POSTGRES_DB: testdb
+        POSTGRES_PASSWORD: test
+  caches:
+    npm: ~/.npm
+
+pipelines:
+  default:
+    - step:
+        name: Install & Build
+        caches:
+          - npm
+        script:
+          - npm ci
+          - npm run build
+        artifacts:
+          - dist/**
+
+    - parallel:
+        - step:
+            name: Unit Tests
+            caches:
+              - npm
+            services:
+              - postgres
+            script:
+              - npm ci
+              - npm run test:unit
+        - step:
+            name: Lint
+            caches:
+              - npm
+            script:
+              - npm ci
+              - npm run lint
+
+    - step:
+        name: Deploy to Staging
+        trigger: manual
+        script:
+          - pipe: atlassian/aws-s3-deploy:1.1.0
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              S3_BUCKET: staging-bucket
+              LOCAL_PATH: dist
+
+  branches:
+    main:
+      - step:
+          name: Deploy to Production
+          script:
+            - npm ci
+            - npm run build
+            - pipe: atlassian/aws-s3-deploy:1.1.0
+              variables:
+                S3_BUCKET: production-bucket
+                LOCAL_PATH: dist

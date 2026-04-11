@@ -1,0 +1,87 @@
+image: node:20-alpine
+
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  NPM_TOKEN: "${CI_JOB_TOKEN}"
+  CACHE_KEY: "$CI_COMMIT_REF_SLUG"
+
+cache:
+  key: ${CACHE_KEY}
+  paths:
+    - node_modules/
+
+.base_job:
+  before_script:
+    - npm ci
+
+build:
+  stage: build
+  extends: .base_job
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+test:
+  stage: test
+  extends: .base_job
+  needs:
+    - build
+  script:
+    - npm run test -- --coverage
+  artifacts:
+    reports:
+      junit: coverage/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+  services:
+    - postgres:15
+    - redis:7-alpine
+  variables:
+    DATABASE_URL: "postgres://postgres@postgres:5432/test"
+
+lint:
+  stage: test
+  extends: .base_job
+  needs: []
+  script:
+    - npm run lint
+  allow_failure: true
+
+deploy_staging:
+  stage: deploy
+  needs:
+    - build
+    - test
+  script:
+    - echo "Deploying to staging..."
+    - npx serverless deploy --stage staging
+  environment:
+    name: staging
+    url: https://staging.example.com
+  only:
+    - main
+
+deploy_production:
+  stage: deploy
+  needs:
+    - deploy_staging
+  script:
+    - echo "Deploying to production..."
+    - npx serverless deploy --stage production
+  environment:
+    name: production
+    url: https://example.com
+  when: manual
+  only:
+    - main
