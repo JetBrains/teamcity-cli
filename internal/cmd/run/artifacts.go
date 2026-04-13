@@ -96,22 +96,28 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 
 	flatList, totalSize := flattenArtifacts(artifacts.File, "")
 
-	nameWidth := 4 // "NAME"
-	for _, a := range flatList {
-		if len(a.Name) > nameWidth {
-			nameWidth = len(a.Name)
+	displayNames := make([]string, len(flatList))
+	for i, a := range flatList {
+		displayNames[i] = a.Name
+		if a.Content == nil {
+			displayNames[i] += "/"
 		}
+	}
+
+	nameWidth := 4 // "NAME"
+	for _, name := range displayNames {
+		nameWidth = max(nameWidth, len(name))
 	}
 
 	_, _ = fmt.Fprintf(p.Out, "ARTIFACTS (%d %s, %s total)\n\n", len(flatList), english.PluralWord(len(flatList), "file", "files"), humanize.IBytes(uint64(totalSize)))
 	_, _ = fmt.Fprintf(p.Out, "%-*s  %10s\n", nameWidth, "NAME", "SIZE")
 
-	for _, a := range flatList {
+	for i, a := range flatList {
 		size := ""
 		if a.Size > 0 {
 			size = humanize.IBytes(uint64(a.Size))
 		}
-		_, _ = fmt.Fprintf(p.Out, "%-*s  %s\n", nameWidth, a.Name, output.Faint(fmt.Sprintf("%10s", size)))
+		_, _ = fmt.Fprintf(p.Out, "%-*s  %s\n", nameWidth, displayNames[i], output.Faint(fmt.Sprintf("%10s", size)))
 	}
 
 	if opts.path != "" {
