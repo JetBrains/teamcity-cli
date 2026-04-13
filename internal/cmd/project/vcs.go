@@ -36,8 +36,6 @@ func newVcsCmd(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-// --- list ---
-
 type vcsListOptions struct {
 	project string
 	cmdutil.ListFlags
@@ -100,8 +98,6 @@ func (opts *vcsListOptions) fetch(client api.ClientInterface, fields []string) (
 		EmptyMsg: "No VCS roots found",
 	}, nil
 }
-
-// --- view ---
 
 func newVcsViewCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &cmdutil.ViewOptions{}
@@ -212,8 +208,6 @@ func vcsPropertyLabel(name string) string {
 func vcsRootEditURL(id string) string {
 	return fmt.Sprintf("%s/admin/editVcsRoot.html?vcsRootId=%s", config.GetServerURL(), id)
 }
-
-// --- create ---
 
 const (
 	authPassword  = "password"
@@ -576,8 +570,6 @@ func inferAuthFromURL(repoURL string) string {
 	return authAnonymous
 }
 
-// --- test ---
-
 func newVcsTestCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "test <vcs-root-id>",
@@ -672,8 +664,6 @@ func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
 
 	return req
 }
-
-// --- delete ---
 
 type vcsDeleteOptions struct {
 	yes bool

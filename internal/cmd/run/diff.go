@@ -197,8 +197,6 @@ func fetchBothBuilds(client api.ClientInterface, id1, id2 string, p *output.Prin
 	return d1, d2, err2
 }
 
-// --- Log diff ---
-
 func runLogDiff(f *cmdutil.Factory, client api.ClientInterface, id1, id2 string, context int) error {
 	p := f.Printer
 
@@ -237,8 +235,6 @@ func runLogDiff(f *cmdutil.Factory, client api.ClientInterface, id1, id2 string,
 
 	return nil
 }
-
-// --- Shared computation ---
 
 type paramDiff struct {
 	name     string
@@ -353,8 +349,6 @@ func computeProblemDiffs(pr1, pr2 *api.ProblemOccurrences) (newProblems, resolve
 	}
 	return newProblems, resolved
 }
-
-// --- Rendering ---
 
 func renderDiff(p *output.Printer, d1, d2 buildData) {
 	b1, b2 := d1.build, d2.build
@@ -593,8 +587,6 @@ func renderProblemsDiff(p *output.Printer, pr1, pr2 *api.ProblemOccurrences) boo
 	return true
 }
 
-// --- JSON output ---
-
 func buildDiffJSON(d1, d2 buildData) map[string]any {
 	b1, b2 := d1.build, d2.build
 
@@ -689,8 +681,6 @@ func buildDiffJSON(d1, d2 buildData) map[string]any {
 
 	return map[string]any{"run1": jsonBuild(b1), "run2": jsonBuild(b2), "diff": diff}
 }
-
-// --- Helpers ---
 
 func buildDuration(b *api.Build) time.Duration {
 	if b.StartDate == "" || b.FinishDate == "" {
