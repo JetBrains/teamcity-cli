@@ -25,7 +25,7 @@ func newRunArtifactsCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "artifacts [run-id]",
-		Short: "List run artifacts",
+		Short: "List artifacts",
 		Long: `List artifacts from a run without downloading them.
 
 Shows artifact names and sizes. Use teamcity run download to download artifacts.`,

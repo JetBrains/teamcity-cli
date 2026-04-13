@@ -33,7 +33,7 @@ func newRunLogCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "log [run-id]",
-		Short: "View run log",
+		Short: "View log",
 		Long: `View the log output from a run.
 
 You can specify a run ID directly, or use --job to get the latest run's log.

@@ -42,7 +42,7 @@ func newRunTreeCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "tree <run-id>",
-		Short: "Display snapshot dependency tree for a run",
+		Short: "Display snapshot dependency tree",
 		Example: `  teamcity run tree 12345
   teamcity run tree 12345 --depth 2
   teamcity run tree 12345 --json`,

@@ -360,7 +360,7 @@ func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view <run-id>",
 		Aliases: []string{"show"},
-		Short:   "View run details",
+		Short:   "View details",
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity run view 12345
   teamcity run view 12345 --web

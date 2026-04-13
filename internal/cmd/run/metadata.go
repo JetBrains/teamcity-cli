@@ -12,7 +12,7 @@ func newRunPinCmd(f *cmdutil.Factory) *cobra.Command {
 	var comment string
 	cmd := &cobra.Command{
 		Use:   "pin <run-id>",
-		Short: "Pin a run to prevent cleanup",
+		Short: "Pin to prevent cleanup",
 		Long:  `Pin a run to prevent it from being automatically cleaned up by retention policies.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run pin 12345
@@ -60,8 +60,8 @@ func newRunUnpinCmd(f *cmdutil.Factory) *cobra.Command {
 func newRunTagCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tag <run-id> <tag>...",
-		Short: "Add tags to a run",
-		Long:  `Add one or more tags to a run for categorization and filtering.`,
+		Short: "Add tags",
+		Long:  `Add one or more tags for categorization and filtering.`,
 		Args:  cobra.MinimumNArgs(2),
 		Example: `  teamcity run tag 12345 release
   teamcity run tag 12345 release v1.0 production`,
@@ -102,8 +102,8 @@ func runRunTag(f *cmdutil.Factory, runID string, tags []string) error {
 func newRunUntagCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "untag <run-id> <tag>...",
-		Short: "Remove tags from a run",
-		Long:  `Remove one or more tags from a run.`,
+		Short: "Remove tags",
+		Long:  `Remove one or more tags.`,
 		Args:  cobra.MinimumNArgs(2),
 		Example: `  teamcity run untag 12345 release
   teamcity run untag 12345 release v1.0`,
@@ -157,7 +157,7 @@ func newRunCommentCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "comment <run-id> [comment]",
-		Short: "Set or view run comment",
+		Short: "Set or view comment",
 		Long: `Set, view, or delete a comment on a run.
 
 Without a comment argument, displays the current comment.
