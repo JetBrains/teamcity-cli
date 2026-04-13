@@ -68,6 +68,7 @@ Report issues:  https://jb.gg/tc/issues`,
 	cmd.PersistentFlags().BoolVar(&f.NoColor, "no-color", false, "Disable colored output")
 	cmd.PersistentFlags().BoolVarP(&f.Quiet, "quiet", "q", false, "Suppress non-essential output")
 	cmd.PersistentFlags().BoolVar(&f.Verbose, "verbose", false, "Show detailed output including debug info")
+	cmd.PersistentFlags().BoolVar(&f.Verbose, "debug", false, "Alias for --verbose")
 	cmd.PersistentFlags().BoolVar(&f.NoInput, "no-input", false, "Disable interactive prompts")
 
 	cmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
