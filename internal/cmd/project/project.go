@@ -344,7 +344,7 @@ func newProjectTreeCmd(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&noJobs, "no-jobs", false, "Hide build configurations")
+	cmd.Flags().BoolVar(&noJobs, "no-jobs", false, "Hide jobs")
 	cmd.Flags().IntVarP(&depth, "depth", "d", 0, "Limit tree depth (0 = unlimited)")
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "Output as JSON")
 

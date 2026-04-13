@@ -32,7 +32,7 @@ func newRunLogCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runLogOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "log [run-id]",
+		Use:   "log [id]",
 		Short: "View log",
 		Long: `View the log output from a run.
 
@@ -48,7 +48,7 @@ Pager: / search, n/N next/prev, g/G top/bottom, q quit.
 Use --raw to bypass the pager.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.Flags().Changed("job") {
-				return tcerrors.MutuallyExclusive("run-id", "job")
+				return tcerrors.MutuallyExclusive("id", "job")
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
@@ -68,13 +68,13 @@ Use --raw to bypass the pager.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Get log for latest run of this job")
+	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Use this job's latest")
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show failure summary (problems and failed tests)")
 	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Show raw log without formatting")
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open build log in browser")
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open log in browser")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().IntVar(&opts.tail, "tail", 0, "Show last N log messages")
-	cmd.Flags().BoolVarP(&opts.follow, "follow", "f", false, "Stream log output until build completes")
+	cmd.Flags().BoolVarP(&opts.follow, "follow", "f", false, "Stream log output until completion")
 
 	cmd.MarkFlagsMutuallyExclusive("json", "raw")
 	cmd.MarkFlagsMutuallyExclusive("json", "web")
@@ -213,7 +213,7 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
 		if !opts.json {
-			f.Printer.Info("Showing log for run %s  #%s", runID, runs.Builds[0].Number)
+			f.Printer.Info("Showing log for #%s (%s)", runID, runs.Builds[0].Number)
 		}
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
@@ -259,7 +259,7 @@ func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, op
 	}
 
 	if log == "" {
-		f.Printer.Info("No log available for this run")
+		f.Printer.Info("No log available")
 		return nil
 	}
 

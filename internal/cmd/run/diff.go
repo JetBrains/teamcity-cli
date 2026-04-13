@@ -28,7 +28,7 @@ func newRunDiffCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runDiffOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "diff <run-id-1> [run-id-2]",
+		Use:   "diff <id-1> [id-2]",
 		Short: "Compare two runs and show differences",
 		Long: `Compare two runs (builds) and highlight what changed between them.
 
@@ -45,7 +45,7 @@ Pipe to external diff tools for advanced views:
   teamcity run diff 123 124 --log --no-color | diff-so-fancy
 
 If only one run ID is given, it is compared against the previous
-finished run of the same build configuration.`,
+finished run of the same job.`,
 		Args: cobra.RangeArgs(1, 2),
 		Example: `  teamcity run diff 123 124
   teamcity run diff 456                # compare with previous run
@@ -59,8 +59,8 @@ finished run of the same build configuration.`,
 	}
 
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().BoolVar(&opts.log, "log", false, "Compare build logs with colored unified diff")
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open both runs in browser")
+	cmd.Flags().BoolVar(&opts.log, "log", false, "Compare logs with colored unified diff")
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open both in browser")
 	cmd.Flags().IntVarP(&opts.context, "unified", "U", 3, "Number of context lines in log diff")
 
 	cmd.MarkFlagsMutuallyExclusive("json", "log")

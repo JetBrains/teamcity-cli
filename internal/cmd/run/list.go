@@ -67,11 +67,11 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running, queued, error, unknown)")
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
 	cmd.Flags().StringVar(&opts.revision, "revision", "", "Filter by VCS revision/commit SHA (or '@head' for current HEAD)")
-	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorite runs for the current user")
+	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorites for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of runs")
-	cmd.Flags().StringVar(&opts.since, "since", "", "Filter builds finished after this time (e.g., 24h, 2026-01-21)")
-	cmd.Flags().StringVar(&opts.until, "until", "", "Filter builds finished before this time (e.g., 12h, 2026-01-22)")
+	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number to show")
+	cmd.Flags().StringVar(&opts.since, "since", "", "Finished after this time (e.g., 24h, 2026-01-21)")
+	cmd.Flags().StringVar(&opts.until, "until", "", "Finished before this time (e.g., 12h, 2026-01-22)")
 	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
 	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
 	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
@@ -358,7 +358,7 @@ func resolveRunListEmptyMessage(opts *runListOptions) string {
 func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &cmdutil.ViewOptions{}
 	cmd := &cobra.Command{
-		Use:     "view <run-id>",
+		Use:     "view <id>",
 		Aliases: []string{"show"},
 		Short:   "View details",
 		Args:    cobra.ExactArgs(1),

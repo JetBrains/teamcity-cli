@@ -17,7 +17,7 @@ func newRunRestartCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runRestartOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "restart <run-id>",
+		Use:   "restart <id>",
 		Short: "Restart a run",
 		Long:  `Restart a run with the same configuration.`,
 		Args:  cobra.ExactArgs(1),
@@ -29,7 +29,7 @@ func newRunRestartCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	opts.addToCmd(cmd)
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open run in browser")
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 
 	return cmd
 }

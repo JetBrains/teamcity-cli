@@ -16,7 +16,7 @@ func newQueueRemoveCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &queueRemoveOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "remove <run-id>",
+		Use:     "remove <id>",
 		Aliases: []string{"rm"},
 		Short:   "Remove a run from the queue",
 		Long:    `Remove a queued run from the TeamCity queue.`,
@@ -60,6 +60,6 @@ func runQueueRemove(f *cmdutil.Factory, runID string, opts *queueRemoveOptions) 
 		return fmt.Errorf("failed to remove run from queue: %w", err)
 	}
 
-	f.Printer.Success("Removed run %s from queue", runID)
+	f.Printer.Success("Removed #%s from queue", runID)
 	return nil
 }

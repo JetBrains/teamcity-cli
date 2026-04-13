@@ -21,7 +21,7 @@ func newRunChangesCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runChangesOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "changes <run-id>",
+		Use:   "changes <id>",
 		Short: "Show VCS changes",
 		Long:  `Show the VCS changes (commits) included in a run.`,
 		Args:  cobra.ExactArgs(1),
@@ -132,14 +132,14 @@ func newRunTestsCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runTestsOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "tests [run-id]",
+		Use:   "tests [id]",
 		Short: "Show test results",
 		Long: `Show test results from a run.
 
 You can specify a run ID directly, or use --job to get the latest run's tests.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.Flags().Changed("job") {
-				return tcerrors.MutuallyExclusive("run-id", "job")
+				return tcerrors.MutuallyExclusive("id", "job")
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
@@ -158,7 +158,7 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show only failed tests")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 0, "Maximum number of tests to show")
-	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Get tests for latest run of this job")
+	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Use this job's latest")
 
 	return cmd
 }
