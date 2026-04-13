@@ -464,7 +464,7 @@ func TestRunView_usedByOtherBuilds(t *testing.T) {
 		})
 	})
 	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "55")
-	assert.Contains(t, got, "Results shared with other builds in chain")
+	assert.Contains(t, got, "Results shared in build chain")
 }
 
 func TestRunView_waitReason(t *testing.T) {
@@ -500,8 +500,8 @@ func TestRunStart_reused(t *testing.T) {
 		})
 	})
 	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "start", testJob)
-	assert.Contains(t, got, "Reused existing run")
-	assert.Contains(t, got, "build optimization")
+	assert.Contains(t, got, "Reused existing")
+	assert.Contains(t, got, "(optimization)")
 }
 
 func TestRunList_invalid_status(t *testing.T) {
