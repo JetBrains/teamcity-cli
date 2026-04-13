@@ -28,7 +28,7 @@ func newQueueRemoveCmd(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
 	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "Deprecated: use --yes")
 	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 

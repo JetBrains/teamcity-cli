@@ -78,7 +78,7 @@ Note: Local agents (running on the same machine as the server) cannot be reboote
 	cmd.Flags().BoolVar(&opts.graceful, "graceful", false, "Wait for current work to finish before rebooting")
 	cmd.Flags().BoolVar(&opts.graceful, "after-build", false, "Deprecated: use --graceful")
 	_ = cmd.Flags().MarkDeprecated("after-build", "use --graceful instead")
-	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
 	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "Deprecated: use --yes")
 	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 

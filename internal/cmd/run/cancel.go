@@ -30,7 +30,7 @@ func newRunCancelCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&opts.comment, "comment", "", "Comment for cancellation")
-	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
 	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "Deprecated: use --yes")
 	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 
