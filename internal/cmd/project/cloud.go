@@ -52,6 +52,7 @@ func newCloudProfileListCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:     "list",
 		Short:   "List cloud profiles",
 		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
 		Example: `  teamcity project cloud profile list
   teamcity project cloud profile list --project MyProject
   teamcity project cloud profile list --json`,
@@ -174,6 +175,7 @@ func newCloudImageListCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:     "list",
 		Short:   "List cloud images",
 		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
 		Example: `  teamcity project cloud image list
   teamcity project cloud image list --project MyProject --profile aws-prod
   teamcity project cloud image list --json`,
@@ -347,6 +349,7 @@ func newCloudInstanceListCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:     "list",
 		Short:   "List cloud instances",
 		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
 		Example: `  teamcity project cloud instance list
   teamcity project cloud instance list --project MyProject --image ubuntu-22-large
   teamcity project cloud instance list --json`,
