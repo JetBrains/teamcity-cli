@@ -37,3 +37,9 @@ stdout '"id"'
 
 extract '"id":\s*(\d+)' BUILD_ID
 exec teamcity run cancel $BUILD_ID --force --no-input
+
+# --reuse-deps (dry-run, non-existent id surfaces as "not found")
+exec teamcity run start $JOB_ID --reuse-deps 999999999 --dry-run --no-input
+stdout 'Snapshot dependencies:'
+stdout '999999999'
+stdout 'not found'

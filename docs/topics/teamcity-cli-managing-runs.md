@@ -342,6 +342,9 @@ teamcity run start MyProject_Build --rebuild-deps
 # Rebuild only failed dependencies
 teamcity run start MyProject_Build --rebuild-failed-deps
 
+# Reuse existing builds as snapshot dependencies (pin by build ID)
+teamcity run start MyProject_Build --reuse-deps 6946,6917
+
 # Add to the top of the queue
 teamcity run start MyProject_Build --top
 
@@ -569,6 +572,18 @@ Rebuild all dependencies
 <td>
 
 Rebuild failed or incomplete dependencies only
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--reuse-deps`
+
+</td>
+<td>
+
+Reuse existing builds as snapshot dependencies. Accepts a comma-separated list of build IDs or can be repeated. TeamCity resolves which dependency slot each build fills by its build configuration.
 
 </td>
 </tr>

@@ -2,6 +2,8 @@ package run_test
 
 import (
 	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -73,6 +75,41 @@ func TestRunStartDryRun(T *testing.T) {
 	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "start", testJob, "--dry-run")
 	assert.Contains(T, got, "Would trigger run for")
 	assert.Contains(T, got, testJob)
+}
+
+func TestRunStartReuseDepsDryRun(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /app/rest/builds/id:6946", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{ID: 6946, Number: "42", Status: "SUCCESS", BuildTypeID: "Dep_A"})
+	})
+	ts.Handle("GET /app/rest/builds/id:6917", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{ID: 6917, Number: "41", Status: "SUCCESS", BuildTypeID: "Dep_B"})
+	})
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "start", testJob,
+		"--reuse-deps", "6946,6917", "--dry-run")
+	assert.Contains(T, got, "Snapshot dependencies:")
+	assert.Contains(T, got, "6946")
+	assert.Contains(T, got, "#42")
+	assert.Contains(T, got, "Dep_A")
+	assert.Contains(T, got, "6917")
+}
+
+func TestRunStartReuseDepsSendsIDs(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	var captured api.TriggerBuildRequest
+	ts.Handle("POST /app/rest/buildQueue", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		require.NoError(T, json.Unmarshal(body, &captured))
+		cmdtest.JSON(w, api.Build{ID: 999, BuildTypeID: testJob, WebURL: "https://example/build/999"})
+	})
+
+	cmdtest.RunCmdWithFactory(T, ts.Factory, "run", "start", testJob, "--reuse-deps", "6946,6917")
+
+	require.NotNil(T, captured.SnapshotDependencies)
+	require.Len(T, captured.SnapshotDependencies.Build, 2)
+	assert.Equal(T, 6946, captured.SnapshotDependencies.Build[0].ID)
+	assert.Equal(T, 6917, captured.SnapshotDependencies.Build[1].ID)
 }
 
 func TestRunStartDryRunNonExistentJob(T *testing.T) {

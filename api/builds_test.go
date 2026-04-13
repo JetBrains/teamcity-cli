@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
@@ -87,4 +88,45 @@ func TestGetBuildsUsesFavoritesLocator(T *testing.T) {
 
 	assert.Contains(T, capturedQuery, BuildsOptions{Favorites: true}.Locator().Encode())
 	assert.Contains(T, capturedQuery, "count%3A5")
+}
+
+func TestRunBuildSendsSnapshotDependencies(T *testing.T) {
+	T.Parallel()
+
+	var captured TriggerBuildRequest
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(T, err)
+		require.NoError(T, json.Unmarshal(body, &captured))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(Build{ID: 1})
+	})
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{
+		SnapshotDependencies: []int{6946, 6917, 6922},
+	})
+	require.NoError(T, err)
+
+	require.NotNil(T, captured.SnapshotDependencies)
+	require.Len(T, captured.SnapshotDependencies.Build, 3)
+	assert.Equal(T, 6946, captured.SnapshotDependencies.Build[0].ID)
+	assert.Equal(T, 6917, captured.SnapshotDependencies.Build[1].ID)
+	assert.Equal(T, 6922, captured.SnapshotDependencies.Build[2].ID)
+}
+
+func TestRunBuildOmitsEmptySnapshotDependencies(T *testing.T) {
+	T.Parallel()
+
+	var rawBody []byte
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		b, err := io.ReadAll(r.Body)
+		require.NoError(T, err)
+		rawBody = b
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(Build{ID: 1})
+	})
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{})
+	require.NoError(T, err)
+	assert.NotContains(T, string(rawBody), "snapshot-dependencies")
 }

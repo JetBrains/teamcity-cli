@@ -1,8 +1,12 @@
 package run
 
 import (
+	"cmp"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -44,6 +48,63 @@ func (w *watchFlags) watchOpts(logs, json bool) *runWatchOptions {
 	}
 }
 
+type reuseDep struct {
+	id    int
+	build *api.Build
+	err   error
+}
+
+func fetchReuseDeps(client api.ClientInterface, ids []int) []reuseDep {
+	out := make([]reuseDep, len(ids))
+	var wg sync.WaitGroup
+	for i, id := range ids {
+		wg.Go(func() {
+			b, err := client.GetBuild(strconv.Itoa(id))
+			out[i] = reuseDep{id: id, build: b, err: err}
+		})
+	}
+	wg.Wait()
+	return out
+}
+
+func printReuseDeps(p *output.Printer, deps []reuseDep) {
+	if len(deps) == 0 {
+		return
+	}
+	_, _ = fmt.Fprintln(p.Out, "  Snapshot dependencies:")
+	idW := 0
+	for _, d := range deps {
+		idW = max(idW, len(strconv.Itoa(d.id)))
+	}
+	for _, d := range deps {
+		icon, summary := reuseDepRow(d)
+		_, _ = fmt.Fprintf(p.Out, "    %s %-*d  %s\n", icon, idW, d.id, summary)
+	}
+}
+
+func reuseDepRow(d reuseDep) (icon, summary string) {
+	if d.build == nil {
+		if _, ok := errors.AsType[*api.NotFoundError](d.err); ok || d.err == nil {
+			return output.Faint("?"), output.Red("(not found)")
+		}
+		return output.Faint("?"), output.Yellow(fmt.Sprintf("(lookup failed: %v)", d.err))
+	}
+	b := d.build
+	var btName string
+	if b.BuildType != nil {
+		btName = b.BuildType.Name
+	}
+	parts := make([]string, 0, 3)
+	if b.Number != "" {
+		parts = append(parts, output.Cyan("#"+b.Number))
+	}
+	parts = append(parts, cmp.Or(btName, b.BuildTypeID))
+	if (b.State != "" && b.State != "finished") || (b.Status != "" && !strings.EqualFold(b.Status, "SUCCESS")) {
+		parts = append(parts, output.StatusText(b.Status, b.State))
+	}
+	return output.StatusIcon(b.Status, b.State), strings.Join(parts, "  ")
+}
+
 func printQueuedRun(p *output.Printer, build *api.Build, context string) {
 	ref := fmt.Sprintf("%d  #%s", build.ID, build.Number)
 	if build.Number == "" {
@@ -79,6 +140,7 @@ type runStartOptions struct {
 	queueAtTop        bool
 	agent             int
 	tags              []string
+	reuseDeps         []int
 	watchFlags
 	web    bool
 	dryRun bool
@@ -101,6 +163,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
   teamcity run start Falcon_Build --comment "Release build" --tag release --tag v1.0
   teamcity run start Falcon_Build --clean --rebuild-deps --top
+  teamcity run start Falcon_Build --reuse-deps 6946,6917  # pin existing builds as snapshot deps
   teamcity run start Falcon_Build --local-changes # personal build with uncommitted Git changes
   teamcity run start Falcon_Build --local-changes changes.patch  # from file
   teamcity run start Falcon_Build --revision abc123def --branch main
@@ -124,6 +187,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.cleanSources, "clean", false, "Clean sources before run")
 	cmd.Flags().BoolVar(&opts.rebuildDeps, "rebuild-deps", false, "Rebuild all dependencies")
 	cmd.Flags().BoolVar(&opts.rebuildFailedDeps, "rebuild-failed-deps", false, "Rebuild failed/incomplete dependencies")
+	cmd.Flags().IntSliceVar(&opts.reuseDeps, "reuse-deps", nil, "Reuse existing builds as snapshot deps (build IDs, comma-separated or repeated)")
 	cmd.Flags().BoolVar(&opts.queueAtTop, "top", false, "Add to top of queue")
 	cmd.Flags().IntVar(&opts.agent, "agent", 0, "Run on specific agent (by ID)")
 	opts.addToCmd(cmd)
@@ -190,6 +254,9 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		}
 		if opts.rebuildDeps {
 			_, _ = fmt.Fprintln(p.Out, "  Rebuild dependencies: yes")
+		}
+		if len(opts.reuseDeps) > 0 {
+			printReuseDeps(p, fetchReuseDeps(client, opts.reuseDeps))
 		}
 		if opts.queueAtTop {
 			_, _ = fmt.Fprintln(p.Out, "  Queue at top: yes")
@@ -268,6 +335,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		Tags:                      opts.tags,
 		PersonalChangeID:          personalChangeID,
 		Revision:                  opts.revision,
+		SnapshotDependencies:      opts.reuseDeps,
 	})
 	if err != nil {
 		return err
@@ -299,6 +367,9 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	}
 	if len(opts.tags) > 0 {
 		p.Info("  Tags: %s", strings.Join(opts.tags, ", "))
+	}
+	if len(opts.reuseDeps) > 0 {
+		printReuseDeps(p, fetchReuseDeps(client, opts.reuseDeps))
 	}
 	p.Info("  URL: %s", build.WebURL)
 	if opts.agent > 0 {

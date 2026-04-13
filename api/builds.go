@@ -217,6 +217,7 @@ type RunBuildOptions struct {
 	Tags                      []string
 	PersonalChangeID          string
 	Revision                  string
+	SnapshotDependencies      []int
 }
 
 // RunBuild runs a new build with full options
@@ -276,6 +277,14 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 				{ID: opts.PersonalChangeID, Personal: true},
 			},
 		}
+	}
+
+	if len(opts.SnapshotDependencies) > 0 {
+		refs := make([]BuildRef, len(opts.SnapshotDependencies))
+		for i, id := range opts.SnapshotDependencies {
+			refs[i] = BuildRef{ID: id}
+		}
+		req.SnapshotDependencies = &SnapshotDepBuilds{Build: refs}
 	}
 
 	if opts.Revision != "" {
