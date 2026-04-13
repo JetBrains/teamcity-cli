@@ -297,7 +297,7 @@ func resolveRunListStatus(status string) (statusFilter, stateFilter string, err 
 	case "running", "queued":
 		return "", v, nil
 	default:
-		return v, "", nil
+		return v, "finished", nil
 	}
 }
 

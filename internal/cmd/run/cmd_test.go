@@ -289,14 +289,15 @@ func TestStatusFilterLocator(T *testing.T) {
 	tests := []struct {
 		status        string
 		wantLocator   string // substring that must appear in the locator query
+		wantState     string // additional substring that must appear (e.g., state:finished)
 		rejectLocator string // substring that must NOT appear
 	}{
-		{"success", "status%3ASUCCESS", "state%3A"},
-		{"failure", "status%3AFAILURE", "state%3A"},
-		{"running", "state%3Arunning", "status%3ARUNNING"},
-		{"queued", "state%3Aqueued", "status%3AQUEUED"},
-		{"error", "status%3AERROR", "state%3A"},
-		{"unknown", "status%3AUNKNOWN", "state%3A"},
+		{"success", "status%3ASUCCESS", "state%3Afinished", ""},
+		{"failure", "status%3AFAILURE", "state%3Afinished", ""},
+		{"running", "state%3Arunning", "", "status%3ARUNNING"},
+		{"queued", "state%3Aqueued", "", "status%3AQUEUED"},
+		{"error", "status%3AERROR", "state%3Afinished", ""},
+		{"unknown", "status%3AUNKNOWN", "state%3Afinished", ""},
 	}
 
 	for _, tt := range tests {
@@ -324,6 +325,10 @@ func TestStatusFilterLocator(T *testing.T) {
 
 			assert.Contains(t, capturedQuery, tt.wantLocator,
 				"--status %s: expected locator to contain %s, got query: %s", tt.status, tt.wantLocator, capturedQuery)
+			if tt.wantState != "" {
+				assert.Contains(t, capturedQuery, tt.wantState,
+					"--status %s: expected locator to contain %s, got query: %s", tt.status, tt.wantState, capturedQuery)
+			}
 			if tt.rejectLocator != "" {
 				assert.NotContains(t, capturedQuery, tt.rejectLocator,
 					"--status %s: locator must not contain %s, got query: %s", tt.status, tt.rejectLocator, capturedQuery)
