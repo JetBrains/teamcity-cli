@@ -9,6 +9,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/JetBrains/teamcity-cli/internal/pipelineschema"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -110,7 +111,7 @@ func loadSchema(f *cmdutil.Factory, opts *validateOptions) ([]byte, error) {
 		return nil, fmt.Errorf("schema caching requires a real API client")
 	}
 
-	return fetchOrCacheSchema(c, opts.refreshSchema)
+	return cmdutil.FetchOrCachePipelineSchema(c, opts.refreshSchema)
 }
 
 type validationError struct {
@@ -134,7 +135,7 @@ func validateAgainstSchema(schemaData []byte, doc any) ([]validationError, error
 		return nil, fmt.Errorf("failed to compile schema: %w", err)
 	}
 
-	converted := convertYAMLToJSON(doc)
+	converted := pipelineschema.ConvertYAMLToJSON(doc)
 	err = schema.Validate(converted)
 	if err == nil {
 		return nil, nil
@@ -175,33 +176,6 @@ func flattenValidationErrors(ve *jsonschema.ValidationError, prefix string) []va
 	return result
 }
 
-// convertYAMLToJSON converts YAML-parsed values to JSON-compatible types.
-// yaml.v3 uses map[string]any for mappings, which jsonschema expects,
-// but integer keys and other edge cases need conversion.
-func convertYAMLToJSON(v any) any {
-	switch val := v.(type) {
-	case map[string]any:
-		result := make(map[string]any, len(val))
-		for k, v := range val {
-			result[k] = convertYAMLToJSON(v)
-		}
-		return result
-	case map[any]any:
-		result := make(map[string]any, len(val))
-		for k, v := range val {
-			result[fmt.Sprint(k)] = convertYAMLToJSON(v)
-		}
-		return result
-	case []any:
-		result := make([]any, len(val))
-		for i, v := range val {
-			result[i] = convertYAMLToJSON(v)
-		}
-		return result
-	default:
-		return v
-	}
-}
 
 // findLineNumber walks the YAML node tree to find the line number for a JSON pointer path.
 func findLineNumber(root *yaml.Node, path string) int {

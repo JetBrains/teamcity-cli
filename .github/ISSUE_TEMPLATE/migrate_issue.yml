@@ -1,0 +1,83 @@
+name: Migrate Issue
+description: Report a problem with `teamcity migrate` (CI config conversion)
+title: "[migrate] "
+labels: ["migrate", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `teamcity migrate` is an experimental, heuristic converter. To fix
+        a conversion, we need to see the source CI file (or a minimal
+        reproducer). Please redact any secrets or private URLs before pasting.
+
+        For higher-quality conversions, try the bundled `migrate-to-teamcity`
+        skill under an AI agent — it does a semantic review the CLI can't.
+
+  - type: input
+    id: version
+    attributes:
+      label: CLI version
+      description: Run `teamcity --version`
+      placeholder: "v0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source CI system
+      options:
+        - GitHub Actions
+        - GitLab CI
+        - Jenkins
+        - CircleCI
+        - Azure DevOps
+        - Travis CI
+        - Bitbucket Pipelines
+    validations:
+      required: true
+
+  - type: textarea
+    id: source-file
+    attributes:
+      label: Source CI file
+      description: Paste the original (or a minimal reproducer). Redact secrets.
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: generated
+    attributes:
+      label: Generated `.tc.yml`
+      description: Contents of the generated TeamCity pipeline YAML.
+      render: yaml
+
+  - type: textarea
+    id: command-output
+    attributes:
+      label: Command output
+      description: Output of `teamcity migrate --dry-run` (or the full run, with `--json` if useful).
+      render: shell
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: How should the converted pipeline have looked or behaved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What went wrong? (missing step, wrong dependency, broken script, crash, etc.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: Workarounds tried, related issues, or additional context.
