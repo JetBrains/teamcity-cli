@@ -9,7 +9,7 @@ import (
 )
 
 type queueRemoveOptions struct {
-	force bool
+	yes bool
 }
 
 func newQueueRemoveCmd(f *cmdutil.Factory) *cobra.Command {
@@ -22,13 +22,15 @@ func newQueueRemoveCmd(f *cmdutil.Factory) *cobra.Command {
 		Long:    `Remove a queued run from the TeamCity queue.`,
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity queue remove 12345
-  teamcity queue remove 12345 --force`,
+  teamcity queue remove 12345 --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runQueueRemove(f, args[0], opts)
 		},
 	}
 
-	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "Deprecated: use --yes")
+	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 
 	return cmd
 }
@@ -39,7 +41,7 @@ func runQueueRemove(f *cmdutil.Factory, runID string, opts *queueRemoveOptions) 
 		return err
 	}
 
-	needsConfirmation := !opts.force && f.IsInteractive()
+	needsConfirmation := !opts.yes && f.IsInteractive()
 
 	if needsConfirmation {
 		var confirm bool

@@ -9,7 +9,7 @@ import (
 )
 
 type deleteOptions struct {
-	force bool
+	yes bool
 }
 
 func newPipelineDeleteCmd(f *cmdutil.Factory) *cobra.Command {
@@ -20,13 +20,15 @@ func newPipelineDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "Delete a pipeline",
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity pipeline delete CLI_MyPipeline
-  teamcity pipeline delete CLI_MyPipeline --force`,
+  teamcity pipeline delete CLI_MyPipeline --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPipelineDelete(f, args[0], opts)
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.force, "force", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&opts.yes, "force", false, "Deprecated: use --yes")
+	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 
 	return cmd
 }
@@ -42,9 +44,9 @@ func runPipelineDelete(f *cmdutil.Factory, id string, opts *deleteOptions) error
 		return err
 	}
 
-	if !opts.force {
+	if !opts.yes {
 		if !f.IsInteractive() {
-			return fmt.Errorf("--force is required in non-interactive mode")
+			return fmt.Errorf("--yes is required in non-interactive mode")
 		}
 		var confirm bool
 		prompt := &survey.Confirm{

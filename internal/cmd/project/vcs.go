@@ -676,7 +676,7 @@ func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
 // --- delete ---
 
 type vcsDeleteOptions struct {
-	force bool
+	yes bool
 }
 
 func newVcsDeleteCmd(f *cmdutil.Factory) *cobra.Command {
@@ -688,13 +688,15 @@ func newVcsDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"rm"},
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity project vcs delete MyProject_GitHubRepo
-  teamcity project vcs delete MyProject_GitHubRepo --force`,
+  teamcity project vcs delete MyProject_GitHubRepo --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runVcsDelete(f, args[0], opts)
 		},
 	}
 
-	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "Deprecated: use --yes")
+	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 
 	return cmd
 }
@@ -705,7 +707,7 @@ func runVcsDelete(f *cmdutil.Factory, id string, opts *vcsDeleteOptions) error {
 		return err
 	}
 
-	if !opts.force && f.IsInteractive() {
+	if !opts.yes && f.IsInteractive() {
 		var confirm bool
 		prompt := &survey.Confirm{
 			Message: fmt.Sprintf("Delete VCS root %q?", id),

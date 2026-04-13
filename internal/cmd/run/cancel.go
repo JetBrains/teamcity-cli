@@ -10,7 +10,7 @@ import (
 
 type runCancelOptions struct {
 	comment string
-	force   bool
+	yes     bool
 }
 
 func newRunCancelCmd(f *cmdutil.Factory) *cobra.Command {
@@ -23,14 +23,16 @@ func newRunCancelCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run cancel 12345
   teamcity run cancel 12345 --comment "Canceling for hotfix"
-  teamcity run cancel 12345 --force`,
+  teamcity run cancel 12345 --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunCancel(f, args[0], opts)
 		},
 	}
 
 	cmd.Flags().StringVar(&opts.comment, "comment", "", "Comment for cancellation")
-	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "Deprecated: use --yes")
+	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 
 	return cmd
 }
@@ -41,7 +43,7 @@ func runRunCancel(f *cmdutil.Factory, runID string, opts *runCancelOptions) erro
 		return err
 	}
 
-	needsConfirmation := !opts.force && opts.comment == "" && f.IsInteractive()
+	needsConfirmation := !opts.yes && opts.comment == "" && f.IsInteractive()
 
 	if needsConfirmation {
 		var confirm bool

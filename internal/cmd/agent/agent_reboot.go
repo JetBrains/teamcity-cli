@@ -50,7 +50,7 @@ func runAgentMove(f *cmdutil.Factory, nameOrID string, poolID int) error {
 
 type agentRebootOptions struct {
 	graceful bool
-	force    bool
+	yes      bool
 }
 
 func newAgentRebootCmd(f *cmdutil.Factory) *cobra.Command {
@@ -69,7 +69,7 @@ Note: Local agents (running on the same machine as the server) cannot be reboote
 		Example: `  teamcity agent reboot 1
   teamcity agent reboot Agent-Linux-01
   teamcity agent reboot Agent-Linux-01 --graceful
-  teamcity agent reboot Agent-Linux-01 --force`,
+  teamcity agent reboot Agent-Linux-01 --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentReboot(f, cmd.Context(), args[0], opts)
 		},
@@ -78,7 +78,9 @@ Note: Local agents (running on the same machine as the server) cannot be reboote
 	cmd.Flags().BoolVar(&opts.graceful, "graceful", false, "Wait for current work to finish before rebooting")
 	cmd.Flags().BoolVar(&opts.graceful, "after-build", false, "Deprecated: use --graceful")
 	_ = cmd.Flags().MarkDeprecated("after-build", "use --graceful instead")
-	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "Deprecated: use --yes")
+	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 
 	return cmd
 }
@@ -94,7 +96,7 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 		return err
 	}
 
-	needsConfirmation := !opts.force && f.IsInteractive()
+	needsConfirmation := !opts.yes && f.IsInteractive()
 	if needsConfirmation {
 		var confirm bool
 		prompt := &survey.Confirm{
