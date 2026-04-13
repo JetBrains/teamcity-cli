@@ -69,7 +69,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&opts.revision, "revision", "", "Filter by VCS revision/commit SHA (or '@head' for current HEAD)")
 	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorites for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number to show")
+	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of items")
 	cmd.Flags().StringVar(&opts.since, "since", "", "Finished after this time (e.g., 24h, 2026-01-21)")
 	cmd.Flags().StringVar(&opts.until, "until", "", "Finished before this time (e.g., 12h, 2026-01-22)")
 	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
@@ -435,7 +435,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	}
 
 	if build.UsedByOtherBuilds {
-		_, _ = fmt.Fprintf(p.Out, "\n%s Results shared with other builds in chain\n", output.Yellow("⟳"))
+		_, _ = fmt.Fprintf(p.Out, "\n%s Results shared in build chain\n", output.Yellow("⟳"))
 	}
 
 	if build.StatusText != "" && build.StatusText != build.Status {
@@ -482,7 +482,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 			padded := fmt.Sprintf("%-*s", maxIDLen+2, j.ID)
 			buildInfo := ""
 			if j.Build != nil && j.Build.ID > 0 {
-				buildInfo = fmt.Sprintf(" (build %d)", j.Build.ID)
+				buildInfo = fmt.Sprintf(" (#%d)", j.Build.ID)
 			}
 			_, _ = fmt.Fprintf(p.Out, "  %s %s%s\n", output.Faint(padded), j.Name, output.Faint(buildInfo))
 		}

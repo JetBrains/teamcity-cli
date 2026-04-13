@@ -12,7 +12,7 @@ import (
 const maxFailedTestsToShow = 10
 
 func PrintFailureSummary(p *output.Printer, client api.ClientInterface, buildID, buildNumber, webURL, statusText string) {
-	header := fmt.Sprintf("%s Build %s  #%s failed", output.Red("✗"), buildID, buildNumber)
+	header := fmt.Sprintf("%s %s  #%s failed", output.Red("✗"), buildID, buildNumber)
 	if statusText != "" {
 		header += ": " + statusText
 	}
@@ -24,13 +24,13 @@ func PrintFailureSummary(p *output.Printer, client api.ClientInterface, buildID,
 
 	tests, testsErr = client.GetBuildTests(buildID, true, maxFailedTestsToShow)
 	if testsErr != nil {
-		p.Debug("Failed to fetch build tests: %v", testsErr)
+		p.Debug("Failed to fetch tests: %v", testsErr)
 	} else if tests.Failed > 0 {
 		hasTests = true
 	}
 
 	if problems, err := client.GetBuildProblems(buildID); err != nil {
-		p.Debug("Failed to fetch build problems: %v", err)
+		p.Debug("Failed to fetch problems: %v", err)
 	} else if problems.Count > 0 {
 		_, _ = fmt.Fprintf(p.Out, "\nProblems:\n")
 		for _, prob := range problems.ProblemOccurrence {
@@ -92,7 +92,7 @@ func BuildResultError(p *output.Printer, client api.ClientInterface, build *api.
 		PrintFailureSummary(p, client, fmt.Sprintf("%d", build.ID), build.Number, build.WebURL, build.StatusText)
 		return &ExitError{Code: ExitFailure}
 	default:
-		_, _ = fmt.Fprintf(p.Out, "%s Build %d  #%s canceled\n", output.Yellow("○"), build.ID, build.Number)
+		_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s canceled\n", output.Yellow("○"), output.Cyan(jobName), build.ID, build.Number)
 		return &ExitError{Code: ExitCancelled}
 	}
 }

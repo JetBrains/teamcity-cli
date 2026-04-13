@@ -71,7 +71,7 @@ Use --raw to bypass the pager.`,
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Use this job's latest")
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show failure summary (problems and failed tests)")
 	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Show raw log without formatting")
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open log in browser")
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().IntVar(&opts.tail, "tail", 0, "Show last N log messages")
 	cmd.Flags().BoolVarP(&opts.follow, "follow", "f", false, "Stream log output until completion")
@@ -515,7 +515,7 @@ func messageToJSON(msg api.BuildMessage) string {
 func runLogFailed(f *cmdutil.Factory, client api.ClientInterface, runID string, jsonOut bool) error {
 	build, err := client.GetBuild(runID)
 	if err != nil {
-		return fmt.Errorf("failed to get build: %w", err)
+		return fmt.Errorf("failed to fetch: %w", err)
 	}
 
 	if jsonOut {

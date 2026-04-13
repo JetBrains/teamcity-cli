@@ -157,7 +157,7 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show only failed tests")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 0, "Maximum number of tests to show")
+	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 0, "Maximum number of items")
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Use this job's latest")
 
 	return cmd
@@ -188,7 +188,7 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 
 	build, err := client.GetBuild(runID)
 	if err != nil {
-		return fmt.Errorf("failed to get build: %w", err)
+		return fmt.Errorf("failed to fetch: %w", err)
 	}
 
 	tests, err := client.GetBuildTests(runID, opts.failed, opts.limit)
