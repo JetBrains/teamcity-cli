@@ -119,19 +119,20 @@ teamcity queue list
 
 ## Commands
 
-| Group       | Commands                                                                                                                                           |
-|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| **auth**    | `login`, `logout`, `status`                                                                                                                        |
-| **run**     | `list`, `start`, `view`, `watch`, `log`, `changes`, `tests`, `cancel`, `download`, `artifacts`, `restart`, `pin`/`unpin`, `tag`/`untag`, `comment` |
-| **job**     | `list`, `view`, `tree`, `pause`/`resume`, `param list`/`get`/`set`/`delete`                                                                        |
-| **project** | `list`, `view`, `tree`, `vcs list`/`view`/`create`/`delete`, `param`, `token get`/`put`, `settings export`/`status`/`validate`                     |
-| **queue**   | `list`, `approve`, `remove`, `top`                                                                                                                 |
-| **agent**   | `list`, `view`, `term`, `exec`, `jobs`, `authorize`/`deauthorize`, `enable`/`disable`, `move`, `reboot`                                            |
-| **pool**    | `list`, `view`, `link`/`unlink`                                                                                                                    |
-| **api**     | Raw REST API access                                                                                                                                |
-| **config**  | `list`, `get`, `set`                                                                                                                               |
-| **alias**   | `set`, `list`, `delete`                                                                                                                            |
-| **skill**   | `install`, `remove`, `update`                                                                                                                      |
+| Group        | Commands                                                                                                                                                                                                                              |
+|--------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **auth**     | `login`, `logout`, `status`                                                                                                                                                                                                           |
+| **run**      | `list`, `start`, `view`, `watch`, `log`, `tree`, `changes`, `tests`, `cancel`, `download`, `artifacts`, `restart`, `pin`/`unpin`, `tag`/`untag`, `comment`                                                                            |
+| **job**      | `list`, `view`, `tree`, `pause`/`resume`, `param list`/`get`/`set`/`delete`                                                                                                                                                           |
+| **project**  | `list`, `view`, `tree`, `vcs list`/`view`/`create`/`test`/`delete`, `ssh list`/`generate`/`upload`/`delete`, `cloud profile`/`image`/`instance`, `connection list`, `param`, `token get`/`put`, `settings export`/`status`/`validate` |
+| **pipeline** | `list`, `view`, `create`, `validate`, `pull`, `push`, `delete`                                                                                                                                                                        |
+| **queue**    | `list`, `approve`, `remove`, `top`                                                                                                                                                                                                    |
+| **agent**    | `list`, `view`, `term`, `exec`, `jobs`, `authorize`/`deauthorize`, `enable`/`disable`, `move`, `reboot`                                                                                                                               |
+| **pool**     | `list`, `view`, `link`/`unlink`                                                                                                                                                                                                       |
+| **api**      | Raw REST API access                                                                                                                                                                                                                   |
+| **config**   | `list`, `get`, `set`                                                                                                                                                                                                                  |
+| **alias**    | `set`, `list`, `delete`                                                                                                                                                                                                               |
+| **skill**    | `install`, `remove`, `update`                                                                                                                                                                                                         |
 
 Run `teamcity <command> --help` for usage details. See the [command reference](https://www.jetbrains.com/help/teamcity/teamcity-cli-commands.html) for full documentation.
 
