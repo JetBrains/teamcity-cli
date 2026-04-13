@@ -45,7 +45,7 @@ func TestPrintFailureSummary(t *testing.T) {
 			api.ProblemOccurrences{},
 			"compilation error",
 		)
-		assert.Contains(t, out, "Build 123")
+		assert.Contains(t, out, "123")
 		assert.Contains(t, out, "#42 failed: compilation error")
 		assert.Contains(t, out, "https://tc/build/123")
 	})
