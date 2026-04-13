@@ -28,7 +28,7 @@ func newRunDownloadCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "download <run-id>",
-		Short: "Download run artifacts",
+		Short: "Download artifacts",
 		Long:  `Download artifacts from a completed run.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run download 12345

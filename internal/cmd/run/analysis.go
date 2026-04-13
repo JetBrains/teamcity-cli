@@ -22,7 +22,7 @@ func newRunChangesCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "changes <run-id>",
-		Short: "Show VCS changes in a run",
+		Short: "Show VCS changes",
 		Long:  `Show the VCS changes (commits) included in a run.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run changes 12345
@@ -133,7 +133,7 @@ func newRunTestsCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "tests [run-id]",
-		Short: "Show test results for a run",
+		Short: "Show test results",
 		Long: `Show test results from a run.
 
 You can specify a run ID directly, or use --job to get the latest run's tests.`,
