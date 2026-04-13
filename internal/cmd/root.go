@@ -71,7 +71,7 @@ Report issues:  https://jb.gg/tc/issues`,
 	cmd.PersistentFlags().BoolVar(&f.Verbose, "debug", false, "Alias for --verbose")
 	cmd.PersistentFlags().BoolVar(&f.NoInput, "no-input", false, "Disable interactive prompts")
 
-	cmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
+	cmd.MarkFlagsMutuallyExclusive("quiet", "verbose", "debug")
 
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		f.InitOutput()
