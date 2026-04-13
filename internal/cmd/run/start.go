@@ -163,7 +163,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
   teamcity run start Falcon_Build --comment "Release build" --tag release --tag v1.0
   teamcity run start Falcon_Build --clean --rebuild-deps --top
-  teamcity run start Falcon_Build --reuse-deps 6946,6917  # pin existing builds as snapshot deps
+  teamcity run start Falcon_Build --reuse-deps 6946,6917  # reuse existing as snapshot dependencies
   teamcity run start Falcon_Build --local-changes # personal build with uncommitted Git changes
   teamcity run start Falcon_Build --local-changes changes.patch  # from file
   teamcity run start Falcon_Build --revision abc123def --branch main
@@ -187,7 +187,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.cleanSources, "clean", false, "Clean sources before start")
 	cmd.Flags().BoolVar(&opts.rebuildDeps, "rebuild-deps", false, "Rebuild all dependencies")
 	cmd.Flags().BoolVar(&opts.rebuildFailedDeps, "rebuild-failed-deps", false, "Rebuild failed/incomplete dependencies")
-	cmd.Flags().IntSliceVar(&opts.reuseDeps, "reuse-deps", nil, "Reuse existing builds as snapshot deps (build IDs, comma-separated or repeated)")
+	cmd.Flags().IntSliceVar(&opts.reuseDeps, "reuse-deps", nil, "Reuse existing as snapshot dependencies (IDs, comma-separated or repeated)")
 	cmd.Flags().BoolVar(&opts.queueAtTop, "top", false, "Add to top of queue")
 	cmd.Flags().IntVar(&opts.agent, "agent", 0, "Use specific agent (by ID)")
 	opts.addToCmd(cmd)
