@@ -193,7 +193,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	opts.addToCmd(cmd)
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", false, "Preview without triggering")
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON (for scripting)")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 
 	return cmd
 }
@@ -354,7 +354,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		if build.Number != "" {
 			ref = fmt.Sprintf("%d  #%s", build.ID, build.Number)
 		}
-		p.Info("Reused existing run %s for %s (build optimization)", ref, jobID)
+		p.Info("Reused existing #%s for %s (optimization)", ref, jobID)
 	} else {
 		printQueuedRun(p, build, jobID)
 	}

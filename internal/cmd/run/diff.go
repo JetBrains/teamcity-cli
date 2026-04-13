@@ -60,7 +60,7 @@ finished run of the same job.`,
 
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().BoolVar(&opts.log, "log", false, "Compare logs with colored unified diff")
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open both in browser")
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 	cmd.Flags().IntVarP(&opts.context, "unified", "U", 3, "Number of context lines in log diff")
 
 	cmd.MarkFlagsMutuallyExclusive("json", "log")
@@ -96,10 +96,10 @@ func runRunDiff(f *cmdutil.Factory, args []string, opts *runDiffOptions) error {
 		b1, err1 := client.GetBuild(id1)
 		b2, err2 := client.GetBuild(id2)
 		if err1 != nil {
-			return fmt.Errorf("resolving build %s: %w", id1, err1)
+			return fmt.Errorf("resolving #%s: %w", id1, err1)
 		}
 		if err2 != nil {
-			return fmt.Errorf("resolving build %s: %w", id2, err2)
+			return fmt.Errorf("resolving #%s: %w", id2, err2)
 		}
 		if b1.WebURL != "" {
 			_ = browser.OpenURL(b1.WebURL)
@@ -134,7 +134,7 @@ func resolveDiffBuildIDs(client api.ClientInterface, args []string) (string, str
 
 	build, err := client.GetBuild(args[0])
 	if err != nil {
-		return "", "", fmt.Errorf("resolving build: %w", err)
+		return "", "", fmt.Errorf("could not resolve: %w", err)
 	}
 
 	builds, err := client.GetBuilds(api.BuildsOptions{
@@ -162,23 +162,23 @@ func resolveDiffBuildIDs(client api.ClientInterface, args []string) (string, str
 func fetchBuildData(client api.ClientInterface, id string, p *output.Printer) (buildData, error) {
 	b, err := client.GetBuild(id)
 	if err != nil {
-		return buildData{}, fmt.Errorf("build %s: %w", id, err)
+		return buildData{}, fmt.Errorf("#%s: %w", id, err)
 	}
 	d := buildData{build: b}
 	if d.tests, err = client.GetBuildTests(id, true, 0); err != nil {
-		p.Warn("Could not fetch tests for build %s: %v", id, err)
+		p.Warn("Could not fetch tests for #%s: %v", id, err)
 	}
 	if d.testSummary, err = client.GetBuildTestSummary(id); err != nil {
-		p.Warn("Could not fetch test summary for build %s: %v", id, err)
+		p.Warn("Could not fetch test summary for #%s: %v", id, err)
 	}
 	if d.changes, err = client.GetBuildChanges(id); err != nil {
-		p.Warn("Could not fetch changes for build %s: %v", id, err)
+		p.Warn("Could not fetch changes for #%s: %v", id, err)
 	}
 	if d.problems, err = client.GetBuildProblems(id); err != nil {
-		p.Warn("Could not fetch problems for build %s: %v", id, err)
+		p.Warn("Could not fetch problems for #%s: %v", id, err)
 	}
 	if d.params, err = client.GetBuildResultingProperties(id); err != nil {
-		p.Warn("Could not fetch parameters for build %s: %v", id, err)
+		p.Warn("Could not fetch parameters for #%s: %v", id, err)
 	}
 	return d, nil
 }
@@ -213,11 +213,11 @@ func runLogDiff(f *cmdutil.Factory, client api.ClientInterface, id1, id2 string,
 
 	log1, err := client.GetBuildLog(id1)
 	if err != nil {
-		return fmt.Errorf("log for build %s: %w", id1, err)
+		return fmt.Errorf("log for #%s: %w", id1, err)
 	}
 	log2, err := client.GetBuildLog(id2)
 	if err != nil {
-		return fmt.Errorf("log for build %s: %w", id2, err)
+		return fmt.Errorf("log for #%s: %w", id2, err)
 	}
 
 	lines1 := output.NormalizeBuildLog(output.SplitLogLines(log1))
