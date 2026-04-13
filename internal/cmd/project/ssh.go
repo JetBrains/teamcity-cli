@@ -211,7 +211,7 @@ func runSSHGenerate(f *cmdutil.Factory, opts *sshGenerateOptions) error {
 
 type sshDeleteOptions struct {
 	project string
-	force   bool
+	yes     bool
 }
 
 func newSSHDeleteCmd(f *cmdutil.Factory) *cobra.Command {
@@ -223,14 +223,16 @@ func newSSHDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"rm"},
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity project ssh delete my-deploy-key
-  teamcity project ssh delete my-deploy-key --force`,
+  teamcity project ssh delete my-deploy-key --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSSHDelete(f, args[0], opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
-	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&opts.yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "Deprecated: use --yes")
+	_ = cmd.Flags().MarkDeprecated("force", "use --yes instead")
 
 	return cmd
 }
@@ -243,7 +245,7 @@ func runSSHDelete(f *cmdutil.Factory, name string, opts *sshDeleteOptions) error
 
 	projectID := cmp.Or(opts.project, "_Root")
 
-	if !opts.force && f.IsInteractive() {
+	if !opts.yes && f.IsInteractive() {
 		var confirm bool
 		prompt := &survey.Confirm{
 			Message: fmt.Sprintf("Delete SSH key %q from project %s?", name, projectID),
