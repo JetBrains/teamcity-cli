@@ -11,7 +11,7 @@ import (
 func newRunPinCmd(f *cmdutil.Factory) *cobra.Command {
 	var comment string
 	cmd := &cobra.Command{
-		Use:   "pin <run-id>",
+		Use:   "pin <id>",
 		Short: "Pin to prevent cleanup",
 		Long:  `Pin a run to prevent it from being automatically cleaned up by retention policies.`,
 		Args:  cobra.ExactArgs(1),
@@ -25,20 +25,20 @@ func newRunPinCmd(f *cmdutil.Factory) *cobra.Command {
 			if err := client.PinBuild(args[0], comment); err != nil {
 				return fmt.Errorf("failed to pin run: %w", err)
 			}
-			f.Printer.Success("Pinned run #%s", args[0])
+			f.Printer.Success("Pinned #%s", args[0])
 			if comment != "" {
 				f.Printer.Info("  Comment: %s", comment)
 			}
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&comment, "comment", "m", "", "Comment explaining why the run is pinned")
+	cmd.Flags().StringVarP(&comment, "comment", "m", "", "Reason for pinning")
 	return cmd
 }
 
 func newRunUnpinCmd(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:     "unpin <run-id>",
+		Use:     "unpin <id>",
 		Short:   "Unpin a run",
 		Long:    `Remove the pin from a run, allowing it to be cleaned up by retention policies.`,
 		Args:    cobra.ExactArgs(1),
@@ -51,7 +51,7 @@ func newRunUnpinCmd(f *cmdutil.Factory) *cobra.Command {
 			if err := client.UnpinBuild(args[0]); err != nil {
 				return fmt.Errorf("failed to unpin run: %w", err)
 			}
-			f.Printer.Success("Unpinned run #%s", args[0])
+			f.Printer.Success("Unpinned #%s", args[0])
 			return nil
 		},
 	}
@@ -59,7 +59,7 @@ func newRunUnpinCmd(f *cmdutil.Factory) *cobra.Command {
 
 func newRunTagCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "tag <run-id> <tag>...",
+		Use:   "tag <id> <tag>...",
 		Short: "Add tags",
 		Long:  `Add one or more tags for categorization and filtering.`,
 		Args:  cobra.MinimumNArgs(2),
@@ -94,14 +94,14 @@ func runRunTag(f *cmdutil.Factory, runID string, tags []string) error {
 		return fmt.Errorf("failed to add tags: %w", err)
 	}
 
-	f.Printer.Success("Added %d tag(s) to run #%s", len(tags), runID)
+	f.Printer.Success("Added %d tag(s) to #%s", len(tags), runID)
 	f.Printer.Info("  Tags: %s", strings.Join(tags, ", "))
 	return nil
 }
 
 func newRunUntagCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "untag <run-id> <tag>...",
+		Use:   "untag <id> <tag>...",
 		Short: "Remove tags",
 		Long:  `Remove one or more tags.`,
 		Args:  cobra.MinimumNArgs(2),
@@ -132,7 +132,7 @@ func runRunUntag(f *cmdutil.Factory, runID string, tags []string) error {
 	}
 
 	if removed > 0 {
-		f.Printer.Success("Removed %d tag(s) from run #%s", removed, runID)
+		f.Printer.Success("Removed %d tag(s) from #%s", removed, runID)
 	}
 
 	if len(errors) > 0 {
@@ -156,7 +156,7 @@ func newRunCommentCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runCommentOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "comment <run-id> [comment]",
+		Use:   "comment <id> [comment]",
 		Short: "Set or view comment",
 		Long: `Set, view, or delete a comment on a run.
 
@@ -196,7 +196,7 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 		if opts.json {
 			return f.Printer.PrintJSON(map[string]string{"run_id": runID, "comment": ""})
 		}
-		f.Printer.Success("Deleted comment from run #%s", runID)
+		f.Printer.Success("Deleted comment from #%s", runID)
 		return nil
 	}
 
@@ -207,7 +207,7 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 		if opts.json {
 			return f.Printer.PrintJSON(map[string]string{"run_id": runID, "comment": comment})
 		}
-		f.Printer.Success("Set comment on run #%s", runID)
+		f.Printer.Success("Set comment on #%s", runID)
 		f.Printer.Info("  Comment: %s", comment)
 		return nil
 	}
@@ -223,7 +223,7 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 
 	p := f.Printer
 	if existingComment == "" {
-		p.Info("No comment set on run #%s", runID)
+		p.Info("No comment set on #%s", runID)
 	} else {
 		_, _ = fmt.Fprintln(p.Out, existingComment)
 	}

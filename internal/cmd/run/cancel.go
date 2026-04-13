@@ -17,7 +17,7 @@ func newRunCancelCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runCancelOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "cancel <run-id>",
+		Use:   "cancel <id>",
 		Short: "Cancel a run",
 		Long:  `Cancel a running or queued run.`,
 		Args:  cobra.ExactArgs(1),
@@ -67,6 +67,6 @@ func runRunCancel(f *cmdutil.Factory, runID string, opts *runCancelOptions) erro
 		return err
 	}
 
-	f.Printer.Success("Canceled run #%s", runID)
+	f.Printer.Success("Canceled #%s", runID)
 	return nil
 }

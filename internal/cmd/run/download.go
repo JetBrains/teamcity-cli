@@ -27,7 +27,7 @@ func newRunDownloadCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runDownloadOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "download <run-id>",
+		Use:   "download <id>",
 		Short: "Download artifacts",
 		Long:  `Download artifacts from a completed run.`,
 		Args:  cobra.ExactArgs(1),

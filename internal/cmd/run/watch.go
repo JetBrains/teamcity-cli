@@ -31,7 +31,7 @@ func newRunWatchCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runWatchOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "watch <run-id>",
+		Use:   "watch <id>",
 		Short: "Watch a run until it completes",
 		Long: `Watch a run in real-time until it completes.
 
@@ -49,7 +49,7 @@ For a simpler, pipe-friendly log stream, use "teamcity run log --follow" instead
 	}
 
 	cmd.Flags().IntVarP(&opts.interval, "interval", "i", 5, "Refresh interval in seconds")
-	cmd.Flags().BoolVar(&opts.logs, "logs", false, "Stream build logs while watching")
+	cmd.Flags().BoolVar(&opts.logs, "logs", false, "Stream logs while watching")
 	cmd.Flags().BoolVar(&opts.quiet, "quiet", false, "Minimal output, show only state changes and result")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Wait for completion and output result as JSON")
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Timeout duration (e.g., 30m, 1h)")

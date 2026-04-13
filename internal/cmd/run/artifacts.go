@@ -24,14 +24,14 @@ func newRunArtifactsCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runArtifactsOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "artifacts [run-id]",
+		Use:   "artifacts [id]",
 		Short: "List artifacts",
 		Long: `List artifacts from a run without downloading them.
 
 Shows artifact names and sizes. Use teamcity run download to download artifacts.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.Flags().Changed("job") {
-				return tcerrors.MutuallyExclusive("run-id", "job")
+				return tcerrors.MutuallyExclusive("id", "job")
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
@@ -48,7 +48,7 @@ Shows artifact names and sizes. Use teamcity run download to download artifacts.
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "List artifacts from latest run of this job")
+	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Use this job's latest")
 	cmd.Flags().StringVarP(&opts.path, "path", "p", "", "Browse artifacts under this subdirectory")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 

@@ -78,5 +78,6 @@ func TestAgentReboot(T *testing.T) {
 	f := ts.Factory
 
 	cmdtest.RunCmdWithFactory(T, f, "agent", "reboot", "Agent 1")
+	cmdtest.RunCmdWithFactory(T, f, "agent", "reboot", "1", "--graceful")
 	cmdtest.RunCmdWithFactory(T, f, "agent", "reboot", "1", "--after-build")
 }

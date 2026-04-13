@@ -49,8 +49,8 @@ func runAgentMove(f *cmdutil.Factory, nameOrID string, poolID int) error {
 }
 
 type agentRebootOptions struct {
-	afterBuild bool
-	force      bool
+	graceful bool
+	force    bool
 }
 
 func newAgentRebootCmd(f *cmdutil.Factory) *cobra.Command {
@@ -59,23 +59,25 @@ func newAgentRebootCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reboot <agent>",
 		Short: "Reboot an agent",
-		Long: `Request a reboot of a build agent.
+		Long: `Request a reboot of an agent.
 
 The agent can be specified by ID or name. By default, the agent reboots immediately.
-Use --after-build to wait for the current build to finish before rebooting.
+Use --graceful to wait for current work to finish before rebooting.
 
 Note: Local agents (running on the same machine as the server) cannot be rebooted.`,
 		Args: cobra.ExactArgs(1),
 		Example: `  teamcity agent reboot 1
   teamcity agent reboot Agent-Linux-01
-  teamcity agent reboot Agent-Linux-01 --after-build
+  teamcity agent reboot Agent-Linux-01 --graceful
   teamcity agent reboot Agent-Linux-01 --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentReboot(f, cmd.Context(), args[0], opts)
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.afterBuild, "after-build", false, "Wait for current build to finish before rebooting")
+	cmd.Flags().BoolVar(&opts.graceful, "graceful", false, "Wait for current work to finish before rebooting")
+	cmd.Flags().BoolVar(&opts.graceful, "after-build", false, "Deprecated: use --graceful")
+	_ = cmd.Flags().MarkDeprecated("after-build", "use --graceful instead")
 	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
 
 	return cmd
@@ -108,13 +110,13 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 		}
 	}
 
-	if err := client.RebootAgent(ctx, agentID, opts.afterBuild); err != nil {
+	if err := client.RebootAgent(ctx, agentID, opts.graceful); err != nil {
 		return fmt.Errorf("failed to reboot agent: %w", err)
 	}
 
-	if opts.afterBuild {
+	if opts.graceful {
 		f.Printer.Success("Reboot scheduled for %s", agentName)
-		_, _ = fmt.Fprintln(f.Printer.Out, "  The agent will reboot after the current build finishes.")
+		_, _ = fmt.Fprintln(f.Printer.Out, "  The agent will reboot after current work finishes.")
 	} else {
 		f.Printer.Success("Reboot initiated for %s", agentName)
 	}

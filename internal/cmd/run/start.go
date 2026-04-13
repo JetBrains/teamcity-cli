@@ -26,7 +26,7 @@ type watchFlags struct {
 
 // addToCmd registers the shared watch flags on a cobra command.
 func (w *watchFlags) addToCmd(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&w.watch, "watch", false, "Watch run until it completes")
+	cmd.Flags().BoolVar(&w.watch, "watch", false, "Watch until completion")
 	cmd.Flags().IntVarP(&w.interval, "interval", "i", 5, "Refresh interval in seconds when watching")
 	cmd.Flags().DurationVar(&w.timeout, "timeout", 0, "Timeout when watching (e.g., 30m, 1h); implies --watch")
 }
@@ -174,25 +174,25 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Branch to build")
-	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin build to a specific Git commit SHA")
-	cmd.Flags().StringToStringVarP(&opts.params, "param", "P", nil, "Build parameters (key=value)")
+	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin to a specific Git commit SHA")
+	cmd.Flags().StringToStringVarP(&opts.params, "param", "P", nil, "Parameters (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.systemProps, "system", "S", nil, "System properties (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.envVars, "env", "E", nil, "Environment variables (key=value)")
-	cmd.Flags().StringVarP(&opts.comment, "comment", "m", "", "Run comment")
-	cmd.Flags().StringSliceVarP(&opts.tags, "tag", "t", nil, "Run tags (can be repeated)")
-	cmd.Flags().BoolVar(&opts.personal, "personal", false, "Run as personal build")
+	cmd.Flags().StringVarP(&opts.comment, "comment", "m", "", "Comment to attach")
+	cmd.Flags().StringSliceVarP(&opts.tags, "tag", "t", nil, "Tags (can be repeated)")
+	cmd.Flags().BoolVar(&opts.personal, "personal", false, "Personal build")
 	localChangesFlag := cmd.Flags().VarPF(&localChangesValue{val: &opts.localChanges}, "local-changes", "l", "Include local changes (git, -, or path; default: git)")
 	localChangesFlag.NoOptDefVal = "git"
 	cmd.Flags().BoolVar(&opts.noPush, "no-push", false, "Skip auto-push of branch to remote")
-	cmd.Flags().BoolVar(&opts.cleanSources, "clean", false, "Clean sources before run")
+	cmd.Flags().BoolVar(&opts.cleanSources, "clean", false, "Clean sources before start")
 	cmd.Flags().BoolVar(&opts.rebuildDeps, "rebuild-deps", false, "Rebuild all dependencies")
 	cmd.Flags().BoolVar(&opts.rebuildFailedDeps, "rebuild-failed-deps", false, "Rebuild failed/incomplete dependencies")
 	cmd.Flags().IntSliceVar(&opts.reuseDeps, "reuse-deps", nil, "Reuse existing builds as snapshot deps (build IDs, comma-separated or repeated)")
 	cmd.Flags().BoolVar(&opts.queueAtTop, "top", false, "Add to top of queue")
-	cmd.Flags().IntVar(&opts.agent, "agent", 0, "Run on specific agent (by ID)")
+	cmd.Flags().IntVar(&opts.agent, "agent", 0, "Use specific agent (by ID)")
 	opts.addToCmd(cmd)
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open run in browser")
-	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", false, "Show what would be triggered without running")
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
+	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", false, "Preview without triggering")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON (for scripting)")
 
 	return cmd

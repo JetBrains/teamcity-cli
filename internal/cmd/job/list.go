@@ -36,7 +36,7 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
-	cmd.Flags().BoolVar(&opts.all, "all", false, "Include pipeline-generated build types")
+	cmd.Flags().BoolVar(&opts.all, "all", false, "Include pipelines")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
 
 	return cmd
