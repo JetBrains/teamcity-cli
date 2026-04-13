@@ -7,11 +7,12 @@ import (
 
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "run",
-		Short: "Manage runs (builds)",
-		Long:  `List, view, start, and manage TeamCity runs (builds).`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Use:     "run",
+		Aliases: []string{"build"},
+		Short:   "Manage runs (builds)",
+		Long:    `List, view, start, and manage TeamCity runs (builds).`,
+		Args:    cobra.NoArgs,
+		RunE:    cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newRunListCmd(f))

@@ -1,0 +1,9 @@
+# Test that `buildtype` works as an alias for `job`.
+
+exec teamcity buildtype list --all --limit 2 --no-input
+stdout 'ID'
+! stderr 'Error'
+
+exec teamcity buildtype list --all --limit 1 --json --no-input
+stdout '"id"'
+! stderr 'Error'
