@@ -25,7 +25,6 @@ type runLogOptions struct {
 	web    bool
 	json   bool
 	tail   int
-	head   int
 	follow bool
 }
 
@@ -39,7 +38,7 @@ func newRunLogCmd(f *cmdutil.Factory) *cobra.Command {
 
 You can specify a run ID directly, or use --job to get the latest run's log.
 
-Use --tail or --head to show partial logs via the structured messages API.
+Use --tail to show the last N log messages via the structured messages API.
 Use --follow to stream logs from a running build until it completes.
 Output is plain text and pipe-friendly (e.g., teamcity run log -f 123 | grep ERROR).
 
@@ -55,7 +54,6 @@ Use --raw to bypass the pager.`,
 		},
 		Example: `  teamcity run log 12345
   teamcity run log 12345 --tail 50
-  teamcity run log 12345 --head 20
   teamcity run log 12345 --follow
   teamcity run log 12345 --follow --tail 200
   teamcity run log 12345 --failed
@@ -76,18 +74,13 @@ Use --raw to bypass the pager.`,
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open build log in browser")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().IntVar(&opts.tail, "tail", 0, "Show last N log messages")
-	cmd.Flags().IntVar(&opts.head, "head", 0, "Show first N log messages")
 	cmd.Flags().BoolVarP(&opts.follow, "follow", "f", false, "Stream log output until build completes")
 
 	cmd.MarkFlagsMutuallyExclusive("json", "raw")
 	cmd.MarkFlagsMutuallyExclusive("json", "web")
-	cmd.MarkFlagsMutuallyExclusive("head", "tail")
-	cmd.MarkFlagsMutuallyExclusive("head", "follow")
 	cmd.MarkFlagsMutuallyExclusive("failed", "tail")
-	cmd.MarkFlagsMutuallyExclusive("failed", "head")
 	cmd.MarkFlagsMutuallyExclusive("failed", "follow")
 	cmd.MarkFlagsMutuallyExclusive("web", "tail")
-	cmd.MarkFlagsMutuallyExclusive("web", "head")
 	cmd.MarkFlagsMutuallyExclusive("web", "follow")
 
 	return cmd
@@ -248,13 +241,6 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 		return runLogTail(f, client, runID, opts)
 	}
 
-	if opts.head != 0 {
-		if opts.head < 1 {
-			return fmt.Errorf("--head must be a positive number, got %d", opts.head)
-		}
-		return runLogHead(f, client, runID, opts)
-	}
-
 	return runLogFull(f, client, runID, opts)
 }
 
@@ -297,18 +283,6 @@ func runLogTail(f *cmdutil.Factory, client api.ClientInterface, runID string, op
 	resp, err := client.GetBuildMessages(runID, api.BuildMessagesOptions{
 		Count:     -opts.tail,
 		Tail:      true,
-		ExpandAll: true,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get log messages: %w", err)
-	}
-
-	return printMessages(f, runID, resp.Messages, opts)
-}
-
-func runLogHead(f *cmdutil.Factory, client api.ClientInterface, runID string, opts *runLogOptions) error {
-	resp, err := client.GetBuildMessages(runID, api.BuildMessagesOptions{
-		Count:     opts.head,
 		ExpandAll: true,
 	})
 	if err != nil {

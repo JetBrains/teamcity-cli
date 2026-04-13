@@ -132,7 +132,7 @@ func TestRunLogJSON_job(T *testing.T) {
 	assert.Contains(T, got, `"log"`)
 }
 
-func TestRunLogTailAndHead(T *testing.T) {
+func TestRunLogTail(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory
 
@@ -142,15 +142,6 @@ func TestRunLogTailAndHead(T *testing.T) {
 
 	got = cmdtest.CaptureOutput(T, f, "run", "log", testBuildID, "--tail", "10", "--json")
 	assert.Contains(T, got, `"messages"`)
-
-	got = cmdtest.CaptureOutput(T, f, "run", "log", testBuildID, "--head", "10")
-	assert.Contains(T, got, "Build started")
-
-	err := cmdtest.CaptureErr(T, f, "run", "log", testBuildID, "--tail", "10", "--head", "10")
-	assert.Contains(T, err.Error(), "if any flags in the group [head tail] are set none of the others can be")
-
-	err = cmdtest.CaptureErr(T, f, "run", "log", testBuildID, "--follow", "--head", "10")
-	assert.Contains(T, err.Error(), "if any flags in the group [head follow] are set none of the others can be")
 }
 
 func TestRunLogFollow(T *testing.T) {
