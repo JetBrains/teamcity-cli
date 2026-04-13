@@ -171,16 +171,21 @@ type BuildQueue struct {
 
 // TriggerBuildRequest represents a request to trigger a build
 type TriggerBuildRequest struct {
-	BuildType         BuildTypeRef       `json:"buildType"`
-	BranchName        string             `json:"branchName,omitempty"`
-	Properties        *PropertyList      `json:"properties,omitempty"`
-	Comment           *BuildComment      `json:"comment,omitempty"`
-	Personal          bool               `json:"personal,omitempty"`
-	TriggeringOptions *TriggeringOptions `json:"triggeringOptions,omitempty"`
-	Agent             *AgentRef          `json:"agent,omitempty"`
-	Tags              *TagList           `json:"tags,omitempty"`
-	LastChanges       *LastChanges       `json:"lastChanges,omitempty"`
-	Revisions         *Revisions         `json:"revisions,omitempty"`
+	BuildType            BuildTypeRef       `json:"buildType"`
+	BranchName           string             `json:"branchName,omitempty"`
+	Properties           *PropertyList      `json:"properties,omitempty"`
+	Comment              *BuildComment      `json:"comment,omitempty"`
+	Personal             bool               `json:"personal,omitempty"`
+	TriggeringOptions    *TriggeringOptions `json:"triggeringOptions,omitempty"`
+	Agent                *AgentRef          `json:"agent,omitempty"`
+	Tags                 *TagList           `json:"tags,omitempty"`
+	LastChanges          *LastChanges       `json:"lastChanges,omitempty"`
+	Revisions            *Revisions         `json:"revisions,omitempty"`
+	SnapshotDependencies *SnapshotDepBuilds `json:"snapshot-dependencies,omitempty"`
+}
+
+type SnapshotDepBuilds struct {
+	Build []BuildRef `json:"build"`
 }
 
 type Revisions struct {
