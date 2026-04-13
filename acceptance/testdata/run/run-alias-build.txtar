@@ -1,0 +1,9 @@
+# Test that `build` works as an alias for `run`.
+
+exec teamcity build list --limit 2 --no-input
+stdout 'STATUS'
+! stderr 'Error'
+
+exec teamcity build list --limit 1 --json --no-input
+stdout '"id"'
+! stderr 'Error'

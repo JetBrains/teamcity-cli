@@ -8,11 +8,12 @@ import (
 
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "job",
-		Short: "Manage jobs (build configurations)",
-		Long:  `List and manage TeamCity jobs (build configurations).`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Use:     "job",
+		Aliases: []string{"buildtype"},
+		Short:   "Manage jobs (build configurations)",
+		Long:    `List and manage TeamCity jobs (build configurations).`,
+		Args:    cobra.NoArgs,
+		RunE:    cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newJobListCmd(f))
