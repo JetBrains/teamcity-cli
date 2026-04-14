@@ -23,5 +23,6 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newJobResumeCmd(f))
 	cmd.AddCommand(param.NewCmd(f, "job", param.JobParamAPI))
 
+	cmdutil.AliasAwareHelp(cmd, "", "")
 	return cmd
 }

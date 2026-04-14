@@ -34,5 +34,6 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newRunTreeCmd(f))
 	cmd.AddCommand(newRunDiffCmd(f))
 
+	cmdutil.AliasAwareHelp(cmd, "run", "build")
 	return cmd
 }
