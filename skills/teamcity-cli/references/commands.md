@@ -72,6 +72,7 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--no-push` - Skip auto-push of branch to remote
 - `--rebuild-deps` - Rebuild all dependencies
 - `--rebuild-failed-deps` - Rebuild failed/incomplete dependencies
+- `--reuse-deps <id,...>` - Reuse existing builds as snapshot dependencies (comma-separated IDs)
 - `--top` - Add to top of queue
 - `--dry-run` - Show what would be triggered without running
 - `--json` - Output as JSON (for scripting)
@@ -81,7 +82,10 @@ Shows all branches and all build states (including canceled, personal, composite
 
 - `--failed` - Show failure summary (problems and failed tests)
 - `-j, --job <id>` - Get log for latest run of this job
+- `-f, --follow` - Stream log output in real-time until build finishes
+- `--tail <N>` - Show last N log messages
 - `--raw` - Show raw log without formatting
+- `--json` - Output as JSON
 - `-w, --web` - Open build log in browser
 
 ### Flags for `teamcity run watch`

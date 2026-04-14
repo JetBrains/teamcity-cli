@@ -132,7 +132,7 @@ teamcity queue list
 | **api**      | Raw REST API access                                                                                                                                                                                                                   |
 | **config**   | `list`, `get`, `set`                                                                                                                                                                                                                  |
 | **alias**    | `set`, `list`, `delete`                                                                                                                                                                                                               |
-| **skill**    | `install`, `remove`, `update`                                                                                                                                                                                                         |
+| **skill**    | `list`, `install`, `remove`, `update`                                                                                                                                                                                                         |
 
 Run `teamcity <command> --help` for usage details. See the [command reference](https://www.jetbrains.com/help/teamcity/teamcity-cli-commands.html) for full documentation.
 

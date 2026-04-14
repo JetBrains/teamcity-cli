@@ -468,7 +468,7 @@ Output file path (default: `projectSettings.zip`)
 </td>
 <td>
 
-Use relative IDs in the exported settings
+Use relative IDs in the exported settings (enabled by default)
 
 </td>
 </tr>

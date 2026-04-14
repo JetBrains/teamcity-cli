@@ -896,6 +896,24 @@ Bypass the pager and output raw text:
 teamcity run log 12345 --raw
 ```
 
+Stream the log in real-time until the build finishes:
+
+```Shell
+teamcity run log 12345 --follow
+```
+
+Show the last 50 log messages:
+
+```Shell
+teamcity run log 12345 --tail 50
+```
+
+Output the log as JSON:
+
+```Shell
+teamcity run log 12345 --json
+```
+
 Open the build log in your browser:
 
 ```Shell
