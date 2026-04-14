@@ -289,6 +289,30 @@ git tag -a v1.1.1 -m "Release v1.1.1"
 git push origin v1.1.1
 ```
 
+### Troubleshooting Chocolatey
+
+Chocolatey pushes can fail with `503 Service Unavailable` or other transient errors. When this happens, upload the package manually:
+
+1. Check out the release tag and build the package locally:
+   ```sh
+   git checkout v0.9.0
+   ```
+
+2. Download the existing `.nupkg` for the previous version to use as a template:
+   ```sh
+   curl -L -o old.nupkg 'https://community.chocolatey.org/api/v2/package/TeamCityCLI/<previous-version>'
+   unzip old.nupkg -d old/
+   ```
+
+3. Create a new package directory with updated `TeamCityCLI.nuspec` (bump `<version>` and `<releaseNotes>` URL) and `tools/chocolateyinstall.ps1` (update the download URL and `checksum64` from `checksums.txt` on the GitHub release page).
+
+4. Pack and push:
+   ```sh
+   choco apikey --key <YOUR_API_KEY> --source https://push.chocolatey.org/
+   choco pack
+   choco push TeamCityCLI.<version>.nupkg --source https://push.chocolatey.org/
+   ```
+
 ### Rolling back a release
 
 If a release needs to be reverted:
