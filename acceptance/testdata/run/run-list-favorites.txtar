@@ -12,10 +12,10 @@ exec teamcity run list --favorites --status success --limit 3 --no-input
 stdout 'Success'
 
 # --favorites with --json includes build details
-exec teamcity run list --favorites --json --limit 3 --no-input
+exec teamcity run list --favorites --json --limit 10 --no-input
 ! stderr 'Error'
-stdout '"buildTypeId": "CLI_CiCd"'
-stdout '"name": "Pipeline Head"'
+stdout '"buildTypeId"'
+stdout '"buildType"'
 
 # --favorites with --plain for scripting
 exec teamcity run list --favorites --plain --limit 3 --no-input

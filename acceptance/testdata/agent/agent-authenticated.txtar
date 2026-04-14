@@ -5,20 +5,11 @@
 exec teamcity run start Sandbox_Test --json --no-input
 extract '"id":\s*(\d+)' BUILD_ID
 
-# Run list tests while cloud agent spins up
+# Smoke-test list subcommands while cloud agent spins up (no content assertions — agents may not exist yet)
 exec teamcity agent list --limit 1 --json --no-input
-stdout '"id"'
-stdout '"name"'
 ! stderr 'Error'
 
 exec teamcity agent list --pool Default --no-input
-stdout 'ID'
-stdout 'NAME'
-! stderr 'Error'
-
-exec teamcity agent list --limit 1 --json=id,name,connected --no-input
-stdout '"id"'
-stdout '"name"'
 ! stderr 'Error'
 
 ! exec teamcity agent view 999999999 --no-input
@@ -47,11 +38,21 @@ exec teamcity agent jobs $AGENT_ID --no-input
 stdout '(Compatible|Incompatible|Jobs)'
 ! stderr 'Error'
 
-# Test agent list shows the agent
+# Test agent list now that an agent is connected
+exec teamcity agent list --limit 1 --json --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+exec teamcity agent list --limit 1 --json=id,name,connected --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
 exec teamcity agent list --no-input
 stdout 'ID'
 stdout 'NAME'
 ! stderr 'Error'
 
 # Cleanup: cancel the build
-exec teamcity run cancel $BUILD_ID --force --no-input
+exec teamcity run cancel $BUILD_ID --yes --no-input

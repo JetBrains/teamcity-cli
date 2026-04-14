@@ -18,7 +18,7 @@ stderr '.'
 ! exec teamcity queue approve 999999999 --no-input
 stderr '.'
 
-! exec teamcity queue remove 999999999 --force --no-input
+! exec teamcity queue remove 999999999 --yes --no-input
 stderr '.'
 
 # Start a build and immediately try to remove from queue.
@@ -27,4 +27,4 @@ exec teamcity run start Sandbox_Build --json --no-input
 extract '"id":\s*(\d+)' BUILD_ID
 
 # Cancel/cleanup regardless of queue state
-exec teamcity run cancel $BUILD_ID --force --no-input
+exec teamcity run cancel $BUILD_ID --yes --no-input

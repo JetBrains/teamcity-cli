@@ -102,7 +102,7 @@ stderr 'read-only mode'
 
 # ---- queue: write subcommands ----
 
-! exec teamcity queue remove 999999 --force --no-input
+! exec teamcity queue remove 999999 --yes --no-input
 stderr 'read-only mode'
 
 ! exec teamcity queue approve 999999 --no-input

@@ -12,4 +12,4 @@ extract '"id":"([^"]+)"' JOB_ID
 exec teamcity run start $JOB_ID --json --no-input
 extract '"id":\s*(\d+)' BUILD_ID
 
-exec teamcity run cancel $BUILD_ID --force --no-input
+exec teamcity run cancel $BUILD_ID --yes --no-input
