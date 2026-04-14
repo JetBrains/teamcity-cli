@@ -124,7 +124,7 @@ Shows all branches and all build states (including canceled, personal, composite
 ### Flags for `teamcity run cancel`
 
 - `--comment <text>` - Comment for cancellation
-- `-f, --force` - Skip confirmation prompt
+- `-y, --yes` - Skip confirmation prompt
 
 ### Flags for `teamcity run restart`
 
@@ -234,7 +234,7 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ### Flags for `teamcity project vcs delete`
 
-- `-f, --force` - Skip confirmation prompt
+- `-y, --yes` - Skip confirmation prompt
 
 ### Flags for `teamcity project param list`
 
@@ -280,7 +280,7 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ### Flags for `teamcity queue remove`
 
-- `-f, --force` - Skip confirmation prompt
+- `-y, --yes` - Skip confirmation prompt
 
 ## Agents (`teamcity agent`)
 
@@ -323,8 +323,8 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ### Flags for `teamcity agent reboot`
 
-- `--after-build` - Wait for current build to finish before rebooting
-- `-f, --force` - Skip confirmation prompt
+- `--graceful` - Wait for current build to finish before rebooting
+- `-y, --yes` - Skip confirmation prompt
 
 ## Agent Pools (`teamcity pool`)
 
@@ -388,7 +388,7 @@ Pipelines are YAML-first build configurations. Each pipeline is a project that c
 
 ### Flags for `teamcity pipeline delete`
 
-- `--force` - Skip confirmation prompt
+- `-y, --yes` - Skip confirmation prompt
 
 ## Configuration (`teamcity config`)
 

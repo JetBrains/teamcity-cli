@@ -361,7 +361,7 @@ teamcity project vcs create --project <project-id>
 **Delete a VCS root:**
 ```bash
 teamcity project vcs delete <vcs-root-id>
-teamcity project vcs delete <vcs-root-id> --force   # skip confirmation
+teamcity project vcs delete <vcs-root-id> --yes   # skip confirmation
 ```
 
 ## Project Settings (Export & Status)
@@ -454,7 +454,7 @@ teamcity agent reboot <agent-id>
 
 **Reboot after current build finishes:**
 ```bash
-teamcity agent reboot <agent-id> --after-build
+teamcity agent reboot <agent-id> --graceful
 ```
 
 ## Remote Agent Access
@@ -767,7 +767,7 @@ teamcity pipeline push <pipeline-id> .teamcity.yml
 **Delete a pipeline:**
 ```bash
 teamcity pipeline delete <pipeline-id>
-teamcity pipeline delete <pipeline-id> --force   # skip confirmation
+teamcity pipeline delete <pipeline-id> --yes   # skip confirmation
 ```
 
 **Gotchas:**
