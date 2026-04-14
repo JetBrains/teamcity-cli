@@ -376,7 +376,7 @@ body {
   <header>
     <div>
       <div class="header-title">TeamCity CLI — Screen Gallery</div>
-      <p>120 screens &middot; generated 2026-04-14 21:28</p>
+      <p>120 screens &middot; generated 2026-04-14 21:49</p>
     </div>
     <div class="header-actions">
       <a class="theme-toggle" href="https://github.com/jetbrains/teamcity-cli/" target="_blank" rel="noopener">[&#9733; github]</a>
@@ -407,7 +407,7 @@ body {
   <span class="term-fg33">●</span>  <span class="term-fg33">Running</span> <span class="term-fg2">build is currently executing</span>
   <span class="term-fg2">◦</span>  <span class="term-fg2">Queued</span> <span class="term-fg2">build is waiting in queue</span>
   <span class="term-fg31">✗</span>  <span class="term-fg31">Error</span> <span class="term-fg2">internal or infrastructure error</span>
-  <span class="term-fg33">?</span>  UNKNOWN      <span class="term-fg2">unknown status</span></pre></div></div>
+  <span class="term-fg33">?</span>  <span class="term-fg33">Unknown</span> <span class="term-fg2">unknown status</span></pre></div></div>
     </div>
     <div class="screen" id="messages">
       <div class="screen-header"><h3>Messages</h3><p>Info, success, warning, error patterns</p></div>
@@ -1145,7 +1145,7 @@ Head Job: MyApp_CI
     <div class="screen" id="pipeline-validate">
       <div class="screen-header"><h3>pipeline validate</h3><p>Validate pipeline YAML</p></div>
       <div class="screen-cmd">teamcity pipeline validate .teamcity.yml</div>
-      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> &#47;var&#47;folders&#47;4y&#47;7q13x9990bv9hf94lw6g4ptm0000gn&#47;T&#47;TestGenerateGallery810746317&#47;001&#47;3599681215.teamcity.yml is valid
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> &#47;var&#47;folders&#47;4y&#47;7q13x9990bv9hf94lw6g4ptm0000gn&#47;T&#47;TestGenerateGallery2417321501&#47;001&#47;436233947.teamcity.yml is valid
   Jobs: build, test</pre></div></div>
     </div>
     <div class="screen" id="pipeline-delete">
@@ -1225,9 +1225,9 @@ Opening browser for authentication...
       <div class="screen-cmd">teamcity config list</div>
       <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg2">Config:</span> ~&#47;.config&#47;tc&#47;config.yml
 &nbsp;
-default_server=http:&#47;&#47;127.0.0.1:51040
+default_server=https:&#47;&#47;tc.example.com
 &nbsp;
-http:&#47;&#47;127.0.0.1:51040<span class="term-fg2"> (default)</span>
+https:&#47;&#47;tc.example.com<span class="term-fg2"> (default)</span>
   guest=false
   ro=false
 &nbsp;
@@ -1257,7 +1257,7 @@ https:&#47;&#47;nightly.tc.example.com
     <div class="screen" id="config-get">
       <div class="screen-header"><h3>config get</h3><p>Get a config value</p></div>
       <div class="screen-cmd">teamcity config get default_server</div>
-      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>http:&#47;&#47;127.0.0.1:51040</pre></div></div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>https:&#47;&#47;tc.example.com</pre></div></div>
     </div>
     <div class="screen" id="config-set">
       <div class="screen-header"><h3>config set</h3><p>Set a config value</p></div>

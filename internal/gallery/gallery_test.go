@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -81,7 +82,9 @@ func capture(t *testing.T, ts *cmdtest.TestServer, args ...string) string {
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
 	require.NoError(t, rootCmd.Execute(), "teamcity %s", strings.Join(args, " "))
-	return mockURLReplacer.Replace(buf.String())
+	result := mockURLReplacer.Replace(buf.String())
+	result = regexp.MustCompile(`http://127\.0\.0\.1:\d+`).ReplaceAllString(result, "https://tc.example.com")
+	return result
 }
 
 func repoRoot() string {
