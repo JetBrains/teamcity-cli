@@ -87,6 +87,7 @@ Use --shell for aliases that need pipes, redirection, or other shell features.`,
 type aliasEntry struct {
 	Name      string `json:"name"`
 	Expansion string `json:"expansion"`
+	Shell     bool   `json:"shell"`
 	Type      string `json:"type"`
 }
 
@@ -130,6 +131,7 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 					entries = append(entries, aliasEntry{
 						Name:      name,
 						Expansion: displayExp,
+						Shell:     isShell,
 						Type:      kind,
 					})
 				}
