@@ -134,10 +134,10 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	for _, r := range runs.Builds {
 		var status, runRef string
 		if opts.plain {
-			status = output.PlainStatusText(r.Status, r.State)
+			status = output.PlainStatusText(r.Status, r.State, r.StatusText)
 			runRef = fmt.Sprintf("%d", r.ID)
 		} else {
-			status = fmt.Sprintf("%s %s", output.StatusIcon(r.Status, r.State), output.StatusText(r.Status, r.State))
+			status = fmt.Sprintf("%s %s", output.StatusIcon(r.Status, r.State, r.StatusText), output.StatusText(r.Status, r.State, r.StatusText))
 			runRef = fmt.Sprintf("%d  #%s", r.ID, r.Number)
 		}
 
@@ -287,7 +287,7 @@ func resolveRunListStatus(status string) (statusFilter, stateFilter string, err 
 		return "", "", nil
 	}
 
-	validValues := []string{"success", "failure", "running", "queued", "error", "unknown"}
+	validValues := []string{"success", "failure", "running", "queued", "error", "unknown", "canceled"}
 	v := strings.ToLower(status)
 	if !slices.Contains(validValues, v) {
 		return "", "", fmt.Errorf("invalid status %q, must be one of: %s", status, strings.Join(validValues, ", "))
@@ -296,6 +296,8 @@ func resolveRunListStatus(status string) (statusFilter, stateFilter string, err 
 	switch v {
 	case "running", "queued":
 		return "", v, nil
+	case "canceled":
+		return "unknown", "finished", nil
 	default:
 		return v, "finished", nil
 	}
@@ -400,7 +402,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 
 	pipelineRun, _ := client.GetBuildPipelineRun(fmt.Sprintf("%d", build.ID))
 
-	icon := output.StatusIcon(build.Status, build.State)
+	icon := output.StatusIcon(build.Status, build.State, build.StatusText)
 	jobName := build.BuildTypeID
 	if pipelineRun != nil && pipelineRun.Pipeline != nil && pipelineRun.Pipeline.Name != "" {
 		jobName = pipelineRun.Pipeline.Name + " ⬡"

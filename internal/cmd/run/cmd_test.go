@@ -308,7 +308,7 @@ func TestInvalidStatusFilter(T *testing.T) {
 func TestValidStatusFilter(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
-	validStatuses := []string{"success", "failure", "running", "queued"}
+	validStatuses := []string{"success", "failure", "running", "queued", "canceled"}
 	for _, status := range validStatuses {
 		T.Run(status, func(t *testing.T) {
 			rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
@@ -335,6 +335,7 @@ func TestStatusFilterLocator(T *testing.T) {
 		{"queued", "state%3Aqueued", "", "status%3AQUEUED"},
 		{"error", "status%3AERROR", "state%3Afinished", ""},
 		{"unknown", "status%3AUNKNOWN", "state%3Afinished", ""},
+		{"canceled", "status%3AUNKNOWN", "state%3Afinished", ""},
 	}
 
 	for _, tt := range tests {
@@ -507,7 +508,7 @@ func TestRunStart_reused(t *testing.T) {
 func TestRunList_invalid_status(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	err := cmdtest.CaptureErr(t, ts.Factory, "run", "list", "--status", "bogus")
-	assert.Equal(t, `invalid status "bogus", must be one of: success, failure, running, queued, error, unknown`, err.Error())
+	assert.Equal(t, `invalid status "bogus", must be one of: success, failure, running, queued, error, unknown, canceled`, err.Error())
 }
 
 func TestRunList_invalid_limit(t *testing.T) {

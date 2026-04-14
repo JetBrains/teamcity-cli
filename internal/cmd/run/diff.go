@@ -386,8 +386,8 @@ func renderDiff(p *output.Printer, d1, d2 buildData) {
 }
 
 func renderDiffHeader(p *output.Printer, b1, b2 *api.Build) {
-	icon1 := output.StatusIcon(b1.Status, b1.State)
-	icon2 := output.StatusIcon(b2.Status, b2.State)
+	icon1 := output.StatusIcon(b1.Status, b1.State, b1.StatusText)
+	icon2 := output.StatusIcon(b2.Status, b2.State, b2.StatusText)
 
 	jobName := b1.BuildTypeID
 	if b1.BuildType != nil {
@@ -439,13 +439,13 @@ func renderStatusDiff(p *output.Printer, b1, b2 *api.Build) bool {
 
 	sectionHeader(p, "STATUS")
 
-	statusLine1 := output.StatusText(b1.Status, b1.State)
-	if b1.StatusText != "" && b1.StatusText != b1.Status {
-		statusLine1 += output.Faint("  " + truncate(b1.StatusText, 80))
+	statusLine1 := output.StatusText(b1.Status, b1.State, b1.StatusText)
+	if detail := statusTextDetail(b1); detail != "" {
+		statusLine1 += output.Faint("  " + truncate(detail, 80))
 	}
-	statusLine2 := output.StatusText(b2.Status, b2.State)
-	if b2.StatusText != "" && b2.StatusText != b2.Status {
-		statusLine2 += output.Faint("  " + truncate(b2.StatusText, 80))
+	statusLine2 := output.StatusText(b2.Status, b2.State, b2.StatusText)
+	if detail := statusTextDetail(b2); detail != "" {
+		statusLine2 += output.Faint("  " + truncate(detail, 80))
 	}
 
 	diffLine(p, "-", "red", "%s", statusLine1)
@@ -699,6 +699,16 @@ func agentName(b *api.Build) string {
 		return b.Agent.Name
 	}
 	return ""
+}
+
+func statusTextDetail(b *api.Build) string {
+	if b.StatusText == "" || b.StatusText == b.Status {
+		return ""
+	}
+	if strings.EqualFold(b.StatusText, "Canceled") {
+		return ""
+	}
+	return b.StatusText
 }
 
 func statusString(b *api.Build) string {

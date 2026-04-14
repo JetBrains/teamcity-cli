@@ -199,7 +199,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 				progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
 			}
 			_, _ = fmt.Fprintf(p.Out, "\r%s %s %d  #%s %s · %s%s    ",
-				output.StatusIcon(build.Status, build.State),
+				output.StatusIcon(build.Status, build.State, build.StatusText),
 				output.Cyan(jobName),
 				build.ID,
 				build.Number,
