@@ -70,15 +70,12 @@ func (f *Factory) Client() (api.ClientInterface, error) {
 // InitOutput configures output settings from Factory flags.
 // Called once after flags are parsed (in PersistentPreRun).
 func (f *Factory) InitOutput() {
-	noColor := os.Getenv("NO_COLOR") != "" ||
+	explicitDisable := os.Getenv("NO_COLOR") != "" ||
 		os.Getenv("TEAMCITY_NO_COLOR") != "" ||
-		os.Getenv("TERM") == "dumb" ||
-		f.NoColor ||
-		!isatty.IsTerminal(os.Stdout.Fd())
-
-	if noColor {
-		color.NoColor = true
-	}
+		f.NoColor
+	forceColor := os.Getenv("FORCE_COLOR") != "" && !explicitDisable
+	color.NoColor = !forceColor &&
+		(explicitDisable || os.Getenv("TERM") == "dumb" || !isatty.IsTerminal(os.Stdout.Fd()))
 
 	f.Printer.Quiet = f.Quiet
 	f.Printer.Verbose = f.Verbose
