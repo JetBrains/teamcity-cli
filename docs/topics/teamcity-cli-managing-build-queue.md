@@ -109,10 +109,10 @@ Remove a build from the queue:
 teamcity queue remove 12345
 ```
 
-Use `--force` to skip the confirmation prompt:
+Use `--yes` to skip the confirmation prompt:
 
 ```Shell
-teamcity queue remove 12345 --force
+teamcity queue remove 12345 --yes
 ```
 
 <seealso>

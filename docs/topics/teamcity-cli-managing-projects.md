@@ -266,7 +266,7 @@ teamcity project vcs test MyProject_GitHubRepo
 
 ```Shell
 teamcity project vcs delete MyProject_GitHubRepo
-teamcity project vcs delete MyProject_GitHubRepo --force  # skip confirmation
+teamcity project vcs delete MyProject_GitHubRepo --yes  # skip confirmation
 ```
 
 ## Managing SSH keys
@@ -302,7 +302,7 @@ teamcity project ssh upload key.pem --name my-deploy-key --project MyProject
 
 ```Shell
 teamcity project ssh delete my-deploy-key --project MyProject
-teamcity project ssh delete my-deploy-key --project MyProject --force
+teamcity project ssh delete my-deploy-key --project MyProject --yes
 ```
 
 ## Project connections

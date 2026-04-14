@@ -234,10 +234,10 @@ When no file is specified, the CLI reads `.teamcity.yml` from the current direct
 
 ```Shell
 teamcity pipeline delete CLI_MyPipeline
-teamcity pipeline delete CLI_MyPipeline --force
+teamcity pipeline delete CLI_MyPipeline --yes
 ```
 
-A confirmation prompt is shown unless `--force` is passed.
+A confirmation prompt is shown unless `--yes` is passed.
 
 ## Managing secrets
 

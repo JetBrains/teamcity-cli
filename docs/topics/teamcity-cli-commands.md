@@ -86,7 +86,7 @@ Description
 </td>
 <td>
 
-List run artifacts
+List artifacts
 
 </td>
 </tr>
@@ -110,7 +110,7 @@ Cancel a run
 </td>
 <td>
 
-Show VCS changes in a run
+Show VCS changes
 
 </td>
 </tr>
@@ -122,7 +122,19 @@ Show VCS changes in a run
 </td>
 <td>
 
-Set or view run comment
+Set or view comment
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity run diff`
+
+</td>
+<td>
+
+[experimental] Compare two runs and show differences
 
 </td>
 </tr>
@@ -134,7 +146,7 @@ Set or view run comment
 </td>
 <td>
 
-Download run artifacts
+Download artifacts
 
 </td>
 </tr>
@@ -158,7 +170,7 @@ List recent runs
 </td>
 <td>
 
-View run log
+View log
 
 </td>
 </tr>
@@ -170,7 +182,7 @@ View run log
 </td>
 <td>
 
-Pin a run to prevent cleanup
+Pin to prevent cleanup
 
 </td>
 </tr>
@@ -206,7 +218,7 @@ Start a new run
 </td>
 <td>
 
-Add tags to a run
+Add tags
 
 </td>
 </tr>
@@ -218,7 +230,19 @@ Add tags to a run
 </td>
 <td>
 
-Show test results for a run
+Show test results
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity run tree`
+
+</td>
+<td>
+
+Display snapshot dependency tree
 
 </td>
 </tr>
@@ -242,7 +266,7 @@ Unpin a run
 </td>
 <td>
 
-Remove tags from a run
+Remove tags
 
 </td>
 </tr>
@@ -254,7 +278,7 @@ Remove tags from a run
 </td>
 <td>
 
-View run details
+View details
 
 </td>
 </tr>
@@ -455,6 +479,18 @@ Manage cloud profiles
 <tr>
 <td>
 
+`teamcity project connection list`
+
+</td>
+<td>
+
+List project connections
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project list`
 
 </td>
@@ -551,6 +587,54 @@ Validate Kotlin DSL configuration locally
 <tr>
 <td>
 
+`teamcity project ssh delete`
+
+</td>
+<td>
+
+Delete an SSH key
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project ssh generate`
+
+</td>
+<td>
+
+Generate an SSH key pair
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project ssh list`
+
+</td>
+<td>
+
+List SSH keys
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project ssh upload`
+
+</td>
+<td>
+
+Upload an SSH private key
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project token get`
 
 </td>
@@ -587,72 +671,12 @@ Display project hierarchy as a tree
 <tr>
 <td>
 
-`teamcity project connection list`
-
-</td>
-<td>
-
-List project connections
-
-</td>
-</tr>
-<tr>
-<td>
-
-`teamcity project ssh delete`
-
-</td>
-<td>
-
-Delete an SSH key
-
-</td>
-</tr>
-<tr>
-<td>
-
-`teamcity project ssh generate`
-
-</td>
-<td>
-
-Generate an SSH key pair
-
-</td>
-</tr>
-<tr>
-<td>
-
-`teamcity project ssh list`
-
-</td>
-<td>
-
-List SSH keys in a project
-
-</td>
-</tr>
-<tr>
-<td>
-
-`teamcity project ssh upload`
-
-</td>
-<td>
-
-Upload an SSH private key
-
-</td>
-</tr>
-<tr>
-<td>
-
 `teamcity project vcs create`
 
 </td>
 <td>
 
-Create a Git VCS root with auth configuration
+Create a VCS root
 
 </td>
 </tr>
