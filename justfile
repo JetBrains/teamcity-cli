@@ -49,6 +49,10 @@ docs-pull *args:
 docs-push *args:
     go run scripts/sync-docs.go push {{args}}
 
+# Generate CLI screen gallery (docs/index.html)
+gallery:
+    go test -tags=gallery -run TestGenerateGallery github.com/JetBrains/teamcity-cli/internal/gallery -v -count=1
+
 # Run go generate
 generate:
     go generate ./...
