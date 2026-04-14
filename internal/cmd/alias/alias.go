@@ -87,7 +87,7 @@ Use --shell for aliases that need pipes, redirection, or other shell features.`,
 type aliasEntry struct {
 	Name      string `json:"name"`
 	Expansion string `json:"expansion"`
-	Shell     bool   `json:"shell"`
+	Type      string `json:"type"`
 }
 
 func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -101,23 +101,36 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity alias list
   teamcity alias list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			builtins := collectBuiltinAliases(cmd.Root())
 			aliases := config.GetAllAliases()
 
-			if len(aliases) == 0 {
+			if len(builtins) == 0 && len(aliases) == 0 {
 				_, _ = fmt.Fprintln(f.Printer.Out, "No aliases configured. Use \"teamcity alias set\" to create one.")
 				return nil
 			}
 
-			names := slices.Sorted(maps.Keys(aliases))
+			builtinNames := slices.Sorted(maps.Keys(builtins))
+			userNames := slices.Sorted(maps.Keys(aliases))
 
 			if jsonOutput {
-				entries := make([]aliasEntry, 0, len(aliases))
-				for _, name := range names {
+				entries := make([]aliasEntry, 0, len(builtins)+len(aliases))
+				for _, name := range builtinNames {
+					entries = append(entries, aliasEntry{
+						Name:      name,
+						Expansion: builtins[name],
+						Type:      "built-in",
+					})
+				}
+				for _, name := range userNames {
 					displayExp, isShell := config.ParseExpansion(aliases[name])
+					kind := "expansion"
+					if isShell {
+						kind = "shell"
+					}
 					entries = append(entries, aliasEntry{
 						Name:      name,
 						Expansion: displayExp,
-						Shell:     isShell,
+						Type:      kind,
 					})
 				}
 				return f.Printer.PrintJSON(entries)
@@ -125,7 +138,10 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 
 			headers := []string{"NAME", "EXPANSION", "TYPE"}
 			var rows [][]string
-			for _, name := range names {
+			for _, name := range builtinNames {
+				rows = append(rows, []string{name, builtins[name], "built-in"})
+			}
+			for _, name := range userNames {
 				displayExp, isShell := config.ParseExpansion(aliases[name])
 				aliasType := "expansion"
 				if isShell {
@@ -141,6 +157,16 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output as JSON")
 
 	return cmd
+}
+
+func collectBuiltinAliases(rootCmd *cobra.Command) map[string]string {
+	result := map[string]string{}
+	for _, c := range rootCmd.Commands() {
+		for _, a := range c.Aliases {
+			result[a] = c.Name()
+		}
+	}
+	return result
 }
 
 func newAliasDeleteCmd(f *cmdutil.Factory) *cobra.Command {
