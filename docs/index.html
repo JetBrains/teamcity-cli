@@ -1,0 +1,2144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeamCity CLI — Screen Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains&#43;Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+:root, [data-theme="dark"] {
+  --bg: #0e0e0e; --bg-sidebar: #080808; --surface: #171717; --surface-cmd: #131313;
+  --border: #222; --border-accent: #282828; --text: #c8c8c8; --text-secondary: #4a4a4a;
+  --accent: #07C3F2; --accent-glow: rgba(7,195,242,0.08); --cmd-color: #4EC5B9;
+  --sidebar-w: 200px;
+  --t-black: #444; --t-red: #f47067; --t-green: #57ab5a; --t-yellow: #c69026;
+  --t-blue: #539bf5; --t-magenta: #b083f0; --t-cyan: #39c5cf; --t-white: #c8c8c8;
+  --t-br-black: #636e7b; --t-br-red: #ff938a; --t-br-green: #6bc46d; --t-br-yellow: #daaa3f;
+  --t-br-blue: #6cb6ff; --t-br-magenta: #dcbdfb; --t-br-cyan: #56d4dd; --t-br-white: #f0f0f0;
+  --t-dim-opacity: 0.45;
+  --dot-close: #ff5f57; --dot-min: #febc2e; --dot-max: #28c840;
+}
+[data-theme="light"] {
+  --bg: #ededed; --bg-sidebar: #e4e4e4; --surface: #fff; --surface-cmd: #f7f7f7;
+  --border: #ccc; --border-accent: #bbb; --text: #1a1a1a; --text-secondary: #888;
+  --accent: #0591b2; --accent-glow: rgba(5,145,178,0.06); --cmd-color: #0e7a6e;
+  --t-black: #1a1a1a; --t-red: #c4302b; --t-green: #1a7f37; --t-yellow: #856d00;
+  --t-blue: #0550ae; --t-magenta: #6639ba; --t-cyan: #0a6e7a; --t-white: #555;
+  --t-br-black: #444; --t-br-red: #a40e26; --t-br-green: #116329; --t-br-yellow: #633c01;
+  --t-br-blue: #0969da; --t-br-magenta: #8250df; --t-br-cyan: #0e7a6e; --t-br-white: #1a1a1a;
+  --t-dim-opacity: 0.5;
+  --dot-close: #ff5f57; --dot-min: #febc2e; --dot-max: #28c840;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg); color: var(--text);
+  line-height: 1.6; font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+ 
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w); background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 16px 0; z-index: 10;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.sidebar-brand {
+  padding: 0 14px 14px; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+  font-size: 12px; color: var(--text-secondary); letter-spacing: 0.5px;
+}
+.sidebar-brand strong {
+  color: var(--accent); font-weight: 700; font-size: 14px; display: block; letter-spacing: 0;
+}
+.sidebar h2 {
+  font-size: 10px; font-weight: 700; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  padding: 14px 14px 4px; margin: 0;
+}
+.sidebar h2 .count { opacity: 0.35; font-weight: 400; }
+.sidebar a {
+  display: block; padding: 2px 14px 2px 22px;
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 12px; line-height: 1.8;
+  border-left: 2px solid transparent; transition: all 0.15s;
+}
+.sidebar a:hover { color: var(--text); border-left-color: var(--accent); background: var(--accent-glow); }
+.sidebar a.active { color: var(--accent); border-left-color: var(--accent); }
+
+ 
+.main { margin-left: var(--sidebar-w); padding: 48px 36px; max-width: none; }
+
+.main > header {
+  margin-bottom: 64px; display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.main > header::after {
+  content: ""; position: absolute; bottom: -1px; left: 0; width: 120px; height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.main > header div p { color: var(--text-secondary); font-size: 12px; margin-top: 8px; }
+.header-title {
+  font-size: 26px; font-weight: 700; color: var(--accent);
+  letter-spacing: -0.5px;
+}
+.header-title span { color: var(--text-secondary); font-weight: 400; }
+
+.header-actions { display: flex; gap: 8px; }
+.theme-toggle {
+  background: none; border: 1px solid var(--border); color: var(--text-secondary);
+  padding: 5px 14px; cursor: pointer; font-size: 11px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+  transition: all 0.2s; text-decoration: none;
+}
+.theme-toggle:hover { color: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+
+ 
+.intro { margin-bottom: 48px; font-size: 12px; color: var(--text-secondary); }
+
+ 
+.category { margin-bottom: 64px; }
+.category > h2 {
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 2.5px;
+  margin-bottom: 24px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.category > h2::before { content: "# "; color: var(--text-secondary); }
+.category > h2::after {
+  content: ""; position: absolute; bottom: -1px; left: 0; width: 60px; height: 1px;
+  background: var(--accent);
+}
+
+.screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+ 
+.screen {
+  transition: box-shadow 0.2s;
+  min-width: 0;
+  opacity: 0; transform: translateY(8px);
+  animation: cardIn 0.4s ease forwards;
+}
+.screen:hover {
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+
+@keyframes cardIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.screen-header { padding: 8px 0 4px 14px; }
+.screen-header h3 {
+  font-size: 13px; font-weight: 500; color: var(--text);
+}
+.screen-header h3::before { content: "// "; color: var(--text-secondary); font-weight: 400; }
+.screen-header p {
+  font-size: 10px; color: var(--text-secondary); margin: 0; padding-left: 2.3em;
+}
+
+.screen-cmd {
+  padding: 5px 14px; margin: 4px 0 0;
+  font-size: 11px; color: var(--cmd-color);
+}
+.screen-cmd::before { content: "$ "; color: var(--text-secondary); }
+
+ 
+.terminal {
+  margin: 4px 0 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: none;
+  max-height: calc(10 * 1.5em + 44px); overflow: hidden; position: relative; cursor: pointer;
+  transition: max-height 0.3s ease;
+}
+.terminal-chrome {
+  padding: 7px 12px; display: flex; gap: 5px; align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-cmd);
+}
+.terminal-chrome i {
+  width: 8px; height: 8px; border-radius: 50%; display: block;
+}
+.terminal-chrome i:nth-child(1) { background: var(--dot-close); }
+.terminal-chrome i:nth-child(2) { background: var(--dot-min); }
+.terminal-chrome i:nth-child(3) { background: var(--dot-max); }
+.terminal-body { padding: 10px 14px; overflow-x: auto; }
+.terminal.overflows::after {
+  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
+  background: linear-gradient(transparent 0%, var(--surface) 80%);
+  pointer-events: none;
+}
+.terminal.expanded { max-height: none; }
+.terminal.expanded::after { display: none; }
+.terminal pre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; line-height: 1.5; color: var(--text);
+  margin: 0; white-space: pre; tab-size: 8;
+}
+
+@media (max-width: 1100px) {
+  .screens { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; padding: 24px 16px; }
+  .main > header { flex-direction: column; gap: 16px; }
+  .header-title { font-size: 20px; }
+  .screens { grid-template-columns: 1fr; }
+  .terminal { margin-left: 0; }
+  .screen-cmd { font-size: 10px; overflow-x: auto; }
+}
+
+ 
+.term-fg1, .term-bold { font-weight: 700; }
+.term-fg2, .term-dim  { opacity: var(--t-dim-opacity); }
+.term-fg3, .term-italic { font-style: italic; }
+.term-fg4, .term-underline { text-decoration: underline; }
+.term-fg30 { color: var(--t-black); } .term-fg31 { color: var(--t-red); } .term-fg32 { color: var(--t-green); }
+.term-fg33 { color: var(--t-yellow); } .term-fg34 { color: var(--t-blue); } .term-fg35 { color: var(--t-magenta); }
+.term-fg36 { color: var(--t-cyan); } .term-fg37 { color: var(--t-white); }
+.term-fg90 { color: var(--t-br-black); } .term-fg91 { color: var(--t-br-red); } .term-fg92 { color: var(--t-br-green); }
+.term-fg93 { color: var(--t-br-yellow); } .term-fg94 { color: var(--t-br-blue); } .term-fg95 { color: var(--t-br-magenta); }
+.term-fg96 { color: var(--t-br-cyan); } .term-fg97 { color: var(--t-br-white); }
+.term-bg40 { background: var(--t-black); } .term-bg41 { background: var(--t-red); } .term-bg42 { background: var(--t-green); }
+.term-bg43 { background: var(--t-yellow); } .term-bg44 { background: var(--t-blue); } .term-bg45 { background: var(--t-magenta); }
+.term-bg46 { background: var(--t-cyan); } .term-bg47 { background: var(--t-white); }
+
+ 
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+ 
+:root,[data-theme="dark"]{--accent:#07C3F2;--accent-glow:#07C3F214;--cmd-color:#07C3F2}
+[data-theme="light"]{--accent:#07C3F2;--accent-glow:#07C3F20f;--cmd-color:#07C3F2}
+
+
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <strong>termbook</strong>
+    screen gallery
+  </div>
+  <h2>Style Guide <span class="count">5</span></h2>
+  <a href="#colors" data-target="colors">Colors &amp; Text Styles</a>
+  <a href="#status-icons" data-target="status-icons">Status Icons</a>
+  <a href="#messages" data-target="messages">Messages</a>
+  <a href="#table" data-target="table">Table Rendering</a>
+  <a href="#tree" data-target="tree">Tree Rendering</a>
+  <h2>Runs <span class="count">18</span></h2>
+  <a href="#run-list" data-target="run-list">run list</a>
+  <a href="#run-view" data-target="run-view">run view</a>
+  <a href="#run-start" data-target="run-start">run start</a>
+  <a href="#run-restart" data-target="run-restart">run restart</a>
+  <a href="#run-watch" data-target="run-watch">run watch --logs</a>
+  <a href="#run-log" data-target="run-log">run log --tail</a>
+  <a href="#run-diff" data-target="run-diff">run diff</a>
+  <a href="#run-artifacts" data-target="run-artifacts">run artifacts</a>
+  <a href="#run-download" data-target="run-download">run download</a>
+  <a href="#run-changes" data-target="run-changes">run changes</a>
+  <a href="#run-tests" data-target="run-tests">run tests</a>
+  <a href="#run-tree" data-target="run-tree">run tree</a>
+  <a href="#run-cancel" data-target="run-cancel">run cancel</a>
+  <a href="#run-pin" data-target="run-pin">run pin</a>
+  <a href="#run-unpin" data-target="run-unpin">run unpin</a>
+  <a href="#run-tag" data-target="run-tag">run tag</a>
+  <a href="#run-comment" data-target="run-comment">run comment</a>
+  <a href="#run-comment-set" data-target="run-comment-set">run comment (set)</a>
+  <h2>Jobs <span class="count">5</span></h2>
+  <a href="#job-list" data-target="job-list">job list</a>
+  <a href="#job-view" data-target="job-view">job view</a>
+  <a href="#job-tree" data-target="job-tree">job tree</a>
+  <a href="#job-pause" data-target="job-pause">job pause</a>
+  <a href="#job-param" data-target="job-param">job param list</a>
+  <h2>Agents <span class="count">7</span></h2>
+  <a href="#agent-list" data-target="agent-list">agent list</a>
+  <a href="#agent-view" data-target="agent-view">agent view</a>
+  <a href="#agent-jobs" data-target="agent-jobs">agent jobs</a>
+  <a href="#agent-enable" data-target="agent-enable">agent enable</a>
+  <a href="#agent-disable" data-target="agent-disable">agent disable</a>
+  <a href="#agent-term" data-target="agent-term">agent term</a>
+  <a href="#agent-exec" data-target="agent-exec">agent exec</a>
+  <h2>Queue <span class="count">4</span></h2>
+  <a href="#queue-list" data-target="queue-list">queue list</a>
+  <a href="#queue-remove" data-target="queue-remove">queue remove</a>
+  <a href="#queue-top" data-target="queue-top">queue top</a>
+  <a href="#queue-approve" data-target="queue-approve">queue approve</a>
+  <h2>Pools <span class="count">3</span></h2>
+  <a href="#pool-list" data-target="pool-list">pool list</a>
+  <a href="#pool-view" data-target="pool-view">pool view</a>
+  <a href="#pool-link" data-target="pool-link">pool link</a>
+  <h2>Projects <span class="count">27</span></h2>
+  <a href="#project-list" data-target="project-list">project list</a>
+  <a href="#project-view" data-target="project-view">project view</a>
+  <a href="#project-tree" data-target="project-tree">project tree</a>
+  <a href="#project-settings" data-target="project-settings">project settings status</a>
+  <a href="#project-settings-validate" data-target="project-settings-validate">project settings validate</a>
+  <a href="#project-settings-export" data-target="project-settings-export">project settings export</a>
+  <a href="#project-vcs-list" data-target="project-vcs-list">project vcs list</a>
+  <a href="#project-vcs-view" data-target="project-vcs-view">project vcs view</a>
+  <a href="#project-vcs-create" data-target="project-vcs-create">project vcs create</a>
+  <a href="#project-vcs-test" data-target="project-vcs-test">project vcs test</a>
+  <a href="#project-vcs-delete" data-target="project-vcs-delete">project vcs delete</a>
+  <a href="#project-ssh-list" data-target="project-ssh-list">project ssh list</a>
+  <a href="#project-ssh-generate" data-target="project-ssh-generate">project ssh generate</a>
+  <a href="#project-ssh-upload" data-target="project-ssh-upload">project ssh upload</a>
+  <a href="#project-ssh-delete" data-target="project-ssh-delete">project ssh delete</a>
+  <a href="#project-connection-list" data-target="project-connection-list">project connection list</a>
+  <a href="#project-cloud-profile" data-target="project-cloud-profile">project cloud profile list</a>
+  <a href="#project-cloud-profile-view" data-target="project-cloud-profile-view">project cloud profile view</a>
+  <a href="#project-cloud-image" data-target="project-cloud-image">project cloud image list</a>
+  <a href="#project-cloud-image-view" data-target="project-cloud-image-view">project cloud image view</a>
+  <a href="#project-cloud-image-start" data-target="project-cloud-image-start">project cloud image start</a>
+  <a href="#project-cloud-instance" data-target="project-cloud-instance">project cloud instance list</a>
+  <a href="#project-cloud-instance-view" data-target="project-cloud-instance-view">project cloud instance view</a>
+  <a href="#project-cloud-instance-stop" data-target="project-cloud-instance-stop">project cloud instance stop</a>
+  <a href="#project-param" data-target="project-param">project param list</a>
+  <a href="#project-token-put" data-target="project-token-put">project token put</a>
+  <a href="#project-token-get" data-target="project-token-get">project token get</a>
+  <h2>Pipelines <span class="count">6</span></h2>
+  <a href="#pipeline-list" data-target="pipeline-list">pipeline list</a>
+  <a href="#pipeline-view" data-target="pipeline-view">pipeline view</a>
+  <a href="#pipeline-validate" data-target="pipeline-validate">pipeline validate</a>
+  <a href="#pipeline-delete" data-target="pipeline-delete">pipeline delete</a>
+  <a href="#pipeline-push" data-target="pipeline-push">pipeline push</a>
+  <a href="#pipeline-pull" data-target="pipeline-pull">pipeline pull</a>
+  <h2>Auth <span class="count">4</span></h2>
+  <a href="#auth-status" data-target="auth-status">auth status</a>
+  <a href="#auth-status-multi" data-target="auth-status-multi">auth status (multi-server)</a>
+  <a href="#auth-login" data-target="auth-login">auth login</a>
+  <a href="#auth-logout" data-target="auth-logout">auth logout</a>
+  <h2>Config <span class="count">3</span></h2>
+  <a href="#config-list" data-target="config-list">config list</a>
+  <a href="#config-get" data-target="config-get">config get</a>
+  <a href="#config-set" data-target="config-set">config set</a>
+  <h2>Aliases <span class="count">3</span></h2>
+  <a href="#alias-list" data-target="alias-list">alias list</a>
+  <a href="#alias-set" data-target="alias-set">alias set</a>
+  <a href="#alias-delete" data-target="alias-delete">alias delete</a>
+  <h2>Skills <span class="count">4</span></h2>
+  <a href="#skill-list" data-target="skill-list">skill list</a>
+  <a href="#skill-install" data-target="skill-install">skill install</a>
+  <a href="#skill-update" data-target="skill-update">skill update</a>
+  <a href="#skill-remove" data-target="skill-remove">skill remove</a>
+  <h2>API <span class="count">1</span></h2>
+  <a href="#api-get" data-target="api-get">api</a>
+  <h2>Update <span class="count">1</span></h2>
+  <a href="#update" data-target="update">update</a>
+  <h2>Errors <span class="count">6</span></h2>
+  <a href="#error-not-found" data-target="error-not-found">Not Found</a>
+  <a href="#error-auth" data-target="error-auth">Authentication Failed</a>
+  <a href="#error-permission" data-target="error-permission">Permission Denied</a>
+  <a href="#error-network" data-target="error-network">Network Error</a>
+  <a href="#error-readonly" data-target="error-readonly">Read-Only Mode</a>
+  <a href="#error-json" data-target="error-json">JSON Error Format</a>
+  <h2>Help Screens <span class="count">23</span></h2>
+  <a href="#help-root" data-target="help-root">teamcity</a>
+  <a href="#help-run" data-target="help-run">run</a>
+  <a href="#help-job" data-target="help-job">job</a>
+  <a href="#help-agent" data-target="help-agent">agent</a>
+  <a href="#help-queue" data-target="help-queue">queue</a>
+  <a href="#help-pool" data-target="help-pool">pool</a>
+  <a href="#help-project" data-target="help-project">project</a>
+  <a href="#help-pipeline" data-target="help-pipeline">pipeline</a>
+  <a href="#help-auth" data-target="help-auth">auth</a>
+  <a href="#help-config" data-target="help-config">config</a>
+  <a href="#help-alias" data-target="help-alias">alias</a>
+  <a href="#help-skill" data-target="help-skill">skill</a>
+  <a href="#help-project-settings" data-target="help-project-settings">project settings</a>
+  <a href="#help-project-vcs" data-target="help-project-vcs">project vcs</a>
+  <a href="#help-project-ssh" data-target="help-project-ssh">project ssh</a>
+  <a href="#help-project-connection" data-target="help-project-connection">project connection</a>
+  <a href="#help-project-cloud" data-target="help-project-cloud">project cloud</a>
+  <a href="#help-project-cloud-profile" data-target="help-project-cloud-profile">project cloud profile</a>
+  <a href="#help-project-cloud-image" data-target="help-project-cloud-image">project cloud image</a>
+  <a href="#help-project-cloud-instance" data-target="help-project-cloud-instance">project cloud instance</a>
+  <a href="#help-project-token" data-target="help-project-token">project token</a>
+  <a href="#help-project-param" data-target="help-project-param">project param</a>
+  <a href="#help-job-param" data-target="help-job-param">job param</a>
+  
+</nav>
+
+<div class="main">
+  <header>
+    <div>
+      <div class="header-title">TeamCity CLI — Screen Gallery</div>
+      <p>120 screens &middot; generated 2026-04-14 21:28</p>
+    </div>
+    <div class="header-actions">
+      <a class="theme-toggle" href="https://github.com/jetbrains/teamcity-cli/" target="_blank" rel="noopener">[&#9733; github]</a>
+      <button class="theme-toggle" onclick="toggleTheme()">[theme: <span id="theme-label">dark</span>]</button>
+    </div>
+  </header>
+
+  <p class="intro">Auto-generated from real command output. Click terminals to expand. Regenerate with just gallery</p>
+
+  <section class="category" id="style-guide">
+    <h2>Style Guide</h2>
+    <div class="screens">
+    <div class="screen" id="colors">
+      <div class="screen-header"><h3>Colors &amp; Text Styles</h3><p>Standard color palette</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">Green</span> — success, links, positive
+<span class="term-fg31">Red</span> — errors, failures, negative
+<span class="term-fg33">Yellow</span> — warnings, running, caution
+<span class="term-fg36">Cyan</span> — titles, names, emphasis
+<span class="term-fg1">Bold</span> — headers, key labels
+<span class="term-fg2">Faint</span> — secondary info, IDs, hints</pre></div></div>
+    </div>
+    <div class="screen" id="status-icons">
+      <div class="screen-header"><h3>Status Icons</h3><p>Status indicators in tables and views</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>  <span class="term-fg32">✓</span>  <span class="term-fg32">Success</span> <span class="term-fg2">build completed successfully</span>
+  <span class="term-fg31">✗</span>  <span class="term-fg31">Failed</span> <span class="term-fg2">build finished with failures</span>
+  <span class="term-fg33">●</span>  <span class="term-fg33">Running</span> <span class="term-fg2">build is currently executing</span>
+  <span class="term-fg2">◦</span>  <span class="term-fg2">Queued</span> <span class="term-fg2">build is waiting in queue</span>
+  <span class="term-fg31">✗</span>  <span class="term-fg31">Error</span> <span class="term-fg2">internal or infrastructure error</span>
+  <span class="term-fg33">?</span>  UNKNOWN      <span class="term-fg2">unknown status</span></pre></div></div>
+    </div>
+    <div class="screen" id="messages">
+      <div class="screen-header"><h3>Messages</h3><p>Info, success, warning, error patterns</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Logged in as Viktor Tiulpin
+3 runs matched your filters
+<span class="term-fg33">!</span> Token expires in 2 days
+Error: build configuration &quot;NonExistent_Build&quot; not found
+&nbsp;
+Hint: Use &#39;teamcity job list&#39; to see available jobs</pre></div></div>
+    </div>
+    <div class="screen" id="table">
+      <div class="screen-header"><h3>Table Rendering</h3><p>Auto-sized columns with colored cells</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID  NAME            STATUS        POOL
+1   linux-agent-01  <span class="term-fg32">Connected</span>     Default
+2   linux-agent-02  <span class="term-fg32">Connected</span>     Default
+3   mac-agent-01    <span class="term-fg31">Disconnected</span>  macOS
+4   cloud-agent-01  <span class="term-fg33">Disabled</span>      Cloud</pre></div></div>
+    </div>
+    <div class="screen" id="tree">
+      <div class="screen-header"><h3>Tree Rendering</h3><p>Hierarchical display with connectors</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">My Application</span> <span class="term-fg2">MyApp</span>
+├── <span class="term-fg36">Build</span> <span class="term-fg2">MyApp_Build</span>
+├── <span class="term-fg36">Run Tests</span> <span class="term-fg2">MyApp_Test</span>
+└── <span class="term-fg36">Deploy</span> <span class="term-fg2">MyApp_Deploy</span>
+    └── <span class="term-fg36">Smoke Tests</span> <span class="term-fg2">MyApp_Smoke</span></pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="runs">
+    <h2>Runs</h2>
+    <div class="screens">
+    <div class="screen" id="run-list">
+      <div class="screen-header"><h3>run list</h3><p>List recent runs with status, job, branch, and timing</p></div>
+      <div class="screen-cmd">teamcity run list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>STATUS     RUN          JOB            BRANCH           TRIGGERED BY    DURATION  AGE
+<span class="term-fg32">✓</span> <span class="term-fg32">Success</span>  45231  #831  MyApp_Build    main             Viktor Tiulpin  2m 13s    2h ago
+<span class="term-fg31">✗</span> <span class="term-fg31">Failed</span>   45230  #442  MyApp_Test     feature&#47;auth     CI Bot          5m 1s     3h ago
+<span class="term-fg33">●</span> <span class="term-fg33">Running</span>  45229  #830  MyApp_Deploy   main             Viktor Tiulpin  1m 22s    now
+<span class="term-fg32">✓</span> <span class="term-fg32">Success</span>  45228  #829  MyApp_Build    fix&#47;memory-leak  Anna Kowalski   45s       5h ago
+<span class="term-fg31">✗</span> <span class="term-fg31">Failed</span>   45227  #126  MyApp_IntTest  main             schedule        12m 45s   8h ago
+<span class="term-fg2">◦</span> <span class="term-fg2">Queued</span>   45226  #     MyApp_Build    feature&#47;onboard  GitHub Hook     -         1d ago
+<span class="term-fg32">✓</span> <span class="term-fg32">Success</span>  45225  #118  MyApp_Lint     main             CI Bot          12s       1d ago</pre></div></div>
+    </div>
+    <div class="screen" id="run-view">
+      <div class="screen-header"><h3>run view</h3><p>Detail view of a finished run</p></div>
+      <div class="screen-cmd">teamcity run view 45231</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> <span class="term-fg36">Build</span> 45231  #831 · main
+Triggered by Viktor Tiulpin · 2h ago · Took 2m 13s
+&nbsp;
+Agent: <span class="term-fg2">linux-agent-01</span>
+&nbsp;
+Tags: release, v1.0.0
+&nbsp;
+<span class="term-fg2">View in browser:</span> <span class="term-fg32">https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231</span></pre></div></div>
+    </div>
+    <div class="screen" id="run-start">
+      <div class="screen-header"><h3>run start</h3><p>Trigger a new run</p></div>
+      <div class="screen-cmd">teamcity run start MyApp_Build --no-input</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Queued run 100  #100 for MyApp_Build
+  URL: https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=100
+  <span class="term-fg2">Follow logs:</span> teamcity run log -f 100</pre></div></div>
+    </div>
+    <div class="screen" id="run-restart">
+      <div class="screen-header"><h3>run restart</h3><p>Re-trigger a completed run</p></div>
+      <div class="screen-cmd">teamcity run restart 1 --no-input</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Queued run 100  #100 for MyApp_Build (restart of 45231)
+  Job: MyApp_Build
+  Branch: main
+  URL: https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=100</pre></div></div>
+    </div>
+    <div class="screen" id="run-watch">
+      <div class="screen-header"><h3>run watch --logs</h3><p>Full-screen TUI with live log streaming (alt-screen)</p></div>
+      <div class="screen-cmd">teamcity run watch --logs 45229</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg33">●</span> Deploy Staging  45229  #830  <span class="term-fg33">Running</span> · Running (67%)
+&nbsp;
+<span class="term-fg2">[12:01:10] Downloading artifacts from Build #831</span>
+<span class="term-fg2">[12:01:12] Extracting app.jar (12.4 MB)</span>
+<span class="term-fg2">[12:01:15] Verifying checksums... OK</span>
+[12:01:18] Starting: deploy.sh --env staging
+[12:01:22] Stopping existing service...
+[12:01:25] Deploying version 1.0.0 to staging-01
+[12:01:30] Deploying version 1.0.0 to staging-02
+<span class="term-fg32">[12:01:35] Health check staging-01: 200 OK</span>
+<span class="term-fg32">[12:01:38] Health check staging-02: 200 OK</span>
+[12:01:40] Updating load balancer config...
+[12:01:42] Draining old instances...
+<span class="term-fg32">[12:01:45] Deploy complete. 2&#47;2 instances healthy</span>
+&nbsp;
+<span class="term-fg2">q</span> quit  ·  <span class="term-fg36">teamcity agent term 1</span>  ·  ~</pre></div></div>
+    </div>
+    <div class="screen" id="run-log">
+      <div class="screen-header"><h3>run log --tail</h3><p>Formatted build log with timestamps</p></div>
+      <div class="screen-cmd">teamcity run log 1 --tail 10</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Build started
+Step 1&#47;3: Compile (go build)
+  Starting: go build -o bin&#47;app .&#47;cmd&#47;app
+  Process exited with code 0
+Step 2&#47;3: Test (go test)
+  Starting: go test -race .&#47;...
+  ok  myapp&#47;internal&#47;auth  0.152s
+  ok  myapp&#47;internal&#47;pool  0.089s
+  ok  myapp&#47;internal&#47;handler  0.523s
+Step 3&#47;3: Package
+Build finished</pre></div></div>
+    </div>
+    <div class="screen" id="run-diff">
+      <div class="screen-header"><h3>run diff</h3><p>Compare two runs side by side</p></div>
+      <div class="screen-cmd">teamcity run diff 45231 45230</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg33">!</span> &quot;teamcity run diff&quot; is experimental: flags, output, and JSON schema may change or the command may be removed without notice. It is intentionally undocumented — do not rely on it in scripts.
+COMPARING  <span class="term-fg32">✓</span> 45231  #831  →  <span class="term-fg31">✗</span> 45230  #442
+<span class="term-fg2">Job: </span><span class="term-fg36">Build</span><span class="term-fg2">  ·  Branch: </span>main → feature&#47;auth
+&nbsp;
+<span class="term-fg1">STATUS</span>
+  <span class="term-fg31">-</span> <span class="term-fg32">Success</span>
+  <span class="term-fg32">+</span> <span class="term-fg31">Failed</span>
+&nbsp;
+<span class="term-fg1">PROBLEMS</span>
+  <span class="term-fg32">+</span> Compilation failed with 3 errors
+&nbsp;
+<span class="term-fg1">TESTS</span>
+  <span class="term-fg31">-</span> 145 passed
+  <span class="term-fg32">+</span> 140 passed, 2 failed, 3 ignored
+  <span class="term-fg31">New failures:</span>
+    <span class="term-fg31">✗</span> TestAuthHandler&#47;expired_session
+      <span class="term-fg2">context deadline exceeded</span>
+    <span class="term-fg31">✗</span> TestAuthHandler&#47;invalid_token
+      <span class="term-fg2">Expected status 401, got 200</span>
+&nbsp;
+<span class="term-fg1">CHANGES</span>
+  <span class="term-fg31">-</span> <span class="term-fg33">abc1234</span>  <span class="term-fg2">vtiulpin</span>  Fix memory leak in connection pool
+  <span class="term-fg31">-</span> <span class="term-fg33">def5678</span>  <span class="term-fg2">akowalski</span>  Add graceful shutdown handler
+  <span class="term-fg31">-</span> <span class="term-fg33">789abcd</span>  <span class="term-fg2">lchen</span>  Update CI pipeline configuration
+  <span class="term-fg32">+</span> <span class="term-fg33">fed9876</span>  <span class="term-fg2">lchen</span>  Add OAuth2 handler
+&nbsp;
+<span class="term-fg1">PARAMETERS</span>
+  <span class="term-fg32">+</span> new.flag: <span class="term-fg32">true</span>
+  <span class="term-fg33">~</span> version: <span class="term-fg31">1.0.0</span> → <span class="term-fg32">1.0.1</span>
+&nbsp;
+<span class="term-fg1">AGENT</span>
+  <span class="term-fg31">-</span> linux-agent-01
+  <span class="term-fg32">+</span>
+&nbsp;
+<span class="term-fg1">DURATION</span>
+  <span class="term-fg31">-</span> 2m 13s
+  <span class="term-fg32">+</span> 5m 0s  <span class="term-fg2">(+2m 47s)</span>
+&nbsp;
+<span class="term-fg2">Changed:</span> status, problems, tests, changes, parameters, agent, duration
+<span class="term-fg2">View -</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231
+<span class="term-fg2">View +</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45230</pre></div></div>
+    </div>
+    <div class="screen" id="run-artifacts">
+      <div class="screen-header"><h3>run artifacts</h3><p>List downloadable build artifacts</p></div>
+      <div class="screen-cmd">teamcity run artifacts 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ARTIFACTS (6 files, 13 MiB total)
+&nbsp;
+NAME                    SIZE
+app.jar           <span class="term-fg2">    12 MiB</span>
+test-report.html  <span class="term-fg2">   234 KiB</span>
+coverage.xml      <span class="term-fg2">    44 KiB</span>
+checksums.sha256  <span class="term-fg2">     512 B</span>
+logs&#47;build.log    <span class="term-fg2">    45 KiB</span>
+logs&#47;test.log     <span class="term-fg2">    12 KiB</span>
+&nbsp;
+Download all: teamcity run download 1
+Download one: teamcity run download 1 -a &quot;&lt;name&gt;&quot;</pre></div></div>
+    </div>
+    <div class="screen" id="run-download">
+      <div class="screen-header"><h3>run download</h3><p>Download artifacts to local filesystem</p></div>
+      <div class="screen-cmd">teamcity run download 45231</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Downloaded app.jar (12.4 MB)
+<span class="term-fg32">✓</span> Downloaded test-report.html (234 KB)
+<span class="term-fg32">✓</span> Downloaded logs&#47;build.log (45 KB)
+&nbsp;
+3 files, 12.6 MB total → .&#47;artifacts&#47;</pre></div></div>
+    </div>
+    <div class="screen" id="run-changes">
+      <div class="screen-header"><h3>run changes</h3><p>VCS changes included in a run</p></div>
+      <div class="screen-cmd">teamcity run changes 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>CHANGES (3 commits)
+&nbsp;
+<span class="term-fg33">abc1234</span>  <span class="term-fg2">vtiulpin</span>  <span class="term-fg2">2h ago</span>
+  Fix memory leak in connection pool
+  <span class="term-fg33">M</span>  <span class="term-fg2">src&#47;pool&#47;connection.go</span>
+  <span class="term-fg33">M</span>  <span class="term-fg2">src&#47;pool&#47;connection_test.go</span>
+&nbsp;
+<span class="term-fg33">def5678</span>  <span class="term-fg2">akowalski</span>  <span class="term-fg2">5h ago</span>
+  Add graceful shutdown handler
+  <span class="term-fg32">A</span>  <span class="term-fg2">src&#47;shutdown&#47;handler.go</span>
+  <span class="term-fg33">M</span>  <span class="term-fg2">src&#47;main.go</span>
+&nbsp;
+<span class="term-fg33">789abcd</span>  <span class="term-fg2">lchen</span>  <span class="term-fg2">8h ago</span>
+  Update CI pipeline configuration
+  <span class="term-fg33">M</span>  <span class="term-fg2">.teamcity.yml</span>
+&nbsp;
+<span class="term-fg2"># For full diff:</span> git diff 789abcd^..abc1234</pre></div></div>
+    </div>
+    <div class="screen" id="run-tests">
+      <div class="screen-header"><h3>run tests</h3><p>Test results summary</p></div>
+      <div class="screen-cmd">teamcity run tests 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg2">View in browser:</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231?buildTab=tests
+&nbsp;
+TESTS: <span class="term-fg32">145 passed</span>
+&nbsp;
+<span class="term-fg32">✓</span> TestAuthHandler&#47;valid_token
+<span class="term-fg32">✓</span> TestConnectionPool&#47;acquire
+<span class="term-fg32">✓</span> TestConnectionPool&#47;release
+<span class="term-fg32">✓</span> TestShutdown&#47;graceful
+<span class="term-fg32">✓</span> TestMigration&#47;forward</pre></div></div>
+    </div>
+    <div class="screen" id="run-tree">
+      <div class="screen-header"><h3>run tree</h3><p>Snapshot dependency tree of a run</p></div>
+      <div class="screen-cmd">teamcity run tree 45229</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg33">●</span> <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">45229</span>
+├── <span class="term-fg32">✓</span> <span class="term-fg36">Build</span> <span class="term-fg2">45231</span>
+│   ├── <span class="term-fg32">✓</span> <span class="term-fg36">Lint</span> <span class="term-fg2">45225</span>
+│   └── <span class="term-fg32">✓</span> <span class="term-fg36">Compile</span> <span class="term-fg2">45240</span>
+└── <span class="term-fg31">✗</span> <span class="term-fg36">Run Tests</span> <span class="term-fg2">45230</span>
+    └── <span class="term-fg32">✓</span> <span class="term-fg36">Build</span> <span class="term-fg2">45231</span>
+        ├── <span class="term-fg32">✓</span> <span class="term-fg36">Lint</span> <span class="term-fg2">45225</span>
+        └── <span class="term-fg32">✓</span> <span class="term-fg36">Compile</span> <span class="term-fg2">45240</span></pre></div></div>
+    </div>
+    <div class="screen" id="run-cancel">
+      <div class="screen-header"><h3>run cancel</h3><p>Cancel a running or queued build</p></div>
+      <div class="screen-cmd">teamcity run cancel --yes 45233</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Canceled #45233</pre></div></div>
+    </div>
+    <div class="screen" id="run-pin">
+      <div class="screen-header"><h3>run pin</h3><p>Pin a build to prevent cleanup</p></div>
+      <div class="screen-cmd">teamcity run pin 1 -m &#34;Release candidate&#34;</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Pinned #1
+  Comment: Release candidate</pre></div></div>
+    </div>
+    <div class="screen" id="run-unpin">
+      <div class="screen-header"><h3>run unpin</h3><p>Unpin a build</p></div>
+      <div class="screen-cmd">teamcity run unpin 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Unpinned #1</pre></div></div>
+    </div>
+    <div class="screen" id="run-tag">
+      <div class="screen-header"><h3>run tag</h3><p>Add tags to a run</p></div>
+      <div class="screen-cmd">teamcity run tag 1 release v1.0.0</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Added 2 tag(s) to #1
+  Tags: release, v1.0.0</pre></div></div>
+    </div>
+    <div class="screen" id="run-comment">
+      <div class="screen-header"><h3>run comment</h3><p>View a build comment</p></div>
+      <div class="screen-cmd">teamcity run comment 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>No comment set on #1</pre></div></div>
+    </div>
+    <div class="screen" id="run-comment-set">
+      <div class="screen-header"><h3>run comment (set)</h3><p>Set a comment on a run</p></div>
+      <div class="screen-cmd">teamcity run comment 1 &#34;Ready for prod&#34;</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Set comment on #1
+  Comment: Ready for prod</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="jobs">
+    <h2>Jobs</h2>
+    <div class="screens">
+    <div class="screen" id="job-list">
+      <div class="screen-header"><h3>job list</h3><p>List build configurations</p></div>
+      <div class="screen-cmd">teamcity job list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID             NAME               PROJECT         STATUS
+MyApp_Build    Build              My Application  <span class="term-fg32">Active</span>
+MyApp_Test     Run Tests          My Application  <span class="term-fg32">Active</span>
+MyApp_Deploy   Deploy Staging     My Application  <span class="term-fg2">Paused</span>
+MyApp_IntTest  Integration Tests  My Application  <span class="term-fg32">Active</span>
+MyApp_Lint     Lint               My Application  <span class="term-fg32">Active</span></pre></div></div>
+    </div>
+    <div class="screen" id="job-view">
+      <div class="screen-header"><h3>job view</h3><p>Detail view of a build configuration</p></div>
+      <div class="screen-cmd">teamcity job view MyApp_Build</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">Build</span>
+ID: MyApp_Build
+Project: My Application (MyApp)
+Status: <span class="term-fg32">Active</span>
+&nbsp;
+<span class="term-fg2">View in browser:</span> <span class="term-fg32">https:&#47;&#47;tc.example.com&#47;viewType.html?buildTypeId=MyApp_Build</span></pre></div></div>
+    </div>
+    <div class="screen" id="job-tree">
+      <div class="screen-header"><h3>job tree</h3><p>Snapshot dependency tree of a job</p></div>
+      <div class="screen-cmd">teamcity job tree MyApp_Build</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">Build</span>
+├── <span class="term-fg2">▲ Dependents</span>
+│   ├── <span class="term-fg36">Build</span> <span class="term-fg2">MyApp_Build</span> <span class="term-fg33">(circular)</span>
+│   ├── <span class="term-fg36">Run Tests</span> <span class="term-fg2">MyApp_Test</span>
+│   │   ├── <span class="term-fg36">Build</span> <span class="term-fg2">MyApp_Build</span> <span class="term-fg33">(circular)</span>
+│   │   ├── <span class="term-fg36">Run Tests</span> <span class="term-fg2">MyApp_Test</span> <span class="term-fg33">(circular)</span>
+│   │   ├── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span>
+│   │   │   ├── <span class="term-fg36">Build</span> <span class="term-fg2">MyApp_Build</span> <span class="term-fg33">(circular)</span>
+│   │   │   ├── <span class="term-fg36">Run Tests</span> <span class="term-fg2">MyApp_Test</span> <span class="term-fg33">(circular)</span>
+│   │   │   ├── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span> <span class="term-fg33">(circular)</span>
+│   │   │   ├── <span class="term-fg36">Integration Tests</span> <span class="term-fg2">MyApp_IntTest</span>
+│   │   │   │   ├── <span class="term-fg36">Build</span> <span class="term-fg2">MyApp_Build</span> <span class="term-fg33">(circular)</span>
+│   │   │   │   ├── <span class="term-fg36">Run Tests</span> <span class="term-fg2">MyApp_Test</span> <span class="term-fg33">(circular)</span>
+│   │   │   │   ├── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span> <span class="term-fg33">(circular)</span>
+│   │   │   │   ├── <span class="term-fg36">Integration Tests</span> <span class="term-fg2">MyApp_IntTest</span> <span class="term-fg33">(circular)</span>
+│   │   │   │   └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span>
+│   │   │   │       ├── <span class="term-fg36">Build</span> <span class="term-fg2">MyApp_Build</span> <span class="term-fg33">(circular)</span>
+│   │   │   │       ├── <span class="term-fg36">Run Tests</span> <span class="term-fg2">MyApp_Test</span> <span class="term-fg33">(circular)</span>
+│   │   │   │       ├── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span> <span class="term-fg33">(circular)</span>
+│   │   │   │       ├── <span class="term-fg36">Integration Tests</span> <span class="term-fg2">MyApp_IntTest</span> <span class="term-fg33">(circular)</span>
+│   │   │   │       └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span> <span class="term-fg33">(circular)</span>
+│   │   │   └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span> <span class="term-fg33">(circular)</span>
+│   │   ├── <span class="term-fg36">Integration Tests</span> <span class="term-fg2">MyApp_IntTest</span> <span class="term-fg33">(circular)</span>
+│   │   └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span> <span class="term-fg33">(circular)</span>
+│   ├── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span> <span class="term-fg33">(circular)</span>
+│   ├── <span class="term-fg36">Integration Tests</span> <span class="term-fg2">MyApp_IntTest</span> <span class="term-fg33">(circular)</span>
+│   └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span> <span class="term-fg33">(circular)</span>
+└── <span class="term-fg2">▼ Dependencies</span>
+    └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span>
+        └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span> <span class="term-fg33">(circular)</span></pre></div></div>
+    </div>
+    <div class="screen" id="job-pause">
+      <div class="screen-header"><h3>job pause</h3><p>Pause a build configuration</p></div>
+      <div class="screen-cmd">teamcity job pause MyApp_Deploy</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Paused job MyApp_Deploy</pre></div></div>
+    </div>
+    <div class="screen" id="job-param">
+      <div class="screen-header"><h3>job param list</h3><p>List job parameters</p></div>
+      <div class="screen-cmd">teamcity job param list MyApp_Build</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>NAME            VALUE
+env.JAVA_HOME   &#47;usr&#47;lib&#47;jvm&#47;java-17
+env.GOVERSION   1.26
+version         1.0.0
+deploy.target   staging
+build.parallel  4</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="agents">
+    <h2>Agents</h2>
+    <div class="screens">
+    <div class="screen" id="agent-list">
+      <div class="screen-header"><h3>agent list</h3><p>List build agents</p></div>
+      <div class="screen-cmd">teamcity agent list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID  NAME              POOL     STATUS
+1   linux-agent-01    Default  <span class="term-fg32">Connected</span>
+2   linux-agent-02    Default  <span class="term-fg32">Connected</span>
+3   windows-agent-01  Windows  <span class="term-fg32">Connected</span>
+4   mac-agent-01      macOS    <span class="term-fg31">Disconnected</span>
+5   cloud-agent-01    Cloud    <span class="term-fg2">Disabled</span></pre></div></div>
+    </div>
+    <div class="screen" id="agent-view">
+      <div class="screen-header"><h3>agent view</h3><p>Detailed view of an agent</p></div>
+      <div class="screen-cmd">teamcity agent view 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">linux-agent-01</span>
+ID: 1
+Pool: Default
+Status: <span class="term-fg32">Connected</span>
+Connected: <span class="term-fg32">Yes</span>
+Enabled: <span class="term-fg32">Yes</span>
+Authorized: <span class="term-fg32">Yes</span>
+&nbsp;
+Current build: Deploy Staging 45229  #830 ()
+&nbsp;
+<span class="term-fg2">View in browser:</span> <span class="term-fg32">https:&#47;&#47;tc.example.com&#47;agentDetails.html?id=1</span>
+<span class="term-fg2">Open terminal:</span> teamcity agent term 1</pre></div></div>
+    </div>
+    <div class="screen" id="agent-jobs">
+      <div class="screen-header"><h3>agent jobs</h3><p>Compatible and incompatible jobs</p></div>
+      <div class="screen-cmd">teamcity agent jobs 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">Compatible Jobs</span> (2)
+&nbsp;
+ID             NAME   PROJECT
+Project_Build  Build  Project
+Project_Test   Test   Project</pre></div></div>
+    </div>
+    <div class="screen" id="agent-enable">
+      <div class="screen-header"><h3>agent enable</h3><p>Enable an agent</p></div>
+      <div class="screen-cmd">teamcity agent enable 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Enabled agent linux-agent-01</pre></div></div>
+    </div>
+    <div class="screen" id="agent-disable">
+      <div class="screen-header"><h3>agent disable</h3><p>Disable an agent</p></div>
+      <div class="screen-cmd">teamcity agent disable 1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Disabled agent linux-agent-01</pre></div></div>
+    </div>
+    <div class="screen" id="agent-term">
+      <div class="screen-header"><h3>agent term</h3><p>Interactive terminal session on an agent (WebSocket)</p></div>
+      <div class="screen-cmd">teamcity agent term linux-agent-01</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Connected to <span class="term-fg36">linux-agent-01</span>
+<span class="term-fg2">https:&#47;&#47;tc.example.com&#47;agentDetails.html?id=1</span>
+&nbsp;
+<span class="term-fg32">builduser@linux-agent-01:~$</span> uname -a
+Linux linux-agent-01 5.15.0-1056-aws #61-Ubuntu SMP x86_64 GNU&#47;Linux
+<span class="term-fg32">builduser@linux-agent-01:~$</span> df -h &#47;opt&#47;buildagent
+Filesystem      Size  Used Avail Use% Mounted on
+&#47;dev&#47;nvme1n1    200G   87G  113G  44% &#47;opt&#47;buildagent
+<span class="term-fg32">builduser@linux-agent-01:~$</span> docker ps --format &#39;{{.Names}}  {{.Status}}&#39;
+tc-build-45229  Up 3 minutes
+tc-build-45231  Up 12 minutes
+<span class="term-fg32">builduser@linux-agent-01:~$</span> free -h | head -2
+              total        used        free      shared  buff&#47;cache   available
+Mem:           31Gi        18Gi       2.1Gi       312Mi        11Gi        12Gi
+<span class="term-fg32">builduser@linux-agent-01:~$</span></pre></div></div>
+    </div>
+    <div class="screen" id="agent-exec">
+      <div class="screen-header"><h3>agent exec</h3><p>Execute a single command on an agent (WebSocket)</p></div>
+      <div class="screen-cmd">teamcity agent exec linux-agent-01 -- top -bn1 | head -5</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>top - 19:31:45 up 14 days,  3:22,  0 users,  load average: 4.12, 3.87, 3.54
+Tasks: 287 total,   3 running, 284 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 42.3 us,  5.1 sy,  0.0 ni, 51.2 id,  0.8 wa,  0.0 hi,  0.6 si
+MiB Mem :  32168.4 total,   2152.3 free,  18724.1 used,  11292.0 buff&#47;cache
+MiB Swap:   8192.0 total,   8192.0 free,      0.0 used.  12876.4 avail Mem</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="queue">
+    <h2>Queue</h2>
+    <div class="screens">
+    <div class="screen" id="queue-list">
+      <div class="screen-header"><h3>queue list</h3><p>List builds in the queue</p></div>
+      <div class="screen-cmd">teamcity queue list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID     JOB            BRANCH           STATE   WAIT REASON
+45233  MyApp_Build    feature&#47;onboard  queued  All compatible agents are busy
+45234  MyApp_Test     main             queued  Waiting for build #45233 in queue
+45235  MyApp_IntTest  main             queued  Waiting for build #45234 in queue
+45236  MyApp_Build    develop          queued  Build queue is paused
+45237  MyApp_Deploy   main             queued  Waiting for approval</pre></div></div>
+    </div>
+    <div class="screen" id="queue-remove">
+      <div class="screen-header"><h3>queue remove</h3><p>Remove a build from the queue</p></div>
+      <div class="screen-cmd">teamcity queue remove --yes 100</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Removed #100 from queue</pre></div></div>
+    </div>
+    <div class="screen" id="queue-top">
+      <div class="screen-header"><h3>queue top</h3><p>Move a build to the top of the queue</p></div>
+      <div class="screen-cmd">teamcity queue top 100</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Moved run 100 to top of queue</pre></div></div>
+    </div>
+    <div class="screen" id="queue-approve">
+      <div class="screen-header"><h3>queue approve</h3><p>Approve a queued build</p></div>
+      <div class="screen-cmd">teamcity queue approve 100</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Approved run 100</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="pools">
+    <h2>Pools</h2>
+    <div class="screens">
+    <div class="screen" id="pool-list">
+      <div class="screen-header"><h3>pool list</h3><p>List agent pools</p></div>
+      <div class="screen-cmd">teamcity pool list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID  NAME                MAX AGENTS
+0   Default             unlimited
+1   Linux Agents        10
+2   Windows Agents      5
+3   macOS Agents        3
+4   Cloud (Auto-scale)  50</pre></div></div>
+    </div>
+    <div class="screen" id="pool-view">
+      <div class="screen-header"><h3>pool view</h3><p>Detailed pool with agents and projects</p></div>
+      <div class="screen-cmd">teamcity pool view 0</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">Default</span>
+ID: 0
+Max Agents: <span class="term-fg2">unlimited</span>
+&nbsp;
+<span class="term-fg1">Agents</span> (3)
+  1  linux-agent-01  <span class="term-fg32">Connected</span>
+  2  linux-agent-02  <span class="term-fg32">Connected</span>
+  6  linux-agent-03  <span class="term-fg31">Disconnected</span>
+&nbsp;
+<span class="term-fg1">Projects</span> (2)
+  _Root  Root project
+  MyApp  My Application
+&nbsp;
+<span class="term-fg2">View in browser:</span> <span class="term-fg32">https:&#47;&#47;tc.example.com&#47;agents.html?tab=agentPools&amp;poolId=0</span></pre></div></div>
+    </div>
+    <div class="screen" id="pool-link">
+      <div class="screen-header"><h3>pool link</h3><p>Link a project to a pool</p></div>
+      <div class="screen-cmd">teamcity pool link 0 MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Linked project MyApp to pool 0</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="projects">
+    <h2>Projects</h2>
+    <div class="screens">
+    <div class="screen" id="project-list">
+      <div class="screen-header"><h3>project list</h3><p>List projects</p></div>
+      <div class="screen-cmd">teamcity project list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID              NAME            PARENT
+_Root           Root project    -
+MyApp           My Application  _Root
+MyApp_Frontend  Frontend        MyApp
+MyApp_Backend   Backend         MyApp
+Infrastructure  Infrastructure  _Root</pre></div></div>
+    </div>
+    <div class="screen" id="project-view">
+      <div class="screen-header"><h3>project view</h3><p>Detailed project view</p></div>
+      <div class="screen-cmd">teamcity project view MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">My Application</span>
+ID: MyApp
+Parent: _Root
+Description: Main product monorepo
+&nbsp;
+<span class="term-fg2">View in browser:</span> <span class="term-fg32">https:&#47;&#47;tc.example.com&#47;project.html?projectId=MyApp</span></pre></div></div>
+    </div>
+    <div class="screen" id="project-tree">
+      <div class="screen-header"><h3>project tree</h3><p>Full hierarchy with jobs and pipelines</p></div>
+      <div class="screen-cmd">teamcity project tree</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">Root project</span> <span class="term-fg2">_Root</span>
+├── <span class="term-fg36">Infrastructure</span> <span class="term-fg2">Infrastructure</span>
+│   └── <span class="term-fg36">Infrastructure Deploy</span> <span class="term-fg2">Infra_Deploy</span> <span class="term-fg2">⬡ pipeline · 2 jobs</span>
+└── <span class="term-fg36">My Application</span> <span class="term-fg2">MyApp</span>
+    ├── <span class="term-fg36">Backend</span> <span class="term-fg2">MyApp_Backend</span>
+    ├── <span class="term-fg36">Frontend</span> <span class="term-fg2">MyApp_Frontend</span>
+    │   └── <span class="term-fg36">Frontend CI</span> <span class="term-fg2">Frontend_CI</span> <span class="term-fg2">⬡ pipeline · 3 jobs</span>
+    ├── <span class="term-fg36">CI</span> <span class="term-fg2">MyApp_CI</span> <span class="term-fg2">⬡ pipeline · 2 jobs</span>
+    ├── <span class="term-fg36">Nightly</span> <span class="term-fg2">MyApp_Nightly</span> <span class="term-fg2">⬡ pipeline · 3 jobs</span>
+    ├── <span class="term-fg36">Release</span> <span class="term-fg2">MyApp_Release</span> <span class="term-fg2">⬡ pipeline · 4 jobs</span>
+    ├── <span class="term-fg2">Build</span> <span class="term-fg2">MyApp_Build</span>
+    ├── <span class="term-fg2">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span>
+    ├── <span class="term-fg2">Integration Tests</span> <span class="term-fg2">MyApp_IntTest</span>
+    ├── <span class="term-fg2">Lint</span> <span class="term-fg2">MyApp_Lint</span>
+    └── <span class="term-fg2">Run Tests</span> <span class="term-fg2">MyApp_Test</span></pre></div></div>
+    </div>
+    <div class="screen" id="project-settings">
+      <div class="screen-header"><h3>project settings status</h3><p>Versioned settings sync status</p></div>
+      <div class="screen-cmd">teamcity project settings status MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> <span class="term-fg36">My Application</span> <span class="term-fg2">(MyApp)</span> <span class="term-fg2">·</span> synchronized
+&nbsp;
+<span class="term-fg2">Format</span>
+<span class="term-fg2">Sync</span>
+<span class="term-fg2">Build</span>
+&nbsp;
+<span class="term-fg2">View</span> <span class="term-fg2">https:&#47;&#47;tc.example.com&#47;project.html?projectId=MyApp&amp;tab=versionedSettings</span></pre></div></div>
+    </div>
+    <div class="screen" id="project-settings-validate">
+      <div class="screen-header"><h3>project settings validate</h3><p>Validate local DSL settings</p></div>
+      <div class="screen-cmd">teamcity project settings validate .teamcity</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Configuration valid
+  Server: https:&#47;&#47;tc.example.com
+  Projects: 5, Build configurations: 12, VCS roots: 3</pre></div></div>
+    </div>
+    <div class="screen" id="project-settings-export">
+      <div class="screen-header"><h3>project settings export</h3><p>Export DSL settings as a zip archive</p></div>
+      <div class="screen-cmd">teamcity project settings export MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Exported kotlin settings to projectSettings.zip (45678 bytes)</pre></div></div>
+    </div>
+    <div class="screen" id="project-vcs-list">
+      <div class="screen-header"><h3>project vcs list</h3><p>List VCS roots in a project</p></div>
+      <div class="screen-cmd">teamcity project vcs list MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID                NAME              TYPE        PROJECT
+MyApp_MainRepo    Main Repo         Git         MyApp
+MyApp_ConfigRepo  Config Repo       Git         MyApp
+MyApp_DocsRepo    Documentation     Git         MyApp
+Shared_Libraries  Shared Libraries  Git         _Root
+Legacy_SVN        Legacy Codebase   Subversion  MyApp</pre></div></div>
+    </div>
+    <div class="screen" id="project-vcs-view">
+      <div class="screen-header"><h3>project vcs view</h3><p>View VCS root details</p></div>
+      <div class="screen-cmd">teamcity project vcs view MyApp_MainRepo</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">My Repo</span>
+ID: MyApp_MainRepo
+Type: Git
+Project: TestProject
+URL: https:&#47;&#47;github.com&#47;org&#47;repo
+Branch: refs&#47;heads&#47;main
+Auth Method: PASSWORD
+Password: ********
+&nbsp;
+<span class="term-fg2">View in browser:</span> <span class="term-fg32">https:&#47;&#47;tc.example.com&#47;admin&#47;editVcsRoot.html?vcsRootId=MyApp_MainRepo</span></pre></div></div>
+    </div>
+    <div class="screen" id="project-vcs-create">
+      <div class="screen-header"><h3>project vcs create</h3><p>Create a new VCS root (interactive prompts)</p></div>
+      <div class="screen-cmd">teamcity project vcs create MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Created VCS root <span class="term-fg36">New Repo</span>
+  ID: MyApp_NewRepo
+  URL: https:&#47;&#47;github.com&#47;org&#47;new-repo</pre></div></div>
+    </div>
+    <div class="screen" id="project-vcs-test">
+      <div class="screen-header"><h3>project vcs test</h3><p>Test VCS connection</p></div>
+      <div class="screen-cmd">teamcity project vcs test MyApp_MainRepo</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Testing connection... <span class="term-fg32">✓</span>
+<span class="term-fg32">✓</span> Connection to &quot;My Repo&quot; is working</pre></div></div>
+    </div>
+    <div class="screen" id="project-vcs-delete">
+      <div class="screen-header"><h3>project vcs delete</h3><p>Delete a VCS root</p></div>
+      <div class="screen-cmd">teamcity project vcs delete --yes MyApp_Repo</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Deleted VCS root MyApp_Repo</pre></div></div>
+    </div>
+    <div class="screen" id="project-ssh-list">
+      <div class="screen-header"><h3>project ssh list</h3><p>List SSH keys in a project</p></div>
+      <div class="screen-cmd">teamcity project ssh list MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>No SSH keys found</pre></div></div>
+    </div>
+    <div class="screen" id="project-ssh-generate">
+      <div class="screen-header"><h3>project ssh generate</h3><p>Generate a new SSH key</p></div>
+      <div class="screen-cmd">teamcity project ssh generate --project MyApp --name ci-key</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Generated SSH key &quot;ci-key&quot; in project TestProject
+&nbsp;
+ssh-ed25519 AAAAC3_generated_key</pre></div></div>
+    </div>
+    <div class="screen" id="project-ssh-upload">
+      <div class="screen-header"><h3>project ssh upload</h3><p>Upload an SSH private key</p></div>
+      <div class="screen-cmd">teamcity project ssh upload id_ed25519 --project MyApp --name deploy-key</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Uploaded SSH key <span class="term-fg36">deploy-key</span></pre></div></div>
+    </div>
+    <div class="screen" id="project-ssh-delete">
+      <div class="screen-header"><h3>project ssh delete</h3><p>Delete an SSH key</p></div>
+      <div class="screen-cmd">teamcity project ssh delete deploy-key --project MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Deleted SSH key &quot;deploy-key&quot; from project TestProject</pre></div></div>
+    </div>
+    <div class="screen" id="project-connection-list">
+      <div class="screen-header"><h3>project connection list</h3><p>List project connections</p></div>
+      <div class="screen-cmd">teamcity project connection list MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>No connections found</pre></div></div>
+    </div>
+    <div class="screen" id="project-cloud-profile">
+      <div class="screen-header"><h3>project cloud profile list</h3><p>List cloud profiles</p></div>
+      <div class="screen-cmd">teamcity project cloud profile list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID           NAME                TYPE
+aws-prod     AWS Production      amazon
+aws-staging  AWS Staging         amazon
+azure-eu     Azure EU            azure
+gcp-us       GCP US Central      google
+k8s-local    Kubernetes On-Prem  kubernetes</pre></div></div>
+    </div>
+    <div class="screen" id="project-cloud-profile-view">
+      <div class="screen-header"><h3>project cloud profile view</h3><p>View cloud profile details</p></div>
+      <div class="screen-cmd">teamcity project cloud profile view aws-prod</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">AWS Production</span>
+ID: aws-prod
+Type: amazon
+Project: TestProject</pre></div></div>
+    </div>
+    <div class="screen" id="project-cloud-image">
+      <div class="screen-header"><h3>project cloud image list</h3><p>List cloud images</p></div>
+      <div class="screen-cmd">teamcity project cloud image list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>NAME              PROFILE         ID
+ubuntu-22-large   AWS Production  img-1
+ubuntu-22-xlarge  AWS Production  img-2
+windows-2022      Azure EU        img-3
+debian-12-small   AWS Staging     img-4
+ubuntu-22-gpu     GCP US Central  img-5</pre></div></div>
+    </div>
+    <div class="screen" id="project-cloud-image-view">
+      <div class="screen-header"><h3>project cloud image view</h3><p>View cloud image details</p></div>
+      <div class="screen-cmd">teamcity project cloud image view img-1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">ubuntu-22-large</span>
+ID: id:img-1,profileId:aws-prod
+Profile: AWS Production</pre></div></div>
+    </div>
+    <div class="screen" id="project-cloud-image-start">
+      <div class="screen-header"><h3>project cloud image start</h3><p>Start a cloud instance from an image</p></div>
+      <div class="screen-cmd">teamcity project cloud image start img-1</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Started instance i-new-instance from image ubuntu-22-large</pre></div></div>
+    </div>
+    <div class="screen" id="project-cloud-instance">
+      <div class="screen-header"><h3>project cloud instance list</h3><p>List running cloud instances</p></div>
+      <div class="screen-cmd">teamcity project cloud instance list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>NAME           STATE     IMAGE             AGENT          STARTED  ID
+agent-cloud-1  running   ubuntu-22-large   agent-cloud-1           i-0a24f...
+agent-cloud-2  running   ubuntu-22-large   agent-cloud-2           i-0b35e...
+agent-cloud-3  starting  ubuntu-22-xlarge                          i-0c46d...
+agent-azure-1  running   windows-2022      agent-azure-1           vm-eu-01
+agent-k8s-5    running   ubuntu-22-gpu     agent-k8s-5             gke-node-5</pre></div></div>
+    </div>
+    <div class="screen" id="project-cloud-instance-view">
+      <div class="screen-header"><h3>project cloud instance view</h3><p>View cloud instance details</p></div>
+      <div class="screen-cmd">teamcity project cloud instance view i-024...</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">agent-cloud-1</span>
+ID: i-0245b46070c443201
+State: running
+Image: ubuntu-22-large
+Agent: agent-cloud-1
+Started: Jan 01</pre></div></div>
+    </div>
+    <div class="screen" id="project-cloud-instance-stop">
+      <div class="screen-header"><h3>project cloud instance stop</h3><p>Stop a cloud instance</p></div>
+      <div class="screen-cmd">teamcity project cloud instance stop i-024...</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Stopped instance i-0245b46070c443201</pre></div></div>
+    </div>
+    <div class="screen" id="project-param">
+      <div class="screen-header"><h3>project param list</h3><p>List project parameters</p></div>
+      <div class="screen-cmd">teamcity project param list MyApp</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>NAME                          VALUE
+env.DEPLOY_ENV                staging
+env.JAVA_HOME                 &#47;usr&#47;lib&#47;jvm&#47;java-17
+version.prefix                1.0
+docker.registry               ghcr.io&#47;myorg
+system.teamcity.build.branch  main</pre></div></div>
+    </div>
+    <div class="screen" id="project-token-put">
+      <div class="screen-header"><h3>project token put</h3><p>Store a secret and get a secure token reference</p></div>
+      <div class="screen-cmd">teamcity project token put MyApp &#34;s3cret-db-password&#34;</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>credentialsJSON:abc123
+&nbsp;
+<span class="term-fg2">Use in versioned settings as: credentialsJSON:abc123</span></pre></div></div>
+    </div>
+    <div class="screen" id="project-token-get">
+      <div class="screen-header"><h3>project token get</h3><p>Retrieve the value of a secure token</p></div>
+      <div class="screen-cmd">teamcity project token get MyApp credentialsJSON:abc123</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>s3cret-db-password</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="pipelines">
+    <h2>Pipelines</h2>
+    <div class="screens">
+    <div class="screen" id="pipeline-list">
+      <div class="screen-header"><h3>pipeline list</h3><p>List YAML pipelines</p></div>
+      <div class="screen-cmd">teamcity pipeline list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>ID             NAME                   PROJECT         JOBS
+MyApp_CI       CI                     My Application  2
+MyApp_Release  Release                My Application  4
+MyApp_Nightly  Nightly                My Application  3
+Infra_Deploy   Infrastructure Deploy  Infrastructure  2
+Frontend_CI    Frontend CI            Frontend        3</pre></div></div>
+    </div>
+    <div class="screen" id="pipeline-view">
+      <div class="screen-header"><h3>pipeline view</h3><p>View pipeline details and jobs</p></div>
+      <div class="screen-cmd">teamcity pipeline view MyApp_CI</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg36">CI</span>
+ID: MyApp_CI
+Project: My Application (MyApp)
+Head Job: MyApp_CI
+&nbsp;
+  <span class="term-fg36">Jobs</span> (2):
+    <span class="term-fg2">build  </span> Build
+    <span class="term-fg2">test   </span> Test</pre></div></div>
+    </div>
+    <div class="screen" id="pipeline-validate">
+      <div class="screen-header"><h3>pipeline validate</h3><p>Validate pipeline YAML</p></div>
+      <div class="screen-cmd">teamcity pipeline validate .teamcity.yml</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> &#47;var&#47;folders&#47;4y&#47;7q13x9990bv9hf94lw6g4ptm0000gn&#47;T&#47;TestGenerateGallery810746317&#47;001&#47;3599681215.teamcity.yml is valid
+  Jobs: build, test</pre></div></div>
+    </div>
+    <div class="screen" id="pipeline-delete">
+      <div class="screen-header"><h3>pipeline delete</h3><p>Delete a pipeline</p></div>
+      <div class="screen-cmd">teamcity pipeline delete --yes MyApp_CI</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Deleted pipeline &quot;CI&quot; (MyApp_CI)</pre></div></div>
+    </div>
+    <div class="screen" id="pipeline-push">
+      <div class="screen-header"><h3>pipeline push</h3><p>Upload YAML to a pipeline</p></div>
+      <div class="screen-cmd">teamcity pipeline push MyApp_CI .teamcity.yml</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Updated pipeline MyApp_CI from .teamcity.yml</pre></div></div>
+    </div>
+    <div class="screen" id="pipeline-pull">
+      <div class="screen-header"><h3>pipeline pull</h3><p>Download pipeline YAML</p></div>
+      <div class="screen-cmd">teamcity pipeline pull MyApp_CI</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Saved pipeline MyApp_CI to .teamcity.yml</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="auth">
+    <h2>Auth</h2>
+    <div class="screens">
+    <div class="screen" id="auth-status">
+      <div class="screen-header"><h3>auth status</h3><p>Authentication status</p></div>
+      <div class="screen-cmd">teamcity auth status</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Logged in to <span class="term-fg36">https:&#47;&#47;tc.example.com</span>
+  User: Administrator (admin) · environment variable
+  Server: TeamCity 2025.7 (build 197398)
+  <span class="term-fg32">✓</span> API compatible</pre></div></div>
+    </div>
+    <div class="screen" id="auth-status-multi">
+      <div class="screen-header"><h3>auth status (multi-server)</h3><p>Multi-server authentication status</p></div>
+      <div class="screen-cmd">teamcity auth status</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Logged in to <span class="term-fg36">https:&#47;&#47;tc.example.com</span> <span class="term-fg2">(default)</span>
+  User: Administrator (admin) · system keyring
+  Token expires: Dec 31, 2026
+  Server: TeamCity 2025.7 (build 197398)
+  <span class="term-fg32">✓</span> API compatible
+&nbsp;
+<span class="term-fg32">✓</span> Guest access to <span class="term-fg36">https:&#47;&#47;staging.tc.example.com</span>
+  Server: TeamCity 2025.7 (build 197398)
+  <span class="term-fg32">✓</span> API compatible
+&nbsp;
+<span class="term-fg31">✗</span> <span class="term-fg36">https:&#47;&#47;legacy.tc.example.com</span>
+  <span class="term-fg31">✗</span> Token expired on Mar 15, 2025
+  Server: TeamCity 2024.3 (build 185432)
+  <span class="term-fg33">!</span> CLI requires TeamCity 2024.7 or later</pre></div></div>
+    </div>
+    <div class="screen" id="auth-login">
+      <div class="screen-header"><h3>auth login</h3><p>Interactive authentication flow (browser-based PKCE)</p></div>
+      <div class="screen-cmd">teamcity auth login</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Secure browser login available on this server
+Opening browser for authentication...
+→ Approve access in TeamCity
+&nbsp;
+<span class="term-fg32">✓</span> Validated
+<span class="term-fg32">✓</span> Logged in as <span class="term-fg36">Viktor Tiulpin</span> (vtiulpin)
+<span class="term-fg32">✓</span> Token stored in system keyring
+  Token expires: Dec 31, 2026
+  Server: TeamCity 2025.7 (build 197398)
+  <span class="term-fg32">✓</span> API compatible</pre></div></div>
+    </div>
+    <div class="screen" id="auth-logout">
+      <div class="screen-header"><h3>auth logout</h3><p>Log out from a server</p></div>
+      <div class="screen-cmd">teamcity auth logout</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Logged out from https:&#47;&#47;tc.example.com</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="config">
+    <h2>Config</h2>
+    <div class="screens">
+    <div class="screen" id="config-list">
+      <div class="screen-header"><h3>config list</h3><p>Show full CLI configuration</p></div>
+      <div class="screen-cmd">teamcity config list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg2">Config:</span> ~&#47;.config&#47;tc&#47;config.yml
+&nbsp;
+default_server=http:&#47;&#47;127.0.0.1:51040
+&nbsp;
+http:&#47;&#47;127.0.0.1:51040<span class="term-fg2"> (default)</span>
+  guest=false
+  ro=false
+&nbsp;
+https:&#47;&#47;staging.tc.example.com
+  guest=false
+  ro=false
+&nbsp;
+https:&#47;&#47;tc.example.com
+  guest=false
+  ro=false
+&nbsp;
+https:&#47;&#47;ai.tc.example.com
+  guest=false
+  ro=false
+&nbsp;
+https:&#47;&#47;nightly.tc.example.com
+  guest=false
+  ro=false
+  token_expiry=2026-05-08T10:59:42.408Z
+&nbsp;
+<span class="term-fg2">Aliases:</span> 1 configured <span class="term-fg2">(run &#39;teamcity alias list&#39; to view)</span>
+&nbsp;
+<span class="term-fg2">Environment overrides:</span>
+  <span class="term-fg33">!</span> TEAMCITY_TOKEN=****
+  <span class="term-fg33">!</span> TEAMCITY_URL=https:&#47;&#47;tc.example.com</pre></div></div>
+    </div>
+    <div class="screen" id="config-get">
+      <div class="screen-header"><h3>config get</h3><p>Get a config value</p></div>
+      <div class="screen-cmd">teamcity config get default_server</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>http:&#47;&#47;127.0.0.1:51040</pre></div></div>
+    </div>
+    <div class="screen" id="config-set">
+      <div class="screen-header"><h3>config set</h3><p>Set a config value</p></div>
+      <div class="screen-cmd">teamcity config set default_server https://tc.example.com</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Set default_server to &quot;https:&#47;&#47;tc.example.com&quot;</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="aliases">
+    <h2>Aliases</h2>
+    <div class="screens">
+    <div class="screen" id="alias-list">
+      <div class="screen-header"><h3>alias list</h3><p>List configured command aliases</p></div>
+      <div class="screen-cmd">teamcity alias list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>NAME       EXPANSION  TYPE
+build      run        built-in
+buildtype  job        built-in
+testing    run        expansion</pre></div></div>
+    </div>
+    <div class="screen" id="alias-set">
+      <div class="screen-header"><h3>alias set</h3><p>Create or update an alias</p></div>
+      <div class="screen-cmd">teamcity alias set mybuilds &#34;run list&#34;</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Added alias &quot;mybuilds&quot;</pre></div></div>
+    </div>
+    <div class="screen" id="alias-delete">
+      <div class="screen-header"><h3>alias delete</h3><p>Remove an alias</p></div>
+      <div class="screen-cmd">teamcity alias delete mybuilds</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Deleted alias &quot;mybuilds&quot;</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="skills">
+    <h2>Skills</h2>
+    <div class="screens">
+    <div class="screen" id="skill-list">
+      <div class="screen-header"><h3>skill list</h3><p>List available AI agent skills</p></div>
+      <div class="screen-cmd">teamcity skill list</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Name          Version  Description
+teamcity-cli  0.9.0    Use when working with TeamCity CI&#47;CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, agents, and pipelines.  (default)</pre></div></div>
+    </div>
+    <div class="screen" id="skill-install">
+      <div class="screen-header"><h3>skill install</h3><p>Install a skill</p></div>
+      <div class="screen-cmd">teamcity skill install teamcity-cli</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Installed teamcity-cli for claude-code (0.9.0)
+<span class="term-fg32">✓</span> Installed teamcity-cli for codex (0.9.0)
+<span class="term-fg32">✓</span> Installed teamcity-cli for opencode (0.9.0)
+<span class="term-fg32">✓</span> Installed teamcity-cli for cursor (0.9.0)
+<span class="term-fg32">✓</span> Installed teamcity-cli for antigravity (0.9.0)
+<span class="term-fg32">✓</span> Installed teamcity-cli for gemini-cli (0.9.0)
+<span class="term-fg32">✓</span> Installed teamcity-cli for junie (0.9.0)</pre></div></div>
+    </div>
+    <div class="screen" id="skill-update">
+      <div class="screen-header"><h3>skill update</h3><p>Update installed skills</p></div>
+      <div class="screen-cmd">teamcity skill update</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (0.9.0)</pre></div></div>
+    </div>
+    <div class="screen" id="skill-remove">
+      <div class="screen-header"><h3>skill remove</h3><p>Remove an installed skill</p></div>
+      <div class="screen-cmd">teamcity skill remove teamcity-cli</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre><span class="term-fg32">✓</span> Removed teamcity-cli from claude-code
+<span class="term-fg32">✓</span> Removed teamcity-cli from codex
+<span class="term-fg32">✓</span> Removed teamcity-cli from opencode
+<span class="term-fg32">✓</span> Removed teamcity-cli from cursor
+<span class="term-fg32">✓</span> Removed teamcity-cli from antigravity
+<span class="term-fg32">✓</span> Removed teamcity-cli from gemini-cli
+<span class="term-fg32">✓</span> Removed teamcity-cli from junie</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="api">
+    <h2>API</h2>
+    <div class="screens">
+    <div class="screen" id="api-get">
+      <div class="screen-header"><h3>api</h3><p>Make raw REST API requests</p></div>
+      <div class="screen-cmd">teamcity api /app/rest/server</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>{
+  &quot;buildNumber&quot;: &quot;197398&quot;,
+  &quot;version&quot;: &quot; (build 197398)&quot;,
+  &quot;versionMajor&quot;: 2025,
+  &quot;versionMinor&quot;: 7,
+  &quot;webUrl&quot;: &quot;https:&#47;&#47;tc.example.com&quot;
+}</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="update">
+    <h2>Update</h2>
+    <div class="screens">
+    <div class="screen" id="update">
+      <div class="screen-header"><h3>update</h3><p>Check for CLI updates</p></div>
+      <div class="screen-cmd">teamcity update</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Checking for updates...
+<span class="term-fg2">vdev</span> → <span class="term-fg32">v0.9.0</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
+<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v0.9.0</span></pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="errors">
+    <h2>Errors</h2>
+    <div class="screens">
+    <div class="screen" id="error-not-found">
+      <div class="screen-header"><h3>Not Found</h3><p>Resource not found with contextual hint</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Error: not found: No build found by locator &#39;id:999999&#39;
+&nbsp;
+Hint: Use &#39;teamcity run list&#39; to see available resources</pre></div></div>
+    </div>
+    <div class="screen" id="error-auth">
+      <div class="screen-header"><h3>Authentication Failed</h3><p>Invalid or expired token</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Error: Authentication failed: invalid or expired token
+&nbsp;
+Hint: Run &#39;teamcity auth login&#39; to re-authenticate</pre></div></div>
+    </div>
+    <div class="screen" id="error-permission">
+      <div class="screen-header"><h3>Permission Denied</h3><p>Insufficient permissions</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Error: permission denied: You do not have &quot;Run build&quot; permission
+&nbsp;
+Hint: Check your TeamCity permissions or contact your administrator</pre></div></div>
+    </div>
+    <div class="screen" id="error-network">
+      <div class="screen-header"><h3>Network Error</h3><p>Cannot reach the server</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Error: network error: dial tcp: lookup tc.example.com: no such host
+&nbsp;
+Hint: Check your network connection and verify the server URL</pre></div></div>
+    </div>
+    <div class="screen" id="error-readonly">
+      <div class="screen-header"><h3>Read-Only Mode</h3><p>Write operation blocked by TEAMCITY_RO</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Error: read-only mode: POST &#47;app&#47;rest&#47;buildQueue is not allowed
+&nbsp;
+Hint: Unset the TEAMCITY_RO environment variable to allow write operations</pre></div></div>
+    </div>
+    <div class="screen" id="error-json">
+      <div class="screen-header"><h3>JSON Error Format</h3><p>Structured error with --json flag</p></div>
+      
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;not_found&quot;,
+    &quot;message&quot;: &quot;not found: No build found by locator &#39;id:999999&#39;&quot;,
+    &quot;suggestion&quot;: &quot;Use &#39;teamcity run list&#39; to see available resources&quot;
+  }
+}</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  <section class="category" id="help">
+    <h2>Help Screens</h2>
+    <div class="screens">
+    <div class="screen" id="help-root">
+      <div class="screen-header"><h3>teamcity</h3><p>Root command — shows logo and common commands</p></div>
+      <div class="screen-cmd">teamcity  --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>TeamCity CLI vdev
+&nbsp;
+A command-line interface for interacting with TeamCity CI&#47;CD server.
+&nbsp;
+teamcity provides a complete experience for managing
+TeamCity runs, jobs, projects and more from the command line.
+&nbsp;
+Documentation:  https:&#47;&#47;jb.gg&#47;tc&#47;docs
+Report issues:  https:&#47;&#47;jb.gg&#47;tc&#47;issues
+&nbsp;
+Usage:
+  teamcity [flags]
+  teamcity [command]
+&nbsp;
+Available Commands:
+  agent       Manage build agents
+  alias       Manage command aliases
+  api         Make an authenticated API request
+  auth        Authenticate with TeamCity
+  completion  Generate the autocompletion script for the specified shell
+  config      Manage CLI configuration
+  help        Help about any command
+  job         Manage jobs (build configurations)
+  pipeline    Manage pipelines (YAML configurations)
+  pool        Manage agent pools
+  project     Manage projects
+  queue       Manage build queue
+  run         Manage runs (builds)
+  skill       Manage AI coding agent skills
+  update      Check for CLI updates and show how to upgrade
+&nbsp;
+Flags:
+      --debug      Alias for --verbose
+  -h, --help       help for teamcity
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+  -v, --version    version for teamcity
+&nbsp;
+Use &quot;teamcity [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-run">
+      <div class="screen-header"><h3>run</h3><p>Run (build) management commands</p></div>
+      <div class="screen-cmd">teamcity run --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List, view, start, and manage TeamCity runs (builds).
+&nbsp;
+Usage:
+  teamcity run [flags]
+  teamcity run [command]
+&nbsp;
+Aliases:
+  run, build
+&nbsp;
+Available Commands:
+  artifacts   List artifacts
+  cancel      Cancel a run
+  changes     Show VCS changes
+  comment     Set or view comment
+  diff        [experimental] Compare two runs and show differences
+  download    Download artifacts
+  list        List recent runs
+  log         View log
+  pin         Pin to prevent cleanup
+  restart     Restart a run
+  start       Start a new run
+  tag         Add tags
+  tests       Show test results
+  tree        Display snapshot dependency tree
+  unpin       Unpin a run
+  untag       Remove tags
+  view        View details
+  watch       Watch a run until it completes
+&nbsp;
+Flags:
+  -h, --help   help for run
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity run [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-job">
+      <div class="screen-header"><h3>job</h3><p>Job (build configuration) commands</p></div>
+      <div class="screen-cmd">teamcity job --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List and manage TeamCity jobs (build configurations).
+&nbsp;
+Usage:
+  teamcity job [flags]
+  teamcity job [command]
+&nbsp;
+Aliases:
+  job, buildtype
+&nbsp;
+Available Commands:
+  list        List jobs
+  param       Manage job parameters
+  pause       Pause a job
+  resume      Resume a paused job
+  tree        Display snapshot dependency tree
+  view        View job details
+&nbsp;
+Flags:
+  -h, --help   help for job
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity job [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-agent">
+      <div class="screen-header"><h3>agent</h3><p>Build agent commands</p></div>
+      <div class="screen-cmd">teamcity agent --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List, view, and manage TeamCity build agents.
+&nbsp;
+Usage:
+  teamcity agent [flags]
+  teamcity agent [command]
+&nbsp;
+Available Commands:
+  authorize   Authorize an agent
+  deauthorize Deauthorize an agent
+  disable     Disable an agent
+  enable      Enable an agent
+  exec        Execute command on agent
+  jobs        Show jobs an agent can run
+  list        List build agents
+  move        Move an agent to a different pool
+  reboot      Reboot an agent
+  term        Open interactive terminal to agent
+  view        View agent details
+&nbsp;
+Flags:
+  -h, --help   help for agent
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity agent [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-queue">
+      <div class="screen-header"><h3>queue</h3><p>Build queue commands</p></div>
+      <div class="screen-cmd">teamcity queue --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List and manage the TeamCity build queue.
+&nbsp;
+Usage:
+  teamcity queue [flags]
+  teamcity queue [command]
+&nbsp;
+Available Commands:
+  approve     Approve a queued run
+  list        List queued runs
+  remove      Remove a run from the queue
+  top         Move a run to the top of the queue
+&nbsp;
+Flags:
+  -h, --help   help for queue
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity queue [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-pool">
+      <div class="screen-header"><h3>pool</h3><p>Agent pool commands</p></div>
+      <div class="screen-cmd">teamcity pool --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List agent pools and manage project assignments.
+&nbsp;
+Usage:
+  teamcity pool [flags]
+  teamcity pool [command]
+&nbsp;
+Available Commands:
+  link        Link a project to an agent pool
+  list        List agent pools
+  unlink      Unlink a project from an agent pool
+  view        View pool details
+&nbsp;
+Flags:
+  -h, --help   help for pool
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity pool [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project">
+      <div class="screen-header"><h3>project</h3><p>Project management commands</p></div>
+      <div class="screen-cmd">teamcity project --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List and view TeamCity projects.
+&nbsp;
+Usage:
+  teamcity project [flags]
+  teamcity project [command]
+&nbsp;
+Available Commands:
+  cloud       Manage cloud profiles, images, and instances
+  connection  Manage project connections
+  list        List projects
+  param       Manage project parameters
+  settings    Manage versioned settings
+  ssh         Manage SSH keys
+  token       Manage secure tokens
+  tree        Display project hierarchy as a tree
+  vcs         Manage VCS roots
+  view        View project details
+&nbsp;
+Flags:
+  -h, --help   help for project
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-pipeline">
+      <div class="screen-header"><h3>pipeline</h3><p>YAML pipeline commands</p></div>
+      <div class="screen-cmd">teamcity pipeline --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List, view, validate, and manage TeamCity pipelines.
+&nbsp;
+Usage:
+  teamcity pipeline [flags]
+  teamcity pipeline [command]
+&nbsp;
+Available Commands:
+  create      Create a new pipeline from YAML
+  delete      Delete a pipeline
+  list        List pipelines
+  pull        Download pipeline YAML
+  push        Upload pipeline YAML
+  validate    Validate pipeline YAML against server schema
+  view        View pipeline details
+&nbsp;
+Flags:
+  -h, --help   help for pipeline
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity pipeline [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-auth">
+      <div class="screen-header"><h3>auth</h3><p>Authentication commands</p></div>
+      <div class="screen-cmd">teamcity auth --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Manage authentication state for TeamCity servers.
+&nbsp;
+Usage:
+  teamcity auth [flags]
+  teamcity auth [command]
+&nbsp;
+Available Commands:
+  login       Authenticate with a TeamCity server
+  logout      Log out from a TeamCity server
+  status      Show authentication status
+&nbsp;
+Flags:
+  -h, --help   help for auth
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity auth [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-config">
+      <div class="screen-header"><h3>config</h3><p>Configuration commands</p></div>
+      <div class="screen-cmd">teamcity config --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Get, set, and list CLI configuration values.
+&nbsp;
+Usage:
+  teamcity config [flags]
+  teamcity config [command]
+&nbsp;
+Available Commands:
+  get         Get a configuration value
+  list        List configuration settings
+  set         Set a configuration value
+&nbsp;
+Flags:
+  -h, --help   help for config
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity config [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-alias">
+      <div class="screen-header"><h3>alias</h3><p>Command alias management</p></div>
+      <div class="screen-cmd">teamcity alias --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Create, list, and delete command shortcuts.
+&nbsp;
+Usage:
+  teamcity alias [flags]
+  teamcity alias [command]
+&nbsp;
+Available Commands:
+  delete      Delete an alias
+  list        List configured aliases
+  set         Create a command alias
+&nbsp;
+Flags:
+  -h, --help   help for alias
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity alias [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-skill">
+      <div class="screen-header"><h3>skill</h3><p>AI agent skill management</p></div>
+      <div class="screen-cmd">teamcity skill --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Install, update, or remove TeamCity skills for AI coding agents (Claude Code, Cursor, etc.).
+&nbsp;
+Usage:
+  teamcity skill [flags]
+  teamcity skill [command]
+&nbsp;
+Available Commands:
+  install     Install skills for AI coding agents
+  list        List available skills bundled with this release
+  remove      Remove skills from AI coding agents
+  update      Update skills for AI coding agents
+&nbsp;
+Flags:
+  -h, --help   help for skill
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity skill [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-settings">
+      <div class="screen-header"><h3>project settings</h3><p>Versioned settings subcommands</p></div>
+      <div class="screen-cmd">teamcity project settings --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>View and manage versioned settings (Kotlin DSL) for a project.
+&nbsp;
+Versioned settings allow you to store project configuration as code in a VCS repository.
+This enables version control, code review, and automated deployment of CI&#47;CD configuration.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;storing-project-settings-in-version-control.html
+&nbsp;
+Usage:
+  teamcity project settings [flags]
+  teamcity project settings [command]
+&nbsp;
+Available Commands:
+  export      Export project settings as Kotlin DSL or XML
+  status      Show versioned settings sync status
+  validate    Validate Kotlin DSL configuration locally
+&nbsp;
+Flags:
+  -h, --help   help for settings
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project settings [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-vcs">
+      <div class="screen-header"><h3>project vcs</h3><p>VCS root subcommands</p></div>
+      <div class="screen-cmd">teamcity project vcs --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List, view, create, test, and delete VCS roots in a project.
+&nbsp;
+Usage:
+  teamcity project vcs [flags]
+  teamcity project vcs [command]
+&nbsp;
+Available Commands:
+  create      Create a VCS root
+  delete      Delete a VCS root
+  list        List VCS roots
+  test        Test a VCS root connection
+  view        View VCS root details
+&nbsp;
+Flags:
+  -h, --help   help for vcs
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project vcs [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-ssh">
+      <div class="screen-header"><h3>project ssh</h3><p>SSH key subcommands</p></div>
+      <div class="screen-cmd">teamcity project ssh --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List, upload, generate, and delete SSH keys in a project.
+&nbsp;
+Usage:
+  teamcity project ssh [flags]
+  teamcity project ssh [command]
+&nbsp;
+Available Commands:
+  delete      Delete an SSH key
+  generate    Generate an SSH key pair
+  list        List SSH keys
+  upload      Upload an SSH private key
+&nbsp;
+Flags:
+  -h, --help   help for ssh
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project ssh [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-connection">
+      <div class="screen-header"><h3>project connection</h3><p>Project connection subcommands</p></div>
+      <div class="screen-cmd">teamcity project connection --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List OAuth and other connections configured in a project.
+&nbsp;
+Usage:
+  teamcity project connection [flags]
+  teamcity project connection [command]
+&nbsp;
+Available Commands:
+  list        List project connections
+&nbsp;
+Flags:
+  -h, --help   help for connection
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project connection [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-cloud">
+      <div class="screen-header"><h3>project cloud</h3><p>Cloud management subcommands</p></div>
+      <div class="screen-cmd">teamcity project cloud --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List and manage cloud profiles, images, and instances for a project.
+&nbsp;
+Usage:
+  teamcity project cloud [flags]
+  teamcity project cloud [command]
+&nbsp;
+Available Commands:
+  image       Manage cloud images
+  instance    Manage cloud instances
+  profile     Manage cloud profiles
+&nbsp;
+Flags:
+  -h, --help   help for cloud
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project cloud [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-cloud-profile">
+      <div class="screen-header"><h3>project cloud profile</h3><p>Cloud profile subcommands</p></div>
+      <div class="screen-cmd">teamcity project cloud profile --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Manage cloud profiles
+&nbsp;
+Usage:
+  teamcity project cloud profile [flags]
+  teamcity project cloud profile [command]
+&nbsp;
+Available Commands:
+  list        List cloud profiles
+  view        View cloud profile details
+&nbsp;
+Flags:
+  -h, --help   help for profile
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project cloud profile [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-cloud-image">
+      <div class="screen-header"><h3>project cloud image</h3><p>Cloud image subcommands</p></div>
+      <div class="screen-cmd">teamcity project cloud image --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Manage cloud images
+&nbsp;
+Usage:
+  teamcity project cloud image [flags]
+  teamcity project cloud image [command]
+&nbsp;
+Available Commands:
+  list        List cloud images
+  start       Start a cloud instance from an image
+  view        View cloud image details
+&nbsp;
+Flags:
+  -h, --help   help for image
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project cloud image [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-cloud-instance">
+      <div class="screen-header"><h3>project cloud instance</h3><p>Cloud instance subcommands</p></div>
+      <div class="screen-cmd">teamcity project cloud instance --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Manage cloud instances
+&nbsp;
+Usage:
+  teamcity project cloud instance [flags]
+  teamcity project cloud instance [command]
+&nbsp;
+Available Commands:
+  list        List cloud instances
+  stop        Stop a cloud instance
+  view        View cloud instance details
+&nbsp;
+Flags:
+  -h, --help   help for instance
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project cloud instance [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-token">
+      <div class="screen-header"><h3>project token</h3><p>Secure token subcommands</p></div>
+      <div class="screen-cmd">teamcity project token --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>Manage secure tokens for versioned settings.
+&nbsp;
+Secure tokens allow you to store sensitive values (passwords, API keys, etc.)
+in TeamCity&#39;s credentials storage. The scrambled token can be safely committed
+to version control and used in configuration files as credentialsJSON:&lt;token&gt;.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;storing-project-settings-in-version-control.html#Managing+Tokens
+&nbsp;
+Usage:
+  teamcity project token [flags]
+  teamcity project token [command]
+&nbsp;
+Available Commands:
+  get         Get the value of a secure token
+  put         Store a secret and get a secure token
+&nbsp;
+Flags:
+  -h, --help   help for token
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project token [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-project-param">
+      <div class="screen-header"><h3>project param</h3><p>Project parameter subcommands</p></div>
+      <div class="screen-cmd">teamcity project param --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List, get, set, and delete project parameters.
+&nbsp;
+Usage:
+  teamcity project param [flags]
+  teamcity project param [command]
+&nbsp;
+Available Commands:
+  delete      Delete a project parameter
+  get         Get a project parameter value
+  list        List project parameters
+  set         Set a project parameter value
+&nbsp;
+Flags:
+  -h, --help   help for param
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project param [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    <div class="screen" id="help-job-param">
+      <div class="screen-header"><h3>job param</h3><p>Job parameter subcommands</p></div>
+      <div class="screen-cmd">teamcity job param --help</div>
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>List, get, set, and delete job parameters.
+&nbsp;
+Usage:
+  teamcity job param [flags]
+  teamcity job param [command]
+&nbsp;
+Available Commands:
+  delete      Delete a job parameter
+  get         Get a job parameter value
+  list        List job parameters
+  set         Set a job parameter value
+&nbsp;
+Flags:
+  -h, --help   help for param
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity job param [command] --help&quot; for more information about a command.</pre></div></div>
+    </div>
+    
+    </div>
+  </section>
+  
+</div>
+
+<script>
+(function(){
+  var s=localStorage.getItem('tc-gallery-theme');
+  if(s){document.documentElement.dataset.theme=s;document.getElementById('theme-label').textContent=s}
+})();
+function toggleTheme(){
+  var t=document.documentElement.dataset.theme==='dark'?'light':'dark';
+  document.documentElement.dataset.theme=t;
+  localStorage.setItem('tc-gallery-theme',t);
+  document.getElementById('theme-label').textContent=t;
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('.terminal');
+  if(t){t.classList.toggle('expanded');markOverflows()}
+});
+function markOverflows(){
+  document.querySelectorAll('.terminal').forEach(function(t){
+    t.classList.toggle('overflows',!t.classList.contains('expanded')&&t.scrollHeight>t.clientHeight)
+  });
+}
+window.addEventListener('load',markOverflows);
+window.addEventListener('resize',markOverflows);
+
+ 
+var observer = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    var link = document.querySelector('.sidebar a[data-target="'+e.target.id+'"]');
+    if(link){ link.classList.toggle('active', e.isIntersecting) }
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+document.querySelectorAll('.screen[id]').forEach(function(el){ observer.observe(el) });
+
+ 
+var cardObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      var cards = e.target.querySelectorAll('.screen');
+      cards.forEach(function(c,i){ c.style.animationDelay = (i*0.03)+'s' });
+      cardObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.screens').forEach(function(el){ cardObs.observe(el) });
+</script>
+</body>
+</html>
