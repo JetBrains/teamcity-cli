@@ -1,0 +1,25 @@
+# Test color environment variable precedence.
+
+# FORCE_COLOR enables ANSI escapes even without a TTY.
+env NO_COLOR=
+env FORCE_COLOR=1
+exec teamcity run list --limit 1 --no-input
+stdout '\x1b\['
+
+# NO_COLOR wins over FORCE_COLOR.
+env NO_COLOR=1
+env FORCE_COLOR=1
+exec teamcity run list --limit 1 --no-input
+! stdout '\x1b\['
+
+# --no-color flag wins over FORCE_COLOR.
+env NO_COLOR=
+env FORCE_COLOR=1
+exec teamcity --no-color run list --limit 1 --no-input
+! stdout '\x1b\['
+
+# TEAMCITY_NO_COLOR wins over FORCE_COLOR.
+env TEAMCITY_NO_COLOR=1
+env FORCE_COLOR=1
+exec teamcity run list --limit 1 --no-input
+! stdout '\x1b\['
