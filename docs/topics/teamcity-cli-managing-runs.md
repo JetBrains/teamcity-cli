@@ -915,10 +915,10 @@ teamcity run cancel 12345
 teamcity run cancel 12345 --comment "Canceling for hotfix"
 ```
 
-Use `--force` to skip the confirmation prompt:
+Use `--yes` to skip the confirmation prompt:
 
 ```Shell
-teamcity run cancel 12345 --force
+teamcity run cancel 12345 --yes
 ```
 
 ## Restarting a run

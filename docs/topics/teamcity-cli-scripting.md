@@ -207,7 +207,7 @@ teamcity run watch "$BUILD_ID" --json
 ### Cancel all queued builds for a job
 
 ```Shell
-teamcity queue list --job MyProject_Build --json=id | jq -r '.[].id' | xargs -I {} teamcity run cancel {} --force
+teamcity queue list --job MyProject_Build --json=id | jq -r '.[].id' | xargs -I {} teamcity run cancel {} --yes
 ```
 
 ## CI/CD integration
@@ -254,10 +254,10 @@ Use `--no-input` to disable interactive prompts in automated environments. The C
 teamcity run cancel 12345 --no-input
 ```
 
-Alternatively, use `--force` on commands that support it:
+Alternatively, use `--yes` on commands that support it:
 
 ```Shell
-teamcity queue remove 12345 --force
+teamcity queue remove 12345 --yes
 ```
 
 ### Read-only mode
