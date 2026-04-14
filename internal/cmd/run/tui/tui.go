@@ -210,8 +210,8 @@ func (m watchModel) renderHeader() string {
 		jobName = m.build.BuildType.Name
 	}
 
-	icon := output.StatusIcon(m.build.Status, m.build.State)
-	status := output.StatusText(m.build.Status, m.build.State)
+	icon := output.StatusIcon(m.build.Status, m.build.State, m.build.StatusText)
+	status := output.StatusText(m.build.Status, m.build.State, m.build.StatusText)
 
 	header := fmt.Sprintf("%s %s %d  #%s %s · %s", icon, output.Bold(jobName), m.build.ID, m.build.Number, output.Faint(m.build.WebURL), status)
 	if m.build.PercentageComplete > 0 && m.build.State != "finished" {

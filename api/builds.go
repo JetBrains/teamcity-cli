@@ -376,7 +376,7 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 // GetBuildSnapshotDependencies returns all immediate dependency builds in a snapshot dependency chain.
 func (c *Client) GetBuildSnapshotDependencies(buildID string) (*BuildList, error) {
 	locator := fmt.Sprintf("snapshotDependency:(to:(id:%s),recursive:false),defaultFilter:false", buildID)
-	fields := "count,nextHref,build(id,number,status,state,buildTypeId,buildType(id,name))"
+	fields := "count,nextHref,build(id,number,status,statusText,state,buildTypeId,buildType(id,name))"
 	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(fields))
 
 	var combined BuildList

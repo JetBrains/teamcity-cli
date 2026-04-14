@@ -19,13 +19,14 @@ type RunTreeNode struct {
 	Name         string        `json:"name"`
 	BuildTypeID  string        `json:"buildTypeId"`
 	Status       string        `json:"status,omitempty"`
+	StatusText   string        `json:"statusText,omitempty"`
 	State        string        `json:"state,omitempty"`
 	Dependencies []RunTreeNode `json:"dependencies"`
 	circular     bool
 }
 
 func (n RunTreeNode) toDisplayNode() output.TreeNode {
-	label := output.StatusIcon(n.Status, n.State) + " " + output.Cyan(n.Name) + " " + output.Faint(strconv.Itoa(n.ID))
+	label := output.StatusIcon(n.Status, n.State, n.StatusText) + " " + output.Cyan(n.Name) + " " + output.Faint(strconv.Itoa(n.ID))
 	if n.circular {
 		return output.TreeNode{Label: label + " " + output.Yellow("(circular)")}
 	}
@@ -93,7 +94,7 @@ func runRunTree(f *cmdutil.Factory, runID string, depth int, jsonOut bool) error
 }
 
 func printPipelineTree(p *output.Printer, build *api.Build, pr *api.PipelineRun, node RunTreeNode) {
-	icon := output.StatusIcon(build.Status, build.State)
+	icon := output.StatusIcon(build.Status, build.State, build.StatusText)
 	header := fmt.Sprintf("%s %s ⬡  %d  #%s", icon, output.Cyan(pr.Pipeline.Name), build.ID, build.Number)
 	if build.BranchName != "" {
 		header += "  · " + build.BranchName
@@ -115,7 +116,7 @@ func printPipelineTree(p *output.Printer, build *api.Build, pr *api.PipelineRun,
 	}
 
 	for _, dep := range node.Dependencies {
-		icon := output.StatusIcon(dep.Status, dep.State)
+		icon := output.StatusIcon(dep.Status, dep.State, dep.StatusText)
 		padded := fmt.Sprintf("%-*s", maxNameLen+2, dep.Name)
 		_, _ = fmt.Fprintf(p.Out, "  %s %s %s\n", icon, padded, output.Faint(strconv.Itoa(dep.ID)))
 	}
@@ -163,6 +164,7 @@ func buildRunTree(client api.ClientInterface, b api.Build, depth int, path map[s
 		Name:         name,
 		BuildTypeID:  b.BuildTypeID,
 		Status:       b.Status,
+		StatusText:   b.StatusText,
 		State:        b.State,
 		Dependencies: []RunTreeNode{},
 	}

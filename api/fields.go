@@ -87,7 +87,7 @@ var BuildFields = FieldSpec{
 		"usedByOtherBuilds",
 	},
 	Default: []string{
-		"id", "number", "status", "state", "branchName", "buildTypeId",
+		"id", "number", "status", "statusText", "state", "branchName", "buildTypeId",
 		"buildType.id", "buildType.name", "buildType.projectName",
 		"triggered.type", "triggered.user.name", "triggered.user.username",
 		"startDate", "finishDate", "queuedDate", "agent.name",

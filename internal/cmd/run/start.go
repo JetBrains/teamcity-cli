@@ -100,9 +100,9 @@ func reuseDepRow(d reuseDep) (icon, summary string) {
 	}
 	parts = append(parts, cmp.Or(btName, b.BuildTypeID))
 	if (b.State != "" && b.State != "finished") || (b.Status != "" && !strings.EqualFold(b.Status, "SUCCESS")) {
-		parts = append(parts, output.StatusText(b.Status, b.State))
+		parts = append(parts, output.StatusText(b.Status, b.State, b.StatusText))
 	}
-	return output.StatusIcon(b.Status, b.State), strings.Join(parts, "  ")
+	return output.StatusIcon(b.Status, b.State, b.StatusText), strings.Join(parts, "  ")
 }
 
 func printQueuedRun(p *output.Printer, build *api.Build, context string) {
