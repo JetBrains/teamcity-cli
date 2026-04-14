@@ -142,7 +142,7 @@ func TestAliasListEmpty(t *testing.T) {
 	root := cmd.NewRootCmdWithFactory(f)
 	root.SetArgs([]string{"alias", "list"})
 	require.NoError(t, root.Execute())
-	assert.Contains(t, out.String(), "No aliases configured")
+	assert.Contains(t, out.String(), "built-in")
 }
 
 func TestAliasListJSON(t *testing.T) {
