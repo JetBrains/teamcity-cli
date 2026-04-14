@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/mattn/go-isatty"
@@ -40,11 +41,11 @@ func (s *State) IsStale(interval time.Duration) bool {
 }
 
 func stateFilePath() string {
-	home, err := os.UserHomeDir()
+	dir, err := config.ConfigDir()
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, ".config", "tc", stateFileName)
+	return filepath.Join(dir, stateFileName)
 }
 
 func LoadState() *State {
