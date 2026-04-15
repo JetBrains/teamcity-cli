@@ -218,15 +218,16 @@ func newSetCmd(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 			var value string
-			if len(args) == 2 {
+			switch {
+			case len(args) == 2:
 				value = args[1]
-			} else if key == "default_server" {
+			case key == "default_server":
 				selected, err := selectDefaultServer(f)
 				if err != nil {
 					return err
 				}
 				value = selected
-			} else {
+			default:
 				return fmt.Errorf("value is required for key %q", key)
 			}
 
