@@ -7,14 +7,34 @@ import (
 	"net/url"
 )
 
-// GetAgentPools returns all agent pools
-func (c *Client) GetAgentPools(requestedFields []string) (*PoolList, error) {
-	fields := requestedFields
+type AgentPoolsOptions struct {
+	Limit        int
+	Skip         int
+	ContinuePath string
+	Fields       []string
+}
+
+// GetAgentPools returns all agent pools.
+func (c *Client) GetAgentPools(opts AgentPoolsOptions) (*PoolList, error) {
+	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = PoolFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,agentPool(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/agentPools?fields=%s", url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("agentPool", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator().
+			AddIntDefault("count", opts.Limit, 100).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/agentPools?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result PoolList
 	if err := c.get(path, &result); err != nil {

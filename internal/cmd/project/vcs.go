@@ -51,6 +51,8 @@ func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"ls"},
 		Example: `  teamcity project vcs list
   teamcity project vcs list --project MyProject
+  teamcity project vcs list --limit 50 --skip 50
+  teamcity project vcs list --continue <token>
   teamcity project vcs list --project MyProject --json
   teamcity project vcs list --plain`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -59,7 +61,8 @@ func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.SetContinueConflicts(cmd, "project")
 
 	return cmd
 }
@@ -67,9 +70,11 @@ func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
 func (opts *vcsListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	project := cmp.Or(opts.project, "_Root")
 	roots, err := client.GetVcsRoots(api.VcsRootsOptions{
-		Project: project,
-		Limit:   opts.Limit,
-		Fields:  fields,
+		Project:      project,
+		Limit:        opts.Limit,
+		Skip:         opts.Skip,
+		ContinuePath: opts.ContinuePath,
+		Fields:       fields,
 	})
 	if err != nil {
 		return nil, err
@@ -93,9 +98,10 @@ func (opts *vcsListOptions) fetch(client api.ClientInterface, fields []string) (
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     roots,
+		JSON:     roots.VcsRoot,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2, 3}},
 		EmptyMsg: "No VCS roots found",
+		Page:     &cmdutil.ListPageInfo{Count: len(roots.VcsRoot), ContinuePath: roots.NextHref},
 	}, nil
 }
 

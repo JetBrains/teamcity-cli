@@ -8,28 +8,40 @@ import (
 
 // QueueOptions represents options for listing queued builds
 type QueueOptions struct {
-	BuildTypeID string
-	Limit       int
-	Fields      []string
+	BuildTypeID  string
+	Limit        int
+	Skip         int
+	ContinuePath string
+	Fields       []string
 }
 
 // GetBuildQueue returns the build queue
 func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
-	locator := NewLocator().
-		Add("buildType", opts.BuildTypeID).
-		AddInt("count", opts.Limit)
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = QueuedBuildFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,build(%s)", ToAPIFields(fields))
+	fieldsParam := paginatedFieldsParam("build", fields)
 
-	path := "/app/rest/buildQueue"
-	if !locator.IsEmpty() {
-		path = fmt.Sprintf("%s?locator=%s&fields=%s", path, locator.Encode(), url.QueryEscape(fieldsParam))
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
 	} else {
-		path = fmt.Sprintf("%s?fields=%s", path, url.QueryEscape(fieldsParam))
+		locator := NewLocator().
+			Add("buildType", opts.BuildTypeID).
+			AddInt("count", opts.Limit).
+			AddInt("start", opts.Skip)
+
+		path = "/app/rest/buildQueue"
+		if !locator.IsEmpty() {
+			path = fmt.Sprintf("%s?locator=%s&fields=%s", path, locator.Encode(), url.QueryEscape(fieldsParam))
+		} else {
+			path = fmt.Sprintf("%s?fields=%s", path, url.QueryEscape(fieldsParam))
+		}
 	}
 
 	var queue BuildQueue

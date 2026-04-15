@@ -26,6 +26,8 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"ls"},
 		Example: `  teamcity job list
   teamcity job list --project Falcon
+  teamcity job list --limit 30 --skip 30
+  teamcity job list --continue <token>
   teamcity job list --json
   teamcity job list --json=id,name,webUrl
   teamcity job list --plain
@@ -37,7 +39,8 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().BoolVar(&opts.all, "all", false, "Include pipelines")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.SetContinueConflicts(cmd, "project", "all")
 
 	return cmd
 }
@@ -62,34 +65,20 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 		fetchFields = append(slices.Clone(fields), "projectId")
 	}
 
-	jobs, err := client.GetBuildTypes(api.BuildTypesOptions{
-		Project: opts.project,
-		Limit:   limit,
-		Fields:  fetchFields,
-	})
+	jobs, pageInfo, err := opts.fetchJobsPage(client, fetchFields, pipelineProjectIDs, limit)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(pipelineProjectIDs) > 0 {
-		filtered := jobs.BuildTypes[:0]
-		for _, j := range jobs.BuildTypes {
-			if !isPipelineOwned(j.ProjectID, pipelineProjectIDs) {
-				filtered = append(filtered, j)
-			}
+	if len(pipelineProjectIDs) > 0 && len(fields) > 0 && !slices.Contains(fields, "projectId") {
+		for i := range jobs {
+			jobs[i].ProjectID = ""
 		}
-		jobs.BuildTypes = filtered
-		jobs.Count = len(filtered)
-	}
-	if len(jobs.BuildTypes) > opts.Limit {
-		jobs.BuildTypes = jobs.BuildTypes[:opts.Limit]
-		jobs.Count = opts.Limit
 	}
 
 	headers := []string{"ID", "NAME", "PROJECT", "STATUS"}
 	var rows [][]string
 
-	for _, j := range jobs.BuildTypes {
+	for _, j := range jobs {
 		status := output.Green("Active")
 		if j.Paused {
 			status = output.Faint("Paused")
@@ -107,7 +96,118 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 		JSON:     jobs,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
 		EmptyMsg: "No jobs found",
+		Page:     pageInfo,
 	}, nil
+}
+
+func (opts *jobListOptions) fetchJobsPage(
+	client api.ClientInterface,
+	fields []string,
+	pipelineProjectIDs map[string]bool,
+	limit int,
+) ([]api.BuildType, *cmdutil.ListPageInfo, error) {
+	if len(pipelineProjectIDs) == 0 {
+		page, err := client.GetBuildTypes(api.BuildTypesOptions{
+			Project:      opts.project,
+			Limit:        opts.Limit,
+			Skip:         opts.Skip,
+			ContinuePath: opts.ContinuePath,
+			Fields:       fields,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		return page.BuildTypes, &cmdutil.ListPageInfo{
+			Count:        len(page.BuildTypes),
+			ContinuePath: page.NextHref,
+		}, nil
+	}
+
+	collected := make([]api.BuildType, 0, opts.Limit)
+	skipRemaining := opts.Skip
+	offsetRemaining := opts.ContinueOffset
+	continuePath := opts.ContinuePath
+	continueOffset := 0
+
+	for {
+		page, err := client.GetBuildTypes(api.BuildTypesOptions{
+			Project:      opts.project,
+			Limit:        limit,
+			ContinuePath: continuePath,
+			Fields:       fields,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		pagePath := page.Href
+		if pagePath == "" {
+			pagePath = continuePath
+		}
+
+		filtered := filterPipelineJobs(page.BuildTypes, pipelineProjectIDs)
+		if offsetRemaining > 0 {
+			if offsetRemaining >= len(filtered) {
+				offsetRemaining -= len(filtered)
+				if page.NextHref == "" {
+					return collected, &cmdutil.ListPageInfo{Count: len(collected)}, nil
+				}
+				continuePath = page.NextHref
+				continue
+			}
+			filtered = filtered[offsetRemaining:]
+			offsetRemaining = 0
+		}
+		if skipRemaining > 0 {
+			if skipRemaining >= len(filtered) {
+				skipRemaining -= len(filtered)
+				if page.NextHref == "" {
+					return collected, &cmdutil.ListPageInfo{Count: len(collected)}, nil
+				}
+				continuePath = page.NextHref
+				continue
+			}
+			filtered = filtered[skipRemaining:]
+			skipRemaining = 0
+		}
+
+		remaining := opts.Limit - len(collected)
+		if remaining <= 0 {
+			break
+		}
+		if len(filtered) > remaining {
+			collected = append(collected, filtered[:remaining]...)
+			consumed := len(filterPipelineJobs(page.BuildTypes, pipelineProjectIDs)) - len(filtered) + remaining
+			continuePath = pagePath
+			continueOffset = consumed
+			break
+		}
+
+		collected = append(collected, filtered...)
+		if page.NextHref == "" {
+			continuePath = ""
+			continueOffset = 0
+			break
+		}
+		continuePath = page.NextHref
+		continueOffset = 0
+	}
+
+	return collected, &cmdutil.ListPageInfo{
+		Count:          len(collected),
+		ContinuePath:   continuePath,
+		ContinueOffset: continueOffset,
+	}, nil
+}
+
+func filterPipelineJobs(jobs []api.BuildType, pipelineProjectIDs map[string]bool) []api.BuildType {
+	filtered := make([]api.BuildType, 0, len(jobs))
+	for _, j := range jobs {
+		if !isPipelineOwned(j.ProjectID, pipelineProjectIDs) {
+			filtered = append(filtered, j)
+		}
+	}
+	return filtered
 }
 
 func newJobViewCmd(f *cmdutil.Factory) *cobra.Command {

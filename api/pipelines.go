@@ -12,19 +12,29 @@ import (
 
 // GetPipelines lists pipelines, optionally filtered by project.
 func (c *Client) GetPipelines(opts PipelinesOptions) (*PipelineList, error) {
-	locator := NewLocator().
-		AddIntDefault("count", opts.Limit, 100)
-	if opts.Project != "" {
-		locator.AddLocator("parentProject", NewLocator().Add("id", opts.Project))
-	}
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = PipelineFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,pipeline(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/pipelines?locator=%s&fields=%s",
-		locator.Encode(), url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("pipeline", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator().
+			AddIntDefault("count", opts.Limit, 100).
+			AddInt("start", opts.Skip)
+		if opts.Project != "" {
+			locator.AddLocator("parentProject", NewLocator().Add("id", opts.Project))
+		}
+		path = fmt.Sprintf("/app/rest/pipelines?locator=%s&fields=%s",
+			locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result PipelineList
 	if err := c.get(path, &result); err != nil {

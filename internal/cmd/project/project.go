@@ -55,6 +55,8 @@ func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"ls"},
 		Example: `  teamcity project list
   teamcity project list --parent Falcon
+  teamcity project list --limit 50 --skip 50
+  teamcity project list --continue <token>
   teamcity project list --json
   teamcity project list --json=id,name,webUrl
   teamcity project list --plain
@@ -65,16 +67,19 @@ func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.parent, "parent", "p", "", "Filter by parent project ID")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.SetContinueConflicts(cmd, "parent")
 
 	return cmd
 }
 
 func (opts *projectListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	projects, err := client.GetProjects(api.ProjectsOptions{
-		Parent: opts.parent,
-		Limit:  opts.Limit,
-		Fields: fields,
+		Parent:       opts.parent,
+		Limit:        opts.Limit,
+		Skip:         opts.Skip,
+		ContinuePath: opts.ContinuePath,
+		Fields:       fields,
 	})
 	if err != nil {
 		return nil, err
@@ -97,9 +102,10 @@ func (opts *projectListOptions) fetch(client api.ClientInterface, fields []strin
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     projects,
+		JSON:     projects.Projects,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
 		EmptyMsg: "No projects found",
+		Page:     &cmdutil.ListPageInfo{Count: len(projects.Projects), ContinuePath: projects.NextHref},
 	}, nil
 }
 

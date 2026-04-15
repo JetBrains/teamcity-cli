@@ -173,6 +173,22 @@ func CaptureOutput(t *testing.T, f *cmdutil.Factory, args ...string) string {
 	return buf.String()
 }
 
+// CaptureSplitOutput executes a CLI command and returns stdout and stderr separately.
+func CaptureSplitOutput(t *testing.T, f *cmdutil.Factory, args ...string) (string, string) {
+	t.Helper()
+	var stdout, stderr bytes.Buffer
+	f.Printer = &output.Printer{Out: &stdout, ErrOut: &stderr}
+
+	rootCmd := cmd.NewRootCmdWithFactory(f)
+	rootCmd.SetArgs(args)
+	rootCmd.SetOut(&stdout)
+	rootCmd.SetErr(&stderr)
+
+	err := rootCmd.Execute()
+	require.NoError(t, err, "Execute(%v)", args)
+	return stdout.String(), stderr.String()
+}
+
 // CaptureErr executes a CLI command, asserts it errors, and returns the error.
 func CaptureErr(t *testing.T, f *cmdutil.Factory, args ...string) error {
 	t.Helper()

@@ -23,6 +23,8 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"ls"},
 		Example: `  teamcity queue list
   teamcity queue list --job Falcon_Build
+  teamcity queue list --limit 20 --skip 20
+  teamcity queue list --continue <token>
   teamcity queue list --json
   teamcity queue list --json=id,state,webUrl
   teamcity queue list --plain
@@ -33,16 +35,19 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.SetContinueConflicts(cmd, "job")
 
 	return cmd
 }
 
 func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	queue, err := client.GetBuildQueue(api.QueueOptions{
-		BuildTypeID: opts.job,
-		Limit:       opts.Limit,
-		Fields:      fields,
+		BuildTypeID:  opts.job,
+		Limit:        opts.Limit,
+		Skip:         opts.Skip,
+		ContinuePath: opts.ContinuePath,
+		Fields:       fields,
 	})
 	if err != nil {
 		return nil, err
@@ -72,8 +77,9 @@ func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string)
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     queue,
+		JSON:     queue.Builds,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2, 4}},
 		EmptyMsg: "No runs in queue",
+		Page:     &cmdutil.ListPageInfo{Count: len(queue.Builds), ContinuePath: queue.NextHref},
 	}, nil
 }

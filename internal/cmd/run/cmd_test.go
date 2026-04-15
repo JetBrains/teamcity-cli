@@ -15,6 +15,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 )
 
@@ -41,6 +42,40 @@ func TestRunListBackwardsDateRange(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
 	cmdtest.RunCmdWithFactoryExpectErr(T, ts.Factory, "is more recent than", "run", "list", "--since", "2020-01-01", "--until", "2019-01-01")
+}
+
+func TestRunListJSONPaginationEnvelope(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.BuildList{
+			Count:    1,
+			Href:     "/app/rest/builds?locator=count:1,start:0",
+			NextHref: "/app/rest/builds?locator=count:1,start:1",
+			Builds: []api.Build{{
+				ID:          1,
+				Number:      "1",
+				Status:      "SUCCESS",
+				State:       "finished",
+				BuildTypeID: "TestProject_Build",
+			}},
+		})
+	})
+
+	stdout := cmdtest.CaptureOutput(t, ts.Factory, "run", "list", "--json", "--limit", "1")
+
+	var result struct {
+		Count    int         `json:"count"`
+		Items    []api.Build `json:"items"`
+		Continue string      `json:"continue"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(stdout), &result))
+	assert.Equal(t, 1, result.Count)
+	assert.Len(t, result.Items, 1)
+
+	path, offset, err := cmdutil.DecodeContinueToken("teamcity run list", result.Continue)
+	require.NoError(t, err)
+	assert.Equal(t, "/app/rest/builds?locator=count:1,start:1", path)
+	assert.Zero(t, offset)
 }
 
 func TestRunView(T *testing.T) {

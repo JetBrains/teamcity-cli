@@ -21,20 +21,29 @@ var runListCurrentBranchFn = getCurrentBranch
 var runListHeadRevisionFn = getHeadRevision // used in tests
 
 type runListOptions struct {
-	job        string
-	branch     string
-	status     string
-	user       string
-	revision   string
-	favorites  bool
-	project    string
-	limit      int
-	since      string
-	until      string
-	jsonFields string
-	plain      bool
-	noHeader   bool
-	web        bool
+	job           string
+	branch        string
+	status        string
+	user          string
+	revision      string
+	favorites     bool
+	project       string
+	limit         int
+	skip          int
+	since         string
+	until         string
+	continueToken string
+	continuePath  string
+	jsonFields    string
+	plain         bool
+	noHeader      bool
+	web           bool
+}
+
+type runListJSON struct {
+	Count    int         `json:"count"`
+	Items    []api.Build `json:"items"`
+	Continue string      `json:"continue,omitzero"`
 }
 
 func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -54,6 +63,8 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run list --revision abc1234
   teamcity run list --revision @head --job Falcon_Build
   teamcity run list --since 24h
+  teamcity run list --limit 50 --skip 50
+  teamcity run list --continue <token> --json
   teamcity run list --json
   teamcity run list --json=id,status,webUrl
   teamcity run list --plain | grep failure`,
@@ -70,6 +81,8 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorites for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of items")
+	cmd.Flags().IntVar(&opts.skip, "skip", 0, "Skip the first N items")
+	cmd.Flags().StringVar(&opts.continueToken, "continue", "", "Continue from a previous page token")
 	cmd.Flags().StringVar(&opts.since, "since", "", "Finished after this time (e.g., 24h, 2026-01-21)")
 	cmd.Flags().StringVar(&opts.until, "until", "", "Finished before this time (e.g., 12h, 2026-01-22)")
 	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
@@ -78,13 +91,29 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 
 	cmd.MarkFlagsMutuallyExclusive("json", "plain")
+	cmd.MarkFlagsMutuallyExclusive("skip", "continue")
+	cmd.MarkFlagsMutuallyExclusive("skip", "web")
+	cmdutil.SetContinueConflicts(cmd, "job", "branch", "status", "user", "revision", "favorites", "project", "since", "until", "web")
 
 	return cmd
 }
 
 func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) error {
+	if err := cmdutil.ValidateContinueConflicts(cmd); err != nil {
+		return err
+	}
 	if err := cmdutil.ValidateLimit(opts.limit); err != nil {
 		return err
+	}
+	if err := cmdutil.ValidateSkip(opts.skip); err != nil {
+		return err
+	}
+	if opts.continueToken != "" {
+		continuePath, _, err := cmdutil.DecodeContinueToken(cmd.CommandPath(), opts.continueToken)
+		if err != nil {
+			return err
+		}
+		opts.continuePath = continuePath
 	}
 	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.BuildFields, f.Printer.Out)
 	if err != nil {
@@ -114,8 +143,20 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		return err
 	}
 
+	continueToken := ""
+	if runs.NextHref != "" {
+		continueToken, err = cmdutil.EncodeContinueToken(cmd.CommandPath(), runs.NextHref, 0)
+		if err != nil {
+			return err
+		}
+	}
+
 	if jsonResult.Enabled {
-		return f.Printer.PrintJSON(runs)
+		return f.Printer.PrintJSON(runListJSON{
+			Count:    len(runs.Builds),
+			Items:    runs.Builds,
+			Continue: continueToken,
+		})
 	}
 
 	if runs.Count == 0 {
@@ -189,6 +230,9 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		output.AutoSizeColumns(headers, rows, 2, 2, 3, 4)
 		p.PrintTable(headers, rows)
 	}
+	if continueToken != "" {
+		_, _ = fmt.Fprintf(p.ErrOut, "Continue: %s\n", continueToken)
+	}
 	return nil
 }
 
@@ -226,18 +270,20 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 
 	return &runListRequest{
 		builds: api.BuildsOptions{
-			BuildTypeID: opts.job,
-			Branch:      branch,
-			Status:      statusFilter,
-			State:       stateFilter,
-			User:        user,
-			Project:     opts.project,
-			Revision:    revision,
-			Favorites:   opts.favorites,
-			Limit:       opts.limit,
-			SinceDate:   sinceDate,
-			UntilDate:   untilDate,
-			Fields:      fields,
+			BuildTypeID:  opts.job,
+			Branch:       branch,
+			Status:       statusFilter,
+			State:        stateFilter,
+			User:         user,
+			Project:      opts.project,
+			Revision:     revision,
+			Favorites:    opts.favorites,
+			Limit:        opts.limit,
+			Skip:         opts.skip,
+			SinceDate:    sinceDate,
+			UntilDate:    untilDate,
+			ContinuePath: opts.continuePath,
+			Fields:       fields,
 		},
 		webPath:  resolveRunListWebPath(opts),
 		emptyMsg: resolveRunListEmptyMessage(opts),

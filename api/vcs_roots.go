@@ -11,16 +11,26 @@ import (
 
 // GetVcsRoots returns a list of VCS roots
 func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
-	locator := NewLocator().
-		Add("affectedProject", opts.Project).
-		AddIntDefault("count", opts.Limit, 100)
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = VcsRootFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,vcs-root(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/vcs-roots?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("vcs-root", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator().
+			Add("affectedProject", opts.Project).
+			AddIntDefault("count", opts.Limit, 100).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/vcs-roots?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result VcsRootList
 	if err := c.get(path, &result); err != nil {

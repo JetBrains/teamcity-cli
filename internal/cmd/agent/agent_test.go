@@ -1,12 +1,17 @@
 package agent_test
 
 import (
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/fatih/color"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 )
 
 func init() { color.NoColor = true }
@@ -31,6 +36,30 @@ func TestAgentList_plain(t *testing.T) {
 		"1 \tAgent 1\tDefault\tConnected   \n" +
 		"2 \tAgent 2\tDefault\tDisconnected\n"
 	assert.Equal(t, want, got)
+}
+
+func TestAgentListPlainPrintsContinuationTokenToStderr(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/agents", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.AgentList{
+			Count:    2,
+			Href:     "/app/rest/agents?locator=count:2,start:0",
+			NextHref: "/app/rest/agents?locator=count:2,start:2",
+			Agents: []api.Agent{
+				{ID: 1, Name: "Agent 1", Connected: true, Enabled: true, Authorized: true, Pool: &api.Pool{Name: "Default"}},
+				{ID: 2, Name: "Agent 2", Connected: false, Enabled: true, Authorized: true, Pool: &api.Pool{Name: "Default"}},
+			},
+		})
+	})
+
+	_, stderr := cmdtest.CaptureSplitOutput(t, ts.Factory, "agent", "list", "--plain", "--limit", "2")
+	require.Contains(t, stderr, "Continue: ")
+
+	token := strings.TrimSpace(strings.TrimPrefix(stderr, "Continue: "))
+	path, offset, err := cmdutil.DecodeContinueToken("teamcity agent list", token)
+	require.NoError(t, err)
+	assert.Equal(t, "/app/rest/agents?locator=count:2,start:2", path)
+	assert.Zero(t, offset)
 }
 
 func TestAgentView(T *testing.T) {

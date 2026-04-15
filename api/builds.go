@@ -12,19 +12,21 @@ import (
 
 // BuildsOptions represents options for listing builds
 type BuildsOptions struct {
-	BuildTypeID string
-	Branch      string
-	Status      string
-	State       string
-	User        string
-	Project     string
-	Number      string
-	Revision    string
-	Favorites   bool
-	Limit       int
-	SinceDate   string
-	UntilDate   string
-	Fields      []string
+	BuildTypeID  string
+	Branch       string
+	Status       string
+	State        string
+	User         string
+	Project      string
+	Number       string
+	Revision     string
+	Favorites    bool
+	Limit        int
+	Skip         int
+	SinceDate    string
+	UntilDate    string
+	ContinuePath string
+	Fields       []string
 }
 
 const favoriteBuildTag = ".teamcity.star"
@@ -66,15 +68,25 @@ func currentUserFavoriteBuildsTagLocator() *Locator {
 
 // GetBuilds returns a list of builds
 func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
-	locator := opts.Locator().
-		AddIntDefault("count", opts.Limit, 30)
-
 	buildFields := opts.Fields
 	if len(buildFields) == 0 {
 		buildFields = BuildFields.Default
 	}
-	fields := fmt.Sprintf("count,build(%s)", ToAPIFields(buildFields))
-	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
+	fields := paginatedFieldsParam("build", buildFields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = rewriteContinuationPath(path, opts.Limit, fields)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := opts.Locator().
+			AddIntDefault("count", opts.Limit, 30).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
+	}
 
 	var result BuildList
 	if err := c.get(path, &result); err != nil {

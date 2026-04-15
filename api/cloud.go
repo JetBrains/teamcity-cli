@@ -10,23 +10,29 @@ import (
 )
 
 type CloudProfilesOptions struct {
-	ProjectID string
-	Limit     int
-	Fields    []string
+	ProjectID    string
+	Limit        int
+	Skip         int
+	ContinuePath string
+	Fields       []string
 }
 
 type CloudImagesOptions struct {
-	ProjectID string
-	Profile   string
-	Limit     int
-	Fields    []string
+	ProjectID    string
+	Profile      string
+	Limit        int
+	Skip         int
+	ContinuePath string
+	Fields       []string
 }
 
 type CloudInstancesOptions struct {
-	ProjectID string
-	Image     string
-	Limit     int
-	Fields    []string
+	ProjectID    string
+	Image        string
+	Limit        int
+	Skip         int
+	ContinuePath string
+	Fields       []string
 }
 
 // cloudLocator normalizes a value into a cloud resource locator.
@@ -82,16 +88,26 @@ func isCloudIDLikeLocator(value string) bool {
 }
 
 func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList, error) {
-	locator := NewLocator().
-		Add("project", opts.ProjectID).
-		AddIntDefault("count", opts.Limit, 100)
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = CloudProfileFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,cloudProfile(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/cloud/profiles?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("cloudProfile", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator().
+			Add("project", opts.ProjectID).
+			AddIntDefault("count", opts.Limit, 100).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/cloud/profiles?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result CloudProfileList
 	if err := c.get(path, &result); err != nil {
@@ -111,19 +127,29 @@ func (c *Client) GetCloudProfile(locator string) (*CloudProfile, error) {
 }
 
 func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error) {
-	locator := NewLocator().
-		Add("project", opts.ProjectID)
-	if opts.Profile != "" {
-		locator.AddRaw("profile", "("+cloudLocator(opts.Profile, "id")+")")
-	}
-	locator.AddIntDefault("count", opts.Limit, 100)
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = CloudImageFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,cloudImage(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/cloud/images?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("cloudImage", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator().
+			Add("project", opts.ProjectID)
+		if opts.Profile != "" {
+			locator.AddRaw("profile", "("+cloudLocator(opts.Profile, "id")+")")
+		}
+		locator.AddIntDefault("count", opts.Limit, 100).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/cloud/images?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result CloudImageList
 	if err := c.get(path, &result); err != nil {
@@ -143,19 +169,29 @@ func (c *Client) GetCloudImage(locator string) (*CloudImage, error) {
 }
 
 func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceList, error) {
-	locator := NewLocator().
-		Add("project", opts.ProjectID)
-	if opts.Image != "" {
-		locator.AddRaw("image", "("+cloudLocator(opts.Image, "name")+")")
-	}
-	locator.AddIntDefault("count", opts.Limit, 100)
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = CloudInstanceFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,cloudInstance(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/cloud/instances?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("cloudInstance", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator().
+			Add("project", opts.ProjectID)
+		if opts.Image != "" {
+			locator.AddRaw("image", "("+cloudLocator(opts.Image, "name")+")")
+		}
+		locator.AddIntDefault("count", opts.Limit, 100).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/cloud/instances?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result CloudInstanceList
 	if err := c.get(path, &result); err != nil {

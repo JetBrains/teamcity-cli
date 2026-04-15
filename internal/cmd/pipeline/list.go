@@ -22,6 +22,8 @@ func newPipelineListCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"ls"},
 		Example: `  teamcity pipeline list
   teamcity pipeline list --project MyProject
+  teamcity pipeline list --limit 30 --skip 30
+  teamcity pipeline list --continue <token>
   teamcity pipeline list --json
   teamcity pipeline list --json=id,name
   teamcity pipeline list --plain`,
@@ -31,16 +33,19 @@ func newPipelineListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.SetContinueConflicts(cmd, "project")
 
 	return cmd
 }
 
 func (opts *pipelineListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	pipelines, err := client.GetPipelines(api.PipelinesOptions{
-		Project: opts.project,
-		Limit:   opts.Limit,
-		Fields:  fields,
+		Project:      opts.project,
+		Limit:        opts.Limit,
+		Skip:         opts.Skip,
+		ContinuePath: opts.ContinuePath,
+		Fields:       fields,
 	})
 	if err != nil {
 		return nil, err
@@ -68,8 +73,9 @@ func (opts *pipelineListOptions) fetch(client api.ClientInterface, fields []stri
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     pipelines,
+		JSON:     pipelines.Pipelines,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
 		EmptyMsg: "No pipelines found",
+		Page:     &cmdutil.ListPageInfo{Count: len(pipelines.Pipelines), ContinuePath: pipelines.NextHref},
 	}, nil
 }

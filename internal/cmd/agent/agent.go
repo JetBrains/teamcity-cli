@@ -52,6 +52,8 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity agent list
   teamcity agent list --pool Default
   teamcity agent list --connected
+  teamcity agent list --limit 50 --skip 50
+  teamcity agent list --continue <token>
   teamcity agent list --json
   teamcity agent list --json=id,name,connected,enabled
   teamcity agent list --plain
@@ -65,19 +67,22 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.connected, "connected", false, "Show only connected agents")
 	cmd.Flags().BoolVar(&opts.enabled, "enabled", false, "Show only enabled agents")
 	cmd.Flags().BoolVar(&opts.authorized, "authorized", false, "Show only authorized agents")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.SetContinueConflicts(cmd, "pool", "connected", "enabled", "authorized")
 
 	return cmd
 }
 
 func (opts *agentListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	agents, err := client.GetAgents(api.AgentsOptions{
-		Pool:       opts.pool,
-		Connected:  opts.connected,
-		Enabled:    opts.enabled,
-		Authorized: opts.authorized,
-		Limit:      opts.Limit,
-		Fields:     fields,
+		Pool:         opts.pool,
+		Connected:    opts.connected,
+		Enabled:      opts.enabled,
+		Authorized:   opts.authorized,
+		Limit:        opts.Limit,
+		Skip:         opts.Skip,
+		ContinuePath: opts.ContinuePath,
+		Fields:       fields,
 	})
 	if err != nil {
 		return nil, err
@@ -102,9 +107,10 @@ func (opts *agentListOptions) fetch(client api.ClientInterface, fields []string)
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     agents,
+		JSON:     agents.Agents,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
 		EmptyMsg: "No agents found",
+		Page:     &cmdutil.ListPageInfo{Count: len(agents.Agents), ContinuePath: agents.NextHref},
 	}, nil
 }
 
