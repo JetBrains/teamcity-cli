@@ -12,6 +12,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmd/auth"
 	configcmd "github.com/JetBrains/teamcity-cli/internal/cmd/config"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/job"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/link"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/pipeline"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/pool"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/project"
@@ -95,6 +96,7 @@ Report issues:  https://jb.gg/tc/issues`,
 	addGrouped(cmd, "config",
 		auth.NewCmd(f),
 		configcmd.NewCmd(f),
+		link.NewCmd(f),
 		alias.NewCmd(f),
 		apicmd.NewCmd(f),
 		skill.NewCmd(f),

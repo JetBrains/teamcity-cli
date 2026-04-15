@@ -112,14 +112,27 @@ func (opts *projectListOptions) fetch(client api.ClientInterface, fields []strin
 func newProjectViewCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &cmdutil.ViewOptions{}
 	cmd := &cobra.Command{
-		Use:     "view <project-id>",
+		Use:     "view [project-id]",
 		Short:   "View project details",
+		Long:    `View details of a TeamCity project. With no argument, uses the linked project from teamcity.toml.`,
 		Aliases: []string{"show"},
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		Example: `  teamcity project view Falcon
-  teamcity project view Falcon --web`,
+  teamcity project view Falcon --web
+  teamcity project view              # uses linked project (see 'teamcity link')`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runProjectView(f, args[0], opts)
+			explicit := ""
+			if len(args) > 0 {
+				explicit = args[0]
+			}
+			projectID := f.ResolveProject(explicit)
+			if projectID == "" {
+				return api.Validation(
+					"project id is required",
+					"Pass <project-id> or run 'teamcity link' to bind this repository to a project",
+				)
+			}
+			return runProjectView(f, projectID, opts)
 		},
 	}
 	cmdutil.AddViewFlags(cmd, opts)

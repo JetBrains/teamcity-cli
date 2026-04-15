@@ -1,0 +1,34 @@
+# A configured link is consumed by downstream commands so callers don't repeat
+# --project / job-id everywhere. The cascade matches the active TC server URL.
+
+[!has_token] skip 'requires authentication token to call project view'
+
+exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
+extract '"id":"([^"]+)"' PROJECT_ID
+exec teamcity api '/app/rest/buildTypes?locator=project:'$PROJECT_ID',count:1&fields=buildType(id)' --raw --no-input
+extract '"id":"([^"]+)"' JOB_ID
+
+exec teamcity link --project $PROJECT_ID --job $JOB_ID --no-input
+exists teamcity.toml
+
+# project view with no positional arg uses the linked project for active server
+exec teamcity project view --no-input
+stdout $PROJECT_ID
+! stderr 'Error'
+
+# run start --dry-run with no positional arg uses the linked job
+exec teamcity run start --dry-run --no-input
+stdout 'Would trigger run for'
+stdout $JOB_ID
+! stderr 'Error'
+
+# TEAMCITY_PROJECT overrides the file
+env TEAMCITY_PROJECT=NonExistent_OverrideTest
+! exec teamcity project view --no-input
+stderr 'NonExistent_OverrideTest'
+
+# Explicit positional arg wins over env + file
+env TEAMCITY_PROJECT=
+exec teamcity project view $PROJECT_ID --no-input
+stdout $PROJECT_ID
+! stderr 'Error'
