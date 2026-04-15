@@ -7,21 +7,21 @@ stdout 'Project: Acme'
 stdout 'Default job: Acme_Build'
 stdout 'Wrote:'
 exists teamcity.toml
-grep 'url = "https://primary.example"' teamcity.toml
-grep 'project = "Acme"' teamcity.toml
-grep 'job = "Acme_Build"' teamcity.toml
+grep 'url = ''https://primary.example''' teamcity.toml
+grep 'project = ''Acme''' teamcity.toml
+grep 'job = ''Acme_Build''' teamcity.toml
 
 # Add a second server with multiple jobs
 exec teamcity link --server https://nightly.example --project Nightly --jobs Nightly_Release,Nightly_Eval --no-input
 stdout 'Jobs: Nightly_Release, Nightly_Eval'
-grep 'url = "https://nightly.example"' teamcity.toml
-grep 'project = "Nightly"' teamcity.toml
-grep '"Nightly_Release"' teamcity.toml
-grep '"Nightly_Eval"' teamcity.toml
+grep 'url = ''https://nightly.example''' teamcity.toml
+grep 'project = ''Nightly''' teamcity.toml
+grep '''Nightly_Release''' teamcity.toml
+grep '''Nightly_Eval''' teamcity.toml
 # Original entry is still there
-grep 'url = "https://primary.example"' teamcity.toml
+grep 'url = ''https://primary.example''' teamcity.toml
 
 # Re-linking the same server replaces the entry
 exec teamcity link --server https://primary.example --project Acme2 --job Acme2_Build --no-input
-grep 'project = "Acme2"' teamcity.toml
-! grep 'project = "Acme"$' teamcity.toml
+grep 'project = ''Acme2''' teamcity.toml
+! grep 'project = ''Acme''$' teamcity.toml

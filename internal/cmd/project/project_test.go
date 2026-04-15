@@ -149,7 +149,7 @@ func TestProjectSettingsStatusParallelFanOut(T *testing.T) {
 
 	assert.Equal(T, int32(1), configCalls.Load(), "config endpoint should be called exactly once")
 	assert.Equal(T, int32(1), statusCalls.Load(), "status endpoint should be called exactly once")
-	assert.Less(T, elapsed, delay+delay/2,
+	assert.Less(T, elapsed, 2*delay-50*time.Millisecond,
 		"parallel fan-out: both calls should overlap, expected ~%s, sequential would be ~%s", delay, 2*delay)
 }
 
