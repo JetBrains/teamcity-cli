@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
+	"github.com/JetBrains/teamcity-cli/internal/git"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/browser"
@@ -327,7 +327,7 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 
 	name := opts.name
 	if name == "" {
-		name = vcsNameFromURL(repoURL)
+		name = cmp.Or(git.RepoPath(repoURL), repoURL)
 	}
 
 	authMethod := opts.auth
@@ -528,21 +528,6 @@ func readStdin(f *cmdutil.Factory) (string, error) {
 		return "", fmt.Errorf("failed to read from stdin: %w", err)
 	}
 	return strings.TrimRight(string(data), "\r\n"), nil
-}
-
-func vcsNameFromURL(repoURL string) string {
-	if strings.Contains(repoURL, "@") && !strings.Contains(repoURL, "://") {
-		if _, after, ok := strings.Cut(repoURL, ":"); ok {
-			return strings.TrimSuffix(after, ".git")
-		}
-	}
-
-	if parsed, err := url.Parse(repoURL); err == nil && parsed.Host != "" {
-		path := strings.TrimPrefix(parsed.Path, "/")
-		return strings.TrimSuffix(path, ".git")
-	}
-
-	return repoURL
 }
 
 func isSSHURL(repoURL string) bool {

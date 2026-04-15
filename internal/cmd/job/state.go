@@ -3,6 +3,7 @@ package job
 import (
 	"fmt"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -22,20 +23,32 @@ var jobStateActions = map[string]jobStateAction{
 
 func newJobStateCmd(f *cmdutil.Factory, a jobStateAction) *cobra.Command {
 	return &cobra.Command{
-		Use:     a.use + " <job-id>",
-		Short:   a.short,
-		Long:    a.long,
-		Args:    cobra.ExactArgs(1),
-		Example: fmt.Sprintf("  teamcity job %s Falcon_Build", a.use),
+		Use:   a.use + " [job-id]",
+		Short: a.short,
+		Long:  a.long + " With no argument, uses the linked default job from teamcity.toml.",
+		Args:  cobra.MaximumNArgs(1),
+		Example: fmt.Sprintf(`  teamcity job %s Falcon_Build
+  teamcity job %s                # uses linked default job (see 'teamcity link')`, a.use, a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			explicit := ""
+			if len(args) > 0 {
+				explicit = args[0]
+			}
+			jobID := f.ResolveDefaultJob(explicit)
+			if jobID == "" {
+				return api.Validation(
+					"job id is required",
+					"Pass <job-id> or run 'teamcity link' to bind a default job to this repository",
+				)
+			}
 			client, err := f.Client()
 			if err != nil {
 				return err
 			}
-			if err := client.SetBuildTypePaused(args[0], a.paused); err != nil {
+			if err := client.SetBuildTypePaused(jobID, a.paused); err != nil {
 				return fmt.Errorf("failed to %s job: %w", a.use, err)
 			}
-			f.Printer.Success("%s job %s", a.verb, args[0])
+			f.Printer.Success("%s job %s", a.verb, jobID)
 			return nil
 		},
 	}

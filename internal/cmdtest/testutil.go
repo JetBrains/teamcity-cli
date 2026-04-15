@@ -76,6 +76,7 @@ func NewTestServer(t *testing.T) *TestServer {
 	ts.Factory.ClientFunc = func() (api.ClientInterface, error) {
 		return api.NewClient(ts.URL, "test-token"), nil
 	}
+	ts.Factory.SkipLinkLookup() // tests must not pick up the host's teamcity.toml
 
 	t.Cleanup(func() {
 		ts.Close()

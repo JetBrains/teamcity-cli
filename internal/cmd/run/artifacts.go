@@ -2,10 +2,8 @@ package run
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path"
-	"strconv"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -45,6 +43,9 @@ Shows artifact names and sizes. Use teamcity run download to download artifacts.
 			if len(args) > 0 {
 				runID = args[0]
 			}
+			if runID == "" && opts.job == "" {
+				opts.job = f.ResolveDefaultJob("")
+			}
 			return runRunArtifacts(f, runID, opts)
 		},
 	}
@@ -63,25 +64,13 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 		return err
 	}
 
-	if opts.job != "" {
-		runs, err := client.GetBuilds(f.Context(), api.BuildsOptions{
-			BuildTypeID: opts.job,
-			State:       "finished",
-			Limit:       1,
-		})
-		if err != nil {
-			return err
-		}
-		if runs.Count == 0 || len(runs.Builds) == 0 {
-			return api.Validation(
-				fmt.Sprintf("no runs found for job %q", opts.job),
-				"Try --all, or verify the job ID with 'teamcity job list'",
-			)
-		}
-		runID = strconv.Itoa(runs.Builds[0].ID)
-		p.Info("Listing artifacts for run %s  #%s", runID, runs.Builds[0].Number)
-	} else if runID == "" {
-		return errors.New("run ID required (or use --job to get latest run)")
+	resolvedID, latest, err := resolveRunID(f.Context(), client, runID, opts.job, "finished")
+	if err != nil {
+		return err
+	}
+	runID = resolvedID
+	if latest != nil {
+		p.Info("Listing artifacts for run %s  #%s", runID, latest.Number)
 	}
 
 	artifacts, err := client.GetArtifacts(f.Context(), runID, opts.path)

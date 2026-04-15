@@ -35,6 +35,7 @@ them alongside classic build configurations.`,
   teamcity job list --plain
   teamcity job list --plain --no-header`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			opts.project = f.ResolveProject(opts.project)
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.BuildTypeFields, opts.fetch)
 		},
 	}
@@ -118,14 +119,27 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 func newJobViewCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &cmdutil.ViewOptions{}
 	cmd := &cobra.Command{
-		Use:     "view <job-id>",
+		Use:     "view [job-id]",
 		Short:   "View job details",
+		Long:    "View details of a TeamCity build configuration. With no argument, uses the linked default job from teamcity.toml.",
 		Aliases: []string{"show"},
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		Example: `  teamcity job view Falcon_Build
-  teamcity job view Falcon_Build --web`,
+  teamcity job view Falcon_Build --web
+  teamcity job view              # uses linked default job (see 'teamcity link')`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runJobView(f, args[0], opts)
+			explicit := ""
+			if len(args) > 0 {
+				explicit = args[0]
+			}
+			jobID := f.ResolveDefaultJob(explicit)
+			if jobID == "" {
+				return api.Validation(
+					"job id is required",
+					"Pass <job-id> or run 'teamcity link' to bind a default job to this repository",
+				)
+			}
+			return runJobView(f, jobID, opts)
 		},
 	}
 	cmdutil.AddViewFlags(cmd, opts)
