@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +16,11 @@ const (
 	repoOwner    = "JetBrains"
 	repoName     = "teamcity-cli"
 	checkTimeout = 5 * time.Second
+)
+
+var (
+	latestReleaseAPIURL      = fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", repoOwner, repoName)
+	latestReleaseRedirectURL = fmt.Sprintf("https://github.com/%s/%s/releases/latest", repoOwner, repoName)
 )
 
 type ReleaseInfo struct {
@@ -30,12 +37,24 @@ func LatestRelease(ctx context.Context) (*ReleaseInfo, error) {
 	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", repoOwner, repoName)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	release, err := latestReleaseFromAPI(ctx)
+	if err != nil {
+		fallbackRelease, fallbackErr := latestReleaseFromRedirect(ctx)
+		if fallbackErr != nil {
+			return nil, fmt.Errorf("%w; fallback failed: %w", err, fallbackErr)
+		}
+		return fallbackRelease, nil
+	}
+	return release, nil
+}
+
+func latestReleaseFromAPI(ctx context.Context) (*ReleaseInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, latestReleaseAPIURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "teamcity-cli")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -55,6 +74,50 @@ func LatestRelease(ctx context.Context) (*ReleaseInfo, error) {
 	return &ReleaseInfo{
 		Version: strings.TrimPrefix(release.TagName, "v"),
 		URL:     release.HTMLURL,
+	}, nil
+}
+
+func latestReleaseFromRedirect(ctx context.Context) (*ReleaseInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, latestReleaseRedirectURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "teamcity-cli")
+
+	client := &http.Client{
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusFound && resp.StatusCode != http.StatusMovedPermanently {
+		return nil, fmt.Errorf("GitHub releases page returned %d", resp.StatusCode)
+	}
+
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return nil, fmt.Errorf("GitHub releases page did not provide a redirect location")
+	}
+
+	redirectURL, err := url.Parse(location)
+	if err != nil {
+		return nil, fmt.Errorf("parse redirect location: %w", err)
+	}
+
+	version := strings.TrimPrefix(path.Base(redirectURL.Path), "v")
+	if version == "" {
+		return nil, fmt.Errorf("could not extract version from %q", location)
+	}
+
+	return &ReleaseInfo{
+		Version: version,
+		URL:     location,
 	}, nil
 }
 
