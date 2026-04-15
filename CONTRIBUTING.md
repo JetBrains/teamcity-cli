@@ -23,6 +23,8 @@ cd teamcity-cli
 just build
 ```
 
+On Windows, `just build`, `just install`, `just lint`, and the other simple Go recipes work in PowerShell with no extra setup. A handful of recipes use bash shebangs (`clean`, `docs-build`, `docs-deploy`, `install-choco`, `install-codesign`, `eval`, `eval-diff`) and require Git Bash or WSL.
+
 ## Architecture
 
 ```
