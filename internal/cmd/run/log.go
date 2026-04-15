@@ -3,10 +3,8 @@ package run
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 	"time"
 
@@ -62,6 +60,9 @@ Use --raw to bypass the pager.`,
 			var runID string
 			if len(args) > 0 {
 				runID = args[0]
+			}
+			if runID == "" && opts.job == "" {
+				opts.job = f.ResolveDefaultJob("")
 			}
 			return runRunLog(f, runID, opts)
 		},
@@ -194,31 +195,17 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 		return err
 	}
 
-	if opts.job != "" {
-		state := "finished"
-		if opts.follow {
-			state = "any"
-		}
-		runs, err := client.GetBuilds(f.Context(), api.BuildsOptions{
-			BuildTypeID: opts.job,
-			State:       state,
-			Limit:       1,
-		})
-		if err != nil {
-			return err
-		}
-		if runs.Count == 0 || len(runs.Builds) == 0 {
-			return api.Validation(
-				fmt.Sprintf("no runs found for job %q", opts.job),
-				"Try --all, or verify the job ID with 'teamcity job list'",
-			)
-		}
-		runID = strconv.Itoa(runs.Builds[0].ID)
-		if !opts.json {
-			f.Printer.Info("Showing log for #%s (%s)", runID, runs.Builds[0].Number)
-		}
-	} else if runID == "" {
-		return errors.New("run ID required (or use --job to get latest run)")
+	state := "finished"
+	if opts.follow {
+		state = "any"
+	}
+	resolvedID, latest, err := resolveRunID(f.Context(), client, runID, opts.job, state)
+	if err != nil {
+		return err
+	}
+	runID = resolvedID
+	if latest != nil && !opts.json {
+		f.Printer.Info("Showing log for #%s (%s)", runID, latest.Number)
 	}
 
 	if opts.web {

@@ -40,16 +40,29 @@ func newJobTreeCmd(f *cmdutil.Factory) *cobra.Command {
 	var jsonOut bool
 
 	cmd := &cobra.Command{
-		Use:   "tree <job-id>",
+		Use:   "tree [job-id]",
 		Short: "Display snapshot dependency tree",
+		Long:  "Display the snapshot dependency tree for a build configuration. With no argument, uses the linked default job from teamcity.toml.",
 		Example: `  teamcity job tree MyProject_Build
+  teamcity job tree                          # uses linked default job
   teamcity job tree Falcon_Deploy --depth 2
   teamcity job tree MyProject_Build --only dependents
   teamcity job tree MyProject_Build --only dependencies
   teamcity job tree MyProject_Build --json`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runJobTree(f, args[0], depth, only, jsonOut)
+			explicit := ""
+			if len(args) > 0 {
+				explicit = args[0]
+			}
+			jobID := f.ResolveDefaultJob(explicit)
+			if jobID == "" {
+				return api.Validation(
+					"job id is required",
+					"Pass <job-id> or run 'teamcity link' to bind a default job to this repository",
+				)
+			}
+			return runJobTree(f, jobID, depth, only, jsonOut)
 		},
 	}
 

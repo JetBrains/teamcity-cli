@@ -2,6 +2,7 @@ package run
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -95,6 +96,18 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	client, err := f.Client()
 	if err != nil {
 		return err
+	}
+
+	// Explicit --job (or TEAMCITY_JOB) suppresses inferred project filter, since
+	// the job's buildType may live outside the linked project.
+	if opts.job == "" {
+		opts.job = os.Getenv(config.EnvJob)
+	}
+	if opts.job == "" {
+		opts.project = f.ResolveProject(opts.project)
+	}
+	if opts.job == "" && opts.project == "" {
+		opts.job = f.ResolveDefaultJob("")
 	}
 
 	request, err := resolveRunListRequest(client, opts, jsonResult.Fields)

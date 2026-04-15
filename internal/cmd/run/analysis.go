@@ -1,9 +1,7 @@
 package run
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -151,6 +149,9 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 			if len(args) > 0 {
 				runID = args[0]
 			}
+			if runID == "" && opts.job == "" {
+				opts.job = f.ResolveDefaultJob("")
+			}
 			return runRunTests(f, runID, opts)
 		},
 	}
@@ -170,24 +171,11 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		return err
 	}
 
-	if opts.job != "" {
-		runs, err := client.GetBuilds(f.Context(), api.BuildsOptions{
-			BuildTypeID: opts.job,
-			Limit:       1,
-		})
-		if err != nil {
-			return err
-		}
-		if runs.Count == 0 || len(runs.Builds) == 0 {
-			return api.Validation(
-				fmt.Sprintf("no runs found for job %q", opts.job),
-				"Try --all, or verify the job ID with 'teamcity job list'",
-			)
-		}
-		runID = strconv.Itoa(runs.Builds[0].ID)
-	} else if runID == "" {
-		return errors.New("run ID required (or use --job to get latest run)")
+	resolvedID, _, err := resolveRunID(f.Context(), client, runID, opts.job, "")
+	if err != nil {
+		return err
 	}
+	runID = resolvedID
 
 	build, err := client.GetBuild(f.Context(), runID)
 	if err != nil {

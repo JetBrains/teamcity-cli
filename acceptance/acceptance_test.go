@@ -98,6 +98,7 @@ func TestAcceptance(t *testing.T) {
 		"api",
 		"queue",
 		"alias",
+		"link",
 		"skill",
 	}
 

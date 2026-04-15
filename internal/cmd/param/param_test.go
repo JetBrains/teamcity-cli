@@ -73,23 +73,23 @@ func TestParamRequiresSubcommand(t *testing.T) {
 	cmdtest.RunCmdWithFactoryExpectErr(t, f, "requires a subcommand", "job", "param")
 }
 
-func TestParamListMissingArgs(t *testing.T) {
+func TestParamListWithoutIDOrLink(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	f := ts.Factory
 
-	cmdtest.RunCmdWithFactoryExpectErr(t, f, "accepts 1 arg(s)", "project", "param", "list")
+	cmdtest.RunCmdWithFactoryExpectErr(t, f, "project id is required", "project", "param", "list")
 }
 
 func TestParamGetMissingArgs(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	f := ts.Factory
 
-	cmdtest.RunCmdWithFactoryExpectErr(t, f, "accepts 2 arg(s)", "project", "param", "get", "TestProject")
+	cmdtest.RunCmdWithFactoryExpectErr(t, f, "accepts between 1 and 2 arg(s)", "project", "param", "get")
 }
 
 func TestParamSetMissingArgs(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	f := ts.Factory
 
-	cmdtest.RunCmdWithFactoryExpectErr(t, f, "accepts 3 arg(s)", "project", "param", "set", "TestProject", "name")
+	cmdtest.RunCmdWithFactoryExpectErr(t, f, "accepts between 2 and 3 arg(s)", "project", "param", "set", "name")
 }

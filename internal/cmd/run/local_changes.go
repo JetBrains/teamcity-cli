@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/git"
 )
 
 type localChangesValue struct {
@@ -38,9 +38,12 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 				"Run this command from within a git repository, or use --local-changes <path> to specify a diff file",
 			)
 		}
-		patch, err := getGitDiff()
+		patch, err := git.UncommittedDiff()
 		if err != nil {
-			return nil, err
+			return nil, api.Validation(
+				"failed to generate git diff",
+				"Ensure you have at least one commit in your repository",
+			)
 		}
 		if len(patch) == 0 {
 			return nil, api.Validation(
@@ -80,32 +83,4 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 		}
 		return patch, nil
 	}
-}
-
-func getGitDiff() ([]byte, error) {
-	untrackedFiles, err := getUntrackedFiles()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get untracked files: %w", err)
-	}
-
-	if len(untrackedFiles) > 0 {
-		addArgs := append([]string{"add", "-N", "--"}, untrackedFiles...)
-		addCmd := exec.Command("git", addArgs...)
-		if addCmd.Run() == nil {
-			defer func() {
-				resetArgs := append([]string{"reset", "HEAD", "--"}, untrackedFiles...)
-				_ = exec.Command("git", resetArgs...).Run()
-			}()
-		}
-	}
-
-	cmd := exec.Command("git", "diff", "HEAD")
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, api.Validation(
-			"failed to generate git diff",
-			"Ensure you have at least one commit in your repository",
-		)
-	}
-	return out, nil
 }

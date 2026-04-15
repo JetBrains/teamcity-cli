@@ -28,7 +28,7 @@ See: https://www.jetbrains.com/help/teamcity/creating-and-editing-build-configur
 	cmd.AddCommand(newJobTreeCmd(f))
 	cmd.AddCommand(newJobPauseCmd(f))
 	cmd.AddCommand(newJobResumeCmd(f))
-	cmd.AddCommand(param.NewCmd(f, "job", param.JobParamAPI))
+	cmd.AddCommand(param.NewCmd(f, "job", param.JobParamAPI, f.ResolveDefaultJob))
 
 	cmdutil.AliasAwareHelp(cmd, "", "")
 	return cmd
