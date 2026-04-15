@@ -1,6 +1,13 @@
 # TeamCity CLI
 
 set quiet
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+
+# Environment variables for recipes — exported via justfile syntax so they work
+# under any shell (sh on macOS/Linux, PowerShell on Windows).
+export TC_INSECURE_SKIP_WARN := "1"
+export SIGN := "true"
+export FINGERPRINT := "B46DC71E03FEEB7F89D1F2491F7A8F87B9D8F501"
 
 # Build the CLI binary
 build:
@@ -18,15 +25,15 @@ install:
 
 # Run unit tests
 unit:
-    TC_INSECURE_SKIP_WARN=1 go test -race -shuffle=on -v ./internal/config ./internal/errors ./internal/output ./internal/cmd
+    go test -race -shuffle=on -v ./internal/config ./internal/errors ./internal/output ./internal/cmd
 
 # Run all tests with coverage
 test:
-    TC_INSECURE_SKIP_WARN=1 go test -race -shuffle=on -v ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
+    go test -race -shuffle=on -v ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
 
 # Run acceptance tests against cli.teamcity.com (guest auth)
 acceptance:
-    TC_INSECURE_SKIP_WARN=1 go test -v -tags=acceptance ./acceptance -timeout 10m
+    go test -v -tags=acceptance ./acceptance -timeout 10m
 
 # Run sandbox integration tests (requires npx, bubblewrap+socat on Linux)
 sandbox:
@@ -68,7 +75,7 @@ release-dry-run:
 # Create and publish a signed release
 [confirm]
 release:
-    SIGN=true FINGERPRINT=B46DC71E03FEEB7F89D1F2491F7A8F87B9D8F501 goreleaser release --clean
+    goreleaser release --clean
 
 # Record all documentation GIFs (both light and dark themes)
 record-gifs *args:
