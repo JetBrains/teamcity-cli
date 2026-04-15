@@ -26,7 +26,7 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 	path := opts.ContinuePath
 	if path != "" {
 		var err error
-		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fieldsParam)
 		if err != nil {
 			return nil, err
 		}
@@ -48,6 +48,7 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 	if err := c.get(path, &queue); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&queue.Href, &queue.NextHref)
 	return &queue, nil
 }
 

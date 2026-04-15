@@ -8,7 +8,9 @@ import (
 )
 
 func TestRewriteContinuationPathOverridesCountAndFields(t *testing.T) {
-	path, err := rewriteContinuationPath(
+	client := NewClient("https://example.com", "token")
+
+	path, err := client.rewriteContinuationPath(
 		"/app/rest/buildTypes?locator=affectedProject:TestProject,count:30,start:30&fields=count,href,nextHref,buildType(id,name)",
 		10,
 		paginatedFieldsParam("buildType", []string{"id", "name", "projectId"}),
@@ -19,6 +21,23 @@ func TestRewriteContinuationPathOverridesCountAndFields(t *testing.T) {
 	assert.Contains(t, path, "start%3A30")
 	assert.Contains(t, path, "projectId")
 	assert.Contains(t, path, "nextHref")
+}
+
+func TestRewriteContinuationPathNormalizesBasePathAndVersion(t *testing.T) {
+	client := NewClient("https://example.com/teamcity", "token", WithAPIVersion("2023.1"))
+
+	path, err := client.rewriteContinuationPath(
+		"/teamcity/app/rest/2023.1/buildTypes?locator=affectedProject:TestProject,count:30,start:30&fields=count,href,nextHref,buildType(id,name)",
+		10,
+		paginatedFieldsParam("buildType", []string{"id", "name"}),
+	)
+	require.NoError(t, err)
+
+	assert.NotContains(t, path, "/teamcity/")
+	assert.NotContains(t, path, "/app/rest/2023.1/")
+	assert.Contains(t, path, "/app/rest/buildTypes")
+	assert.Contains(t, path, "count%3A10")
+	assert.Contains(t, path, "start%3A30")
 }
 
 func TestSetLocatorIntReplacesExistingValue(t *testing.T) {

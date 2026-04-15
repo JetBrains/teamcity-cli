@@ -97,7 +97,7 @@ func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList,
 	path := opts.ContinuePath
 	if path != "" {
 		var err error
-		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fieldsParam)
 		if err != nil {
 			return nil, err
 		}
@@ -113,6 +113,7 @@ func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList,
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 	return &result, nil
 }
 
@@ -136,7 +137,7 @@ func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error
 	path := opts.ContinuePath
 	if path != "" {
 		var err error
-		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fieldsParam)
 		if err != nil {
 			return nil, err
 		}
@@ -155,6 +156,7 @@ func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 	return &result, nil
 }
 
@@ -178,7 +180,7 @@ func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceLi
 	path := opts.ContinuePath
 	if path != "" {
 		var err error
-		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fieldsParam)
 		if err != nil {
 			return nil, err
 		}
@@ -197,6 +199,7 @@ func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceLi
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 	return &result, nil
 }
 

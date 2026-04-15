@@ -1,6 +1,8 @@
 package job
 
 import (
+	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -15,6 +17,10 @@ type jobListOptions struct {
 	project string
 	all     bool
 	cmdutil.ListFlags
+}
+
+type jobListContinueState struct {
+	All bool `json:"all,omitzero"`
 }
 
 func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -46,6 +52,10 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
+	if err := opts.applyContinueState(); err != nil {
+		return nil, err
+	}
+
 	pipelineProjectIDs := map[string]bool{}
 	if !opts.all && client.SupportsFeature("pipelines") {
 		if pipelines, err := client.GetPipelines(api.PipelinesOptions{Limit: 10000}); err == nil {
@@ -118,8 +128,9 @@ func (opts *jobListOptions) fetchJobsPage(
 			return nil, nil, err
 		}
 		return page.BuildTypes, &cmdutil.ListPageInfo{
-			Count:        len(page.BuildTypes),
-			ContinuePath: page.NextHref,
+			Count:         len(page.BuildTypes),
+			ContinuePath:  page.NextHref,
+			ContinueState: opts.continueState(),
 		}, nil
 	}
 
@@ -197,7 +208,29 @@ func (opts *jobListOptions) fetchJobsPage(
 		Count:          len(collected),
 		ContinuePath:   continuePath,
 		ContinueOffset: continueOffset,
+		ContinueState:  opts.continueState(),
 	}, nil
+}
+
+func (opts *jobListOptions) continueState() any {
+	if !opts.all {
+		return nil
+	}
+	return jobListContinueState{All: true}
+}
+
+func (opts *jobListOptions) applyContinueState() error {
+	if len(opts.ContinueState) == 0 {
+		return nil
+	}
+
+	var state jobListContinueState
+	if err := json.Unmarshal(opts.ContinueState, &state); err != nil {
+		return fmt.Errorf("invalid continuation token")
+	}
+
+	opts.all = state.All
+	return nil
 }
 
 func filterPipelineJobs(jobs []api.BuildType, pipelineProjectIDs map[string]bool) []api.BuildType {

@@ -77,7 +77,7 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 	path := opts.ContinuePath
 	if path != "" {
 		var err error
-		path, err = rewriteContinuationPath(path, opts.Limit, fields)
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fields)
 		if err != nil {
 			return nil, err
 		}
@@ -92,6 +92,7 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 
 	for i := range result.Builds {
 		cleanupBuildTriggered(&result.Builds[i])
@@ -420,16 +421,7 @@ func (c *Client) GetBuildSnapshotDependencies(buildID string) (*BuildList, error
 		}
 		combined.Builds = append(combined.Builds, page.Builds...)
 		combined.Count += page.Count
-		path = page.NextHref
-		if next, err := url.Parse(path); err == nil && next.IsAbs() {
-			path = next.RequestURI()
-		}
-		if base, err := url.Parse(c.BaseURL); err == nil && len(base.Path) > 1 {
-			path = strings.TrimPrefix(path, base.Path)
-		}
-		if c.APIVersion != "" && strings.HasPrefix(path, "/app/rest/") {
-			path = strings.Replace(path, "/app/rest/"+c.APIVersion+"/", "/app/rest/", 1)
-		}
+		path = c.normalizeContinuationPath(page.NextHref)
 	}
 	return &combined, nil
 }

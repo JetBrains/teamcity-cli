@@ -20,7 +20,7 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 	path := opts.ContinuePath
 	if path != "" {
 		var err error
-		path, err = rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fieldsParam)
 		if err != nil {
 			return nil, err
 		}
@@ -36,6 +36,7 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 	return &result, nil
 }
 

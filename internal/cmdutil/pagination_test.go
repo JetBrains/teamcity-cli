@@ -27,6 +27,17 @@ func TestContinueTokenCommandMismatch(t *testing.T) {
 	assert.Contains(t, err.Error(), "does not belong")
 }
 
+func TestContinueTokenStateRoundTrip(t *testing.T) {
+	token, err := EncodeContinueTokenWithState("teamcity job list", "/app/rest/buildTypes?locator=count:2,start:2", 1, map[string]bool{"all": true})
+	require.NoError(t, err)
+
+	path, offset, state, err := DecodeContinueTokenWithState("teamcity job list", token)
+	require.NoError(t, err)
+	assert.Equal(t, "/app/rest/buildTypes?locator=count:2,start:2", path)
+	assert.Equal(t, 1, offset)
+	assert.JSONEq(t, `{"all":true}`, string(state))
+}
+
 func TestValidateContinueConflicts(t *testing.T) {
 	cmd := &cobra.Command{Use: "list"}
 	cmd.Flags().String("continue", "", "")

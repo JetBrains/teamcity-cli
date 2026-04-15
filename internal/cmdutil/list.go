@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -15,6 +16,7 @@ type ListFlags struct {
 	ContinueToken  string
 	ContinuePath   string
 	ContinueOffset int
+	ContinueState  json.RawMessage
 	JSONFields     string
 	Plain          bool
 	NoHeader       bool
@@ -88,12 +90,13 @@ func RunList(
 		}
 	}
 	if cmd.Flags().Lookup("continue") != nil && flags.ContinueToken != "" {
-		continuePath, continueOffset, err := DecodeContinueToken(cmd.CommandPath(), flags.ContinueToken)
+		continuePath, continueOffset, continueState, err := DecodeContinueTokenWithState(cmd.CommandPath(), flags.ContinueToken)
 		if err != nil {
 			return err
 		}
 		flags.ContinuePath = continuePath
 		flags.ContinueOffset = continueOffset
+		flags.ContinueState = continueState
 	}
 
 	jsonResult, showHelp, err := ParseJSONFields(cmd, flags.JSONFields, fieldSpec, f.Printer.Out)
@@ -116,7 +119,12 @@ func RunList(
 
 	continueToken := ""
 	if result.Page != nil && result.Page.ContinuePath != "" {
-		continueToken, err = EncodeContinueToken(cmd.CommandPath(), result.Page.ContinuePath, result.Page.ContinueOffset)
+		continueToken, err = EncodeContinueTokenWithState(
+			cmd.CommandPath(),
+			result.Page.ContinuePath,
+			result.Page.ContinueOffset,
+			result.Page.ContinueState,
+		)
 		if err != nil {
 			return err
 		}

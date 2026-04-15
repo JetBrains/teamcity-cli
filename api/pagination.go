@@ -12,7 +12,7 @@ func paginatedFieldsParam(itemKey string, fields []string) string {
 	return fmt.Sprintf("count,href,nextHref,%s(%s)", itemKey, ToAPIFields(fields))
 }
 
-func rewriteContinuationPath(path string, limit int, fieldsParam string) (string, error) {
+func (c *Client) rewriteContinuationPath(path string, limit int, fieldsParam string) (string, error) {
 	u, err := url.Parse(path)
 	if err != nil {
 		return "", fmt.Errorf("parse continuation path: %w", err)
@@ -29,7 +29,42 @@ func rewriteContinuationPath(path string, limit int, fieldsParam string) (string
 	}
 
 	u.RawQuery = query.Encode()
-	return u.RequestURI(), nil
+	return c.normalizeContinuationPath(u.RequestURI()), nil
+}
+
+func (c *Client) normalizePageHrefs(hrefs ...*string) {
+	for _, href := range hrefs {
+		if href == nil {
+			continue
+		}
+		*href = c.normalizeContinuationPath(*href)
+	}
+}
+
+func (c *Client) normalizeContinuationPath(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	if u, err := url.Parse(path); err == nil {
+		path = u.RequestURI()
+	}
+
+	if base, err := url.Parse(c.BaseURL); err == nil {
+		basePath := strings.TrimSuffix(base.Path, "/")
+		if basePath != "" && basePath != "/" {
+			path = strings.TrimPrefix(path, basePath)
+		}
+	}
+
+	if c.APIVersion != "" {
+		versionPrefix := "/app/rest/" + c.APIVersion + "/"
+		if strings.HasPrefix(path, versionPrefix) {
+			path = strings.Replace(path, versionPrefix, "/app/rest/", 1)
+		}
+	}
+
+	return path
 }
 
 func setLocatorInt(locator, key string, value int) string {
