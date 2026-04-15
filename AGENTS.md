@@ -1,10 +1,41 @@
 # Agent Instructions
 
-## Making Changes
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) — it is the source of truth for
+architecture, conventions, testing, linting, and the before-pushing checklist.
+Everything below is additive guidance for AI agents only.
 
-Read `CONTRIBUTING.md` before introducing any code change. It covers
-architecture, testing requirements, flag conventions, documentation
-locations that must stay in sync, and the PR checklist.
+## Quick reference
+
+```sh
+just build          # go build → bin/teamcity
+just install        # go install ./tc → $GOPATH/bin/teamcity
+just lint           # go fmt + go fix + golangci-lint
+just unit           # unit tests
+just test           # unit + integration (testcontainers)
+just acceptance     # e2e against cli.teamcity.com (-tags=acceptance)
+just snapshot       # goreleaser local snapshot (all platforms)
+just docs-generate  # regenerate CLI command reference
+just record-gifs <name>  # record GIF from docs/tapes/<name>.tape → docs/images/
+```
+
+## Commits and PRs
+
+- Don't commit unless asked.
+- Conventional format: `feat(scope):`, `fix(scope):`, `refactor(scope):`.
+- **Always respect `.github/PULL_REQUEST_TEMPLATE.md` when opening a PR.** Read the
+  template before writing the body, fill in every section it defines (don't drop
+  any), and don't invent extra sections. If a section doesn't apply, say so
+  explicitly rather than silently omitting it.
+
+## Terminology
+
+| TeamCity concept    | CLI noun |
+|---------------------|----------|
+| Build               | `run`    |
+| Build configuration | `job`    |
+| Build agent         | `agent`  |
+| Build queue         | `queue`  |
+| Agent pool          | `pool`   |
 
 ## Filing Issues
 
@@ -17,12 +48,6 @@ locations that must stay in sync, and the PR checklist.
 - **Verify labels exist before using them.** Templates declare labels (e.g. `eval`) that
   may not yet exist in the repo. Run `gh label list` first; create missing labels only
   if the template requires them.
-
-## Before Pushing
-
-Run `just lint` before pushing. The CI lint job uses `golangci-lint` with
-`.golangci.yml` (includes `gocritic`, among others). Catching lint errors
-locally avoids a round-trip through CI.
 
 ## Eval Issues (`eval_task.yml`)
 
