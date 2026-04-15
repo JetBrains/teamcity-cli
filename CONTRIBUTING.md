@@ -6,7 +6,7 @@
 
 Prerequisites:
 
-- [Go 1.25+](https://golang.org/doc/install)
+- [Go 1.26+](https://golang.org/doc/install)
 - [just](https://github.com/casey/just) (task runner)
 - [Docker](https://docs.docker.com/get-docker/) (for integration tests)
 
@@ -25,28 +25,32 @@ just build
 
 On Windows, `just build`, `just install`, `just lint`, and the other simple Go recipes work in PowerShell with no extra setup. A handful of recipes use bash shebangs (`clean`, `docs-build`, `docs-deploy`, `install-choco`, `install-codesign`, `eval`, `eval-diff`) and require Git Bash or WSL.
 
-## Architecture
+### Development workflow
 
-```
-tc/                  # Entry point (main package)
-api/                 # HTTP client — all TeamCity REST API calls live here
-  interface.go       # ClientInterface — the contract commands code against
-  client.go          # Real HTTP implementation
-  types.go           # Request/response structs
-internal/
-  cmd/               # CLI commands, one subpackage per noun (run/, agent/, project/, …)
-    root.go          # Root cobra command, global flags
-  cmdutil/           # Shared helpers: client init, view flags, failure summaries
-  config/            # Auth config (keyring / file storage)
-  output/            # Terminal output: colors, tables, trees, pager, status icons
-  errors/            # Structured error types
-  terminal/          # Agent WebSocket terminal
-acceptance/          # End-to-end .txtar tests against a live server
+```sh
+just build          # go build → bin/teamcity
+just install        # go install ./tc → $GOPATH/bin/teamcity
+just lint           # go fmt + go fix + golangci-lint
+just unit           # unit tests
+just test           # unit + integration (testcontainers)
+just acceptance     # e2e against cli.teamcity.com (-tags=acceptance)
+just snapshot       # goreleaser local snapshot (all platforms)
+just docs-generate  # regenerate CLI command reference
+just record-gifs <name>  # record GIF from docs/tapes/<name>.tape → docs/images/
 ```
 
-**Data flow:** `tc/main.go` → `cmd.Execute()` builds the cobra tree → each command receives a `*cmdutil.Factory` and calls `f.Client()` to get an `api.ClientInterface` → calls API methods → formats output via `internal/output`.
+Run `just` with no arguments to see all available recipes.
 
-When adding a new command, create a subpackage under `internal/cmd/<noun>/` and register it in `root.go`.
+### Building
+
+The main package is `./tc/`, not the repo root:
+
+```sh
+go build -o bin/teamcity ./tc/
+go install ./tc/
+```
+
+`go build .` from the repo root produces an `ar` archive — the root is `package teamcitycli` (skills embed), not `main`.
 
 ### Integration tests
 
@@ -58,22 +62,92 @@ To use an existing server instead, copy the env template and fill in your values
 cp .env.example .env
 ```
 
-## Development workflow
+## Architecture
 
-```sh
-just build        # build binary to bin/teamcity
-just unit         # run unit tests only
-just test         # run all tests (unit + integration) with coverage
-just lint         # go fmt + golangci-lint
-just docs-generate # regenerate CLI command reference
-just install      # install to $GOPATH/bin
+```
+tc/                  # main package
+api/                 # public HTTP client — don't break exported interface
+  interface.go       # ClientInterface
+  client.go          # HTTP implementation
+  types.go           # request/response structs
+internal/
+  cmd/               # one subpackage per noun: run/, agent/, project/, job/, …
+    root.go          # root cobra command, global flags
+  cmdutil/           # Factory, shared helpers, client init
+  cmdtest/           # mock server, RunCmdWithFactory, SetupMockClient
+  config/            # auth (keyring + file), server detection
+  output/            # Printer, colors, tables, trees, status icons
+  errors/            # Structured error types
+  terminal/          # Agent WebSocket terminal
+acceptance/          # .txtar e2e tests (testscript framework)
+docs/                # Writerside topics + images + tapes
+skills/teamcity-cli/ # AI agent skill
 ```
 
-Run `just` with no arguments to see all available recipes.
+**Data flow:** `tc/main.go` → `cmd.Execute()` → cobra tree → `*cmdutil.Factory` → `f.Client()` → API → `output.Printer`.
+
+Every command:
+1. Package under `internal/cmd/<noun>/`
+2. `NewCmd(f *cmdutil.Factory)` returns cobra command
+3. `run<Verb>(f, opts)` does the work — pure logic, testable
+4. Register in `root.go`
+
+### `api/` is public
+
+Breaking changes to exported types/functions need explicit sign-off. `internal/` refactoring is free.
+
+### Before adding a new package
+
+Search for the helper you think you need before creating a new package. `internal/cmd/<sub>/git.go`, `internal/cmdutil/`, etc. may already host it. Creating a parallel package (e.g. duplicating `isGitRepo`) is a common trap and gets caught in review — extract a shared package only when there's a second consumer.
+
+## Go conventions
+
+Go 1.26. Follow [JetBrains Go Modern Guidelines](https://github.com/JetBrains/go-modern-guidelines).
+
+Hard rules:
+- **No CGO.** Any dep requiring CGO is rejected.
+- **No `os.Exit` in commands.** Return errors; only `tc/main.go` exits.
+- **`[]T{}` not `var s []T`** — nil slices serialize to JSON `null`.
+- **`slices.SortFunc`** not `sort.Slice`. **`t.Context()`** not `context.Background()` in tests.
+- **`_, _ = fmt.Fprintf(...)`** — satisfy errcheck in output code.
+
+### Output
+
+All output through `*output.Printer`. Never `fmt.Printf` in commands.
+
+- `p.Info()`, `p.Success()` — suppressed by `--quiet`
+- `p.Warn()`, `p.Debug()` — stderr only
+- `p.PrintTable()`, `p.PrintJSON()` — always print, never suppressed
+- `fmt.Fprintln(p.Out, ...)` — for primary output that must always appear
+- Never `cmd.OutOrStdout()` — use `p.Out`
+
+### Error handling
+
+1. API errors → typed (`api.NotFoundError`, `api.PermissionError`)
+2. Commands → `tcerrors.UserError` with suggestions via `tcerrors.WithSuggestion(msg, hint)`
+3. Root `Execute()` prints `Error: <msg>\nHint: <suggestion>`
+
+Error strings: lowercase, no trailing punctuation. Wrap with `%w`, not bare `return err`.
+
+### Comments
+
+One-line doc comments on funcs. No multi-line restate-the-code text. Inline comments only for non-obvious things (magic numbers, OS quirks, why-not-the-obvious-approach).
 
 ## Tests
 
 All new features and bug fixes must include tests. We have a solid integration test setup with testcontainers that spins up a real TeamCity server — please use it. If your change touches API behavior or user-facing commands, an integration test is expected, not just unit tests.
+
+- Prefer testcontainers integration tests over mocks for `api/` behavior.
+- Every new command gets an acceptance test in `acceptance/testdata/<noun>/`.
+- `require` for setup, `assert` for assertions, `t.Parallel()` where safe.
+- `internal/cmdtest/`: `SetupMockClient`, `RunCmdWithFactory`, `RunCmdWithFactoryExpectErr`.
+
+### Test conventions
+
+- **Test env vars**: `t.Setenv(k, v)` only; use `t.Setenv(k, "")` to clear. Never `os.Unsetenv` — it doesn't restore.
+- **Test cwd**: small `chdir(t, dir)` helper using `t.Cleanup` to restore. Don't return defer functions.
+- **Test surface split**: unit tests cover internal helpers (parsers, cascades, etc.); acceptance scripts (`acceptance/testdata/<sub>/*.txtar`) cover the user-facing binary surface. Don't duplicate — if a `.txtar` asserts `--clear` removes a file, no parallel unit test for the same.
+- **Test isolation**: `cmdtest.NewTestServer` calls `Factory.SkipLinkLookup()` so unit tests don't pick up the host's `teamcity.toml`. Pattern this for any future per-cwd config you add.
 
 ### JSON output contract
 
@@ -109,37 +183,27 @@ To run a single test:
 TC_ACCEPTANCE_SCRIPT=agent-cloud go test -tags=acceptance -v ./acceptance/ -count=1 -timeout 10m
 ```
 
+### Writing tests
+
+Each `.txtar` file is a self-contained test script. Key patterns:
+
+```
+[!has_token] skip 'requires authentication token'
+exec teamcity run list --no-input
+stdout '.'
+! stderr 'Error'
+extract '"id":\s*(\d+)' BUILD_ID
+```
+
+Custom commands: `extract`, `wait_for_agent`, `stdout2env`, `env2upper`, `sleep`.
+Conditions: `[has_token]`, `[guest]`.
+
 ### How they run in CI
 
 Acceptance tests are embedded in the goreleaser build pipeline as a **post-build hook** (`.goreleaser.yaml`). They run automatically after building the CLI binary for the native platform:
 
 - **Snapshot builds** (every push): guest-auth tests — no token needed
 - **Release builds** (tagged): token-auth tests using `TEAMCITY_TOKEN` secret — failures block publishing
-
-### Writing tests
-
-Each `.txtar` file is a self-contained test script. Key patterns:
-
-```
-# Tests requiring auth should skip in guest mode
-[!has_token] skip 'requires authentication token'
-
-# Run CLI commands
-exec teamcity project list --no-input
-stdout '.'           # assert stdout contains something
-! stderr 'Error'     # assert no errors
-
-# Extract values from JSON output
-exec teamcity run start Sandbox_Build --json --no-input
-extract '"id":\s*(\d+)' BUILD_ID
-
-# Wait for a cloud agent to be assigned to a build
-wait_for_agent $BUILD_ID AGENT_ID
-```
-
-Available custom commands: `extract`, `wait_for_agent`, `stdout2env`, `env2upper`, `sleep`.
-
-Available conditions: `[has_token]` (token auth), `[guest]` (guest auth).
 
 ### Coverage
 
@@ -156,8 +220,6 @@ Every CLI command and subcommand has acceptance test coverage. The following is 
 - `--secure` on `param set` (identical to a regular set, just marks value encrypted server-side)
 - `run start --rebuild-deps`, `--agent`, `--rebuild-failed-deps`, `--clean` (build queue options, same API path as `--branch`)
 
-If you add a new command, add a corresponding `.txtar` test in `acceptance/testdata/<command>/`.
-
 ### Test environment
 
 - **Server**: `cli.teamcity.com` (TeamCity Cloud, configurable via `TC_ACCEPTANCE_HOST`)
@@ -165,9 +227,33 @@ If you add a new command, add a corresponding `.txtar` test in `acceptance/testd
 - **Cloud agents**: ephemeral — tests that need agents must start a build, wait for assignment, then clean up
 - **Isolation**: each test gets its own `HOME` directory, no cross-test state leakage
 
-## AI-assisted contributions
+## Linting
 
-We're fine with AI tools — Junie, Claude Code, Copilot, whatever helps you move faster. But you must understand the code you're submitting. `teamcity` is a tool where we prioritize security and reliability. PRs with AI-generated code that the author can't explain or defend during review will not be merged.
+Run `just lint` before pushing. The CI lint job uses `golangci-lint` with
+`.golangci.yml` (includes `gocritic`, `misspell`, among others).
+
+Watch for:
+- `gocritic/ifElseChain` — rewrite to `switch`
+- `misspell` — US locale (canceled, color)
+- `errcheck` — excluded in test files only
+
+## Before pushing — checklist
+
+Run, in order:
+
+1. `go test ./...`
+2. `just lint` (golangci-lint + `go fmt` + `go fix`)
+3. `git status` after lint — `go fmt ./...` may touch unrelated files (e.g. `internal/gallery/`); revert those with `git checkout -- <path>` so they don't bleed into your PR
+4. `go test -tags=acceptance ./acceptance/...` if you touched acceptance scripts
+
+## When you change user-facing behavior
+
+Update all three:
+1. `docs/topics/` — Writerside topics + GIF if needed
+2. `skills/teamcity-cli/` — SKILL.md + references/commands.md + references/workflows.md
+3. `README.md` — commands table
+
+Grep the flag/command name across all three before closing the PR.
 
 ## Documentation
 
@@ -181,17 +267,7 @@ just docs-push              # open a PR to teamcity-documentation with local cha
 just docs-generate          # regenerate the CLI command reference table
 ```
 
-When your change adds or modifies commands, flags, or user-facing behavior, update **all** of the following:
-
-| Location               | What to update                                                                   |
-|------------------------|----------------------------------------------------------------------------------|
-| `docs/topics/`         | Writerside topic files (`.md`) — edit locally, then `just docs-push` to upstream |
-| `skills/teamcity-cli/` | AI agent skill — `SKILL.md`, `references/commands.md`, `references/workflows.md` |
-| `README.md`            | Commands table in the root readme                                                |
-
-**GIFs:** Terminal recordings (in `docs/images/`) illustrate key workflows. If your change visibly alters CLI output for an existing GIF, re-record it. Use [vhs](https://github.com/charmbracelet/vhs) with tape files in `docs/tapes/`.
-
-**Keep docs in sync:** It's easy to forget one of the locations above. A good check: grep for the flag or command name you changed across `docs/`, `skills/`, and `README.md` to make sure nothing is stale.
+**GIFs:** Terminal recordings (in `docs/images/`) illustrate key workflows. If your change visibly alters CLI output for an existing GIF, re-record it. Use [vhs](https://github.com/charmbracelet/vhs) with tape files in `docs/tapes/`. Always set `TEAMCITY_NO_UPDATE "1"` in tapes. Use `cli.teamcity.com` + `TEAMCITY_GUEST "1"` for public demos, `buildserver.labs.intellij.net` for richer dependency trees.
 
 ## Flags and short-flag conventions
 
@@ -261,13 +337,19 @@ No flags or commands are deprecated today; these are the patterns for when the f
 
 ## Submit a pull request
 
-Push your branch and open a PR against `main`. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) will guide you through describing the change.
+Push your branch and open a PR against `main`. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) will guide you through describing the change — fill in every section it defines.
 
-Before submitting, make sure:
+## AI-assisted contributions
 
-- `just lint` passes
-- `just unit` passes (at minimum)
-- You've manually tested your change
+We're fine with AI tools — Junie, Claude Code, Copilot, whatever helps you move faster. But you must understand the code you're submitting. `teamcity` is a tool where we prioritize security and reliability. PRs with AI-generated code that the author can't explain or defend during review will not be merged.
+
+## CI pipeline
+
+Use `https://cli.teamcity.com` (guest auth) when debugging this project's own pipeline — not GitHub Actions.
+
+```sh
+TEAMCITY_URL=https://cli.teamcity.com teamcity run list --status failure
+```
 
 ## Release a new version
 
