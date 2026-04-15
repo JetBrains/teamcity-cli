@@ -3,6 +3,7 @@ module github.com/JetBrains/teamcity-cli
 go 1.26
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
 	github.com/aymanbagabas/go-udiff v0.3.1
 	github.com/buildkite/shellwords v1.0.1

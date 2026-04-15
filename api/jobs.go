@@ -12,9 +12,10 @@ import (
 
 // BuildTypesOptions represents options for listing build configurations
 type BuildTypesOptions struct {
-	Project string
-	Limit   int
-	Fields  []string
+	Project    string
+	VcsRootURL string // filter to build configs whose VCS root url property contains this fragment (server-side)
+	Limit      int
+	Fields     []string
 }
 
 // GetBuildTypes returns a list of build configurations, automatically following pagination.
@@ -22,6 +23,14 @@ func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 	locator := NewLocator().
 		Add("affectedProject", opts.Project).
 		AddIntDefault("count", opts.Limit, 30)
+
+	if opts.VcsRootURL != "" {
+		locator.AddLocator("vcsRoot", NewLocator().
+			AddLocator("property", NewLocator().
+				Add("name", "url").
+				Add("value", opts.VcsRootURL).
+				Add("matchType", "contains")))
+	}
 
 	fields := opts.Fields
 	if len(fields) == 0 {

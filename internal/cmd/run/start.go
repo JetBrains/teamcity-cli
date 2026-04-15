@@ -154,10 +154,11 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "start <job-id>",
+		Use:   "start [job-id]",
 		Short: "Start a new run",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		Example: `  teamcity run start Falcon_Build
+  teamcity run start                              # uses linked default (see 'teamcity link')
   teamcity run start Falcon_Build --branch feature/test
   teamcity run start Falcon_Build --branch @this
   teamcity run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
@@ -170,7 +171,18 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run start Falcon_Build --revision @head --branch @this
   teamcity run start Falcon_Build --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRunStart(f, args[0], opts)
+			explicit := ""
+			if len(args) > 0 {
+				explicit = args[0]
+			}
+			jobID := f.ResolveDefaultJob(explicit)
+			if jobID == "" {
+				return api.Validation(
+					"job id is required",
+					"Pass <job-id> or run 'teamcity link' to bind a default job to this repository",
+				)
+			}
+			return runRunStart(f, jobID, opts)
 		},
 	}
 

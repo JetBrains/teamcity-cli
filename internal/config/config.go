@@ -23,6 +23,8 @@ const (
 	EnvGuestAuth = "TEAMCITY_GUEST"
 	EnvReadOnly  = "TEAMCITY_RO"
 	EnvDSLDir    = "TEAMCITY_DSL_DIR"
+	EnvProject   = "TEAMCITY_PROJECT"
+	EnvJob       = "TEAMCITY_JOB"
 
 	DefaultDSLDirTeamCity = ".teamcity"
 	DefaultDSLDirTC       = ".tc"
