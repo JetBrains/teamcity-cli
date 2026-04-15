@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	cfg "github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -199,10 +200,13 @@ func newSetCmd(f *cmdutil.Factory) *cobra.Command {
 	var serverURL string
 
 	cmd := &cobra.Command{
-		Use:   "set <key> <value>",
+		Use:   "set <key> [<value>]",
 		Short: "Set a configuration value",
 		Long:  "Set the value of a configuration key.\n\nValid keys: " + strings.Join(cfg.ValidKeys(), ", "),
-		Example: `  # Switch default server
+		Example: `  # Switch default server (interactive picker)
+  teamcity config set default_server
+
+  # Switch default server
   teamcity config set default_server tc.example.com
 
   # Enable read-only mode for a server
@@ -210,9 +214,22 @@ func newSetCmd(f *cmdutil.Factory) *cobra.Command {
 
   # Enable guest auth for the default server
   teamcity config set guest true`,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			key, value := args[0], args[1]
+			key := args[0]
+			var value string
+			if len(args) == 2 {
+				value = args[1]
+			} else if key == "default_server" {
+				selected, err := selectDefaultServer(f)
+				if err != nil {
+					return err
+				}
+				value = selected
+			} else {
+				return fmt.Errorf("value is required for key %q", key)
+			}
+
 			if err := cfg.SetField(key, value, serverURL); err != nil {
 				return err
 			}
@@ -223,4 +240,41 @@ func newSetCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&serverURL, "server", "s", "", "Server URL for per-server settings")
 	return cmd
+}
+
+func selectDefaultServer(f *cmdutil.Factory) (string, error) {
+	if !f.IsInteractive() {
+		return "", fmt.Errorf("value is required for key \"default_server\" in non-interactive mode")
+	}
+
+	c := cfg.Get()
+	if len(c.Servers) == 0 {
+		return "", fmt.Errorf("no servers configured; run 'teamcity auth login' first")
+	}
+
+	urls := sortedServerURLs(c)
+
+	if len(urls) == 1 {
+		return urls[0], nil
+	}
+
+	options := make([]string, len(urls))
+	for i, u := range urls {
+		if u == c.DefaultServer {
+			options[i] = u + " (current)"
+		} else {
+			options[i] = u
+		}
+	}
+
+	var selected int
+	prompt := &survey.Select{
+		Message: "Select default server:",
+		Options: options,
+	}
+	if err := survey.AskOne(prompt, &selected); err != nil {
+		return "", err
+	}
+
+	return urls[selected], nil
 }
