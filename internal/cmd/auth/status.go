@@ -193,6 +193,8 @@ func collectBuildStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth) authSta
 func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 	p := f.Printer
 
+	_, _ = fmt.Fprintln(p.Out)
+
 	if len(results) == 0 {
 		_, _ = fmt.Fprintln(p.Out, output.Red("✗"), "Not logged in to any TeamCity server")
 		_, _ = fmt.Fprintln(p.Out, "\nRun", output.Cyan("teamcity auth login"), "to authenticate")
@@ -210,6 +212,12 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 		renderOneStatus(f, p, s)
 	}
 
+	if len(results) > 1 {
+		_, _ = fmt.Fprintln(p.Out)
+		_, _ = fmt.Fprintf(p.Out, "%s To switch the default server, run %s\n",
+			output.Faint("Tip:"), output.Cyan("teamcity config set default_server <url>"))
+	}
+
 	renderDSLHint(p, results)
 	return nil
 }
@@ -217,7 +225,7 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 func renderOneStatus(f *cmdutil.Factory, p *output.Printer, s authStatus) {
 	suffix := ""
 	if s.IsDefault {
-		suffix = " (default)"
+		suffix = " " + output.Bold(output.Green("(default)"))
 	}
 
 	switch s.AuthMethod {
@@ -240,7 +248,8 @@ func renderOneStatus(f *cmdutil.Factory, p *output.Printer, s authStatus) {
 
 	case s.Status == "authenticated":
 		_, _ = fmt.Fprintf(p.Out, "%s Logged in to %s%s\n", output.Green("✓"), output.Cyan(s.Server), suffix)
-		_, _ = fmt.Fprintf(p.Out, "  User: %s (%s) · %s\n", s.User.Name, s.User.Username, tokenSourceLabel(s.TokenSource))
+		_, _ = fmt.Fprintf(p.Out, "  %s %s (%s) %s %s\n",
+			output.Faint("User:"), s.User.Name, s.User.Username, output.Faint("·"), output.Faint(tokenSourceLabel(s.TokenSource)))
 		renderTokenExpiry(p, s.TokenExpiry)
 		renderServerInfo(p, s)
 
@@ -258,12 +267,13 @@ func renderServerInfo(p *output.Printer, s authStatus) {
 	if s.ServerInfo == nil {
 		return
 	}
-	_, _ = fmt.Fprintf(p.Out, "  Server: TeamCity %d.%d (build %s)\n",
-		s.ServerInfo.VersionMajor, s.ServerInfo.VersionMinor, s.ServerInfo.BuildNumber)
+	_, _ = fmt.Fprintf(p.Out, "  %s\n",
+		output.Faint(fmt.Sprintf("Server: TeamCity %d.%d (build %s)",
+			s.ServerInfo.VersionMajor, s.ServerInfo.VersionMinor, s.ServerInfo.BuildNumber)))
 	if s.versionCheckErr != "" {
 		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Yellow("!"), s.versionCheckErr)
 	} else {
-		_, _ = fmt.Fprintf(p.Out, "  %s API compatible\n", output.Green("✓"))
+		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Green("✓"), output.Faint("API compatible"))
 	}
 }
 
