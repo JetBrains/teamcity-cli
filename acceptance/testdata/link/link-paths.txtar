@@ -1,0 +1,35 @@
+# Path-scoped: cwd relative to teamcity.toml's dir is the implicit scope.
+
+mkdir services/api
+mkdir services/web
+
+# Top-level scope at root
+exec teamcity link --server https://x.example --project Mono --job Mono_Build --no-input
+grep 'project = "Mono"' teamcity.toml
+grep 'job = "Mono_Build"' teamcity.toml
+
+# Path scope from a subdirectory upserts under [server.paths."<rel>"]
+cd services/api
+exec teamcity link --server https://x.example --project API --job API_Build --no-input
+stdout 'services/api'
+cd ../..
+grep '\[server.paths."services/api"\]' teamcity.toml
+grep 'project = "API"' teamcity.toml
+grep 'job = "API_Build"' teamcity.toml
+
+# Top-level scope is preserved
+grep 'project = "Mono"' teamcity.toml
+grep 'job = "Mono_Build"' teamcity.toml
+
+# Explicit --scope override works from the root too
+exec teamcity link --server https://x.example --scope services/web --project Web --jobs Web_Build,Web_Deploy --no-input
+grep '\[server.paths."services/web"\]' teamcity.toml
+grep 'project = "Web"' teamcity.toml
+grep 'jobs = \["Web_Build", "Web_Deploy"\]' teamcity.toml
+
+# `--scope=` (empty) writes to the top-level scope from anywhere
+mkdir docs
+cd docs
+exec teamcity link --server https://x.example --scope= --project Mono2 --job Mono2_Build --no-input
+cd ..
+grep 'project = "Mono2"' teamcity.toml

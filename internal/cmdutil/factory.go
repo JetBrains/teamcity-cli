@@ -46,6 +46,9 @@ type Factory struct {
 
 	// UpdateNotice is called after command execution to print update notices.
 	UpdateNotice func()
+
+	// link caches teamcity.toml lookup; see link.go.
+	link *linkResolver
 }
 
 // NewFactory creates a Factory with production defaults.
