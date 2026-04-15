@@ -1,5 +1,11 @@
 # Agent Instructions
 
+## Making Changes
+
+Read `CONTRIBUTING.md` before introducing any code change. It covers
+architecture, testing requirements, flag conventions, documentation
+locations that must stay in sync, and the PR checklist.
+
 ## Filing Issues
 
 - **Always check `.github/ISSUE_TEMPLATE/` before creating an issue.** This repo has
@@ -11,6 +17,12 @@
 - **Verify labels exist before using them.** Templates declare labels (e.g. `eval`) that
   may not yet exist in the repo. Run `gh label list` first; create missing labels only
   if the template requires them.
+
+## Before Pushing
+
+Run `just lint` before pushing. The CI lint job uses `golangci-lint` with
+`.golangci.yml` (includes `gocritic`, among others). Catching lint errors
+locally avoids a round-trip through CI.
 
 ## Eval Issues (`eval_task.yml`)
 
