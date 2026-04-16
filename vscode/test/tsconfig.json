@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "outDir": "../dist-tests",
+    "module": "commonjs",
+    "types": ["node"],
+    "noEmit": false
+  },
+  "include": ["**/*.ts", "../src/util.ts"]
+}

@@ -1,0 +1,449 @@
+{
+  "name": "teamcity",
+  "displayName": "TeamCity",
+  "description": "TeamCity CI/CD integration for VS Code — pipelines, builds, agents, and more",
+  "version": "0.1.0",
+  "publisher": "JetBrains",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JetBrains/teamcity-cli"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "teamcity",
+    "ci",
+    "cd",
+    "pipelines",
+    "builds",
+    "jetbrains"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "teamcity",
+          "title": "TeamCity",
+          "icon": "resources/icons/teamcity-logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "teamcity": [
+        {
+          "id": "teamcity.pipelines",
+          "name": "Pipelines"
+        },
+        {
+          "id": "teamcity.favorites",
+          "name": "Favorites"
+        },
+        {
+          "id": "teamcity.runs",
+          "name": "Runs"
+        },
+        {
+          "id": "teamcity.queue",
+          "name": "Queue"
+        },
+        {
+          "id": "teamcity.agents",
+          "name": "Agents"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "teamcity.pipelines",
+        "contents": "Connect to TeamCity to view pipelines.\n[Login to TeamCity](command:teamcity.login)\n[Login as Guest](command:teamcity.loginGuest)",
+        "when": "!teamcity.authenticated"
+      },
+      {
+        "view": "teamcity.favorites",
+        "contents": "Connect to TeamCity to view favorite builds.\n[Login to TeamCity](command:teamcity.login)\n[Login as Guest](command:teamcity.loginGuest)",
+        "when": "!teamcity.authenticated"
+      },
+      {
+        "view": "teamcity.runs",
+        "contents": "Connect to TeamCity to view runs.\n[Login to TeamCity](command:teamcity.login)\n[Login as Guest](command:teamcity.loginGuest)",
+        "when": "!teamcity.authenticated"
+      },
+      {
+        "view": "teamcity.queue",
+        "contents": "Connect to TeamCity to view queue.\n[Login to TeamCity](command:teamcity.login)\n[Login as Guest](command:teamcity.loginGuest)",
+        "when": "!teamcity.authenticated"
+      },
+      {
+        "view": "teamcity.agents",
+        "contents": "Connect to TeamCity to view agents.\n[Login to TeamCity](command:teamcity.login)\n[Login as Guest](command:teamcity.loginGuest)",
+        "when": "!teamcity.authenticated"
+      }
+    ],
+    "commands": [
+      {
+        "command": "teamcity.login",
+        "title": "Login",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.loginGuest",
+        "title": "Login as Guest",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.logout",
+        "title": "Logout",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.authStatus",
+        "title": "Auth Status",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.selectServer",
+        "title": "Select Server",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.refresh",
+        "title": "Refresh",
+        "category": "TeamCity",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "teamcity.filterRuns",
+        "title": "Filter Runs",
+        "category": "TeamCity",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "teamcity.openInBrowser",
+        "title": "Open in Browser",
+        "category": "TeamCity",
+        "icon": {
+          "light": "resources/icons/light/open-in-browser.svg",
+          "dark": "resources/icons/dark/open-in-browser.svg"
+        }
+      },
+      {
+        "command": "teamcity.viewLog",
+        "title": "View Build Log",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.viewFailedTests",
+        "title": "View Failed Tests",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.watchRun",
+        "title": "Watch Run",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.triggerRun",
+        "title": "Trigger Run",
+        "category": "TeamCity",
+        "icon": {
+          "light": "resources/icons/light/run.svg",
+          "dark": "resources/icons/dark/run.svg"
+        }
+      },
+      {
+        "command": "teamcity.remoteRun",
+        "title": "Remote Run (Local Changes)",
+        "category": "TeamCity",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "teamcity.cancelRun",
+        "title": "Cancel Run",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.restartRun",
+        "title": "Restart Run",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.pinRun",
+        "title": "Pin Run",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.unpinRun",
+        "title": "Unpin Run",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.downloadArtifacts",
+        "title": "Download Artifacts",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.approveQueued",
+        "title": "Approve",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.removeFromQueue",
+        "title": "Remove from Queue",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.moveToTop",
+        "title": "Move to Top",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.agentTerminal",
+        "title": "Open Agent Terminal",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.enableAgent",
+        "title": "Enable Agent",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.disableAgent",
+        "title": "Disable Agent",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.validatePipeline",
+        "title": "Validate Pipeline",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.pushPipeline",
+        "title": "Push Pipeline",
+        "category": "TeamCity"
+      },
+      {
+        "command": "teamcity.createPipeline",
+        "title": "Create Pipeline",
+        "category": "TeamCity"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "teamcity.refresh",
+          "when": "view =~ /^teamcity\\./",
+          "group": "navigation"
+        },
+        {
+          "command": "teamcity.filterRuns",
+          "when": "view == teamcity.runs",
+          "group": "navigation"
+        },
+        {
+          "command": "teamcity.triggerRun",
+          "when": "view == teamcity.runs",
+          "group": "navigation"
+        },
+        {
+          "command": "teamcity.remoteRun",
+          "when": "view == teamcity.pipelines",
+          "group": "navigation"
+        },
+        {
+          "command": "teamcity.createPipeline",
+          "when": "view == teamcity.pipelines",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "teamcity.openInBrowser",
+          "when": "viewItem =~ /webUrl/",
+          "group": "inline@1"
+        },
+        {
+          "command": "teamcity.viewLog",
+          "when": "viewItem =~ /run/",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "teamcity.watchRun",
+          "when": "viewItem =~ /run\\.running/",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "teamcity.cancelRun",
+          "when": "viewItem =~ /run\\.running/",
+          "group": "1_actions@3"
+        },
+        {
+          "command": "teamcity.restartRun",
+          "when": "viewItem =~ /run\\.finished/",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "teamcity.viewFailedTests",
+          "when": "viewItem =~ /run\\.finished/",
+          "group": "1_actions@3"
+        },
+        {
+          "command": "teamcity.pinRun",
+          "when": "viewItem =~ /run\\.finished/",
+          "group": "2_metadata@1"
+        },
+        {
+          "command": "teamcity.downloadArtifacts",
+          "when": "viewItem =~ /run\\.finished/",
+          "group": "2_metadata@2"
+        },
+        {
+          "command": "teamcity.remoteRun",
+          "when": "viewItem =~ /job|pipeline/",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "teamcity.triggerRun",
+          "when": "viewItem =~ /job|pipeline/",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "teamcity.validatePipeline",
+          "when": "viewItem =~ /pipeline/",
+          "group": "1_actions@3"
+        },
+        {
+          "command": "teamcity.approveQueued",
+          "when": "viewItem =~ /queued/",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "teamcity.removeFromQueue",
+          "when": "viewItem =~ /queued/",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "teamcity.moveToTop",
+          "when": "viewItem =~ /queued/",
+          "group": "1_actions@3"
+        },
+        {
+          "command": "teamcity.agentTerminal",
+          "when": "viewItem =~ /agent/",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "teamcity.enableAgent",
+          "when": "viewItem =~ /agent\\.disabled/",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "teamcity.disableAgent",
+          "when": "viewItem =~ /agent\\.enabled/",
+          "group": "1_actions@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "teamcity.openInBrowser",
+          "when": "false"
+        },
+        {
+          "command": "teamcity.approveQueued",
+          "when": "false"
+        },
+        {
+          "command": "teamcity.removeFromQueue",
+          "when": "false"
+        },
+        {
+          "command": "teamcity.moveToTop",
+          "when": "false"
+        },
+        {
+          "command": "teamcity.enableAgent",
+          "when": "false"
+        },
+        {
+          "command": "teamcity.disableAgent",
+          "when": "false"
+        },
+        {
+          "command": "teamcity.pinRun",
+          "when": "false"
+        },
+        {
+          "command": "teamcity.unpinRun",
+          "when": "false"
+        },
+        {
+          "command": "teamcity.filterRuns",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "TeamCity",
+      "properties": {
+        "teamcity.defaultServer": {
+          "type": "string",
+          "default": "https://cli.teamcity.com",
+          "description": "Default TeamCity server URL for new logins"
+        },
+        "teamcity.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the teamcity CLI binary (leave empty to auto-download)"
+        },
+        "teamcity.pollInterval": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "description": "How often to poll for status bar and favorites updates (seconds)"
+        },
+        "teamcity.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh tree views on status changes"
+        },
+        "teamcity.enableCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Validate/Run actions inline in .teamcity.yml files"
+        }
+      }
+    },
+    "yamlValidation": [
+      {
+        "fileMatch": [
+          "**/.teamcity.yml",
+          "**/.teamcity/*.yml"
+        ],
+        "url": "./resources/schema/teamcity-pipelines.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "vsce package",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.5.0"
+  }
+}
