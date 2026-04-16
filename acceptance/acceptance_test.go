@@ -93,6 +93,7 @@ func TestAcceptance(t *testing.T) {
 		"queue",
 		"alias",
 		"skill",
+		"analytics",
 	}
 
 	for _, dir := range dirs {

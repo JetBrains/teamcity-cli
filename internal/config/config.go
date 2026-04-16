@@ -36,9 +36,11 @@ type ServerConfig struct {
 }
 
 type Config struct {
-	DefaultServer string                  `mapstructure:"default_server"`
-	Servers       map[string]ServerConfig `mapstructure:"servers"`
-	Aliases       map[string]string       `mapstructure:"aliases"`
+	DefaultServer        string                  `mapstructure:"default_server"`
+	Servers              map[string]ServerConfig `mapstructure:"servers"`
+	Aliases              map[string]string       `mapstructure:"aliases"`
+	Analytics            *bool                   `mapstructure:"analytics,omitempty"`
+	AnalyticsNoticeShown bool                    `mapstructure:"analytics_notice_shown,omitempty"`
 }
 
 var (
@@ -261,6 +263,12 @@ func writeConfig() error {
 	}
 	w.Set("servers", servers)
 	w.Set("aliases", cfg.Aliases)
+	if cfg.Analytics != nil {
+		w.Set("analytics", *cfg.Analytics)
+	}
+	if cfg.AnalyticsNoticeShown {
+		w.Set("analytics_notice_shown", true)
+	}
 
 	if err := w.WriteConfigAs(configPath); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
@@ -290,6 +298,34 @@ func RemoveServer(serverURL string) error {
 
 func ConfigPath() string {
 	return configPath
+}
+
+// IsAnalyticsEnabled returns the user's persisted preference; defaults to true.
+func IsAnalyticsEnabled() bool {
+	if cfg == nil || cfg.Analytics == nil {
+		return true
+	}
+	return *cfg.Analytics
+}
+
+func SetAnalyticsEnabled(enabled bool) error {
+	cfg.Analytics = &enabled
+	return writeConfig()
+}
+
+func IsAnalyticsNoticeShown() bool {
+	if cfg == nil {
+		return false
+	}
+	return cfg.AnalyticsNoticeShown
+}
+
+func MarkAnalyticsNoticeShown() error {
+	if cfg.AnalyticsNoticeShown {
+		return nil
+	}
+	cfg.AnalyticsNoticeShown = true
+	return writeConfig()
 }
 
 // IsGuestAuth returns true if guest authentication is enabled via env var or server config

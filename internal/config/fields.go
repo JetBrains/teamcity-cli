@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var validKeys = []string{"default_server", "guest", "ro", "token_expiry"}
+var validKeys = []string{"default_server", "guest", "ro", "token_expiry", "analytics"}
 
 func IsValidKey(key string) bool {
 	return slices.Contains(validKeys, key)
@@ -22,6 +22,9 @@ func GetField(key, serverURL string) (string, error) {
 	}
 	if key == "default_server" {
 		return Get().DefaultServer, nil
+	}
+	if key == "analytics" {
+		return fmt.Sprintf("%t", IsAnalyticsEnabled()), nil
 	}
 	serverURL, err := resolveServerForConfig(serverURL)
 	if err != nil {
@@ -56,6 +59,13 @@ func SetField(key, value, serverURL string) error {
 		}
 		cfg.DefaultServer = normalized
 		return writeConfig()
+	}
+	if key == "analytics" {
+		b, err := parseBoolValue(value)
+		if err != nil {
+			return err
+		}
+		return SetAnalyticsEnabled(b)
 	}
 	serverURL, err := resolveServerForConfig(serverURL)
 	if err != nil {

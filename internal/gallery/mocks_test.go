@@ -134,19 +134,19 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		cmdtest.JSON(w, api.PipelineList{Count: 5, Pipelines: []api.Pipeline{
 			{ID: "MyApp_CI", Name: "CI", ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
 				HeadBuildType: &api.BuildTypeRef{ID: "MyApp_CI"},
-				Jobs: &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}},
+				Jobs:          &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}},
 			{ID: "MyApp_Release", Name: "Release", ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
 				HeadBuildType: &api.BuildTypeRef{ID: "MyApp_Release"},
-				Jobs: &api.PipelineJobs{Count: 4, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}, {ID: "stage", Name: "Stage"}, {ID: "prod", Name: "Production"}}}},
+				Jobs:          &api.PipelineJobs{Count: 4, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}, {ID: "stage", Name: "Stage"}, {ID: "prod", Name: "Production"}}}},
 			{ID: "MyApp_Nightly", Name: "Nightly", ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
 				HeadBuildType: &api.BuildTypeRef{ID: "MyApp_Nightly"},
-				Jobs: &api.PipelineJobs{Count: 3, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}, {ID: "perf", Name: "Performance"}}}},
+				Jobs:          &api.PipelineJobs{Count: 3, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}, {ID: "perf", Name: "Performance"}}}},
 			{ID: "Infra_Deploy", Name: "Infrastructure Deploy", ParentProject: &api.ProjectRef{ID: "Infrastructure", Name: "Infrastructure"},
 				HeadBuildType: &api.BuildTypeRef{ID: "Infra_Deploy"},
-				Jobs: &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "plan", Name: "Plan"}, {ID: "apply", Name: "Apply"}}}},
+				Jobs:          &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "plan", Name: "Plan"}, {ID: "apply", Name: "Apply"}}}},
 			{ID: "Frontend_CI", Name: "Frontend CI", ParentProject: &api.ProjectRef{ID: "MyApp_Frontend", Name: "Frontend"},
 				HeadBuildType: &api.BuildTypeRef{ID: "Frontend_CI"},
-				Jobs: &api.PipelineJobs{Count: 3, Job: []api.PipelineJob{{ID: "lint", Name: "Lint"}, {ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}},
+				Jobs:          &api.PipelineJobs{Count: 3, Job: []api.PipelineJob{{ID: "lint", Name: "Lint"}, {ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}},
 		}})
 	})
 
@@ -180,12 +180,12 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		"45229": {ID: 45229, Number: "830", Status: "", State: "running", BuildTypeID: "MyApp_Deploy", BranchName: "main",
 			BuildType: &api.BuildType{ID: "MyApp_Deploy", Name: "Deploy Staging", ProjectID: "MyApp", ProjectName: "My Application"},
 			Triggered: &api.Triggered{Type: "user", User: &api.User{Name: "Viktor Tiulpin"}},
-			Agent: &api.Agent{ID: 1, Name: "linux-agent-01"}, PercentageComplete: 67,
+			Agent:     &api.Agent{ID: 1, Name: "linux-agent-01"}, PercentageComplete: 67,
 			StartDate: tcTime(-1*time.Minute - 22*time.Second),
-			WebURL: ts.URL + "/viewLog.html?buildId=45229"},
+			WebURL:    ts.URL + "/viewLog.html?buildId=45229"},
 		"45233": {ID: 45233, Number: "", Status: "", State: "queued", BuildTypeID: "MyApp_Build",
 			BuildType: &api.BuildType{ID: "MyApp_Build", Name: "Build", ProjectID: "MyApp", ProjectName: "My Application"},
-			WebURL: ts.URL + "/viewLog.html?buildId=45233"},
+			WebURL:    ts.URL + "/viewLog.html?buildId=45233"},
 	}
 	ts.Handle("GET /app/rest/builds/id:", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -480,7 +480,7 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		cmdtest.JSON(w, api.Pipeline{ID: "MyApp_CI", Name: "CI",
 			ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
 			HeadBuildType: &api.BuildTypeRef{ID: "MyApp_CI"},
-			Jobs: &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}})
+			Jobs:          &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}})
 	})
 	ts.Handle("PUT /app/rest/pipelines/id:", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
