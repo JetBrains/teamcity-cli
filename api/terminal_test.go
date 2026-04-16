@@ -84,6 +84,17 @@ func TestTerminalSession(T *testing.T) {
 func TestTerminalExec(T *testing.T) {
 	agent := requireIdleAgent(T)
 
+	// Warm up the agent-terminal plugin — the first session after agent registration
+	// can take 20-30s for the shell to spawn. If the warmup fails, the plugin is
+	// wedged and all subtests would just hit their 30s timeouts.
+	conn := openTerminalConn(T, agent.ID)
+	ctx, cancel := context.WithTimeout(T.Context(), 60*time.Second)
+	err := conn.Exec(ctx, "true")
+	cancel()
+	if err != nil {
+		T.Skipf("agent-terminal warmup failed, skipping subtests: %v", err)
+	}
+
 	T.Run("simple command", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
 

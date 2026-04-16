@@ -42,6 +42,8 @@ func skipIfGuest(t *testing.T) {
 }
 
 // requireIdleAgent polls until an agent is ready and no builds are running/queued.
+// It checks both server-side queue state AND agent-level build state, because the
+// agent may still be processing a canceled build after the server considers it finished.
 func requireIdleAgent(t *testing.T) api.Agent {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Minute)
@@ -55,9 +57,6 @@ func requireIdleAgent(t *testing.T) api.Agent {
 		}
 		running, _ := client.GetBuilds(api.BuildsOptions{State: "running", Limit: 10})
 		queued, _ := client.GetBuildQueue(api.QueueOptions{Limit: 10})
-		if (running == nil || running.Count == 0) && (queued == nil || queued.Count == 0) {
-			return agents.Agents[0]
-		}
 		if running != nil {
 			for _, b := range running.Builds {
 				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "test cleanup")
@@ -68,7 +67,23 @@ func requireIdleAgent(t *testing.T) api.Agent {
 				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "test cleanup")
 			}
 		}
-		time.Sleep(2 * time.Second)
+		if (running != nil && running.Count > 0) || (queued != nil && queued.Count > 0) {
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		// Server says idle — now verify the agent itself isn't still processing.
+		// GetAgent returns the full agent with build field populated.
+		detail, err := client.GetAgent(agents.Agents[0].ID)
+		if err != nil {
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		if detail.Build != nil {
+			t.Logf("requireIdleAgent: agent %d still has build %d, waiting...", detail.ID, detail.Build.ID)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		return *detail
 	}
 	t.Fatal("no idle agent available within 2m")
 	return api.Agent{}
@@ -796,21 +811,44 @@ teamcity auth status
 		require.NoError(T, err)
 	}
 
-	build, err := client.RunBuild(configID, api.RunBuildOptions{})
-	require.NoError(T, err)
-	buildID := fmt.Sprintf("%d", build.ID)
-	T.Logf("Started build #%d", build.ID)
-	T.Cleanup(func() { cancelAndWait(T, buildID) })
+	// Retry up to 3 times — the testcontainers agent can transiently reject builds
+	// with "Could not connect to build agent" or "Agent runs unknown build" when it's
+	// still cleaning up from a prior test.
+	var buildLog string
+	var build *api.Build
+	for attempt := range 3 {
+		if attempt > 0 {
+			T.Logf("Retrying (attempt %d): rebooting agent and waiting for idle...", attempt+1)
+			agents, _ := client.GetAgents(api.AgentsOptions{Authorized: true, Connected: true, Limit: 1})
+			if len(agents.Agents) > 0 {
+				_ = client.RebootAgent(T.Context(), agents.Agents[0].ID, true)
+			}
+			requireIdleAgent(T)
+		}
 
-	ctx, cancel := context.WithTimeout(T.Context(), 3*time.Minute)
-	defer cancel()
+		queued, err := client.RunBuild(configID, api.RunBuildOptions{})
+		require.NoError(T, err)
+		buildID := fmt.Sprintf("%d", queued.ID)
+		T.Logf("Started build #%d", queued.ID)
+		T.Cleanup(func() { cancelAndWait(T, buildID) })
 
-	build, err = client.WaitForBuild(ctx, buildID, api.WaitForBuildOptions{Interval: 3 * time.Second})
-	require.NoError(T, err)
+		ctx, cancel := context.WithTimeout(T.Context(), 3*time.Minute)
+		build, err = client.WaitForBuild(ctx, buildID, api.WaitForBuildOptions{Interval: 3 * time.Second})
+		cancel()
+		require.NoError(T, err)
 
-	buildLog, err := client.GetBuildLog(buildID)
-	require.NoError(T, err)
-	T.Logf("Build log:\n%s", buildLog)
+		buildLog, err = client.GetBuildLog(buildID)
+		require.NoError(T, err)
+		T.Logf("Build log:\n%s", buildLog)
+
+		// Transient agent failures: server cancels the build and re-queues it
+		if strings.Contains(buildLog, "Could not connect to build agent") ||
+			strings.Contains(buildLog, "Agent runs unknown build") {
+			T.Logf("Agent transient failure, will retry...")
+			continue
+		}
+		break
+	}
 
 	assert.Contains(T, buildLog, "Build-level credentials", "CLI should use build-level auth")
 	assert.Equal(T, "SUCCESS", build.Status)

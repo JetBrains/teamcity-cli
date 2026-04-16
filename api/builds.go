@@ -190,7 +190,7 @@ func (c *Client) WaitForBuild(ctx context.Context, buildID string, opts WaitForB
 		}
 
 		if bs.State == "finished" {
-			return c.GetBuild(id)
+			return c.getFinishedBuild(ctx, id)
 		}
 
 		select {
@@ -199,6 +199,27 @@ func (c *Client) WaitForBuild(ctx context.Context, buildID string, opts WaitForB
 		case <-time.After(interval):
 		}
 	}
+}
+
+// getFinishedBuild fetches the full build after state transitions to "finished".
+// TeamCity briefly reports status as "UNKNOWN" during post-processing; this retries
+// a few times to let the final status (SUCCESS/FAILURE/etc.) settle.
+func (c *Client) getFinishedBuild(ctx context.Context, id string) (*Build, error) {
+	for range 10 {
+		build, err := c.GetBuild(id)
+		if err != nil {
+			return nil, err
+		}
+		if build.Status != "UNKNOWN" {
+			return build, nil
+		}
+		select {
+		case <-ctx.Done():
+			return build, nil // return what we have rather than a bare context error
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+	return c.GetBuild(id) // final attempt
 }
 
 // RunBuildOptions represents options for running a build
