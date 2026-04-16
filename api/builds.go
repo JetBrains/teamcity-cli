@@ -64,7 +64,7 @@ func currentUserFavoriteBuildsTagLocator() *Locator {
 			Add("ignoreCase", "false"))
 }
 
-// GetBuilds returns a list of builds
+// GetBuilds returns a list of builds, automatically following pagination.
 func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 	locator := opts.Locator().
 		AddIntDefault("count", opts.Limit, 30)
@@ -73,19 +73,25 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 	if len(buildFields) == 0 {
 		buildFields = BuildFields.Default
 	}
-	fields := fmt.Sprintf("count,build(%s)", ToAPIFields(buildFields))
+	fields := fmt.Sprintf("count,nextHref,build(%s)", ToAPIFields(buildFields))
 	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
 
-	var result BuildList
-	if err := c.get(path, &result); err != nil {
+	builds, err := collectPages(c, path, opts.Limit, func(p string) ([]Build, string, error) {
+		var page BuildList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Builds, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	for i := range result.Builds {
-		cleanupBuildTriggered(&result.Builds[i])
+	for i := range builds {
+		cleanupBuildTriggered(&builds[i])
 	}
 
-	return &result, nil
+	return &BuildList{Count: len(builds), Builds: builds}, nil
 }
 
 // cleanupBuildTriggered removes empty User objects from build trigger info
@@ -400,24 +406,15 @@ func (c *Client) GetBuildSnapshotDependencies(buildID string) (*BuildList, error
 	fields := "count,nextHref,build(id,number,status,statusText,state,buildTypeId,buildType(id,name))"
 	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(fields))
 
-	var combined BuildList
-	for path != "" {
+	builds, err := collectPages(c, path, 0, func(p string) ([]Build, string, error) {
 		var page BuildList
-		if err := c.get(path, &page); err != nil {
-			return nil, err
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
 		}
-		combined.Builds = append(combined.Builds, page.Builds...)
-		combined.Count += page.Count
-		path = page.NextHref
-		if next, err := url.Parse(path); err == nil && next.IsAbs() {
-			path = next.RequestURI()
-		}
-		if base, err := url.Parse(c.BaseURL); err == nil && len(base.Path) > 1 {
-			path = strings.TrimPrefix(path, base.Path)
-		}
-		if c.APIVersion != "" && strings.HasPrefix(path, "/app/rest/") {
-			path = strings.Replace(path, "/app/rest/"+c.APIVersion+"/", "/app/rest/", 1)
-		}
+		return page.Builds, page.NextHref, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return &combined, nil
+	return &BuildList{Count: len(builds), Builds: builds}, nil
 }

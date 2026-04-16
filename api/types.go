@@ -28,6 +28,7 @@ type Project struct {
 // ProjectList represents a list of projects
 type ProjectList struct {
 	Count    int       `json:"count"`
+	NextHref string    `json:"nextHref,omitempty"`
 	Projects []Project `json:"project"`
 }
 
@@ -46,6 +47,7 @@ type BuildType struct {
 // BuildTypeList represents a list of build configurations
 type BuildTypeList struct {
 	Count      int         `json:"count"`
+	NextHref   string      `json:"nextHref,omitempty"`
 	BuildTypes []BuildType `json:"buildType"`
 }
 
@@ -125,8 +127,9 @@ type Pool struct {
 
 // PoolList represents a list of agent pools
 type PoolList struct {
-	Count int    `json:"count"`
-	Pools []Pool `json:"agentPool"`
+	Count    int    `json:"count"`
+	NextHref string `json:"nextHref,omitempty"`
+	Pools    []Pool `json:"agentPool"`
 }
 
 // Compatibility represents build type compatibility info
@@ -164,9 +167,10 @@ type QueuedBuild struct {
 
 // BuildQueue represents the build queue
 type BuildQueue struct {
-	Count  int           `json:"count"`
-	Href   string        `json:"href"`
-	Builds []QueuedBuild `json:"build"`
+	Count    int           `json:"count"`
+	Href     string        `json:"href"`
+	NextHref string        `json:"nextHref,omitempty"`
+	Builds   []QueuedBuild `json:"build"`
 }
 
 // TriggerBuildRequest represents a request to trigger a build
@@ -394,6 +398,7 @@ type CloudProfile struct {
 
 type CloudProfileList struct {
 	Count    int            `json:"count"`
+	NextHref string         `json:"nextHref,omitempty"`
 	Profiles []CloudProfile `json:"cloudProfile"`
 }
 
@@ -407,8 +412,9 @@ type CloudImage struct {
 }
 
 type CloudImageList struct {
-	Count  int          `json:"count"`
-	Images []CloudImage `json:"cloudImage"`
+	Count    int          `json:"count"`
+	NextHref string       `json:"nextHref,omitempty"`
+	Images   []CloudImage `json:"cloudImage"`
 }
 
 // CloudInstance represents a running cloud instance
@@ -424,6 +430,7 @@ type CloudInstance struct {
 
 type CloudInstanceList struct {
 	Count     int             `json:"count"`
+	NextHref  string          `json:"nextHref,omitempty"`
 	Instances []CloudInstance `json:"cloudInstance"`
 }
 
@@ -449,8 +456,9 @@ type VcsRoot struct {
 
 // VcsRootList represents a list of VCS roots
 type VcsRootList struct {
-	Count   int       `json:"count"`
-	VcsRoot []VcsRoot `json:"vcs-root"`
+	Count    int       `json:"count"`
+	NextHref string    `json:"nextHref,omitempty"`
+	VcsRoot  []VcsRoot `json:"vcs-root"`
 }
 
 // VcsRootsOptions represents options for listing VCS roots
@@ -541,6 +549,7 @@ type PipelineJob struct {
 // PipelineList represents a list of pipelines
 type PipelineList struct {
 	Count     int        `json:"count"`
+	NextHref  string     `json:"nextHref,omitempty"`
 	Pipelines []Pipeline `json:"pipeline,omitempty"`
 }
 
