@@ -926,6 +926,41 @@ func TestWaitForBuild(T *testing.T) {
 		assert.NotEmpty(t, progressCalls)
 	})
 
+	T.Run("retries when finished status is UNKNOWN", func(t *testing.T) {
+		t.Parallel()
+
+		fetchCount := 0
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+
+			if r.URL.Query().Get("fields") == "state,status,percentageComplete" {
+				json.NewEncoder(w).Encode(buildState{State: "finished", Status: "UNKNOWN"})
+				return
+			}
+
+			// Full build fetch — first two return UNKNOWN, third returns SUCCESS
+			fetchCount++
+			status := "UNKNOWN"
+			if fetchCount >= 3 {
+				status = "SUCCESS"
+			}
+			json.NewEncoder(w).Encode(Build{
+				ID:     42,
+				Number: "7",
+				State:  "finished",
+				Status: status,
+			})
+		})
+
+		build, err := client.WaitForBuild(t.Context(), "42", WaitForBuildOptions{
+			Interval: 10 * time.Millisecond,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, "SUCCESS", build.Status, "should retry until status settles")
+		assert.GreaterOrEqual(t, fetchCount, 3)
+	})
+
 	T.Run("respects context cancellation", func(t *testing.T) {
 		t.Parallel()
 
