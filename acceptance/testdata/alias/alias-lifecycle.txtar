@@ -7,13 +7,11 @@ stdout 'Added alias'
 exec teamcity rl 3 --no-input
 ! stderr 'Error'
 
-# List as JSON
 exec teamcity alias list --json --no-input
 stdout '"name"'
 stdout '"expansion"'
 stdout 'rl'
 
-# Delete
 exec teamcity alias delete rl --no-input
 stdout 'Deleted alias'
 

@@ -5,7 +5,6 @@ stdout 'ID: _Root'
 stdout 'View in browser:'
 ! stderr 'Error'
 
-# --json
 exec teamcity project view _Root --json --no-input
 stdout '"id"'
 stdout '"name"'

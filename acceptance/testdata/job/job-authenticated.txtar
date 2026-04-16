@@ -4,13 +4,11 @@
 exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 
-# param list
 exec teamcity job param list $JOB_ID --no-input
 stdout 'NAME'
 stdout 'VALUE'
 ! stderr 'Error'
 
-# param list --json
 exec teamcity job param list $JOB_ID --json --no-input
 stdout '"count"'
 ! stderr 'Error'

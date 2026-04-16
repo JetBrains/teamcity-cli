@@ -10,7 +10,6 @@ exec teamcity skill update --agent claude-code --project --no-input
 stdout 'up to date'
 ! stderr 'Error'
 
-# Remove the skill
 exec teamcity skill remove --agent claude-code --project --no-input
 stdout 'Removed'
 ! stderr 'Error'

@@ -7,7 +7,6 @@ exec teamcity run artifacts $BUILD_ID --no-input
 stdout '(ARTIFACTS|No artifacts)'
 ! stderr 'Error'
 
-# --json
 exec teamcity run artifacts $BUILD_ID --json --no-input
 stdout '"count"'
 ! stderr 'Error'
@@ -16,7 +15,6 @@ stdout '"count"'
 exec teamcity run artifacts $BUILD_ID --path . --no-input
 ! stderr 'Error'
 
-# download to temp dir
 exec teamcity run download $BUILD_ID -o $WORK/artifacts --no-input
 stdout '(downloaded|No artifacts)'
 ! stderr 'Error'

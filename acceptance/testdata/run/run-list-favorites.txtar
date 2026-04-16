@@ -1,7 +1,6 @@
 # List favorite builds for the current user.
 [!has_token] skip 'requires authentication token'
 
-# --favorites returns builds
 exec teamcity run list --favorites --limit 5 --no-input
 ! stderr 'Error'
 stdout 'CLI_CiCd'

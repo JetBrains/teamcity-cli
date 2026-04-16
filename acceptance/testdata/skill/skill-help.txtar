@@ -5,7 +5,6 @@ stdout 'install'
 stdout 'update'
 stdout 'remove'
 
-# install subcommand help
 exec teamcity skill install --help --no-input
 stdout 'agent'
 ! stderr 'Error'

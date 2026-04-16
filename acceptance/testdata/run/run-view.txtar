@@ -8,7 +8,6 @@ stdout 'Triggered by'
 stdout 'View in browser:'
 ! stderr 'Error'
 
-# --json
 exec teamcity run view $BUILD_ID --json --no-input
 stdout '"id"'
 stdout '"status"'

@@ -10,12 +10,10 @@ stdout '⬡'
 stdout 'passed'
 ! stderr 'Error'
 
-# Depth limit
 exec teamcity run tree $BUILD_ID --depth 1 --no-input
 stdout '⬡'
 ! stderr 'Error'
 
-# JSON output
 exec teamcity run tree $BUILD_ID --json --no-input
 stdout '"id"'
 stdout '"name"'

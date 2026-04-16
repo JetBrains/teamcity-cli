@@ -4,21 +4,18 @@ exec teamcity pool list --no-input
 stdout '.'
 ! stderr 'Error'
 
-# --json
 exec teamcity pool list --json --no-input
 stdout '"count"'
 ! stderr 'Error'
 
-# --plain
 exec teamcity pool list --plain --no-input
 stdout '.'
 ! stderr 'Error'
 
-# --plain --no-header
 exec teamcity pool list --plain --no-header --no-input
 ! stderr 'Error'
 
-# --json=f1,f2 field selection accepts valid fields
+# --json field selection
 exec teamcity pool list --json=id,name --no-input
 stdout '"count"'
 ! stderr 'Error'

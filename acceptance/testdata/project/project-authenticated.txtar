@@ -27,19 +27,15 @@ exec teamcity project param delete Sandbox acceptance.test.param --no-input
 stdout 'Deleted parameter'
 ! stderr 'Error'
 
-# token put
 exec teamcity project token put Sandbox 'acceptance-secret-$RANDOM_STRING' --no-input
 stdout '.'
 ! stderr 'Error'
 
-# settings status --json
 exec teamcity project settings status $PROJECT_ID --json --no-input
 ! stderr 'Error'
 
-# settings export --kotlin
 exec teamcity project settings export $PROJECT_ID --kotlin -o $WORK/settings-kotlin.zip --no-input
 ! stderr 'Error'
 
-# settings export --xml
 exec teamcity project settings export $PROJECT_ID --xml -o $WORK/settings-xml.zip --no-input
 ! stderr 'Error'

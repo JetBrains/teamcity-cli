@@ -2,7 +2,6 @@
 
 [!has_token] skip 'requires authentication token'
 
-# List VCS roots
 exec teamcity project vcs list --project CLI --no-input
 stdout 'ID'
 stdout 'NAME'
@@ -10,7 +9,6 @@ stdout 'TYPE'
 stdout 'PROJECT'
 ! stderr 'Error'
 
-# List --json
 exec teamcity project vcs list --project CLI --json --no-input
 stdout '"count"'
 stdout '"id"'
@@ -23,7 +21,6 @@ stdout '"id"'
 stdout '"name"'
 ! stderr 'Error'
 
-# List --plain
 exec teamcity project vcs list --project CLI --plain --no-input
 stdout '.'
 ! stderr 'Error'
@@ -37,14 +34,12 @@ stdout 'ID'
 exec teamcity api '/app/rest/vcs-roots?locator=affectedProject:CLI,count:1&fields=vcs-root(id)' --raw --no-input
 extract '"id":"([^"]+)"' VCS_ROOT_ID
 
-# View VCS root
 exec teamcity project vcs view $VCS_ROOT_ID --no-input
 stdout 'ID:'
 stdout 'Type:'
 stdout 'Project:'
 ! stderr 'Error'
 
-# View --json
 exec teamcity project vcs view $VCS_ROOT_ID --json --no-input
 stdout '"id"'
 stdout '"properties"'

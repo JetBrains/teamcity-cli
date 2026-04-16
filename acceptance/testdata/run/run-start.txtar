@@ -4,14 +4,12 @@
 exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 
-# Start and cancel
 exec teamcity run start $JOB_ID --json --no-input
 extract '"id":\s*(\d+)' BUILD_ID
 
 exec teamcity run cancel $BUILD_ID --yes --no-input
 stdout 'Cancel'
 
-# --json output fields
 exec teamcity run start $JOB_ID --json --no-input
 stdout '"id"'
 stdout '"state"'
@@ -19,7 +17,6 @@ stdout '"state"'
 extract '"id":\s*(\d+)' BUILD_ID
 exec teamcity run cancel $BUILD_ID --yes --no-input
 
-# --branch
 exec teamcity run start $JOB_ID --branch main --json --no-input
 stdout '"branchName"'
 
@@ -31,7 +28,6 @@ exec teamcity run start $JOB_ID --dry-run --no-input
 stdout 'dry-run'
 ! stderr 'Error'
 
-# --comment and --tag
 exec teamcity run start $JOB_ID --comment 'acceptance test' --tag acceptance-$RANDOM_STRING --json --no-input
 stdout '"id"'
 

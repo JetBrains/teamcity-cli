@@ -8,12 +8,10 @@ exec teamcity run log $BUILD_ID --no-input
 stdout '.'
 ! stderr 'Error'
 
-# --raw
 exec teamcity run log $BUILD_ID --raw --no-input
 stdout '.'
 ! stderr 'Error'
 
-# --failed
 exec teamcity run log $BUILD_ID --failed --no-input
 ! stderr 'Error'
 

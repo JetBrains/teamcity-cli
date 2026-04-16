@@ -8,7 +8,6 @@ exec teamcity run watch $BUILD_ID --quiet --timeout 30s --no-input
 stdout 'succeeded'
 ! stderr 'Error'
 
-# --interval flag
 exec teamcity run watch $BUILD_ID --interval 1 --timeout 30s --no-input
 stdout 'succeeded'
 ! stderr 'Error'

@@ -9,7 +9,6 @@ stdout 'Project:'
 stdout 'View in browser:'
 ! stderr 'Error'
 
-# --json
 exec teamcity job view $JOB_ID --json --no-input
 stdout '"id"'
 stdout '"name"'
