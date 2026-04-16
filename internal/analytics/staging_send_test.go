@@ -37,6 +37,7 @@ func TestStagingRealSend(t *testing.T) {
 
 	dir := t.TempDir()
 	logger, err := fus.NewLogger(
+		t.Context(),
 		fus.RecorderConfig{
 			RecorderID:        RecorderID,
 			RecorderVersion:   RecorderVersion,

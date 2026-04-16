@@ -57,6 +57,7 @@ func TestPipeline_EndToEnd(t *testing.T) {
 		t.Fatalf("NewValidator: %v", err)
 	}
 	logger, err := fus.NewLogger(
+		t.Context(),
 		fus.RecorderConfig{
 			RecorderID:      RecorderID,
 			RecorderVersion: RecorderVersion,
