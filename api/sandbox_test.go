@@ -49,8 +49,17 @@ func TestSandboxGuestAuth(T *testing.T) {
 		}
 	}`), 0o644))
 
+	// sandbox-runtime sets HTTPS_PROXY=localhost but may bind IPv4-only → force 127.0.0.1
+	wrapper := filepath.Join(T.TempDir(), "proxy-fix.sh")
+	require.NoError(T, os.WriteFile(wrapper, []byte(`#!/bin/sh
+HTTPS_PROXY=$(echo "$HTTPS_PROXY" | sed 's/localhost/127.0.0.1/g; s/\[::1\]/127.0.0.1/g')
+HTTP_PROXY=$(echo "$HTTP_PROXY" | sed 's/localhost/127.0.0.1/g; s/\[::1\]/127.0.0.1/g')
+export HTTPS_PROXY HTTP_PROXY
+exec "$@"
+`), 0o755))
+
 	sandboxCmd := func(env []string, args ...string) *exec.Cmd {
-		full := []string{"@anthropic-ai/sandbox-runtime", "-s", settings}
+		full := []string{"@anthropic-ai/sandbox-runtime", "-s", settings, wrapper}
 		full = append(full, args...)
 		cmd := exec.Command(npx, full...)
 		cmd.Env = append(os.Environ(), env...)
