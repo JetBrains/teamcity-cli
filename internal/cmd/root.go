@@ -88,6 +88,7 @@ Report issues:  https://jb.gg/tc/issues`,
 		if cmd.Name() != "update" && f.UpdateNotice == nil {
 			f.UpdateNotice = update.CheckInBackground(f.Printer.ErrOut, f.Quiet)
 		}
+		setupAnalytics(f)
 	}
 
 	addGrouped(cmd, "core", run.NewCmd(f), job.NewCmd(f), project.NewCmd(f), pipeline.NewCmd(f))
@@ -109,6 +110,7 @@ Report issues:  https://jb.gg/tc/issues`,
 
 func Execute() error {
 	f := cmdutil.NewFactory()
+	f.StartTime = time.Now()
 	rootCmd := buildRootCmd(f)
 
 	RegisterAliases(rootCmd, f)
@@ -118,6 +120,7 @@ func Execute() error {
 	if f.UpdateNotice != nil {
 		f.UpdateNotice()
 	}
+	defer trackAndFlushAnalytics(f, executedCmd, err)
 	if !f.JSONOutput && executedCmd != nil {
 		if jsonFlag := executedCmd.Flags().Lookup("json"); jsonFlag != nil && jsonFlag.Changed {
 			if jsonFlag.Value.Type() != "bool" || jsonFlag.Value.String() != "false" {

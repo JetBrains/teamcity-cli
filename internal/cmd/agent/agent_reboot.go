@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -43,6 +44,7 @@ func runAgentMove(f *cmdutil.Factory, nameOrID string, poolID int) error {
 		return fmt.Errorf("failed to move agent: %w", err)
 	}
 
+	f.Analytics.Track(analytics.GroupAgent, analytics.EventStateChanged, map[string]any{"action": analytics.AgentActionMove})
 	f.Printer.Success("Moved agent %s to pool %d", agentName, poolID)
 	return nil
 }
@@ -114,6 +116,8 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 	if err := client.RebootAgent(ctx, agentID, opts.graceful); err != nil {
 		return fmt.Errorf("failed to reboot agent: %w", err)
 	}
+
+	f.Analytics.Track(analytics.GroupAgent, analytics.EventStateChanged, map[string]any{"action": analytics.AgentActionReboot})
 
 	if opts.graceful {
 		f.Printer.Success("Reboot scheduled for %s", agentName)

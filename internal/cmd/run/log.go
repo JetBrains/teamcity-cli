@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
@@ -228,6 +229,20 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 		}
 		return browser.OpenURL(build.WebURL + "?buildTab=buildLog")
 	}
+
+	mode := analytics.LogModeFull
+	switch {
+	case opts.failed:
+		mode = analytics.LogModeFailed
+	case opts.follow:
+		mode = analytics.LogModeFollow
+	case opts.raw:
+		mode = analytics.LogModeRaw
+	}
+	f.Analytics.Track(analytics.GroupBuild, analytics.EventLogViewed, map[string]any{
+		"mode":        mode,
+		"is_from_job": opts.job != "",
+	})
 
 	if opts.failed {
 		return runLogFailed(f, client, runID, opts.json)
