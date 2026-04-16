@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/spf13/cobra"
@@ -55,6 +56,7 @@ func runPipelinePush(f *cmdutil.Factory, id, file string) error {
 		return fmt.Errorf("failed to update pipeline %s: %w", id, err)
 	}
 
+	f.Analytics.Track(analytics.GroupPipeline, analytics.EventSynced, map[string]any{"action": analytics.PipelineActionPush})
 	f.Printer.Success("Updated pipeline %s", id)
 	return nil
 }

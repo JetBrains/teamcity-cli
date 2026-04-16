@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/spf13/cobra"
@@ -50,6 +51,8 @@ func runPipelinePull(f *cmdutil.Factory, id string, opts *pullOptions) error {
 			"Edit .teamcity.yml in your repo directly",
 		)
 	}
+
+	f.Analytics.Track(analytics.GroupPipeline, analytics.EventSynced, map[string]any{"action": analytics.PipelineActionPull})
 
 	if opts.output != "" {
 		if err := os.WriteFile(opts.output, []byte(yaml), 0644); err != nil {

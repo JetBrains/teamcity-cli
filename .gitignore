@@ -145,3 +145,6 @@ docs-out/
 # OS
 .DS_Store
 .teamcity/target/
+
+# Generated from internal/analytics/scheme.go via scripts/generate-fus-schema.go
+/internal/analytics/schema.json
