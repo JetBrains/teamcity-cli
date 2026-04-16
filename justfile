@@ -23,21 +23,24 @@ lint:
 install:
     go install ./tc
 
+# gotestsum format: "pkgname" locally, override with GOTESTSUM_FORMAT=dots etc.
+gotestsum_format := env("GOTESTSUM_FORMAT", "pkgname")
+
 # Run unit tests
 unit:
-    go test -race -shuffle=on -v ./internal/config ./internal/errors ./internal/output ./internal/cmd
+    gotestsum --format {{gotestsum_format}} -- -race -shuffle=on ./internal/config ./internal/errors ./internal/output ./internal/cmd
 
 # Run all tests with coverage
 test:
-    go test -race -shuffle=on -v ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
+    gotestsum --format {{gotestsum_format}} -- -race -shuffle=on ./... -timeout 15m -tags=integration -coverprofile=coverage.out -coverpkg=./...
 
 # Run acceptance tests against cli.teamcity.com (guest auth)
 acceptance:
-    go test -v -tags=acceptance ./acceptance -timeout 10m
+    gotestsum --format {{gotestsum_format}} -- -tags=acceptance ./acceptance -timeout 10m
 
 # Run sandbox integration tests (requires npx, bubblewrap+socat on Linux)
 sandbox:
-    go test -v -tags=sandbox ./api -run TestSandbox -timeout 2m
+    gotestsum --format {{gotestsum_format}} -- -tags=sandbox ./api -run TestSandbox -timeout 2m
 
 # Remove build artifacts
 [confirm]
