@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -64,7 +65,7 @@ func runPipelineValidate(f *cmdutil.Factory, file string, opts *validateOptions)
 		return fmt.Errorf("invalid YAML in %s: %w", file, err)
 	}
 
-	schemaData, err := loadSchema(f, opts)
+	schemaData, usedCache, err := loadSchema(f, opts)
 	if err != nil {
 		return err
 	}
@@ -73,6 +74,13 @@ func runPipelineValidate(f *cmdutil.Factory, file string, opts *validateOptions)
 	if err != nil {
 		return fmt.Errorf("schema validation failed: %w", err)
 	}
+
+	f.Analytics.Track(analytics.GroupPipeline, analytics.EventValidated, map[string]any{
+		"error_count":        len(validationErrs),
+		"warning_count":      0,
+		"is_from_file":       true,
+		"used_cached_schema": usedCache,
+	})
 
 	if len(validationErrs) == 0 {
 		f.Printer.Success("%s is valid", file)
@@ -96,19 +104,20 @@ func runPipelineValidate(f *cmdutil.Factory, file string, opts *validateOptions)
 	return &cmdutil.ExitError{Code: 1}
 }
 
-func loadSchema(f *cmdutil.Factory, opts *validateOptions) ([]byte, error) {
+func loadSchema(f *cmdutil.Factory, opts *validateOptions) ([]byte, bool, error) {
 	if opts.schemaPath != "" {
-		return os.ReadFile(opts.schemaPath)
+		data, err := os.ReadFile(opts.schemaPath)
+		return data, false, err
 	}
 
 	client, err := f.Client()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	c, ok := client.(*api.Client)
 	if !ok {
-		return nil, errors.New("schema caching requires a real API client")
+		return nil, false, errors.New("schema caching requires a real API client")
 	}
 
 	return fetchOrCacheSchema(c, opts.refreshSchema)

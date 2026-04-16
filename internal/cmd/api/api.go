@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -159,15 +160,48 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	}
 
 	if opts.paginate {
-		return runAPIPaginated(f.Printer, client, endpoint, headers, opts)
+		err := runAPIPaginated(f.Printer, client, endpoint, headers, opts)
+		f.Analytics.TrackAPI(analytics.APIEvent{
+			Method:     opts.method,
+			Endpoint:   endpoint,
+			StatusCode: statusCodeForTracking(err, http.StatusOK),
+			Paginated:  true,
+			Slurp:      opts.slurp,
+			HadFields:  len(opts.fields) > 0,
+			HadInput:   opts.input != "",
+		})
+		return err
 	}
 
 	resp, err := client.RawRequest(context.Background(), opts.method, endpoint, body, headers)
+	f.Analytics.TrackAPI(analytics.APIEvent{
+		Method:     opts.method,
+		Endpoint:   endpoint,
+		StatusCode: statusCodeForTracking(err, statusCodeOf(resp)),
+		Paginated:  false,
+		Slurp:      false,
+		HadFields:  len(opts.fields) > 0,
+		HadInput:   opts.input != "",
+	})
 	if err != nil {
 		return err
 	}
 
 	return outputAPIResponse(f.Printer, resp.Body, resp.StatusCode, resp.Headers, opts)
+}
+
+func statusCodeOf(r *api.RawResponse) int {
+	if r == nil {
+		return 0
+	}
+	return r.StatusCode
+}
+
+func statusCodeForTracking(err error, observed int) int {
+	if err != nil && observed == 0 {
+		return 0
+	}
+	return observed
 }
 
 func runAPIPaginated(p *output.Printer, client api.ClientInterface, endpoint string, headers map[string]string, opts *apiOptions) error {

@@ -5,10 +5,13 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -73,7 +76,9 @@ build-level credentials from the build properties file.`,
 	return cmd
 }
 
-func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage bool, noBrowser bool) error {
+func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage bool, noBrowser bool) (err error) {
+	defer func() { trackLoginOutcome(f, analytics.AuthMethodToken, err) }()
+
 	isInteractive := f.IsInteractive()
 
 	p := f.Printer
@@ -186,6 +191,8 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
+	cacheServerInfo(serverURL, client)
+
 	p.Success("Logged in as %s", output.Cyan(user.Name))
 	if insecureFallback {
 		_, _ = fmt.Fprintf(p.Out, "%s Token stored in plain text at %s\n", output.Yellow("!"), config.ConfigPath())
@@ -201,7 +208,9 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 	return nil
 }
 
-func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
+func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) (err error) {
+	defer func() { trackLoginOutcome(f, analytics.AuthMethodGuest, err) }()
+
 	if token != "" {
 		return api.Validation(
 			"cannot use --guest with --token",
@@ -245,6 +254,8 @@ func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 	if err := config.SetGuestServer(serverURL); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
+
+	_ = analytics.SaveServerInfo(serverURL, formatServerVersion(server), classifyServerType(server))
 
 	p.Success("Guest access to %s", output.Cyan(serverURL))
 	_, _ = fmt.Fprintf(p.Out, "  Server: TeamCity %d.%d (build %s)\n", server.VersionMajor, server.VersionMinor, server.BuildNumber)
@@ -299,4 +310,64 @@ func runPkceLogin(p *output.Printer, serverURL string) (*api.TokenResponse, erro
 	case <-time.After(authCodeLifetime):
 		return nil, fmt.Errorf("timeout waiting for callback (exceeded %v)", authCodeLifetime)
 	}
+}
+
+// trackLoginOutcome emits one login.completed event (and login.abandoned on user interrupt).
+func trackLoginOutcome(f *cmdutil.Factory, method string, err error) {
+	if errors.Is(err, terminal.InterruptErr) {
+		f.Analytics.Track(analytics.GroupAuth, analytics.EventLoginAbandoned, map[string]any{
+			"method":      method,
+			"failed_step": analytics.AuthStepToken,
+		})
+		return
+	}
+	f.Analytics.Track(analytics.GroupAuth, analytics.EventLoginCompleted, map[string]any{
+		"method":     method,
+		"is_success": err == nil,
+		"error_type": loginErrorType(err),
+	})
+}
+
+// cacheServerInfo best-effort persists TC version + cloud/on-prem for the analytics session event.
+// Failures are silently ignored — telemetry must never block login.
+func cacheServerInfo(serverURL string, client *api.Client) {
+	server, err := client.GetServer()
+	if err != nil {
+		return
+	}
+	_ = analytics.SaveServerInfo(serverURL, formatServerVersion(server), classifyServerType(server))
+}
+
+func formatServerVersion(s *api.Server) string {
+	if s.VersionMajor == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d.%d", s.VersionMajor, s.VersionMinor)
+}
+
+func classifyServerType(s *api.Server) string {
+	if strings.HasPrefix(s.InternalID, "cloud-") {
+		return analytics.ServerTypeCloud
+	}
+	return analytics.ServerTypeOnPrem
+}
+
+func loginErrorType(err error) string {
+	if err == nil {
+		return analytics.ErrorNone
+	}
+	var ue api.UserError
+	if errors.As(err, &ue) {
+		switch ue.Category() {
+		case api.CatAuth:
+			return analytics.ErrorAuth
+		case api.CatNetwork:
+			return analytics.ErrorNetwork
+		case api.CatPermission:
+			return analytics.ErrorPermission
+		case api.CatValidation:
+			return analytics.ErrorValidation
+		}
+	}
+	return analytics.ErrorInternal
 }

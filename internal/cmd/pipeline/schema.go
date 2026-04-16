@@ -69,21 +69,22 @@ func saveSchemaCache(serverURL string, schema []byte) error {
 	return os.WriteFile(path, schema, 0600)
 }
 
-func fetchOrCacheSchema(client *api.Client, refresh bool) ([]byte, error) {
+// fetchOrCacheSchema returns the schema and reports whether it came from the on-disk cache.
+func fetchOrCacheSchema(client *api.Client, refresh bool) ([]byte, bool, error) {
 	if !refresh {
 		if cached, err := loadCachedSchema(client.BaseURL); err == nil {
-			return cached, nil
+			return cached, true, nil
 		}
 	}
 
 	schema, err := client.GetPipelineSchema()
 	if err == nil {
 		_ = saveSchemaCache(client.BaseURL, schema)
-		return schema, nil
+		return schema, false, nil
 	}
 
 	if !refresh {
-		return embeddedSchema, nil
+		return embeddedSchema, false, nil
 	}
-	return nil, fmt.Errorf("failed to fetch pipeline schema from server: %w", err)
+	return nil, false, fmt.Errorf("failed to fetch pipeline schema from server: %w", err)
 }
