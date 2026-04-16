@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
@@ -62,6 +63,7 @@ func runPipelinePush(f *cmdutil.Factory, id, file string) error {
 		return fmt.Errorf("failed to update pipeline %s: %w", id, err)
 	}
 
+	f.Analytics.Track(analytics.GroupPipeline, analytics.EventSynced, map[string]any{"action": analytics.PipelineActionPush})
 	f.Printer.Success("Updated pipeline %s", id)
 	return nil
 }

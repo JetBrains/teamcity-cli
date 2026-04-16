@@ -89,6 +89,7 @@ Report issues:  https://jb.gg/tc/issues`,
 		if cmd.Name() != "update" && f.UpdateNotice == nil {
 			f.UpdateNotice = update.CheckInBackground(f.Context(), f.Printer.ErrOut, f.Quiet)
 		}
+		setupAnalytics(f)
 	}
 
 	addGrouped(cmd, "core", run.NewCmd(f), job.NewCmd(f), project.NewCmd(f), pipeline.NewCmd(f))
@@ -111,6 +112,7 @@ Report issues:  https://jb.gg/tc/issues`,
 
 func Execute(ctx context.Context) error {
 	f := cmdutil.NewFactory()
+	f.StartTime = time.Now()
 	f.SetContext(ctx)
 	rootCmd := buildRootCmd(f)
 	rootCmd.SetContext(ctx)
@@ -122,6 +124,7 @@ func Execute(ctx context.Context) error {
 	if f.UpdateNotice != nil {
 		f.UpdateNotice()
 	}
+	defer trackAndFlushAnalytics(f, executedCmd, err)
 	if err != nil && ctx.Err() != nil {
 		return nil
 	}

@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	teamcitycli "github.com/JetBrains/teamcity-cli"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/tiulpin/instill"
 )
@@ -84,7 +84,7 @@ Auto-detects installed agents when --agent is not specified.`,
   teamcity skill install --agent claude-code --agent cursor
   teamcity skill install --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillInstall(f.Printer, opts, args, false)
+			return runSkillInstall(f, opts, args, false)
 		},
 	}
 
@@ -109,7 +109,7 @@ Auto-detects installed agents when --agent is not specified.`,
   teamcity skill update --agent claude-code
   teamcity skill update --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillInstall(f.Printer, opts, args, true)
+			return runSkillInstall(f, opts, args, true)
 		},
 	}
 
@@ -126,7 +126,17 @@ func addSkillFlags(cmd *cobra.Command, opts *skillOptions) {
 	_ = cmd.RegisterFlagCompletionFunc("agent", completion.SkillAgents())
 }
 
-func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, checkVersion bool) error {
+func runSkillInstall(f *cmdutil.Factory, opts *skillOptions, args []string, checkVersion bool) error {
+	p := f.Printer
+	action := analytics.SkillActionInstall
+	if checkVersion {
+		action = analytics.SkillActionUpdate
+	}
+	scope := analytics.SkillScopeGlobal
+	if opts.project {
+		scope = analytics.SkillScopeProject
+	}
+	autoDetected := len(opts.agents) == 0
 	agents, err := resolveSkillAgents(opts.agents, !opts.project)
 	if err != nil {
 		return err
@@ -178,11 +188,15 @@ func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, check
 
 	results, err := instill.Install(teamcitycli.SkillsFS, instillOpts)
 	if err != nil {
+		for _, ag := range agents {
+			trackSkill(f, action, ag, scope, autoDetected, false)
+		}
 		return err
 	}
 
 	for _, r := range results {
 		bundled := versions[r.Skill]
+		trackSkill(f, action, r.Agent, scope, autoDetected, true)
 		switch {
 		case !r.Existed:
 			p.Success("Installed %s for %s (%s)", r.Skill, r.Agent, bundled)
@@ -212,7 +226,7 @@ Use --all to remove every bundled skill.`,
   teamcity skill remove --agent claude-code
   teamcity skill remove --project`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSkillRemove(f.Printer, opts, args)
+			return runSkillRemove(f, opts, args)
 		},
 	}
 
@@ -220,7 +234,13 @@ Use --all to remove every bundled skill.`,
 	return cmd
 }
 
-func runSkillRemove(p *output.Printer, opts *skillOptions, args []string) error {
+func runSkillRemove(f *cmdutil.Factory, opts *skillOptions, args []string) error {
+	p := f.Printer
+	scope := analytics.SkillScopeGlobal
+	if opts.project {
+		scope = analytics.SkillScopeProject
+	}
+	autoDetected := len(opts.agents) == 0
 	agents, err := resolveSkillAgents(opts.agents, !opts.project)
 	if err != nil {
 		return err
@@ -249,6 +269,7 @@ func runSkillRemove(p *output.Printer, opts *skillOptions, args []string) error 
 		}
 
 		for _, r := range results {
+			trackSkill(f, analytics.SkillActionRemove, r.Agent, scope, autoDetected, r.Existed)
 			if r.Existed {
 				p.Success("Removed %s from %s", name, r.Agent)
 			} else {
@@ -314,4 +335,14 @@ func formatAgentList() string {
 			names[0], names[1], names[2], len(names))
 	}
 	return fmt.Sprintf("%v", names)
+}
+
+func trackSkill(f *cmdutil.Factory, action, agent, scope string, autoDetected, success bool) {
+	f.Analytics.Track(analytics.GroupSkill, analytics.EventManaged, map[string]any{
+		"action":           action,
+		"agent":            analytics.NormalizeAIAgent(agent),
+		"scope":            scope,
+		"is_auto_detected": autoDetected,
+		"is_success":       success,
+	})
 }

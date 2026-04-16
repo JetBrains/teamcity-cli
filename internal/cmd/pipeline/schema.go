@@ -71,24 +71,24 @@ func saveSchemaCache(serverURL string, schema []byte) error {
 	return os.WriteFile(path, schema, 0600)
 }
 
-// fetchOrCacheSchema returns the pipeline JSON schema; the bool reports whether the embedded fallback was used.
-func fetchOrCacheSchema(client *api.Client, refresh bool) ([]byte, bool, error) {
+// fetchOrCacheSchema returns the schema, whether it came from the on-disk cache, and whether the embedded fallback was used.
+func fetchOrCacheSchema(client *api.Client, refresh bool) ([]byte, bool, bool, error) {
 	if !refresh {
 		if cached, err := loadCachedSchema(client.BaseURL); err == nil {
-			return cached, false, nil
+			return cached, true, false, nil
 		}
 	}
 
 	schema, err := client.GetPipelineSchema()
 	if err == nil {
 		_ = saveSchemaCache(client.BaseURL, schema)
-		return schema, false, nil
+		return schema, false, false, nil
 	}
 
 	if !refresh && errors.Is(err, api.ErrPipelineSchemaUnsupported) {
-		return embeddedSchema, true, nil
+		return embeddedSchema, false, true, nil
 	}
-	return nil, false, fmt.Errorf("failed to fetch pipeline schema from server: %w", err)
+	return nil, false, false, fmt.Errorf("failed to fetch pipeline schema from server: %w", err)
 }
 
 func newPipelineSchemaCmd(f *cmdutil.Factory) *cobra.Command {
@@ -116,7 +116,7 @@ a warning is written to stderr; pass --refresh to require a live server fetch.`,
 				return errors.New("schema requires a real API client")
 			}
 
-			data, fallback, err := fetchOrCacheSchema(c, refresh)
+			data, _, fallback, err := fetchOrCacheSchema(c, refresh)
 			if err != nil {
 				return err
 			}
