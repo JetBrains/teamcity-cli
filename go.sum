@@ -8,6 +8,12 @@ github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c h1:udKWzYgxTojEK
 github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/JetBrains/fus-reporting-api-go v0.0.0-20260415121423-32ee791c38a2 h1:g8kfJLIlOkyyujfqDnSNW5Y33jba4w8nCRjvphe804U=
 github.com/JetBrains/fus-reporting-api-go v0.0.0-20260415121423-32ee791c38a2/go.mod h1:jSymVxc/0N4r8EeR3kUU5QqpX/Exw+XbHkAgixkWta4=
+github.com/JetBrains/fus-reporting-api-go v0.0.0-20260416082822-78ed6cf979b1 h1:W28vWMwCFxDcKb5kXnQpVcP1f4JBfEOJ8Wub8XmmVBc=
+github.com/JetBrains/fus-reporting-api-go v0.0.0-20260416082822-78ed6cf979b1/go.mod h1:jSymVxc/0N4r8EeR3kUU5QqpX/Exw+XbHkAgixkWta4=
+github.com/JetBrains/fus-reporting-api-go v0.0.0-20260416111710-135e5707d1ee h1:HzmN9ltmIBMKX2Q7TkURyOYvrXAVz3WlbAQknR+fcIA=
+github.com/JetBrains/fus-reporting-api-go v0.0.0-20260416111710-135e5707d1ee/go.mod h1:jSymVxc/0N4r8EeR3kUU5QqpX/Exw+XbHkAgixkWta4=
+github.com/JetBrains/fus-reporting-api-go v0.1.0 h1:nqzKrfVSGxg3WZRlfnJ4tO0C0Aas3F4CMCpyd4KmtiQ=
+github.com/JetBrains/fus-reporting-api-go v0.1.0/go.mod h1:jSymVxc/0N4r8EeR3kUU5QqpX/Exw+XbHkAgixkWta4=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2 h1:+vx7roKuyA63nhn5WAunQHLTznkw5W8b1Xc0dNjp83s=

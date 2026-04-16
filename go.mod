@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/JetBrains/fus-reporting-api-go v0.0.0-20260415121423-32ee791c38a2
+	github.com/JetBrains/fus-reporting-api-go v0.1.0
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
