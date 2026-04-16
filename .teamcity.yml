@@ -7,8 +7,10 @@ jobs:
       env.PATH: '%env.GOBIN%:%env.PATH%'
     steps:
       - type: script
-        name: Install gotestsum
-        script-content: go install gotest.tools/gotestsum@latest
+        name: Setup
+        script-content: |-
+          go mod download
+          go install gotest.tools/gotestsum@latest
       - type: script
         name: Unit Tests
         script-content: >-
@@ -31,8 +33,10 @@ jobs:
       env.PATH: '%env.GOBIN%;%env.PATH%'
     steps:
       - type: script
-        name: Install gotestsum
-        script-content: go install gotest.tools/gotestsum@latest
+        name: Setup
+        script-content: |-
+          go mod download
+          go install gotest.tools/gotestsum@latest
       - type: script
         name: Unit Tests
         script-content: >-
@@ -71,8 +75,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y golang-1.26-go
       - type: script
-        name: Install gotestsum
-        script-content: go install gotest.tools/gotestsum@latest
+        name: Setup
+        script-content: |-
+          go mod download
+          go install gotest.tools/gotestsum@latest
       - type: script
         name: Integration Tests
         script-content: >-
@@ -123,8 +129,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y golang-1.26-go
       - type: script
-        name: Install gotestsum
-        script-content: go install gotest.tools/gotestsum@latest
+        name: Setup
+        script-content: |-
+          go mod download
+          go install gotest.tools/gotestsum@latest
       - type: script
         name: Integration Tests
         script-content: >-
