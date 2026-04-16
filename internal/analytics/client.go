@@ -83,21 +83,42 @@ func (c *Client) boot() {
 			c.logf("analytics: boot failed (data dir): %v", err)
 			return
 		}
-		validator, err := fus.NewValidator(Scheme)
+
+		var fusConfig *fus.FUSConfig
+		if c.staging {
+			fusConfig, err = fus.FetchTestConfig(RecorderID, ProductCode)
+		} else {
+			fusConfig, err = fus.LoadOrFetchConfig(RecorderID, ProductCode, c.cliVersion, dir, fus.RegionAll)
+		}
+		if err != nil {
+			c.logf("analytics: boot failed (config): %v", err)
+			return
+		}
+
+		if c.salt != "" {
+			fusConfig.Salt = c.salt
+		} else {
+			c.salt = fusConfig.Salt
+		}
+
+		scheme := Scheme
+		if url := fusConfig.SchemeURL(ProductCode); url != "" {
+			if remote, err := fus.LoadOrFetchScheme(url, dir); err == nil {
+				scheme = remote
+				c.logf("analytics: using CDN metadata (version=%s groups=%d)", scheme.Version, len(scheme.Groups))
+			} else {
+				c.logf("analytics: CDN metadata unavailable, using embedded scheme: %v", err)
+			}
+		}
+
+		validator, err := fus.NewValidator(scheme)
 		if err != nil {
 			c.logf("analytics: boot failed (validator): %v", err)
 			return
 		}
-		opts := []fus.LoggerOption{fus.WithValidator(validator)}
-		if c.staging {
-			stagingCfg, err := fus.FetchTestConfig(RecorderID, ProductCode)
-			if err != nil {
-				c.logf("analytics: boot failed (staging config): %v", err)
-				return
-			}
-			opts = append(opts, fus.WithFUSConfig(stagingCfg))
-		}
+		anonymizer := fus.NewAnonymizer(scheme, []byte(c.salt))
 		logger, err := fus.NewLogger(
+			context.Background(),
 			fus.RecorderConfig{
 				RecorderID:        RecorderID,
 				RecorderVersion:   RecorderVersion,
@@ -106,7 +127,9 @@ func (c *Client) boot() {
 				DataDir:           dir,
 				AnonymizationSalt: c.salt,
 			},
-			opts...,
+			fus.WithFUSConfig(fusConfig),
+			fus.WithValidator(validator),
+			fus.WithAnonymizer(anonymizer),
 		)
 		if err != nil {
 			c.logf("analytics: boot failed (logger): %v", err)
@@ -232,14 +255,13 @@ func (c *Client) Flush(ctx context.Context) error {
 	return c.logger.Flush(ctx)
 }
 
-// Close flushes with a 2s timeout; idempotent.
 func (c *Client) Close() error {
 	if c == nil || c.logger == nil {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	err := c.logger.Flush(ctx)
+	err := c.logger.Close(ctx)
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
 		c.logf("analytics: flush timed out after 2s")
