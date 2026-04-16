@@ -1,15 +1,14 @@
 # Test HTTP methods beyond GET.
 
-# HEAD returns no body
 exec teamcity api '/app/rest/server' -X HEAD --no-input
 ! stdout .
 ! stderr 'Error'
 
-# DELETE to a read-only endpoint should fail gracefully
+# DELETE to read-only endpoint fails
 ! exec teamcity api '/app/rest/server' -X DELETE --no-input
 stderr '.'
 
-# --input sends body with POST (invalid payload → server error, but proves input is read)
+# --input sends body with POST
 ! exec teamcity api '/app/rest/buildQueue' -X POST --input body.json --no-input
 stderr '.'
 

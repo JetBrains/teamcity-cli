@@ -1,11 +1,10 @@
 # Queue commands requiring authentication.
 [!has_token] skip 'requires authentication token'
 
-# approve nonexistent build
 ! exec teamcity queue approve 999999999 --no-input
 stderr '.'
 
-# remove: start a build and try to remove from queue (may already be running)
+# remove from queue (may already be running)
 exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 

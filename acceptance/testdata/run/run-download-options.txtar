@@ -19,7 +19,6 @@ exec teamcity run download $BUILD_ID --artifact 'nonexistent-pattern-xyz' -o $WO
 stdout '(No artifacts match|No artifacts found)'
 ! stderr 'Error'
 
-# Download to specific output directory
 exec teamcity run download $BUILD_ID -o $WORK/dl-custom --no-input
 stdout '(downloaded|No artifacts)'
 ! stderr 'Error'

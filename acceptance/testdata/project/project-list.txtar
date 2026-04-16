@@ -19,12 +19,10 @@ stdout '"id"'
 stdout '"name"'
 ! stderr 'Error'
 
-# --plain
 exec teamcity project list --plain --no-input
 stdout '.'
 ! stderr 'Error'
 
-# --plain --no-header
 exec teamcity project list --plain --no-header --no-input
 ! stderr 'Error'
 
@@ -38,6 +36,5 @@ stderr 'must be a positive number'
 ! exec teamcity project list --limit -1 --no-input
 stderr 'must be a positive number'
 
-# --parent
 exec teamcity project list --parent _Root --limit 5 --no-input
 ! stderr 'Error'

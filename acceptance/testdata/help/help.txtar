@@ -18,7 +18,6 @@ stdout '--no-input'
 stdout '--version'
 ! stderr .
 
-# --version
 exec teamcity --version
 stdout 'teamcity version'
 ! stderr 'Error'
@@ -71,6 +70,5 @@ stderr 'requires a subcommand'
 ! exec teamcity auth
 stderr 'requires a subcommand'
 
-# Unknown command
 ! exec teamcity nonexistent-command
 stderr 'unknown command'

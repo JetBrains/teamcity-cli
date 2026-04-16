@@ -12,7 +12,6 @@ exec teamcity job list --all --limit 2 --json --no-input
 stdout '"count"'
 ! stderr 'Error'
 
-# JSON fields
 exec teamcity job list --all --limit 1 --json --no-input
 stdout '"id"'
 stdout '"name"'
@@ -29,16 +28,13 @@ stdout '"projectId"'
 ! exec teamcity job list --limit 0 --no-input
 stderr 'must be a positive number'
 
-# --plain
 exec teamcity job list --all --plain --no-input
 stdout '.'
 ! stderr 'Error'
 
-# --plain --no-header
 exec teamcity job list --all --plain --no-header --no-input
 ! stderr 'Error'
 
-# --project filter
 exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
 extract '"id":"([^"]+)"' PROJECT_ID
 

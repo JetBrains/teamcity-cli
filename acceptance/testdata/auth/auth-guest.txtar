@@ -1,7 +1,7 @@
 # Test auth commands in guest mode.
 [!guest] skip 'test only applies in guest mode'
 
-# Status shows server and guest access
+# Status shows guest access
 exec teamcity auth status --no-input
 stdout 'cli.teamcity.com'
 stdout 'Guest access'

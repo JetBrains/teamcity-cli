@@ -7,16 +7,13 @@ exec teamcity run tests $BUILD_ID --no-input
 stdout '(TESTS:|No tests)'
 ! stderr 'Error'
 
-# --json
 exec teamcity run tests $BUILD_ID --json --no-input
 stdout '"count"'
 ! stderr 'Error'
 
-# --failed
 exec teamcity run tests $BUILD_ID --failed --no-input
 ! stderr 'Error'
 
-# --limit
 exec teamcity run tests $BUILD_ID --limit 5 --no-input
 ! stderr 'Error'
 

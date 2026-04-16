@@ -1,6 +1,6 @@
 # Test color environment variable precedence.
 
-# FORCE_COLOR enables ANSI escapes even without a TTY.
+# FORCE_COLOR enables ANSI escapes
 env NO_COLOR=
 env FORCE_COLOR=1
 exec teamcity run list --limit 1 --no-input

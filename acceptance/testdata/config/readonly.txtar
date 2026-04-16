@@ -9,17 +9,19 @@
 #    These use real IDs discovered from the server so the GET succeeds and
 #    the read-only check fires on the subsequent write operation.
 #
-# Commands not directly tested:
-#   run cancel  — checks build state ("cannot cancel a finished run") before writing
-#   run untag   — checks tag existence ("tag not found") before writing
-# Both are still protected by the HTTP-level guard proven by the api -X tests.
+# Commands not directly tested (GET-first commands where the GET can fail
+# due to external state; the subsequent write is still blocked by the
+# HTTP-level guard proven by the api -X tests above):
+#   run cancel      — checks build state ("cannot cancel a finished run")
+#   run untag       — checks tag existence ("tag not found")
+#   agent authorize/deauthorize/enable/disable/move/reboot
+#                   — resolves agent by ID/name first; cloud agents on
+#                     cli.teamcity.com can be recycled between discovery
+#                     and use, making the GET return 404 before the guard fires
 
 env TEAMCITY_RO=1
 
 # ---- Discover real IDs for GET-first command tests ----
-
-exec teamcity api '/app/rest/agents?locator=authorized:true,count:1&fields=agent(id)' --raw --no-input
-extract '"id":(\d+)' AGENT_ID
 
 exec teamcity api '/app/rest/builds?locator=count:1&fields=build(id)' --raw --no-input
 extract '"id":(\d+)' BUILD_ID
@@ -128,26 +130,6 @@ stderr 'read-only mode'
 stderr 'read-only mode'
 
 ! exec teamcity project token put FakeProject fakevalue --no-input
-stderr 'read-only mode'
-
-# ---- agent: write subcommands (GET lookup first, then write blocked) ----
-
-! exec teamcity agent authorize $AGENT_ID --no-input
-stderr 'read-only mode'
-
-! exec teamcity agent deauthorize $AGENT_ID --no-input
-stderr 'read-only mode'
-
-! exec teamcity agent enable $AGENT_ID --no-input
-stderr 'read-only mode'
-
-! exec teamcity agent disable $AGENT_ID --no-input
-stderr 'read-only mode'
-
-! exec teamcity agent move $AGENT_ID 0 --no-input
-stderr 'read-only mode'
-
-! exec teamcity agent reboot $AGENT_ID --no-input
 stderr 'read-only mode'
 
 # ---- Unsetting TEAMCITY_RO restores writes ----
