@@ -90,14 +90,20 @@ func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList,
 	if len(fields) == 0 {
 		fields = CloudProfileFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,cloudProfile(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,cloudProfile(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/cloud/profiles?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	var result CloudProfileList
-	if err := c.get(path, &result); err != nil {
+	profiles, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudProfile, string, error) {
+		var page CloudProfileList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Profiles, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return &CloudProfileList{Count: len(profiles), Profiles: profiles}, nil
 }
 
 func (c *Client) GetCloudProfile(locator string) (*CloudProfile, error) {
@@ -122,14 +128,20 @@ func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error
 	if len(fields) == 0 {
 		fields = CloudImageFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,cloudImage(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,cloudImage(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/cloud/images?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	var result CloudImageList
-	if err := c.get(path, &result); err != nil {
+	images, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudImage, string, error) {
+		var page CloudImageList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Images, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return &CloudImageList{Count: len(images), Images: images}, nil
 }
 
 func (c *Client) GetCloudImage(locator string) (*CloudImage, error) {
@@ -154,14 +166,20 @@ func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceLi
 	if len(fields) == 0 {
 		fields = CloudInstanceFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,cloudInstance(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,cloudInstance(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/cloud/instances?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	var result CloudInstanceList
-	if err := c.get(path, &result); err != nil {
+	instances, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudInstance, string, error) {
+		var page CloudInstanceList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Instances, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return &CloudInstanceList{Count: len(instances), Instances: instances}, nil
 }
 
 func (c *Client) GetCloudInstance(locator string) (*CloudInstance, error) {

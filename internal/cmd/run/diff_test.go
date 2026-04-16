@@ -263,9 +263,8 @@ func TestRunDiffSingleArg(t *testing.T) {
 
 	ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
 		cmdtest.JSON(w, api.BuildList{
-			Count: 2,
+			Count: 1,
 			Builds: []api.Build{
-				{ID: 2, Number: "2", Status: "FAILURE", State: "finished", BuildTypeID: "TestProject_Build"},
 				{ID: 1, Number: "1", Status: "SUCCESS", State: "finished", BuildTypeID: "TestProject_Build"},
 			},
 		})

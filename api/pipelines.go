@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// GetPipelines lists pipelines, optionally filtered by project.
+// GetPipelines lists pipelines, optionally filtered by project. Automatically follows pagination.
 func (c *Client) GetPipelines(opts PipelinesOptions) (*PipelineList, error) {
 	locator := NewLocator().
 		AddIntDefault("count", opts.Limit, 100)
@@ -22,15 +22,21 @@ func (c *Client) GetPipelines(opts PipelinesOptions) (*PipelineList, error) {
 	if len(fields) == 0 {
 		fields = PipelineFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,pipeline(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,pipeline(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/pipelines?locator=%s&fields=%s",
 		locator.Encode(), url.QueryEscape(fieldsParam))
 
-	var result PipelineList
-	if err := c.get(path, &result); err != nil {
+	pipelines, err := collectPages(c, path, opts.Limit, func(p string) ([]Pipeline, string, error) {
+		var page PipelineList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Pipelines, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return &PipelineList{Count: len(pipelines), Pipelines: pipelines}, nil
 }
 
 // GetPipeline retrieves a single pipeline by ID via the REST API.
