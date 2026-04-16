@@ -2,11 +2,13 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -33,9 +35,27 @@ or the connection drops.`,
 			if err != nil {
 				return err
 			}
-			return conn.RunInteractive(f.Context())
+			start := time.Now()
+			termErr := conn.RunInteractive(f.Context())
+			f.Analytics.Track(analytics.GroupAgent, analytics.EventTerminalClosed, map[string]any{
+				"duration_seconds": int(time.Since(start).Seconds()),
+				"exit_reason":      terminalExitReason(termErr, f.Context().Err()),
+			})
+			return termErr
 		},
 	}
+}
+
+func terminalExitReason(termErr, ctxErr error) string {
+	switch {
+	case termErr == nil:
+		return analytics.AgentExitUser
+	case errors.Is(ctxErr, context.DeadlineExceeded):
+		return analytics.AgentExitTimeout
+	case errors.Is(ctxErr, context.Canceled):
+		return analytics.AgentExitUser
+	}
+	return analytics.AgentExitError
 }
 
 func newAgentExecCmd(f *cmdutil.Factory) *cobra.Command {
@@ -61,7 +81,21 @@ agent-side commands from teamcity flags.`,
 			ctx, cancel := context.WithTimeout(f.Context(), timeout)
 			defer cancel()
 
-			return conn.Exec(ctx, strings.Join(args[1:], " "))
+			start := time.Now()
+			execErr := conn.Exec(ctx, strings.Join(args[1:], " "))
+			exitCode := 0
+			if execErr != nil {
+				exitCode = 1
+				if ee, ok := errors.AsType[*cmdutil.ExitError](execErr); ok {
+					exitCode = ee.Code
+				}
+			}
+			f.Analytics.Track(analytics.GroupAgent, analytics.EventExecFinished, map[string]any{
+				"duration_seconds": int(time.Since(start).Seconds()),
+				"exit_code":        exitCode,
+				"had_timeout":      errors.Is(ctx.Err(), context.DeadlineExceeded),
+			})
+			return execErr
 		},
 	}
 
