@@ -87,7 +87,8 @@ var Scheme = &fus.Scheme{
 
 func sessionGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID: GroupSession,
+		ID:   GroupSession,
+		Type: fus.GroupTypeState,
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventInvoked)},
 			EventData: map[string][]string{
@@ -103,12 +104,16 @@ func sessionGroup() fus.GroupSchema {
 				"has_linked_project": {fus.EnumRefExpr(enumBoolean)},
 			},
 		},
+		AnonymizedFields: []fus.AnonymizedField{
+			{Event: EventInvoked, Fields: []string{"session_id"}},
+		},
 	}
 }
 
 func commandGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID: GroupCommand,
+		ID:   GroupCommand,
+		Type: fus.GroupTypeCounter,
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventExecuted)},
 			EventData: map[string][]string{
@@ -124,12 +129,16 @@ func commandGroup() fus.GroupSchema {
 				"error_type":       {fus.EnumRefExpr(enumErrorType)},
 			},
 		},
+		AnonymizedFields: []fus.AnonymizedField{
+			{Event: EventExecuted, Fields: []string{"session_id"}},
+		},
 	}
 }
 
 func apiGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID: GroupAPI,
+		ID:   GroupAPI,
+		Type: fus.GroupTypeCounter,
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventInvoked)},
 			EventData: map[string][]string{
@@ -147,7 +156,8 @@ func apiGroup() fus.GroupSchema {
 
 func authGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID: GroupAuth,
+		ID:   GroupAuth,
+		Type: fus.GroupTypeCounter,
 		Rules: &fus.SchemeRules{
 			EventID: []string{
 				fus.EnumExpr(EventLoginCompleted, EventLoginAbandoned, EventTokenLoaded),
@@ -166,7 +176,8 @@ func authGroup() fus.GroupSchema {
 
 func buildGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID: GroupBuild,
+		ID:   GroupBuild,
+		Type: fus.GroupTypeCounter,
 		Rules: &fus.SchemeRules{
 			EventID: []string{
 				fus.EnumExpr(EventStarted, EventWatchFinished, EventLogViewed, EventTestsViewed, EventDiffViewed),
@@ -194,7 +205,8 @@ func buildGroup() fus.GroupSchema {
 
 func agentGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID: GroupAgent,
+		ID:   GroupAgent,
+		Type: fus.GroupTypeCounter,
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventTerminalClosed, EventExecFinished, EventStateChanged)},
 			EventData: map[string][]string{
@@ -210,7 +222,8 @@ func agentGroup() fus.GroupSchema {
 
 func pipelineGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID: GroupPipeline,
+		ID:   GroupPipeline,
+		Type: fus.GroupTypeCounter,
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventValidated, EventCreated, EventSynced)},
 			EventData: map[string][]string{
@@ -226,7 +239,8 @@ func pipelineGroup() fus.GroupSchema {
 
 func skillGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID: GroupSkill,
+		ID:   GroupSkill,
+		Type: fus.GroupTypeCounter,
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventManaged)},
 			EventData: map[string][]string{
