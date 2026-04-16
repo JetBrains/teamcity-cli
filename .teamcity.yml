@@ -3,6 +3,8 @@ jobs:
   test_macos:
     name: Test macOS
     runs-on: macOS-14-Sonoma-Medium-Arm64
+    parameters:
+      env.PATH: '%env.GOBIN%:%env.PATH%'
     steps:
       - type: script
         name: Install gotestsum
@@ -25,6 +27,8 @@ jobs:
   test_windows:
     name: Test Windows
     runs-on: Windows-Medium
+    parameters:
+      env.PATH: '%env.GOBIN%;%env.PATH%'
     steps:
       - type: script
         name: Install gotestsum
@@ -58,7 +62,7 @@ jobs:
     runs-on: Ubuntu-24.04-Large
     parameters:
       env.GOROOT: /usr/lib/go-1.26
-      env.PATH: /usr/lib/go-1.26/bin:%env.PATH%
+      env.PATH: /usr/lib/go-1.26/bin:%env.GOBIN%:%env.PATH%
     steps:
       - type: script
         name: Install Go
@@ -110,7 +114,7 @@ jobs:
     runs-on: Ubuntu-24.04-Large-Arm64
     parameters:
       env.GOROOT: /usr/lib/go-1.26
-      env.PATH: /usr/lib/go-1.26/bin:%env.PATH%
+      env.PATH: /usr/lib/go-1.26/bin:%env.GOBIN%:%env.PATH%
     steps:
       - type: script
         name: Install Go
@@ -170,4 +174,5 @@ parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
   env.GOPROXY: https://proxy.golang.org,direct
   env.GOFLAGS: '-buildvcs=false'
+  env.GOBIN: '%system.teamcity.build.checkoutDir%/.gobin'
   env.BRANCH_NAME: '%teamcity.build.branch%'
