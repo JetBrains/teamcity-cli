@@ -3,32 +3,50 @@ jobs:
   test_macos:
     name: Test macOS
     runs-on: macOS-14-Sonoma-Medium-Arm64
+    parameters:
+      env.PATH: '%env.GOBIN%:%env.PATH%'
     steps:
       - type: script
+        name: Setup
+        script-content: |-
+          go mod download
+          go install gotest.tools/gotestsum@latest
+      - type: script
         name: Unit Tests
-        script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
+        script-content: >-
+          gotestsum --format pkgname-and-test-fails --
+          -race -count=1 -shuffle=on ./... -timeout 15m
       - type: script
         name: Acceptance Tests
         script-content: >-
-          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout
-          10m
+          gotestsum --format pkgname-and-test-fails --
+          -count=1 -shuffle=on -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Sandbox Tests
         script-content: |-
           HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install -q ripgrep
-          go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
+          gotestsum --format pkgname-and-test-fails -- -count=1 -tags=sandbox ./api -run TestSandbox -timeout 2m
   test_windows:
     name: Test Windows
     runs-on: Windows-Medium
+    parameters:
+      env.PATH: '%env.GOBIN%;%env.PATH%'
     steps:
       - type: script
+        name: Setup
+        script-content: |-
+          go mod download
+          go install gotest.tools/gotestsum@latest
+      - type: script
         name: Unit Tests
-        script-content: go test -race -count=1 -shuffle=on -v ./... -timeout 15m
+        script-content: >-
+          gotestsum --format pkgname-and-test-fails --
+          -race -count=1 -shuffle=on ./... -timeout 15m
       - type: script
         name: Acceptance Tests
         script-content: >-
-          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout
-          10m
+          gotestsum --format pkgname-and-test-fails --
+          -count=1 -shuffle=on -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Verify install.ps1
         script-content: |-
@@ -48,7 +66,7 @@ jobs:
     runs-on: Ubuntu-24.04-Large
     parameters:
       env.GOROOT: /usr/lib/go-1.26
-      env.PATH: /usr/lib/go-1.26/bin:%env.PATH%
+      env.PATH: /usr/lib/go-1.26/bin:%env.GOBIN%:%env.PATH%
     steps:
       - type: script
         name: Install Go
@@ -57,28 +75,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y golang-1.26-go
       - type: script
+        name: Setup
+        script-content: |-
+          go mod download
+          go install gotest.tools/gotestsum@latest
+      - type: script
         name: Integration Tests
         script-content: >-
-          go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout
-          15m \
-            -coverpkg=./... -coverprofile=coverage-integration.out
+          gotestsum --format pkgname-and-test-fails --
+          -race -count=1 -shuffle=on ./... -tags=integration -timeout 15m
+          -coverpkg=./... -coverprofile=coverage-integration.out
       - type: script
         name: Guest Auth Tests
         script-content: >-
-          TEAMCITY_GUEST=1 go test -race -count=1 -shuffle=on -v ./api/...
-          -tags=guest -timeout 15m \
-            -coverpkg=./... -coverprofile=coverage-guest.out
+          TEAMCITY_GUEST=1 gotestsum --format pkgname-and-test-fails --
+          -race -count=1 -shuffle=on ./api/... -tags=guest -timeout 15m
+          -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
         script-content: >-
-          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout
-          10m
+          gotestsum --format pkgname-and-test-fails --
+          -count=1 -shuffle=on -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Sandbox Tests
         script-content: |-
           sudo apt-get install -y bubblewrap socat ripgrep
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
+          gotestsum --format pkgname-and-test-fails -- -count=1 -tags=sandbox ./api -run TestSandbox -timeout 2m
       - type: script
         name: Merge Coverage
         script-content: |-
@@ -97,7 +120,7 @@ jobs:
     runs-on: Ubuntu-24.04-Large-Arm64
     parameters:
       env.GOROOT: /usr/lib/go-1.26
-      env.PATH: /usr/lib/go-1.26/bin:%env.PATH%
+      env.PATH: /usr/lib/go-1.26/bin:%env.GOBIN%:%env.PATH%
     steps:
       - type: script
         name: Install Go
@@ -106,28 +129,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y golang-1.26-go
       - type: script
+        name: Setup
+        script-content: |-
+          go mod download
+          go install gotest.tools/gotestsum@latest
+      - type: script
         name: Integration Tests
         script-content: >-
-          go test -race -count=1 -shuffle=on -v ./... -tags=integration -timeout
-          15m \
-            -coverpkg=./... -coverprofile=coverage-integration.out
+          gotestsum --format pkgname-and-test-fails --
+          -race -count=1 -shuffle=on ./... -tags=integration -timeout 15m
+          -coverpkg=./... -coverprofile=coverage-integration.out
       - type: script
         name: Guest Auth Tests
         script-content: >-
-          TEAMCITY_GUEST=1 go test -race -count=1 -shuffle=on -v ./api/...
-          -tags=guest -timeout 15m \
-            -coverpkg=./... -coverprofile=coverage-guest.out
+          TEAMCITY_GUEST=1 gotestsum --format pkgname-and-test-fails --
+          -race -count=1 -shuffle=on ./api/... -tags=guest -timeout 15m
+          -coverpkg=./... -coverprofile=coverage-guest.out
       - type: script
         name: Acceptance Tests
         script-content: >-
-          go test -count=1 -shuffle=on -v -tags=acceptance ./acceptance -timeout
-          10m
+          gotestsum --format pkgname-and-test-fails --
+          -count=1 -shuffle=on -tags=acceptance ./acceptance -timeout 10m
       - type: script
         name: Sandbox Tests
         script-content: |-
           sudo apt-get install -y bubblewrap socat ripgrep
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          go test -count=1 -v -tags=sandbox ./api -run TestSandbox -timeout 2m
+          gotestsum --format pkgname-and-test-fails -- -count=1 -tags=sandbox ./api -run TestSandbox -timeout 2m
       - type: script
         name: Merge Coverage
         script-content: |-
@@ -154,4 +182,5 @@ parameters:
   env.TC_INSECURE_SKIP_WARN: '1'
   env.GOPROXY: https://proxy.golang.org,direct
   env.GOFLAGS: '-buildvcs=false'
+  env.GOBIN: '%system.teamcity.build.checkoutDir%/.gobin'
   env.BRANCH_NAME: '%teamcity.build.branch%'
