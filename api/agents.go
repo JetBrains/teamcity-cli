@@ -19,7 +19,7 @@ type AgentsOptions struct {
 	Fields     []string // Fields to return (uses AgentFields.Default if empty)
 }
 
-// GetAgents returns a list of agents
+// GetAgents returns a list of agents, automatically following pagination.
 func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 	locator := NewLocator()
 
@@ -48,15 +48,21 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 	if len(fields) == 0 {
 		fields = AgentFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,agent(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,agent(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	var result AgentList
-	if err := c.get(path, &result); err != nil {
+	agents, err := collectPages(c, path, opts.Limit, func(p string) ([]Agent, string, error) {
+		var page AgentList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Agents, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &AgentList{Count: len(agents), Agents: agents}, nil
 }
 
 // AuthorizeAgent sets the authorized status of an agent

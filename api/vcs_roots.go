@@ -9,7 +9,7 @@ import (
 	"net/url"
 )
 
-// GetVcsRoots returns a list of VCS roots
+// GetVcsRoots returns a list of VCS roots, automatically following pagination.
 func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 	locator := NewLocator().
 		Add("affectedProject", opts.Project).
@@ -19,14 +19,20 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 	if len(fields) == 0 {
 		fields = VcsRootFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,vcs-root(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,vcs-root(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/vcs-roots?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	var result VcsRootList
-	if err := c.get(path, &result); err != nil {
+	roots, err := collectPages(c, path, opts.Limit, func(p string) ([]VcsRoot, string, error) {
+		var page VcsRootList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.VcsRoot, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return &VcsRootList{Count: len(roots), VcsRoot: roots}, nil
 }
 
 // GetVcsRoot returns a VCS root by ID

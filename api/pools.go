@@ -7,21 +7,27 @@ import (
 	"net/url"
 )
 
-// GetAgentPools returns all agent pools
+// GetAgentPools returns all agent pools, automatically following pagination.
 func (c *Client) GetAgentPools(requestedFields []string) (*PoolList, error) {
 	fields := requestedFields
 	if len(fields) == 0 {
 		fields = PoolFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,agentPool(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,agentPool(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/agentPools?fields=%s", url.QueryEscape(fieldsParam))
 
-	var result PoolList
-	if err := c.get(path, &result); err != nil {
+	pools, err := collectPages(c, path, 0, func(p string) ([]Pool, string, error) {
+		var page PoolList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Pools, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &PoolList{Count: len(pools), Pools: pools}, nil
 }
 
 // GetAgentPool returns details for a single pool
