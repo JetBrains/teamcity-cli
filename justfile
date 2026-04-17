@@ -174,7 +174,7 @@ eval *args:
         uv run pytest tests/test_tasks.py -v {{args}}
     fi
 
-# Compare experiments via LangSmith (auto-picks current branch vs main)
+# Compare experiments via Sentry (auto-picks current branch vs main)
 eval-diff *args:
     #!/usr/bin/env bash
     set -euo pipefail

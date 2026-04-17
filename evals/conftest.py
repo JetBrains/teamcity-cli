@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from scaffold import sentry_log
 from scaffold.tasks import TaskConfig, list_tasks, load_task
 
 SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
@@ -34,7 +35,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--task", default=None, help="Task name(s), comma-separated")
     parser.addoption("--treatment", default=None, help="Treatment name(s), comma-separated")
     parser.addoption("--runs", default=1, type=int, help="Repetitions per combination")
-    parser.addoption("--experiment", default=None, help="Experiment name for LangSmith tagging")
+    parser.addoption("--experiment", default=None, help="Experiment ID tag (defaults to branch name)")
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +117,17 @@ def verify_skill() -> None:
 
     print(f"\n  Skill: {skill_md.parent}")
     print(f"  Version: {version}\n")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def sentry_session():
+    """Initialize Sentry once per pytest session; flush at teardown."""
+    active = sentry_log.init_if_configured()
+    if active:
+        print("  Sentry: enabled\n")
+    yield
+    if active:
+        sentry_log.flush(timeout=10.0)
 
 
 @pytest.fixture(scope="session")
