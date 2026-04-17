@@ -15,7 +15,7 @@ type BuildTypesOptions struct {
 	Fields  []string
 }
 
-// GetBuildTypes returns a list of build configurations
+// GetBuildTypes returns a list of build configurations, automatically following pagination.
 func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 	locator := NewLocator().
 		Add("affectedProject", opts.Project).
@@ -25,15 +25,21 @@ func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 	if len(fields) == 0 {
 		fields = BuildTypeFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,buildType(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,buildType(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/buildTypes?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	var result BuildTypeList
-	if err := c.get(path, &result); err != nil {
+	buildTypes, err := collectPages(c, path, opts.Limit, func(p string) ([]BuildType, string, error) {
+		var page BuildTypeList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.BuildTypes, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &BuildTypeList{Count: len(buildTypes), BuildTypes: buildTypes}, nil
 }
 
 // GetBuildType returns a single build configuration by ID

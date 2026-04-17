@@ -16,7 +16,7 @@ type ProjectsOptions struct {
 	Fields []string
 }
 
-// GetProjects returns a list of projects
+// GetProjects returns a list of projects, automatically following pagination.
 func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
 	locator := NewLocator().
 		Add("parentProject", opts.Parent).
@@ -26,15 +26,21 @@ func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
 	if len(fields) == 0 {
 		fields = ProjectFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,project(%s)", ToAPIFields(fields))
+	fieldsParam := fmt.Sprintf("count,nextHref,project(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/projects?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	var result ProjectList
-	if err := c.get(path, &result); err != nil {
+	projects, err := collectPages(c, path, opts.Limit, func(p string) ([]Project, string, error) {
+		var page ProjectList
+		if err := c.get(p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Projects, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &ProjectList{Count: len(projects), Projects: projects}, nil
 }
 
 // GetProject returns a single project by ID
