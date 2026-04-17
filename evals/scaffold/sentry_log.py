@@ -142,12 +142,16 @@ def log_run(
             if llm_grades:
                 txn.set_data("llm_grades", _truncate(json.dumps(llm_grades), 4000))
 
-            # Measurements — queryable as `measurements.*` in the (deprecated) transactions
-            # dataset. Capped at 10 per txn by Sentry.
-            sentry_sdk.set_measurement("pass_rate", float(pass_rate))
-            sentry_sdk.set_measurement("duration_sec", float(duration_sec), "second")
-            sentry_sdk.set_measurement("num_turns", float(num_turns))
-            sentry_sdk.set_measurement("total_tokens", float(input_tokens + output_tokens))
+            # Measurements — queryable as `measurements.*` via the events API (what
+            # scripts/compare.py aggregates over). Must be set on `txn` directly: the
+            # module-level `sentry_sdk.set_measurement` targets the scope's current
+            # transaction, and this txn was created with `start_transaction(...)` without
+            # being entered as a context manager, so it's never bound to scope.
+            # Capped at 10 per txn by Sentry.
+            txn.set_measurement("pass_rate", float(pass_rate))
+            txn.set_measurement("duration_sec", float(duration_sec), "second")
+            txn.set_measurement("num_turns", float(num_turns))
+            txn.set_measurement("total_tokens", float(input_tokens + output_tokens))
 
 
             # Timeline: alternate LLM-call spans and tool-call spans across the parent
