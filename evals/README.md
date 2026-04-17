@@ -44,7 +44,7 @@ evals/
 │   └── common.yaml        # CONTROL (no skill), CURRENT (production skill)
 ├── scaffold/              # Framework: runner, events, validation
 ├── tests/test_tasks.py    # Pytest runner
-├── conftest.py            # Fixtures, parametrization, LangSmith
+├── conftest.py            # Fixtures, parametrization, Sentry init
 ├── Dockerfile             # Claude Code container
 └── results/               # JSON artifacts per run
 ```
@@ -55,7 +55,7 @@ evals/
 2. **Treatment** = skill configuration (CONTROL = no skill, CURRENT = production skill)
 3. **Execution** = Claude Code runs the task in Docker (or locally with `BENCH_LOCAL=1`)
 4. **Validation** = check functions verify Claude used correct commands and produced useful output
-5. **Tracking** = results logged to LangSmith for experiment comparison
+5. **Tracking** = results logged to Sentry as AI-Agent traces (spans + measurements + tags)
 
 ## Tasks
 
@@ -83,9 +83,10 @@ Add variants in `treatments/common.yaml` to A/B test skill changes.
 | `ANTHROPIC_API_KEY`  | Yes      | Claude API key                                                                       |
 | `TEAMCITY_URL`       | Yes      | TeamCity server URL                                                                  |
 | `TEAMCITY_TOKEN`     | Yes      | TeamCity API token                                                                   |
-| `LANGSMITH_API_KEY`  | No       | LangSmith API key for experiment tracking                                            |
-| `LANGSMITH_ENDPOINT` | No       | LangSmith endpoint (default: US, set to `https://eu.api.smith.langchain.com` for EU) |
-| `LANGSMITH_PROJECT`  | No       | LangSmith project name (default: `teamcity-cli`)                                     |
+| `SENTRY_DSN`         | No       | Ingest-only — sends traces to Sentry. Cannot read back.                              |
+| `SENTRY_ORG`         | No       | Org slug for `scripts/compare.py` (DSN doesn't carry org scope)                      |
+| `SENTRY_AUTH_TOKEN`  | No       | Bearer token with `event:read` + `org:read` for compare                              |
+| `SENTRY_ENVIRONMENT` | No       | Sentry environment tag (default: `eval`)                                             |
 | `BENCH_CC_MODEL`     | No       | Claude model (default: `claude-sonnet-4-5-20250929`)                                 |
 | `BENCH_TIMEOUT`      | No       | Task timeout in seconds (default: 300)                                               |
 | `BENCH_LOCAL`        | No       | Set to `1` to skip Docker and run Claude locally                                     |
@@ -128,10 +129,31 @@ MY_VARIANT:
   skill_dir: "teamcity-cli"  # or a custom skill directory
 ```
 
-## LangSmith Integration
+## Sentry Integration
 
-When `LANGSMITH_API_KEY` is set, each eval run is logged as an experiment in your
-LangSmith project. This gives you:
-- Side-by-side comparison of CONTROL vs. CURRENT
-- Pass rate tracking over time
-- Full Claude session traces for debugging
+When `SENTRY_DSN` is set, each eval run is pushed to Sentry as a `gen_ai.invoke_agent`
+transaction with one `gen_ai.execute_tool` child span per Claude tool call.
+
+Per-run signal stored on the transaction:
+- **Tags** (filterable): `experiment_id` (= branch), `task`, `treatment`, `skill_invoked`
+- **Measurements** (aggregatable): `pass_rate`, `duration_sec`, `num_turns`, `total_tokens`
+- **Data**: full instruction, response text, check results, LLM grades, tool inputs/outputs
+
+### DSN vs. auth token
+
+The **DSN is ingest-only** — it can send events to Sentry but cannot query them back.
+To drive `scripts/compare.py` off Sentry you also need:
+
+- `SENTRY_ORG` — your org slug (the DSN encodes an org *ID*, not a slug)
+- `SENTRY_AUTH_TOKEN` — a Bearer token with `event:read` + `org:read` scopes
+  (create at `https://{org}.sentry.io/settings/account/api/auth-tokens/`)
+
+Without those, write still works (traces flow to Sentry for humans to browse in the
+AI Agent Monitoring view); compare falls back to local-directory diff mode.
+
+### Caveats
+
+- Sentry event retention is 30–90d depending on plan. The local `results/<experiment_id>/*.json`
+  dump is the authoritative cold store.
+- Sampling is pinned to `1.0` for eval runs.
+- Each transaction is capped at 10 measurements; we use 4.

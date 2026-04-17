@@ -20,6 +20,7 @@ from scaffold.claude import run_claude, run_claude_docker
 from scaffold.events import extract_events
 from scaffold.graders import grade_all
 from scaffold.runner import EvalRunner
+from scaffold import sentry_log
 from scaffold.tasks import TaskConfig
 from conftest import TreatmentConfig
 from checks import CHECK_REGISTRY
@@ -29,94 +30,6 @@ if str(EVALS_ROOT) not in sys.path:
     sys.path.insert(0, str(EVALS_ROOT))
 
 
-def _log_to_langsmith(
-    task: TaskConfig,
-    treatment: TreatmentConfig,
-    runner: EvalRunner,
-    events,
-    result,
-    llm_grades: list,
-    experiment_id: str,
-) -> None:
-    try:
-        import uuid
-        from langsmith import Client
-
-        client = Client()
-        project = os.environ.get("LANGSMITH_PROJECT", "teamcity-cli")
-        parent_id = uuid.uuid4()
-
-        client.create_run(
-            id=parent_id,
-            name=f"{task.name}/{treatment.name}",
-            run_type="chain",
-            project_name=project,
-            inputs={
-                "task": task.name,
-                "treatment": treatment.name,
-                "instruction": task.instruction,
-            },
-            outputs={
-                "response": runner.text[:10000],
-                "pass_rate": runner.pass_rate,
-                "checks": runner.summary()["results"],
-                "events": events.summary(),
-            },
-            extra={"metadata": {"experiment_id": experiment_id}},
-        )
-
-        for tc in events.tool_calls:
-            tool_output = events.tool_results.get(tc["id"], {})
-            output_text = ""
-            if isinstance(tool_output, dict):
-                for block in tool_output.get("content", []):
-                    if isinstance(block, dict) and block.get("type") == "text":
-                        output_text += block.get("text", "")[:3000]
-            client.create_run(
-                id=uuid.uuid4(),
-                parent_run_id=parent_id,
-                name=tc["name"],
-                run_type="tool",
-                project_name=project,
-                inputs=tc.get("input", {}),
-                outputs={"result": output_text[:5000]} if output_text else {},
-            )
-
-        client.create_run(
-            id=uuid.uuid4(),
-            parent_run_id=parent_id,
-            name="validation",
-            run_type="chain",
-            project_name=project,
-            inputs={"checks_count": runner.total_count},
-            outputs={
-                "pass_rate": runner.pass_rate,
-                "results": runner.summary()["results"],
-                "llm_grades": [
-                    {"dimension": g.dimension, "score": g.score, "reasoning": g.reasoning}
-                    for g in llm_grades
-                ],
-            },
-        )
-
-        feedback = {
-            "checks_pass_rate": runner.pass_rate,
-            "duration_seconds": result.duration_sec,
-            "num_turns": float(events.num_turns),
-            "skill_invoked": 1.0 if runner.skills_invoked else 0.0,
-        }
-        if events.input_tokens:
-            feedback["total_tokens"] = float(events.input_tokens + events.output_tokens)
-            feedback["command_count"] = float(len(events.commands_run))
-        if llm_grades:
-            feedback["avg_llm_score"] = sum(g.score for g in llm_grades) / len(llm_grades)
-        for key, score in feedback.items():
-            client.create_feedback(run_id=parent_id, key=key, score=score)
-    except Exception as e:
-        print(f"  [langsmith] Warning: {e}")
-
-
-@pytest.mark.langsmith(test_suite_name="teamcity-cli-skill-eval")
 @pytest.mark.timeout(900)
 def test_task(
     task_config: TaskConfig,
@@ -162,8 +75,28 @@ def test_task(
 
     runner.print_summary()
 
-    # --- Log to LangSmith ---
-    _log_to_langsmith(task_config, treatment_config, runner, events, result, llm_grades, experiment_id)
+    # --- Log to Sentry (no-op if SENTRY_DSN unset) ---
+    sentry_log.log_run(
+        task_name=task_config.name,
+        treatment_name=treatment_config.name,
+        instruction=task_config.instruction,
+        experiment_id=experiment_id,
+        response_text=runner.text,
+        pass_rate=runner.pass_rate,
+        duration_sec=result.duration_sec,
+        num_turns=events.num_turns,
+        input_tokens=events.input_tokens,
+        output_tokens=events.output_tokens,
+        skill_invoked=bool(runner.skills_invoked),
+        check_results=runner.summary()["results"],
+        tool_calls=events.tool_calls,
+        tool_results=events.tool_results,
+        llm_grades=[
+            {"dimension": g.dimension, "score": g.score, "reasoning": g.reasoning}
+            for g in llm_grades
+        ],
+        run_id=run_id,
+    )
 
     # --- Save artifacts ---
     artifacts_dir = EVALS_ROOT / "results" / experiment_id

@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Compare eval experiments via LangSmith or local result directories.
+"""Compare eval experiments via Sentry or local result directories.
 
-Queries LangSmith for runs tagged with experiment_id (= branch name in CI).
-Compares current branch against main automatically.
+Sentry path (preferred): queries the Discover events API for transactions tagged
+with experiment_id (= branch name). Requires SENTRY_ORG + SENTRY_AUTH_TOKEN —
+the DSN is ingest-only and cannot read.
+
+Local path (fallback): diffs two `results/<experiment_id>/` directories written
+by the test runner. Works with zero credentials.
 
 Regression gate: fails if the OVERALL average of CURRENT runs drops >10%.
 Individual task swings are reported but don't gate — single-run variance is too high.
 
 Usage:
-    uv run scripts/compare.py                          # current branch vs main (LangSmith)
-    uv run scripts/compare.py feature_x main           # explicit A vs B (LangSmith)
+    uv run scripts/compare.py                          # current branch vs main (Sentry)
+    uv run scripts/compare.py feature_x main           # explicit A vs B (Sentry)
     uv run scripts/compare.py results/eval-X results/eval-Y  # local directories
 """
 
@@ -18,6 +22,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+import urllib.parse
+import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
@@ -104,56 +110,133 @@ def compare_local(path_a: str, path_b: str) -> None:
     print_comparison(dir_a.name, dir_b.name, summary_a, summary_b, count_a, count_b)
 
 
-def compare_langsmith(arg_a: str | None, arg_b: str | None) -> None:
-    from langsmith import Client
+def _project_id_from_dsn(dsn: str) -> str | None:
+    """The DSN's final path segment is the numeric project ID."""
+    try:
+        path = urllib.parse.urlparse(dsn).path.strip("/")
+        return path if path.isdigit() else None
+    except Exception:
+        return None
 
-    client = Client()
-    project = os.environ.get("LANGSMITH_PROJECT", "teamcity-cli")
 
-    runs = list(client.list_runs(project_name=project, limit=100, is_root=True))
-    by_exp: dict[str, list] = defaultdict(list)
-    for r in runs:
-        exp_id = (r.extra or {}).get("metadata", {}).get("experiment_id", "unknown")
-        by_exp[exp_id].append(r)
-    available = sorted(by_exp.keys())
+def _sentry_query(
+    org: str,
+    token: str,
+    project: str,
+    query: str,
+    fields: list[str],
+    stats_period: str = "30d",
+) -> list[dict]:
+    """Hit Sentry's Discover events API. Returns the `data` array.
+
+    `project` must be a numeric project ID — the org-wide events endpoint
+    otherwise pools transactions across every project in the org and any
+    shared `experiment_id` (e.g. `main`) leaks in.
+    """
+    host = os.environ.get("SENTRY_HOST", "sentry.io")
+    params: list[tuple[str, str]] = [
+        ("query", query),
+        ("statsPeriod", stats_period),
+        ("per_page", "100"),
+        ("dataset", "transactions"),
+        ("referrer", "teamcity-cli-evals"),
+        ("project", project),
+    ]
+    for f in fields:
+        params.append(("field", f))
+    url = f"https://{host}/api/0/organizations/{org}/events/?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        payload = json.loads(resp.read().decode())
+    return payload.get("data", [])
+
+
+def compare_sentry(arg_a: str | None, arg_b: str | None) -> None:
+    org = os.environ.get("SENTRY_ORG")
+    token = os.environ.get("SENTRY_AUTH_TOKEN")
+    if not org or not token:
+        print("Sentry compare needs SENTRY_ORG and SENTRY_AUTH_TOKEN.")
+        sys.exit(1)
+    project = os.environ.get("SENTRY_PROJECT") or _project_id_from_dsn(
+        os.environ.get("SENTRY_DSN", "")
+    )
+    if not project:
+        print("Sentry compare needs SENTRY_PROJECT (numeric id) or SENTRY_DSN to derive it.")
+        sys.exit(1)
 
     if arg_a and arg_b:
         branch_b, branch_a = arg_a, arg_b
     else:
         branch_b = os.environ.get("BRANCH_NAME", "").replace("/", "_")
-        if not branch_b:
-            non_main = [e for e in available if e != "main"]
-            branch_b = non_main[-1] if non_main else ""
         branch_a = "main"
-
-    if branch_a not in by_exp:
-        print(f"No baseline '{branch_a}' in LangSmith. Available: {available}")
-        sys.exit(0)
-    if branch_b not in by_exp:
-        print(f"No results for '{branch_b}'. Available: {available}")
-        sys.exit(0)
+        if not branch_b:
+            print("Set BRANCH_NAME or pass two experiment IDs.")
+            sys.exit(0)
     if branch_a == branch_b:
         print(f"Same experiment '{branch_a}', nothing to compare.")
         sys.exit(0)
 
-    def summarize(runs: list) -> dict:
-        results: dict = defaultdict(lambda: {"n": 0, "pass_rates": []})
-        for r in runs:
-            parts = (r.name or "").split("/")
-            if len(parts) != 2:
-                continue
-            key = f"{parts[0]}/{parts[1]}"
-            fb = {k: v.get("avg", 0) for k, v in (r.feedback_stats or {}).items()}
-            results[key]["n"] += 1
-            results[key]["pass_rates"].append(fb.get("checks_pass_rate", 0))
-        for data in results.values():
-            n = data["n"]
-            data["pass_rate"] = sum(data["pass_rates"]) / n if n else 0
-        return dict(results)
+    fields = ["tags[task]", "tags[treatment]", "avg(measurements.pass_rate)", "count()"]
 
-    summary_a = summarize(by_exp[branch_a])
-    summary_b = summarize(by_exp[branch_b])
-    print_comparison(branch_a, branch_b, summary_a, summary_b, len(by_exp[branch_a]), len(by_exp[branch_b]))
+    def summarize(experiment_id: str) -> tuple[dict, int]:
+        rows = _sentry_query(
+            org,
+            token,
+            project,
+            query=f"event.type:transaction tags[experiment_id]:{experiment_id}",
+            fields=fields,
+        )
+        summary: dict[str, dict] = {}
+        total = 0
+        for row in rows:
+            task = row.get("tags[task]") or ""
+            treat = row.get("tags[treatment]") or ""
+            if not task or not treat:
+                continue
+            key = f"{task}/{treat}"
+            n = int(row.get("count()", 0) or 0)
+            summary[key] = {
+                "pass_rate": float(row.get("avg(measurements.pass_rate)", 0) or 0),
+                "n": n,
+            }
+            total += n
+        return summary, total
+
+    summary_a, count_a = summarize(branch_a)
+    summary_b, count_b = summarize(branch_b)
+    if not summary_a:
+        print(f"No baseline '{branch_a}' in Sentry.")
+        sys.exit(0)
+    if not summary_b:
+        print(f"No results for '{branch_b}' in Sentry.")
+        sys.exit(0)
+    print_comparison(branch_a, branch_b, summary_a, summary_b, count_a, count_b)
+
+
+RESULTS_ROOT = Path(__file__).resolve().parent.parent / "results"
+
+
+def _try_local_fallback(arg_a: str | None, arg_b: str | None) -> bool:
+    """Diff two results/<experiment_id>/ dirs when Sentry creds are absent.
+
+    Resolves defaults the same way compare_sentry does: baseline=`main`,
+    branch=$BRANCH_NAME. Returns True if a comparison ran.
+    """
+    if arg_a and arg_b:
+        branch_b, branch_a = arg_a, arg_b
+    else:
+        branch_b = os.environ.get("BRANCH_NAME", "").replace("/", "_")
+        branch_a = "main"
+    if not branch_b or branch_a == branch_b:
+        return False
+    dir_a = RESULTS_ROOT / branch_a
+    dir_b = RESULTS_ROOT / branch_b
+    if not dir_a.is_dir() or not dir_b.is_dir():
+        print(f"  Local fallback: missing results/{branch_a} or results/{branch_b}.")
+        return False
+    print(f"  Local fallback: comparing results/{branch_a} vs results/{branch_b}")
+    compare_local(str(dir_a), str(dir_b))
+    return True
 
 
 def main() -> None:
@@ -163,8 +246,14 @@ def main() -> None:
     looks_like_path = lambda s: "/" in s or s.startswith(".")
     if arg_a and arg_b and (looks_like_path(arg_a) or looks_like_path(arg_b)):
         compare_local(arg_a, arg_b)
+    elif os.environ.get("SENTRY_AUTH_TOKEN") and os.environ.get("SENTRY_ORG"):
+        compare_sentry(arg_a, arg_b)
+    elif _try_local_fallback(arg_a, arg_b):
+        return
     else:
-        compare_langsmith(arg_a, arg_b)
+        print("  No SENTRY_AUTH_TOKEN/SENTRY_ORG set and no local results/<branch> dirs available.")
+        print("  Pass two paths for local diff, or set SENTRY_AUTH_TOKEN + SENTRY_ORG.")
+        sys.exit(2)
 
 
 if __name__ == "__main__":
