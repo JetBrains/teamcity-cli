@@ -110,8 +110,29 @@ def compare_local(path_a: str, path_b: str) -> None:
     print_comparison(dir_a.name, dir_b.name, summary_a, summary_b, count_a, count_b)
 
 
-def _sentry_query(org: str, token: str, query: str, fields: list[str], stats_period: str = "30d") -> list[dict]:
-    """Hit Sentry's Discover events API. Returns the `data` array."""
+def _project_id_from_dsn(dsn: str) -> str | None:
+    """The DSN's final path segment is the numeric project ID."""
+    try:
+        path = urllib.parse.urlparse(dsn).path.strip("/")
+        return path if path.isdigit() else None
+    except Exception:
+        return None
+
+
+def _sentry_query(
+    org: str,
+    token: str,
+    project: str,
+    query: str,
+    fields: list[str],
+    stats_period: str = "30d",
+) -> list[dict]:
+    """Hit Sentry's Discover events API. Returns the `data` array.
+
+    `project` must be a numeric project ID — the org-wide events endpoint
+    otherwise pools transactions across every project in the org and any
+    shared `experiment_id` (e.g. `main`) leaks in.
+    """
     host = os.environ.get("SENTRY_HOST", "sentry.io")
     params: list[tuple[str, str]] = [
         ("query", query),
@@ -119,6 +140,7 @@ def _sentry_query(org: str, token: str, query: str, fields: list[str], stats_per
         ("per_page", "100"),
         ("dataset", "transactions"),
         ("referrer", "teamcity-cli-evals"),
+        ("project", project),
     ]
     for f in fields:
         params.append(("field", f))
@@ -134,6 +156,12 @@ def compare_sentry(arg_a: str | None, arg_b: str | None) -> None:
     token = os.environ.get("SENTRY_AUTH_TOKEN")
     if not org or not token:
         print("Sentry compare needs SENTRY_ORG and SENTRY_AUTH_TOKEN.")
+        sys.exit(1)
+    project = os.environ.get("SENTRY_PROJECT") or _project_id_from_dsn(
+        os.environ.get("SENTRY_DSN", "")
+    )
+    if not project:
+        print("Sentry compare needs SENTRY_PROJECT (numeric id) or SENTRY_DSN to derive it.")
         sys.exit(1)
 
     if arg_a and arg_b:
@@ -154,6 +182,7 @@ def compare_sentry(arg_a: str | None, arg_b: str | None) -> None:
         rows = _sentry_query(
             org,
             token,
+            project,
             query=f"event.type:transaction tags[experiment_id]:{experiment_id}",
             fields=fields,
         )
@@ -184,6 +213,32 @@ def compare_sentry(arg_a: str | None, arg_b: str | None) -> None:
     print_comparison(branch_a, branch_b, summary_a, summary_b, count_a, count_b)
 
 
+RESULTS_ROOT = Path(__file__).resolve().parent.parent / "results"
+
+
+def _try_local_fallback(arg_a: str | None, arg_b: str | None) -> bool:
+    """Diff two results/<experiment_id>/ dirs when Sentry creds are absent.
+
+    Resolves defaults the same way compare_sentry does: baseline=`main`,
+    branch=$BRANCH_NAME. Returns True if a comparison ran.
+    """
+    if arg_a and arg_b:
+        branch_b, branch_a = arg_a, arg_b
+    else:
+        branch_b = os.environ.get("BRANCH_NAME", "").replace("/", "_")
+        branch_a = "main"
+    if not branch_b or branch_a == branch_b:
+        return False
+    dir_a = RESULTS_ROOT / branch_a
+    dir_b = RESULTS_ROOT / branch_b
+    if not dir_a.is_dir() or not dir_b.is_dir():
+        print(f"  Local fallback: missing results/{branch_a} or results/{branch_b}.")
+        return False
+    print(f"  Local fallback: comparing results/{branch_a} vs results/{branch_b}")
+    compare_local(str(dir_a), str(dir_b))
+    return True
+
+
 def main() -> None:
     arg_a = sys.argv[1] if len(sys.argv) >= 2 else None
     arg_b = sys.argv[2] if len(sys.argv) >= 3 else None
@@ -193,9 +248,11 @@ def main() -> None:
         compare_local(arg_a, arg_b)
     elif os.environ.get("SENTRY_AUTH_TOKEN") and os.environ.get("SENTRY_ORG"):
         compare_sentry(arg_a, arg_b)
+    elif _try_local_fallback(arg_a, arg_b):
+        return
     else:
-        print("  No SENTRY_AUTH_TOKEN/SENTRY_ORG set — DSN alone can't read back.")
-        print("  Pass two results/ paths for local diff, or set an auth token.")
+        print("  No SENTRY_AUTH_TOKEN/SENTRY_ORG set and no local results/<branch> dirs available.")
+        print("  Pass two paths for local diff, or set SENTRY_AUTH_TOKEN + SENTRY_ORG.")
         sys.exit(2)
 
 
