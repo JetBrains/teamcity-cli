@@ -154,11 +154,6 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 		return nil, fmt.Errorf("WebSocket connection failed: %w", err)
 	}
 
-	_ = conn.SetReadDeadline(time.Now().Add(readTimeout))
-	conn.SetPongHandler(func(string) error {
-		return conn.SetReadDeadline(time.Now().Add(readTimeout))
-	})
-
 	return &Conn{conn: conn, done: make(chan struct{}), debugf: c.debugf}, nil
 }
 
@@ -188,6 +183,11 @@ func (tc *Conn) RunInteractive(ctx context.Context) error {
 		return fmt.Errorf("failed to set raw terminal mode: %w", err)
 	}
 	defer func() { _ = term.RestoreTerminal(fd, oldState) }()
+
+	_ = tc.conn.SetReadDeadline(time.Now().Add(readTimeout))
+	tc.conn.SetPongHandler(func(string) error {
+		return tc.conn.SetReadDeadline(time.Now().Add(readTimeout))
+	})
 
 	errChan := make(chan error, 2)
 	go tc.copyToWriter(stdout, errChan)
@@ -246,7 +246,6 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 				}
 				return
 			}
-			_ = tc.conn.SetReadDeadline(time.Now().Add(readTimeout))
 
 			buf.Write(msg)
 
