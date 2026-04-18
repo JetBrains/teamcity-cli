@@ -7,7 +7,7 @@ from scaffold.events import ClaudeEvents
 from scaffold.runner import EvalRunner
 
 
-def _run_check(commands: list[str], check_fn):
+def _run_check(commands: list[str], check_fn) -> dict:
     events = ClaudeEvents(commands_run=commands)
     runner = EvalRunner(events, task_name="unit")
     runner.run([check_fn])
@@ -30,4 +30,3 @@ def test_avoids_raw_maven_for_dsl_validation_fails_on_maven() -> None:
         avoids_raw_maven_for_dsl_validation,
     )
     assert result["passed"] is False
-
