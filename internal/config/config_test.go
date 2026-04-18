@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -582,6 +583,9 @@ func TestGetCurrentUserUnknownServer(T *testing.T) {
 }
 
 func TestWriteConfigCreatesFile0600(T *testing.T) {
+	if runtime.GOOS == "windows" {
+		T.Skip("POSIX mode bits are not meaningful on Windows")
+	}
 	saveCfgState(T)
 	tmpDir := T.TempDir()
 	configPath = filepath.Join(tmpDir, "config.yml")
@@ -607,12 +611,17 @@ func TestWriteConfigCreatesFile0600(T *testing.T) {
 }
 
 func TestWriteConfigPreservesSymlink(T *testing.T) {
+	if runtime.GOOS == "windows" {
+		T.Skip("symlink creation requires elevated privileges on Windows and POSIX perm bits don't apply")
+	}
 	saveCfgState(T)
 	tmpDir := T.TempDir()
 	realPath := filepath.Join(tmpDir, "real-config.yml")
 	linkPath := filepath.Join(tmpDir, "config.yml")
 	require.NoError(T, os.WriteFile(realPath, []byte("default_server: seed\n"), 0600))
-	require.NoError(T, os.Symlink(realPath, linkPath))
+	if err := os.Symlink(realPath, linkPath); err != nil {
+		T.Skipf("symlink creation not permitted in this environment: %v", err)
+	}
 
 	configPath = linkPath
 	cfg = &Config{
