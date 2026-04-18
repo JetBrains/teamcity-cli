@@ -50,7 +50,7 @@ VALIDATE_COMMAND_RE: Pattern[str] = re.compile(
     r"teamcity\s+project\s+settings\s+validate(?:\s|$)",
     re.IGNORECASE,
 )
-MAVEN_COMMAND_RE = re.compile(r"(?:^|\s)(?:\./)?mvnw?(?:\s|$)", re.IGNORECASE)
+MAVEN_COMMAND_RE: Pattern[str] = re.compile(r"(?:^|\s)(?:\./)?mvnw?(?:\s|$)", re.IGNORECASE)
 
 
 def ran_teamcity_commands(runner: EvalRunner) -> None:
