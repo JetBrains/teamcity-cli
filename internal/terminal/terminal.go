@@ -138,7 +138,7 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 		header.Set("Cookie", strings.Join(cookies, "; "))
 	}
 
-	c.debugf("WebSocket URL: %s", wsURL)
+	c.debugf("WebSocket URL: %s://%s/app/agentTerminal/terminal/<redacted>?cols=%d&rows=%d", scheme, u.Host, cols, rows)
 
 	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err != nil {
