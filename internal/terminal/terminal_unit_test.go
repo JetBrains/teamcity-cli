@@ -104,3 +104,30 @@ func TestStripANSI(T *testing.T) {
 		})
 	}
 }
+
+func TestNormalizeEnterKeystroke(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name string
+		in   []byte
+		want []byte
+	}{
+		{"solitary LF becomes CR (broken-console Enter)", []byte("\n"), []byte("\r")},
+		{"solitary CR unchanged (conformant Enter)", []byte("\r"), []byte("\r")},
+		{"solitary printable char unchanged", []byte("a"), []byte("a")},
+		{"solitary Ctrl+C unchanged", []byte{0x03}, []byte{0x03}},
+		{"CRLF pair not rewritten (paste or combined read)", []byte("\r\n"), []byte("\r\n")},
+		{"LF inside multi-byte paste left as LF", []byte("line1\nline2"), []byte("line1\nline2")},
+		{"escape sequence for arrow unchanged", []byte{0x1b, '[', 'A'}, []byte{0x1b, '[', 'A'}},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			buf := append([]byte(nil), tc.in...)
+			normalizeEnterKeystroke(buf)
+			assert.Equal(t, tc.want, buf)
+		})
+	}
+}

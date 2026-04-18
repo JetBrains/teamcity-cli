@@ -388,6 +388,7 @@ func (tc *Conn) copyFromReader(r io.Reader, errChan chan<- error) {
 			return
 		default:
 		}
+		normalizeEnterKeystroke(buf[:n])
 		if err := tc.writeMessage(websocket.TextMessage, buf[:n]); err != nil {
 			select {
 			case errChan <- err:
@@ -395,6 +396,15 @@ func (tc *Conn) copyFromReader(r io.Reader, errChan chan<- error) {
 			}
 			return
 		}
+	}
+}
+
+// Some Windows consoles deliver LF for Enter under raw/VT input mode; PSReadLine
+// reads that as Shift+Enter and never submits. Rewrite only single-byte reads
+// (interactive keystrokes) so pastes containing LF survive.
+func normalizeEnterKeystroke(buf []byte) {
+	if len(buf) == 1 && buf[0] == '\n' {
+		buf[0] = '\r'
 	}
 }
 
