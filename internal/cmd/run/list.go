@@ -99,6 +99,14 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		return err
 	}
 
+	// Explicit --job suppresses inferred project filter (could exclude its buildType).
+	if opts.job == "" {
+		opts.project = f.ResolveProject(opts.project)
+	}
+	if opts.job == "" && opts.project == "" {
+		opts.job = f.ResolveDefaultJob("")
+	}
+
 	request, err := resolveRunListRequest(client, opts, jsonResult.Fields)
 	if err != nil {
 		return err

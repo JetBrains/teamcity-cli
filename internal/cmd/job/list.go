@@ -31,6 +31,7 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity job list --plain
   teamcity job list --plain --no-header`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			opts.project = f.ResolveProject(opts.project)
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.BuildTypeFields, opts.fetch)
 		},
 	}
