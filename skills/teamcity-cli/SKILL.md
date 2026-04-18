@@ -48,6 +48,7 @@ See [Workflows](references/workflows.md) for full details on each.
 **Fix build failure:** diagnose → classify → fix (code: `--local-changes`, DSL: `settings validate`, pipeline: `pipeline validate`) → push
 **Monitor until green:** start → watch → fix if failed → push → watch new build → repeat (max 3 attempts)
 **Pipeline:** `teamcity pipeline create <name> -p <project>` / `teamcity pipeline validate [file]` / `teamcity pipeline pull <pipeline-id>` → edit → `teamcity pipeline push <pipeline-id> [file]`
+**Project VCS root details:** `teamcity project vcs list --project <project-id>` → `teamcity project vcs view <vcs-root-id>` (do not guess VCS root IDs)
 
 ## References
 

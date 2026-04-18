@@ -430,6 +430,7 @@ teamcity config get default_server
 ## Direct API (`teamcity api`)
 
 For features not covered by specific commands. Endpoints always start with `/app/rest/`.
+Pass only the endpoint path as the first argument (never include `GET`, `POST`, etc. in the path).
 
 ```bash
 # GET request

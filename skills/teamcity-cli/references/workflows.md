@@ -343,6 +343,8 @@ mvn teamcity-configs:generate -f .teamcity/pom.xml       # fallback
 
 ## VCS Roots
 
+For questions like "which repository URL and default branch does project `<id>` use", always discover attached VCS roots first, then inspect a concrete root.
+
 **List VCS roots in a project:**
 ```bash
 teamcity project vcs list --project <project-id>
@@ -352,6 +354,12 @@ teamcity project vcs list --project <project-id>
 ```bash
 teamcity project vcs view <vcs-root-id>
 ```
+
+**Required sequence for project VCS inspection:**
+1. Run `teamcity project vcs list --project <project-id>` to get valid root IDs.
+2. Run `teamcity project vcs view <vcs-root-id>` for URL, default branch, auth method, and other properties.
+3. Do not guess VCS root IDs.
+4. Do not use `teamcity project view` or `teamcity project settings status` as a substitute for VCS root details.
 
 **Open browser to create a VCS root:**
 ```bash
