@@ -5,6 +5,7 @@ package gallery_test
 import (
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/tiulpin/termbook"
@@ -24,15 +25,19 @@ func styleGuideScreens() []termbook.Screen {
 			fmt.Fprintln(w, output.Faint("Faint")+" — secondary info, IDs, hints")
 		}),
 		termbook.Manual("status-icons", "Status Icons", "Status indicators in tables and views", "", func(w io.Writer) {
-			for _, s := range []struct{ st, state, desc string }{
-				{"SUCCESS", "finished", "build completed successfully"},
-				{"FAILURE", "finished", "build finished with failures"},
-				{"", "running", "build is currently executing"},
-				{"", "queued", "build is waiting in queue"},
-				{"ERROR", "finished", "internal or infrastructure error"},
-				{"UNKNOWN", "finished", "unknown status"},
+			for _, s := range []struct{ st, state, text, desc string }{
+				{"SUCCESS", "finished", "", "build completed successfully"},
+				{"FAILURE", "finished", "", "build finished with failures"},
+				{"", "running", "", "build is currently executing"},
+				{"", "queued", "", "build is waiting in queue"},
+				{"UNKNOWN", "finished", "Canceled", "build was canceled by a user"},
+				{"ERROR", "finished", "", "internal or infrastructure error"},
+				{"UNKNOWN", "finished", "", "unknown status"},
 			} {
-				fmt.Fprintf(w, "  %s  %-12s %s\n", output.StatusIcon(s.st, s.state), output.StatusText(s.st, s.state), output.Faint(s.desc))
+				fmt.Fprintf(w, "  %s  %-12s %s\n",
+					output.StatusIcon(s.st, s.state, s.text),
+					output.StatusText(s.st, s.state, s.text),
+					output.Faint(s.desc))
 			}
 		}),
 		termbook.Manual("messages", "Messages", "Info, success, warning, error patterns", "", func(w io.Writer) {
@@ -40,7 +45,7 @@ func styleGuideScreens() []termbook.Screen {
 			p.Success("Logged in as Viktor Tiulpin")
 			p.Info("3 runs matched your filters")
 			p.Warn("Token expires in 2 days")
-			fmt.Fprintf(w, "Error: build configuration %q not found\n\nHint: Use 'teamcity job list' to see available jobs\n", "NonExistent_Build")
+			fmt.Fprintf(w, "Error: job '%s' not found\n\nHint: Use 'teamcity job list' to see available jobs\n", "NonExistent_Build")
 		}),
 		termbook.Manual("table", "Table Rendering", "Auto-sized columns with colored cells", "", func(w io.Writer) {
 			p := &output.Printer{Out: w, ErrOut: w}
@@ -107,8 +112,10 @@ func runScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 		termbook.Scr("run-restart", "run restart", "Re-trigger a completed run",
 			"teamcity run restart 1 --no-input", capture(t, ts, "run", "restart", "1", "--no-input")),
 		termbook.Manual("run-watch", "run watch --logs", "Full-screen TUI with live log streaming (alt-screen)", "teamcity run watch --logs 45229", func(w io.Writer) {
-			fmt.Fprintf(w, "%s Deploy Staging  45229  #830  %s · Running (67%%)\n\n",
-				output.Yellow("●"), output.Yellow("Running"))
+			fmt.Fprintf(w, "%s %s 45229  #830 %s · Running (67%%)\n\n",
+				output.Yellow("●"),
+				output.Bold("Deploy Staging"),
+				output.Faint("https://tc.example.com/viewLog.html?buildId=45229"))
 			fmt.Fprintf(w, "%s\n", output.Faint("[12:01:10] Downloading artifacts from Build #831"))
 			fmt.Fprintf(w, "%s\n", output.Faint("[12:01:12] Extracting app.jar (12.4 MB)"))
 			fmt.Fprintf(w, "%s\n", output.Faint("[12:01:15] Verifying checksums... OK"))
@@ -121,7 +128,10 @@ func runScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			fmt.Fprintf(w, "[12:01:40] Updating load balancer config...\n")
 			fmt.Fprintf(w, "[12:01:42] Draining old instances...\n")
 			fmt.Fprintf(w, "%s\n", output.Green("[12:01:45] Deploy complete. 2/2 instances healthy"))
-			fmt.Fprintf(w, "\n%s quit  ·  %s  ·  ~\n", output.Faint("q"), output.Cyan("teamcity agent term 1"))
+			fmt.Fprintf(w, "\n%s  %s  %s\n",
+				output.Faint("q quit"),
+				output.Faint("·"),
+				output.Cyan("teamcity agent term 1"))
 		}),
 		termbook.Scr("run-log", "run log --tail", "Formatted build log with timestamps",
 			"teamcity run log 1 --tail 10", capture(t, ts, "run", "log", "1", "--tail", "10")),
@@ -130,10 +140,13 @@ func runScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 		termbook.Scr("run-artifacts", "run artifacts", "List downloadable build artifacts",
 			"teamcity run artifacts 1", capture(t, ts, "run", "artifacts", "1")),
 		termbook.Manual("run-download", "run download", "Download artifacts to local filesystem", "teamcity run download 45231", func(w io.Writer) {
-			fmt.Fprintf(w, "%s Downloaded app.jar (12.4 MB)\n", output.Green("✓"))
-			fmt.Fprintf(w, "%s Downloaded test-report.html (234 KB)\n", output.Green("✓"))
-			fmt.Fprintf(w, "%s Downloaded logs/build.log (45 KB)\n", output.Green("✓"))
-			fmt.Fprintf(w, "\n3 files, 12.6 MB total → ./artifacts/\n")
+			fmt.Fprintln(w, "Downloading 3 artifacts (12.6 MiB total) to ./artifacts/")
+			fmt.Fprintln(w)
+			fmt.Fprintf(w, "%-18s  %10s\n", "NAME", "SIZE")
+			fmt.Fprintf(w, "%-18s  %10s  %s\n", "app.jar", "12 MiB", output.Green("   ✓"))
+			fmt.Fprintf(w, "%-18s  %10s  %s\n", "test-report.html", "234 KiB", output.Green("   ✓"))
+			fmt.Fprintf(w, "%-18s  %10s  %s\n", "logs/build.log", "45 KiB", output.Green("   ✓"))
+			fmt.Fprintf(w, "\n%s 3 artifacts downloaded\n", output.Green("✓"))
 		}),
 		termbook.Scr("run-changes", "run changes", "VCS changes included in a run",
 			"teamcity run changes 1", capture(t, ts, "run", "changes", "1")),
@@ -149,6 +162,8 @@ func runScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity run unpin 1", capture(t, ts, "run", "unpin", "1")),
 		termbook.Scr("run-tag", "run tag", "Add tags to a run",
 			"teamcity run tag 1 release v1.0.0", capture(t, ts, "run", "tag", "1", "release", "v1.0.0")),
+		termbook.Scr("run-untag", "run untag", "Remove tags from a run",
+			"teamcity run untag 1 release", capture(t, ts, "run", "untag", "1", "release")),
 		termbook.Scr("run-comment", "run comment", "View a build comment",
 			"teamcity run comment 1", capture(t, ts, "run", "comment", "1")),
 		termbook.Scr("run-comment-set", "run comment (set)", "Set a comment on a run",
@@ -164,8 +179,16 @@ func jobScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity job tree MyApp_Build", capture(t, ts, "job", "tree", "MyApp_Build")),
 		termbook.Scr("job-pause", "job pause", "Pause a build configuration",
 			"teamcity job pause MyApp_Deploy", capture(t, ts, "job", "pause", "MyApp_Deploy")),
+		termbook.Scr("job-resume", "job resume", "Resume a paused build configuration",
+			"teamcity job resume MyApp_Deploy", capture(t, ts, "job", "resume", "MyApp_Deploy")),
 		termbook.Scr("job-param", "job param list", "List job parameters",
 			"teamcity job param list MyApp_Build", capture(t, ts, "job", "param", "list", "MyApp_Build")),
+		termbook.Scr("job-param-get", "job param get", "Get a job parameter value",
+			"teamcity job param get MyApp_Build env.JAVA_HOME", capture(t, ts, "job", "param", "get", "MyApp_Build", "env.JAVA_HOME")),
+		termbook.Scr("job-param-set", "job param set", "Set a job parameter value",
+			"teamcity job param set MyApp_Build env.JAVA_HOME /opt/jdk", capture(t, ts, "job", "param", "set", "MyApp_Build", "env.JAVA_HOME", "/opt/jdk")),
+		termbook.Scr("job-param-delete", "job param delete", "Delete a job parameter",
+			"teamcity job param delete MyApp_Build env.JAVA_HOME", capture(t, ts, "job", "param", "delete", "MyApp_Build", "env.JAVA_HOME")),
 	}
 }
 func agentScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
@@ -179,6 +202,14 @@ func agentScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity agent enable 1", capture(t, ts, "agent", "enable", "1")),
 		termbook.Scr("agent-disable", "agent disable", "Disable an agent",
 			"teamcity agent disable 1", capture(t, ts, "agent", "disable", "1")),
+		termbook.Scr("agent-authorize", "agent authorize", "Authorize an agent to accept builds",
+			"teamcity agent authorize 1", capture(t, ts, "agent", "authorize", "1")),
+		termbook.Scr("agent-deauthorize", "agent deauthorize", "Revoke authorization from an agent",
+			"teamcity agent deauthorize 1", capture(t, ts, "agent", "deauthorize", "1")),
+		termbook.Scr("agent-move", "agent move", "Move an agent to a different pool",
+			"teamcity agent move 1 2", capture(t, ts, "agent", "move", "1", "2")),
+		termbook.Scr("agent-reboot", "agent reboot", "Request agent reboot",
+			"teamcity agent reboot --yes 1", capture(t, ts, "agent", "reboot", "--yes", "1")),
 		termbook.Manual("agent-term", "agent term", "Interactive terminal session on an agent (WebSocket)", "teamcity agent term linux-agent-01", func(w io.Writer) {
 			fmt.Fprintf(w, "%s Connected to %s\n", output.Green("✓"), output.Cyan("linux-agent-01"))
 			fmt.Fprintf(w, "%s\n\n", output.Faint("https://tc.example.com/agentDetails.html?id=1"))
@@ -222,6 +253,8 @@ func poolScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity pool view 0", capture(t, ts, "pool", "view", "0")),
 		termbook.Scr("pool-link", "pool link", "Link a project to a pool",
 			"teamcity pool link 0 MyApp", capture(t, ts, "pool", "link", "0", "MyApp")),
+		termbook.Scr("pool-unlink", "pool unlink", "Unlink a project from a pool",
+			"teamcity pool unlink 0 MyApp", capture(t, ts, "pool", "unlink", "0", "MyApp")),
 	}
 }
 func projectScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
@@ -234,33 +267,36 @@ func projectScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 		termbook.Scr("project-settings", "project settings status", "Versioned settings sync status",
 			"teamcity project settings status MyApp", capture(t, ts, "project", "settings", "status", "MyApp")),
 		termbook.Manual("project-settings-validate", "project settings validate", "Validate local DSL settings", "teamcity project settings validate .teamcity", func(w io.Writer) {
-			fmt.Fprintf(w, "%s Configuration valid\n  Server: https://tc.example.com\n  Projects: 5, Build configurations: 12, VCS roots: 3\n", output.Green("✓"))
+			fmt.Fprintf(w, "Validating %s\n", output.Faint(".teamcity"))
+			fmt.Fprintf(w, "%s Configuration valid\n", output.Green("✓"))
+			fmt.Fprintf(w, "  %s %s\n", output.Faint("Server:"), "https://tc.example.com")
+			fmt.Fprintf(w, "  %s\n", output.Faint("Projects: 5, Build configurations: 12"))
 		}),
 		termbook.Manual("project-settings-export", "project settings export", "Export DSL settings as a zip archive", "teamcity project settings export MyApp", func(w io.Writer) {
-			fmt.Fprintf(w, "%s Exported kotlin settings to projectSettings.zip (45678 bytes)\n", output.Green("✓"))
+			fmt.Fprintln(w, "Exported kotlin settings to projectSettings.zip (45678 bytes)")
 		}),
 		termbook.Scr("project-vcs-list", "project vcs list", "List VCS roots in a project",
-			"teamcity project vcs list MyApp", capture(t, ts, "project", "vcs", "list", "MyApp")),
+			"teamcity project vcs list --project MyApp", capture(t, ts, "project", "vcs", "list", "--project", "MyApp")),
 		termbook.Scr("project-vcs-view", "project vcs view", "View VCS root details",
 			"teamcity project vcs view MyApp_MainRepo", capture(t, ts, "project", "vcs", "view", "MyApp_MainRepo")),
-		termbook.Manual("project-vcs-create", "project vcs create", "Create a new VCS root (interactive prompts)", "teamcity project vcs create MyApp", func(w io.Writer) {
-			fmt.Fprintf(w, "%s Created VCS root %s\n  ID: MyApp_NewRepo\n  URL: https://github.com/org/new-repo\n", output.Green("✓"), output.Cyan("New Repo"))
+		termbook.Manual("project-vcs-create", "project vcs create", "Create a new VCS root (interactive prompts)", "teamcity project vcs create --project MyApp --name \"New Repo\" --url https://github.com/org/new-repo", func(w io.Writer) {
+			fmt.Fprintf(w, "%s Created VCS root \"New Repo\" (MyApp_NewRepo) in project MyApp\n", output.Green("✓"))
 		}),
 		termbook.Scr("project-vcs-test", "project vcs test", "Test VCS connection",
 			"teamcity project vcs test MyApp_MainRepo", capture(t, ts, "project", "vcs", "test", "MyApp_MainRepo")),
 		termbook.Scr("project-vcs-delete", "project vcs delete", "Delete a VCS root",
 			"teamcity project vcs delete --yes MyApp_Repo", capture(t, ts, "project", "vcs", "delete", "--yes", "MyApp_Repo")),
 		termbook.Scr("project-ssh-list", "project ssh list", "List SSH keys in a project",
-			"teamcity project ssh list MyApp", capture(t, ts, "project", "ssh", "list", "MyApp")),
+			"teamcity project ssh list --project MyApp", capture(t, ts, "project", "ssh", "list", "--project", "MyApp")),
 		termbook.Scr("project-ssh-generate", "project ssh generate", "Generate a new SSH key",
-			"teamcity project ssh generate --project MyApp --name ci-key", capture(t, ts, "project", "ssh", "generate", "--project", "TestProject", "--name", "ci-key")),
+			"teamcity project ssh generate --project MyApp --name ci-key", capture(t, ts, "project", "ssh", "generate", "--project", "MyApp", "--name", "ci-key")),
 		termbook.Manual("project-ssh-upload", "project ssh upload", "Upload an SSH private key", "teamcity project ssh upload id_ed25519 --project MyApp --name deploy-key", func(w io.Writer) {
-			fmt.Fprintf(w, "%s Uploaded SSH key %s\n", output.Green("✓"), output.Cyan("deploy-key"))
+			fmt.Fprintf(w, "%s Uploaded SSH key \"deploy-key\" to project MyApp\n", output.Green("✓"))
 		}),
 		termbook.Scr("project-ssh-delete", "project ssh delete", "Delete an SSH key",
-			"teamcity project ssh delete deploy-key --project MyApp", capture(t, ts, "project", "ssh", "delete", "deploy-key", "--project", "TestProject")),
+			"teamcity project ssh delete deploy-key --project MyApp", capture(t, ts, "project", "ssh", "delete", "deploy-key", "--project", "MyApp")),
 		termbook.Scr("project-connection-list", "project connection list", "List project connections",
-			"teamcity project connection list MyApp", capture(t, ts, "project", "connection", "list", "MyApp")),
+			"teamcity project connection list --project MyApp", capture(t, ts, "project", "connection", "list", "--project", "MyApp")),
 		termbook.Scr("project-cloud-profile", "project cloud profile list", "List cloud profiles",
 			"teamcity project cloud profile list", capture(t, ts, "project", "cloud", "profile", "list")),
 		termbook.Scr("project-cloud-profile-view", "project cloud profile view", "View cloud profile details",
@@ -279,8 +315,14 @@ func projectScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity project cloud instance stop i-024...", capture(t, ts, "project", "cloud", "instance", "stop", "i-0245b46070c443201")),
 		termbook.Scr("project-param", "project param list", "List project parameters",
 			"teamcity project param list MyApp", capture(t, ts, "project", "param", "list", "MyApp")),
+		termbook.Scr("project-param-get", "project param get", "Get a project parameter value",
+			"teamcity project param get MyApp env.DEPLOY_ENV", capture(t, ts, "project", "param", "get", "MyApp", "env.DEPLOY_ENV")),
+		termbook.Scr("project-param-set", "project param set", "Set a project parameter value",
+			"teamcity project param set MyApp env.DEPLOY_ENV prod", capture(t, ts, "project", "param", "set", "MyApp", "env.DEPLOY_ENV", "prod")),
+		termbook.Scr("project-param-delete", "project param delete", "Delete a project parameter",
+			"teamcity project param delete MyApp env.DEPLOY_ENV", capture(t, ts, "project", "param", "delete", "MyApp", "env.DEPLOY_ENV")),
 		termbook.Scr("project-token-put", "project token put", "Store a secret and get a secure token reference",
-			"teamcity project token put MyApp \"s3cret-db-password\"", capture(t, ts, "project", "token", "put", "TestProject", "my-secret-password")),
+			"teamcity project token put MyApp \"s3cret-db-password\"", capture(t, ts, "project", "token", "put", "MyApp", "s3cret-db-password")),
 		termbook.Manual("project-token-get", "project token get", "Retrieve the value of a secure token", "teamcity project token get MyApp credentialsJSON:abc123", func(w io.Writer) {
 			fmt.Fprintln(w, "s3cret-db-password")
 		}),
@@ -291,15 +333,19 @@ func pipelineScreens(t *testing.T, ts *cmdtest.TestServer, yamlPath string) []te
 		termbook.Scr("pipeline-list", "pipeline list", "List YAML pipelines", "teamcity pipeline list", capture(t, ts, "pipeline", "list")),
 		termbook.Scr("pipeline-view", "pipeline view", "View pipeline details and jobs",
 			"teamcity pipeline view MyApp_CI", capture(t, ts, "pipeline", "view", "MyApp_CI")),
+		termbook.Scr("pipeline-create", "pipeline create", "Create a new pipeline from YAML",
+			"teamcity pipeline create Onboarding --project MyApp --vcs-root MyApp_MainRepo --file .teamcity.yml",
+			capture(t, ts, "pipeline", "create", "Onboarding", "--project", "MyApp", "--vcs-root", "MyApp_MainRepo", "--file", yamlPath)),
 		termbook.Scr("pipeline-validate", "pipeline validate", "Validate pipeline YAML",
-			"teamcity pipeline validate .teamcity.yml", capture(t, ts, "pipeline", "validate", yamlPath)),
+			"teamcity pipeline validate .teamcity.yml",
+			strings.ReplaceAll(capture(t, ts, "pipeline", "validate", yamlPath), yamlPath, ".teamcity.yml")),
 		termbook.Scr("pipeline-delete", "pipeline delete", "Delete a pipeline",
 			"teamcity pipeline delete --yes MyApp_CI", capture(t, ts, "pipeline", "delete", "--yes", "MyApp_CI")),
 		termbook.Manual("pipeline-push", "pipeline push", "Upload YAML to a pipeline", "teamcity pipeline push MyApp_CI .teamcity.yml", func(w io.Writer) {
-			fmt.Fprintf(w, "%s Updated pipeline MyApp_CI from .teamcity.yml\n", output.Green("✓"))
+			fmt.Fprintf(w, "%s Updated pipeline MyApp_CI\n", output.Green("✓"))
 		}),
 		termbook.Manual("pipeline-pull", "pipeline pull", "Download pipeline YAML", "teamcity pipeline pull MyApp_CI", func(w io.Writer) {
-			fmt.Fprintf(w, "%s Saved pipeline MyApp_CI to .teamcity.yml\n", output.Green("✓"))
+			fmt.Fprintf(w, "%s Written to .teamcity.yml\n", output.Green("✓"))
 		}),
 	}
 }
@@ -309,30 +355,30 @@ func authScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity auth status", capture(t, ts, "auth", "status")),
 		termbook.Manual("auth-status-multi", "auth status (multi-server)", "Multi-server authentication status", "teamcity auth status", func(w io.Writer) {
 			fmt.Fprintf(w, "%s Logged in to %s %s\n", output.Green("✓"), output.Cyan("https://tc.example.com"), output.Faint("(default)"))
-			fmt.Fprintln(w, "  User: Administrator (admin) · system keyring")
+			fmt.Fprintf(w, "  %s Viktor Tiulpin (vtiulpin) %s %s\n", output.Faint("User:"), output.Faint("·"), output.Faint("system keyring"))
 			fmt.Fprintln(w, "  Token expires: Dec 31, 2026")
-			fmt.Fprintln(w, "  Server: TeamCity 2025.7 (build 197398)")
-			fmt.Fprintf(w, "  %s API compatible\n", output.Green("✓"))
+			fmt.Fprintf(w, "  %s\n", output.Faint("Server: TeamCity 2025.7 (build 197398)"))
+			fmt.Fprintf(w, "  %s %s\n", output.Green("✓"), output.Faint("API compatible"))
 			fmt.Fprintln(w)
 			fmt.Fprintf(w, "%s Guest access to %s\n", output.Green("✓"), output.Cyan("https://staging.tc.example.com"))
-			fmt.Fprintln(w, "  Server: TeamCity 2025.7 (build 197398)")
-			fmt.Fprintf(w, "  %s API compatible\n", output.Green("✓"))
+			fmt.Fprintf(w, "  %s\n", output.Faint("Server: TeamCity 2025.7 (build 197398)"))
+			fmt.Fprintf(w, "  %s %s\n", output.Green("✓"), output.Faint("API compatible"))
 			fmt.Fprintln(w)
-			fmt.Fprintf(w, "%s %s\n", output.Red("✗"), output.Cyan("https://legacy.tc.example.com"))
+			fmt.Fprintf(w, "%s Logged in to %s\n", output.Green("✓"), output.Cyan("https://legacy.tc.example.com"))
+			fmt.Fprintf(w, "  %s Viktor Tiulpin (vtiulpin) %s %s\n", output.Faint("User:"), output.Faint("·"), output.Faint("system keyring"))
 			fmt.Fprintf(w, "  %s Token expired on Mar 15, 2025\n", output.Red("✗"))
-			fmt.Fprintln(w, "  Server: TeamCity 2024.3 (build 185432)")
+			fmt.Fprintf(w, "  Run %s to re-authenticate\n", output.Cyan("teamcity auth login"))
+			fmt.Fprintf(w, "  %s\n", output.Faint("Server: TeamCity 2024.3 (build 185432)"))
 			fmt.Fprintf(w, "  %s CLI requires TeamCity 2024.7 or later\n", output.Yellow("!"))
 		}),
 		termbook.Manual("auth-login", "auth login", "Interactive authentication flow (browser-based PKCE)", "teamcity auth login", func(w io.Writer) {
 			fmt.Fprintln(w, "Secure browser login available on this server")
 			fmt.Fprintln(w, "Opening browser for authentication...")
-			fmt.Fprintf(w, "→ Approve access in TeamCity\n\n")
-			fmt.Fprintf(w, "%s Validated\n", output.Green("✓"))
-			fmt.Fprintf(w, "%s Logged in as %s (%s)\n", output.Green("✓"), output.Cyan("Viktor Tiulpin"), "vtiulpin")
+			fmt.Fprintf(w, "  %s Approve access in TeamCity\n\n", output.Yellow("→"))
+			fmt.Fprintln(w, output.Green("✓"))
+			fmt.Fprintf(w, "%s Logged in as %s\n", output.Green("✓"), output.Cyan("Viktor Tiulpin"))
 			fmt.Fprintf(w, "%s Token stored in system keyring\n", output.Green("✓"))
-			fmt.Fprintln(w, "  Token expires: Dec 31, 2026")
-			fmt.Fprintln(w, "  Server: TeamCity 2025.7 (build 197398)")
-			fmt.Fprintf(w, "  %s API compatible\n", output.Green("✓"))
+			fmt.Fprintf(w, "Token expires: %s\n", output.Yellow("Dec 31, 2026"))
 		}),
 		termbook.Scr("auth-logout", "auth logout", "Log out from a server",
 			"teamcity auth logout", capture(t, ts, "auth", "logout")),
@@ -386,25 +432,25 @@ func updateScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 func errorScreens() []termbook.Screen {
 	return []termbook.Screen{
 		termbook.Manual("error-not-found", "Not Found", "Resource not found with contextual hint", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: not found: No build found by locator 'id:999999'\n\nHint: Use 'teamcity run list' to see available resources")
+			fmt.Fprintln(w, "Error: run '999999' not found\n\nHint: Use 'teamcity run list' to see available resources")
 		}),
 		termbook.Manual("error-auth", "Authentication Failed", "Invalid or expired token", "", func(w io.Writer) {
 			fmt.Fprintln(w, "Error: Authentication failed: invalid or expired token\n\nHint: Run 'teamcity auth login' to re-authenticate")
 		}),
 		termbook.Manual("error-permission", "Permission Denied", "Insufficient permissions", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: permission denied: You do not have \"Run build\" permission\n\nHint: Check your TeamCity permissions or contact your administrator")
+			fmt.Fprintln(w, "Error: permission denied: cannot reboot agent\n\nHint: Check your TeamCity permissions or contact your administrator")
 		}),
 		termbook.Manual("error-network", "Network Error", "Cannot reach the server", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: network error: dial tcp: lookup tc.example.com: no such host\n\nHint: Check your network connection and verify the server URL")
+			fmt.Fprintln(w, "Error: cannot connect to https://tc.example.com: dial tcp: lookup tc.example.com: no such host\n\nHint: Check your network connection and verify the server URL")
 		}),
 		termbook.Manual("error-readonly", "Read-Only Mode", "Write operation blocked by TEAMCITY_RO", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: read-only mode: POST /app/rest/buildQueue is not allowed\n\nHint: Unset the TEAMCITY_RO environment variable to allow write operations")
+			fmt.Fprintln(w, "Error: read-only mode: write operations are not allowed: POST /app/rest/buildQueue\n\nHint: Unset TEAMCITY_RO to allow write operations")
 		}),
 		termbook.Manual("error-json", "JSON Error Format", "Structured error with --json flag", "", func(w io.Writer) {
 			fmt.Fprintln(w, `{`)
 			fmt.Fprintln(w, `  "error": {`)
 			fmt.Fprintln(w, `    "code": "not_found",`)
-			fmt.Fprintln(w, `    "message": "not found: No build found by locator 'id:999999'",`)
+			fmt.Fprintln(w, `    "message": "run '999999' not found",`)
 			fmt.Fprintln(w, `    "suggestion": "Use 'teamcity run list' to see available resources"`)
 			fmt.Fprintln(w, `  }`)
 			fmt.Fprintln(w, `}`)

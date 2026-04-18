@@ -227,8 +227,8 @@ github.com/testcontainers/testcontainers-go v0.41.0 h1:mfpsD0D36YgkxGj2LrIyxuwQ9
 github.com/testcontainers/testcontainers-go v0.41.0/go.mod h1:pdFrEIfaPl24zmBjerWTTYaY0M6UHsqA1YSvsoU40MI=
 github.com/tiulpin/instill v0.0.0-20260409102126-21f299ecb245 h1:GDY9EUD9I7wzMjqx0L21hDlDg1j/RX374081jItBCqc=
 github.com/tiulpin/instill v0.0.0-20260409102126-21f299ecb245/go.mod h1:OxdrM9ElyAp2nLawA1UpPHWVscyOqfsI0+2mZnwEjIU=
-github.com/tiulpin/termbook v0.0.0-20260414185724-4588728d2b87 h1:Xpx1S3snQR2o2WA7F+8bYT1ERoHWuhVleuqeRbMZpaQ=
-github.com/tiulpin/termbook v0.0.0-20260414185724-4588728d2b87/go.mod h1:FsYSe+6mgO8oPtycK1ux6z/JVJFpjnpzZWqRb6OFYcc=
+github.com/tiulpin/termbook v0.0.0-20260418144716-4da9f77fcd23 h1:l29Z25hirqfjtM2q2ngi1APaxw9XEIIG6oeQU92OEGA=
+github.com/tiulpin/termbook v0.0.0-20260418144716-4da9f77fcd23/go.mod h1:FsYSe+6mgO8oPtycK1ux6z/JVJFpjnpzZWqRb6OFYcc=
 github.com/tklauser/go-sysconf v0.3.16 h1:frioLaCQSsF5Cy1jgRBrzr6t502KIIwQ0MArYICU0nA=
 github.com/tklauser/go-sysconf v0.3.16/go.mod h1:/qNL9xxDhc7tx3HSRsLWNnuzbVfh3e7gh/BmM179nYI=
 github.com/tklauser/numcpus v0.11.0 h1:nSTwhKH5e1dMNsCdVBukSZrURJRoHbSEQjdEbY+9RXw=

@@ -36,7 +36,7 @@ require (
 
 require (
 	github.com/buildkite/terminal-to-html/v3 v3.16.8 // indirect
-	github.com/tiulpin/termbook v0.0.0-20260414185724-4588728d2b87
+	github.com/tiulpin/termbook v0.0.0-20260418144716-4da9f77fcd23
 )
 
 require (
