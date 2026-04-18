@@ -314,7 +314,10 @@ func newProjectSettingsValidateCmd(f *cmdutil.Factory) *cobra.Command {
 		Long: `Validate Kotlin DSL configuration by running mvn teamcity-configs:generate.
 
 Auto-detects .teamcity directory in the current directory or parents.
-Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.`,
+Requires Maven (mvn) or uses mvnw wrapper if present in the DSL directory.
+
+Optional [path] must be a filesystem path to a .teamcity directory.
+This command does not accept TeamCity project IDs and has no --dir flag.`,
 		Example: `  teamcity project settings validate
   teamcity project settings validate ./path/to/.teamcity
   teamcity project settings validate --verbose`,

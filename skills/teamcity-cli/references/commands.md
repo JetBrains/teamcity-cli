@@ -207,7 +207,7 @@ Shows all branches and all build states (including canceled, personal, composite
 | `teamcity project token get <id> <token>`      | Retrieve secret              |
 | `teamcity project settings export <id>`        | Export settings as ZIP       |
 | `teamcity project settings status <id>`        | Show versioned settings sync |
-| `teamcity project settings validate`           | Validate Kotlin DSL config   |
+| `teamcity project settings validate [path]`    | Validate Kotlin DSL config   |
 
 ### Flags for `teamcity project tree`
 
@@ -262,6 +262,7 @@ Shows all branches and all build states (including canceled, personal, composite
 ### Flags for `teamcity project settings validate`
 
 - `--verbose` - Show full Maven output
+- Positional argument: optional filesystem path to `.teamcity` (not a project ID/name; there is no `--dir` flag)
 
 ### Flags for `teamcity project token put`
 

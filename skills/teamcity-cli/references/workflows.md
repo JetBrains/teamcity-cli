@@ -323,6 +323,7 @@ Project parameters work the same way with `teamcity project param`.
 **Always use `teamcity project settings validate`** to verify Kotlin DSL — never generic `mvn compile`.
 
 Under the hood it runs `mvn teamcity-configs:generate` (or `./mvnw` when available) inside the `.teamcity/` directory, which is the only correct DSL validation step. Generic Maven commands like `mvn compile` do **not** validate TeamCity DSL and will give misleading results.
+The optional positional argument is only a filesystem path to `.teamcity`; do **not** pass a TeamCity project ID/name, and do **not** invent `--dir`.
 
 ```bash
 # Preferred — auto-detects .teamcity dir and Maven wrapper
