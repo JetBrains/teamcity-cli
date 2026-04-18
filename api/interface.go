@@ -104,6 +104,9 @@ type ClientInterface interface {
 	RebootAgent(ctx context.Context, id int, afterBuild bool) error
 	GetAgentCompatibleBuildTypes(id int) (*BuildTypeList, error)
 	GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, error)
+	GetBuildCompatibleAgents(buildID int) (*AgentList, error)
+	GetBuildIncompatibleAgents(buildID int) (*AgentList, error)
+	GetAgentBuildTypeCompatibility(agentID int, buildTypeID string, maxScan int) (*Compatibility, error)
 
 	// Agent Pools
 	GetAgentPools(fields []string) (*PoolList, error)

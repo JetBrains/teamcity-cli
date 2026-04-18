@@ -486,6 +486,82 @@ func TestRunView_waitReason(t *testing.T) {
 	})
 	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "60")
 	assert.Contains(t, got, "Wait reason: No compatible agents available")
+	assert.Contains(t, got, "Compatible agents")
+	assert.Contains(t, got, "Incompatible agents")
+}
+
+func TestRunView_waitReason_nonCompatibility_skipsAgentQuery(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/builds/id:65", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{
+			ID: 65, State: "queued", BuildTypeID: "TestProject_Build",
+			BuildType:  &api.BuildType{ID: "TestProject_Build", Name: "Build"},
+			WebURL:     "https://ci.example.com/viewLog.html?buildId=65",
+			Triggered:  &api.Triggered{Type: "user", User: &api.User{Name: "Bob"}},
+			WaitReason: "Build dependencies have not been built yet",
+		})
+	})
+	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "65")
+	assert.Contains(t, got, "Wait reason: Build dependencies have not been built yet")
+	assert.NotContains(t, got, "Compatible agents")
+	assert.NotContains(t, got, "Incompatible agents")
+}
+
+func TestRunView_compatibilityDetails(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/builds/id:71", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{
+			ID:          71,
+			Number:      "12",
+			State:       "queued",
+			BuildTypeID: "Target_BT",
+			BuildType:   &api.BuildType{ID: "Target_BT", Name: "Target"},
+			BranchName:  "main",
+			WebURL:      "https://ci.example.com/viewLog.html?buildId=71",
+			Triggered:   &api.Triggered{Type: "user", User: &api.User{Name: "Bob"}},
+			WaitReason:  "There are no idle compatible agents which can run this build",
+		})
+	})
+	// agents endpoint is shared for compatible/incompatible locators via the default handler;
+	// override it so compatible returns empty and incompatible returns one agent grouped by pool.
+	ts.Handle("GET /app/rest/agents", func(w http.ResponseWriter, r *http.Request) {
+		locator := r.URL.Query().Get("locator")
+		if strings.Contains(locator, "incompatible:") {
+			cmdtest.JSON(w, api.AgentList{
+				Count: 1,
+				Agents: []api.Agent{
+					{ID: 42, Name: "linux-agent-bad", Connected: true, Enabled: true, Authorized: true,
+						Pool: &api.Pool{ID: 3, Name: "Linux Pool"}},
+				},
+			})
+			return
+		}
+		if strings.Contains(locator, "compatible:") {
+			cmdtest.JSON(w, api.AgentList{Count: 0})
+			return
+		}
+		cmdtest.JSON(w, api.AgentList{Count: 0})
+	})
+	ts.Handle("GET /app/rest/agents/id:42/incompatibleBuildTypes", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.CompatibilityList{
+			Count: 1,
+			Compatibility: []api.Compatibility{
+				{
+					Compatible:        false,
+					BuildType:         &api.BuildType{ID: "Target_BT"},
+					UnmetRequirements: &api.UnmetRequirements{Description: "Incompatible runner: Docker"},
+				},
+			},
+		})
+	})
+
+	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "71")
+	assert.Contains(t, got, "Wait reason: There are no idle compatible agents which can run this build")
+	assert.Contains(t, got, "Compatible agents (0)")
+	assert.Contains(t, got, "Incompatible agents (1)")
+	assert.Contains(t, got, "[Linux Pool]")
+	assert.Contains(t, got, "linux-agent-bad")
+	assert.Contains(t, got, "Incompatible runner: Docker")
 }
 
 func TestRunStart_reused(t *testing.T) {

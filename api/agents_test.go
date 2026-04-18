@@ -143,6 +143,76 @@ func TestGetAgentIncompatibleBuildTypes(t *testing.T) {
 	assert.Equal(t, 0, result.Count)
 }
 
+func TestGetBuildCompatibleAgents(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.URL.RawQuery, "compatible%3A%28build%3A%28id%3A99%29%29")
+		assert.Contains(t, r.URL.RawQuery, "defaultFilter%3Afalse")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(AgentList{
+			Count:  1,
+			Agents: []Agent{{ID: 7, Name: "compat-agent", Pool: &Pool{Name: "Linux"}}},
+		})
+	})
+	result, err := client.GetBuildCompatibleAgents(99)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.Count)
+	assert.Equal(t, "compat-agent", result.Agents[0].Name)
+}
+
+func TestGetBuildIncompatibleAgents(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.URL.RawQuery, "incompatible%3A%28build%3A%28id%3A99%29%29")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(AgentList{Count: 0})
+	})
+	result, err := client.GetBuildIncompatibleAgents(99)
+	require.NoError(t, err)
+	assert.Equal(t, 0, result.Count)
+}
+
+func TestGetAgentBuildTypeCompatibility_match(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.URL.Path, "/app/rest/agents/id:5/incompatibleBuildTypes")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(CompatibilityList{
+			Count: 2,
+			Compatibility: []Compatibility{
+				{BuildType: &BuildType{ID: "Other_BT"}},
+				{BuildType: &BuildType{ID: "Target_BT"}, UnmetRequirements: &UnmetRequirements{Description: "Missing: docker"}},
+			},
+		})
+	})
+	c, err := client.GetAgentBuildTypeCompatibility(5, "Target_BT", 100)
+	require.NoError(t, err)
+	require.NotNil(t, c)
+	assert.Equal(t, "Target_BT", c.BuildType.ID)
+	assert.Equal(t, []string{"Missing: docker"}, c.ReasonsList())
+}
+
+func TestGetAgentBuildTypeCompatibility_noMatch(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(CompatibilityList{Count: 1, Compatibility: []Compatibility{{BuildType: &BuildType{ID: "Other_BT"}}}})
+	})
+	c, err := client.GetAgentBuildTypeCompatibility(5, "Target_BT", 100)
+	require.NoError(t, err)
+	assert.Nil(t, c)
+}
+
+func TestReasonsListMergesLegacyAndUnmet(t *testing.T) {
+	t.Parallel()
+	c := Compatibility{
+		Reasons:           &IncompatibleReasons{Reasons: []string{"old-style reason"}},
+		UnmetRequirements: &UnmetRequirements{Description: "Unmet requirements:\n\tline A\n\tline B"},
+	}
+	reasons := c.ReasonsList()
+	assert.Equal(t, []string{"old-style reason", "Unmet requirements:", "line A", "line B"}, reasons)
+}
+
 func TestRebootAgent(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
