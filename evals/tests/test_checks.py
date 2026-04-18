@@ -1,3 +1,5 @@
+from typing import Callable
+
 from checks import (
     avoids_raw_maven_for_dsl_validation,
     uses_project_settings_validate,
@@ -7,7 +9,7 @@ from scaffold.events import ClaudeEvents
 from scaffold.runner import EvalRunner
 
 
-def _run_check(commands: list[str], check_fn) -> dict:
+def _run_check(commands: list[str], check_fn: Callable[[EvalRunner], None]) -> dict:
     events = ClaudeEvents(commands_run=commands)
     runner = EvalRunner(events, task_name="unit")
     runner.run([check_fn])

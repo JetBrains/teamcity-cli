@@ -45,7 +45,7 @@
   },
   {
     "id": "kotlin-dsl-validate-workflow",
-    "prompt": "Introduce a new build configuration into this TeamCity Kotlin DSL project, including runner dependency wiring.\n\nAfter making the DSL changes, validate using the TeamCity CLI workflow (you can run --help first if needed). This repository uses a root-layout DSL (no .teamcity directory), so use an explicit path when validating.",
+    "prompt": "Introduce a new build configuration into this TeamCity Kotlin DSL project, including runner dependency wiring (for example, snapshot/artifact dependencies between build configurations).\n\nAfter making the DSL changes, validate using the TeamCity CLI workflow (you can run --help first if needed). This repository uses a root-layout DSL (no .teamcity directory), so use an explicit path when validating.",
     "checks": ["uses_project_settings_validate", "validates_with_explicit_dot_path", "avoids_raw_maven_for_dsl_validation", "valid_commands", "no_hallucinations", "multi_step"],
     "llm_grade": true
   },

@@ -7,6 +7,7 @@ Checks are referenced by ID in tasks.json.
 from __future__ import annotations
 
 import re
+from typing import Pattern
 
 from scaffold.runner import EvalRunner
 
@@ -43,6 +44,10 @@ KNOWN_HALLUCINATIONS = [
 
 VALIDATE_WITH_DOT_PATH_RE = re.compile(
     r"teamcity\s+project\s+settings\s+validate\s+\.(?:\s|$)",
+    re.IGNORECASE,
+)
+VALIDATE_COMMAND_RE: Pattern[str] = re.compile(
+    r"teamcity\s+project\s+settings\s+validate(?:\s|$)",
     re.IGNORECASE,
 )
 MAVEN_COMMAND_RE = re.compile(r"(?:^|\s)(?:\./)?mvnw?(?:\s|$)", re.IGNORECASE)
@@ -456,7 +461,7 @@ def uses_project_settings_validate(runner: EvalRunner) -> None:
 def validates_with_explicit_dot_path(runner: EvalRunner) -> None:
     validate_cmds = [
         cmd for cmd in runner.events.commands_run
-        if "teamcity project settings validate" in cmd.lower()
+        if VALIDATE_COMMAND_RE.search(cmd)
     ]
     if not validate_cmds:
         runner.failed("No validate command found")
