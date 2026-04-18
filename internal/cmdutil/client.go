@@ -65,7 +65,7 @@ func NotAuthenticatedError(serverURL string, keyringErr error) *tcerrors.UserErr
 		msg = fmt.Sprintf("Not authenticated (could not access system keyring: %v)", keyringErr)
 	}
 
-	suggestion := "If you use environment overrides, set both TEAMCITY_URL and TEAMCITY_TOKEN. Otherwise unset TEAMCITY_URL to use stored auth, or run 'teamcity auth login --insecure-storage'"
+	suggestion := "If you use environment overrides, set both TEAMCITY_URL and TEAMCITY_TOKEN; TEAMCITY_URL alone bypasses stored credentials. Otherwise unset TEAMCITY_URL to use stored auth, or run 'teamcity auth login --insecure-storage'"
 	if ProbeGuestAccess(serverURL) {
 		suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
 	}

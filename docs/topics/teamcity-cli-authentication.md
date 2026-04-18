@@ -287,7 +287,7 @@ set TEAMCITY_GUEST=1
 </tabs>
 
 Environment variables take precedence over the configuration file and keyring.
-If you set `TEAMCITY_URL`, set `TEAMCITY_TOKEN` for that same URL too. To use stored `teamcity auth login` credentials, leave `TEAMCITY_URL` unset.
+If you set `TEAMCITY_URL`, set `TEAMCITY_TOKEN` for that same URL too — `TEAMCITY_URL` alone bypasses stored credentials from `teamcity auth login`. To use stored credentials, leave `TEAMCITY_URL` unset.
 
 > To restrict the CLI to read-only operations (no builds triggered, no data modified), set `TEAMCITY_RO=1`. See [Read-only mode](teamcity-cli-scripting.md#Read-only+mode).
 >
