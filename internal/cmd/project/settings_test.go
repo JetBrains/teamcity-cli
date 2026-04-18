@@ -35,13 +35,13 @@ func TestParseKotlinErrors(T *testing.T) {
 	}
 }
 
-func TestNewProjectSettingsValidateCmd_HelpClarifiesPathOnly(T *testing.T) {
-	T.Parallel()
+func TestNewProjectSettingsValidateCmd_HelpClarifiesPathOnly(t *testing.T) {
+	t.Parallel()
 
 	cmd := newProjectSettingsValidateCmd(nil)
 
-	assert.Equal(T, "validate [path]", cmd.Use)
-	assert.Contains(T, cmd.Long, "Optional [path] must be a filesystem path to a .teamcity directory.")
-	assert.Contains(T, cmd.Long, "This command does not accept TeamCity project IDs and has no --dir flag.")
-	assert.Nil(T, cmd.Flags().Lookup("dir"))
+	assert.Equal(t, "validate [path]", cmd.Use)
+	assert.Contains(t, cmd.Long, "Optional [path] must be a filesystem path to a .teamcity directory.")
+	assert.Contains(t, cmd.Long, "This command does not accept TeamCity project IDs and has no --dir flag.")
+	assert.Nil(t, cmd.Flags().Lookup("dir"))
 }
