@@ -264,12 +264,12 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 
 	time.Sleep(100 * time.Millisecond)
 
-	if err := tc.writeMessage(websocket.TextMessage, []byte("stty -echo\n")); err != nil {
+	if err := tc.writeMessage(websocket.TextMessage, []byte("stty -echo\r")); err != nil {
 		return fmt.Errorf("failed to send stty: %w", err)
 	}
 	time.Sleep(100 * time.Millisecond)
 
-	fullCmd := fmt.Sprintf("echo %s; %s; echo; echo %s; exit\n", execMarker, command, execMarker)
+	fullCmd := fmt.Sprintf("echo %s; %s; echo \"\"; echo %s; exit\r", execMarker, command, execMarker)
 	if err := tc.writeMessage(websocket.TextMessage, []byte(fullCmd)); err != nil {
 		return fmt.Errorf("failed to send command: %w", err)
 	}
