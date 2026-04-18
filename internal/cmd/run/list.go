@@ -446,6 +446,9 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 
 	if build.State == "queued" && build.WaitReason != "" {
 		_, _ = fmt.Fprintf(p.Out, "\nWait reason: %s\n", output.Yellow(build.WaitReason))
+		if waitReasonIsCompatibility(build.WaitReason) {
+			renderBuildCompatibility(p.Out, client, build)
+		}
 	}
 
 	if build.State == "running" && build.PercentageComplete > 0 {

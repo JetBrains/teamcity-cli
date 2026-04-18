@@ -131,10 +131,11 @@ type PoolList struct {
 
 // Compatibility represents build type compatibility info
 type Compatibility struct {
-	Compatible bool                 `json:"compatible"`
-	BuildType  *BuildType           `json:"buildType,omitempty"`
-	Agent      *Agent               `json:"agent,omitempty"`
-	Reasons    *IncompatibleReasons `json:"incompatibleReasons,omitempty"`
+	Compatible        bool                 `json:"compatible"`
+	BuildType         *BuildType           `json:"buildType,omitempty"`
+	Agent             *Agent               `json:"agent,omitempty"`
+	Reasons           *IncompatibleReasons `json:"incompatibleReasons,omitempty"`
+	UnmetRequirements *UnmetRequirements   `json:"unmetRequirements,omitempty"`
 }
 
 // CompatibilityList represents a list of compatibility entries
@@ -146,6 +147,27 @@ type CompatibilityList struct {
 // IncompatibleReasons contains reasons why an agent can't run a build type
 type IncompatibleReasons struct {
 	Reasons []string `json:"reason,omitempty"`
+}
+
+// UnmetRequirements holds the human-readable incompatibility description (may be multi-line).
+type UnmetRequirements struct {
+	Description string `json:"description,omitempty"`
+}
+
+// ReasonsList merges the legacy incompatibleReasons.reason array with unmetRequirements.description.
+func (c *Compatibility) ReasonsList() []string {
+	var out []string
+	if c.Reasons != nil {
+		out = append(out, c.Reasons.Reasons...)
+	}
+	if c.UnmetRequirements != nil && c.UnmetRequirements.Description != "" {
+		for line := range strings.SplitSeq(c.UnmetRequirements.Description, "\n") {
+			if trimmed := strings.TrimSpace(line); trimmed != "" {
+				out = append(out, trimmed)
+			}
+		}
+	}
+	return out
 }
 
 // QueuedBuild represents a build in the queue
