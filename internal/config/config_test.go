@@ -606,6 +606,37 @@ func TestWriteConfigCreatesFile0600(T *testing.T) {
 	}
 }
 
+func TestWriteConfigPreservesSymlink(T *testing.T) {
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	realPath := filepath.Join(tmpDir, "real-config.yml")
+	linkPath := filepath.Join(tmpDir, "config.yml")
+	require.NoError(T, os.WriteFile(realPath, []byte("default_server: seed\n"), 0600))
+	require.NoError(T, os.Symlink(realPath, linkPath))
+
+	configPath = linkPath
+	cfg = &Config{
+		DefaultServer: "https://tc.example.com",
+		Servers: map[string]ServerConfig{
+			"https://tc.example.com": {Token: "secret", User: "user"},
+		},
+	}
+
+	require.NoError(T, writeConfig())
+
+	linkInfo, err := os.Lstat(linkPath)
+	require.NoError(T, err)
+	assert.NotZero(T, linkInfo.Mode()&os.ModeSymlink, "symlink at configPath was replaced by a regular file")
+
+	realInfo, err := os.Stat(realPath)
+	require.NoError(T, err)
+	assert.Equal(T, os.FileMode(0600), realInfo.Mode().Perm())
+
+	body, err := os.ReadFile(realPath)
+	require.NoError(T, err)
+	assert.Contains(T, string(body), "https://tc.example.com", "write went to link target")
+}
+
 func TestSetServerWriteError(T *testing.T) {
 	saveCfgState(T)
 	configPath = "/dev/null/impossible/path/config.yml"
