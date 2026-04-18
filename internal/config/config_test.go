@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -579,6 +580,70 @@ func TestGetCurrentUserUnknownServer(T *testing.T) {
 
 	got := GetCurrentUser()
 	assert.Equal(T, "", got)
+}
+
+func TestWriteConfigCreatesFile0600(T *testing.T) {
+	if runtime.GOOS == "windows" {
+		T.Skip("POSIX mode bits are not meaningful on Windows")
+	}
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	configPath = filepath.Join(tmpDir, "config.yml")
+	cfg = &Config{
+		DefaultServer: "https://tc.example.com",
+		Servers: map[string]ServerConfig{
+			"https://tc.example.com": {Token: "secret-token", User: "user"},
+		},
+	}
+
+	require.NoError(T, writeConfig())
+
+	info, err := os.Stat(configPath)
+	require.NoError(T, err)
+	assert.Equal(T, os.FileMode(0600), info.Mode().Perm(), "config with tokens must never be readable by other users")
+
+	// No stale .tmp siblings left behind.
+	entries, err := os.ReadDir(tmpDir)
+	require.NoError(T, err)
+	for _, e := range entries {
+		assert.NotContains(T, e.Name(), ".tmp", "atomic write left a temp file behind")
+	}
+}
+
+func TestWriteConfigPreservesSymlink(T *testing.T) {
+	if runtime.GOOS == "windows" {
+		T.Skip("symlink creation requires elevated privileges on Windows and POSIX perm bits don't apply")
+	}
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	realPath := filepath.Join(tmpDir, "real-config.yml")
+	linkPath := filepath.Join(tmpDir, "config.yml")
+	require.NoError(T, os.WriteFile(realPath, []byte("default_server: seed\n"), 0600))
+	if err := os.Symlink(realPath, linkPath); err != nil {
+		T.Skipf("symlink creation not permitted in this environment: %v", err)
+	}
+
+	configPath = linkPath
+	cfg = &Config{
+		DefaultServer: "https://tc.example.com",
+		Servers: map[string]ServerConfig{
+			"https://tc.example.com": {Token: "secret", User: "user"},
+		},
+	}
+
+	require.NoError(T, writeConfig())
+
+	linkInfo, err := os.Lstat(linkPath)
+	require.NoError(T, err)
+	assert.NotZero(T, linkInfo.Mode()&os.ModeSymlink, "symlink at configPath was replaced by a regular file")
+
+	realInfo, err := os.Stat(realPath)
+	require.NoError(T, err)
+	assert.Equal(T, os.FileMode(0600), realInfo.Mode().Perm())
+
+	body, err := os.ReadFile(realPath)
+	require.NoError(T, err)
+	assert.Contains(T, string(body), "https://tc.example.com", "write went to link target")
 }
 
 func TestSetServerWriteError(T *testing.T) {
