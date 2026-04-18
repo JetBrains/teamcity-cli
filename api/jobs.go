@@ -10,28 +10,41 @@ import (
 
 // BuildTypesOptions represents options for listing build configurations
 type BuildTypesOptions struct {
-	Project string
-	Limit   int
-	Fields  []string
+	Project      string
+	Limit        int
+	Skip         int
+	ContinuePath string
+	Fields       []string
 }
 
 // GetBuildTypes returns a list of build configurations
 func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
-	locator := NewLocator().
-		Add("affectedProject", opts.Project).
-		AddIntDefault("count", opts.Limit, 30)
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = BuildTypeFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,buildType(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/buildTypes?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("buildType", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator().
+			Add("affectedProject", opts.Project).
+			AddIntDefault("count", opts.Limit, 30).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/buildTypes?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result BuildTypeList
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 
 	return &result, nil
 }

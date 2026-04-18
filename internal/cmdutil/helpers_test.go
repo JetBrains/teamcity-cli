@@ -17,6 +17,13 @@ func TestValidateLimit(t *testing.T) {
 	assert.Contains(t, ValidateLimit(-5).Error(), "--limit must be a positive number")
 }
 
+func TestValidateSkip(t *testing.T) {
+	assert.NoError(t, ValidateSkip(0))
+	assert.NoError(t, ValidateSkip(25))
+	assert.Error(t, ValidateSkip(-1))
+	assert.Contains(t, ValidateSkip(-5).Error(), "--skip must be zero or a positive number")
+}
+
 func TestParseID(t *testing.T) {
 	id, err := ParseID("42", "build")
 	require.NoError(t, err)

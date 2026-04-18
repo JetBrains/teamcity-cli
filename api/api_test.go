@@ -921,7 +921,7 @@ func TestPoolOperations(T *testing.T) {
 	// Not parallel - modifies pool state
 
 	T.Run("list pools", func(t *testing.T) {
-		pools, err := client.GetAgentPools(nil)
+		pools, err := client.GetAgentPools(api.AgentPoolsOptions{})
 		require.NoError(t, err)
 		assert.Greater(t, pools.Count, 0, "should have at least one pool")
 		t.Logf("Found %d pools", pools.Count)

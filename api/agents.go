@@ -11,50 +11,63 @@ import (
 
 // AgentsOptions represents options for listing agents
 type AgentsOptions struct {
-	Authorized bool   // Filter by authorization status
-	Connected  bool   // Filter by connection status
-	Enabled    bool   // Filter by enabled status
-	Pool       string // Filter by pool name
-	Limit      int
-	Fields     []string // Fields to return (uses AgentFields.Default if empty)
+	Authorized   bool   // Filter by authorization status
+	Connected    bool   // Filter by connection status
+	Enabled      bool   // Filter by enabled status
+	Pool         string // Filter by pool name
+	Limit        int
+	Skip         int
+	ContinuePath string
+	Fields       []string // Fields to return (uses AgentFields.Default if empty)
 }
 
 // GetAgents returns a list of agents
 func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
-	locator := NewLocator()
-
-	if opts.Authorized {
-		locator.Add("authorized", "true")
-	} else {
-		locator.Add("authorized", "any")
-	}
-
-	if opts.Connected {
-		locator.Add("connected", "true")
-	}
-	if opts.Enabled {
-		locator.Add("enabled", "true")
-	}
-	if opts.Pool != "" {
-		if _, err := strconv.Atoi(opts.Pool); err == nil {
-			locator.AddRaw("pool", "(id:"+opts.Pool+")")
-		} else {
-			locator.AddRaw("pool", "(name:"+opts.Pool+")")
-		}
-	}
-	locator.AddIntDefault("count", opts.Limit, 100)
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = AgentFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,agent(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("agent", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator()
+
+		if opts.Authorized {
+			locator.Add("authorized", "true")
+		} else {
+			locator.Add("authorized", "any")
+		}
+
+		if opts.Connected {
+			locator.Add("connected", "true")
+		}
+		if opts.Enabled {
+			locator.Add("enabled", "true")
+		}
+		if opts.Pool != "" {
+			if _, err := strconv.Atoi(opts.Pool); err == nil {
+				locator.AddRaw("pool", "(id:"+opts.Pool+")")
+			} else {
+				locator.AddRaw("pool", "(name:"+opts.Pool+")")
+			}
+		}
+		locator.AddIntDefault("count", opts.Limit, 100).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result AgentList
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 
 	return &result, nil
 }

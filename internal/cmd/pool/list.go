@@ -19,22 +19,30 @@ func newPoolListCmd(f *cmdutil.Factory) *cobra.Command {
 		Short:   "List agent pools",
 		Aliases: []string{"ls"},
 		Example: `  teamcity pool list
+  teamcity pool list --limit 20 --skip 20
+  teamcity pool list --continue <token>
   teamcity pool list --json
   teamcity pool list --json=id,name,maxAgents
   teamcity pool list --plain`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmdutil.RunList(f, cmd, flags, &api.PoolFields, fetchPools)
+			return cmdutil.RunList(f, cmd, flags, &api.PoolFields, func(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
+				return fetchPools(client, flags, fields)
+			})
 		},
 	}
 
-	cmdutil.AddJSONFieldsFlag(cmd, &flags.JSONFields)
-	cmdutil.AddPlainFlags(cmd, flags)
+	cmdutil.AddPaginatedListFlags(cmd, flags, 100)
 
 	return cmd
 }
 
-func fetchPools(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	pools, err := client.GetAgentPools(fields)
+func fetchPools(client api.ClientInterface, flags *cmdutil.ListFlags, fields []string) (*cmdutil.ListResult, error) {
+	pools, err := client.GetAgentPools(api.AgentPoolsOptions{
+		Limit:        flags.Limit,
+		Skip:         flags.Skip,
+		ContinuePath: flags.ContinuePath,
+		Fields:       fields,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +64,10 @@ func fetchPools(client api.ClientInterface, fields []string) (*cmdutil.ListResul
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     pools,
+		JSON:     pools.Pools,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows},
 		EmptyMsg: "No agent pools found",
+		Page:     &cmdutil.ListPageInfo{Count: len(pools.Pools), ContinuePath: pools.NextHref},
 	}, nil
 }
 

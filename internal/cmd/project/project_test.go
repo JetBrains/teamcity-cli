@@ -2,12 +2,15 @@ package project_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,6 +23,37 @@ func TestProjectList(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, f, "project", "list", "--limit", "5")
 	cmdtest.RunCmdWithFactory(T, f, "project", "list", "--parent", "_Root", "--limit", "3")
 	cmdtest.RunCmdWithFactory(T, f, "project", "list", "--json", "--limit", "2")
+}
+
+func TestProjectListJSONPaginationEnvelope(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/projects", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.ProjectList{
+			Count:    2,
+			Href:     "/app/rest/projects?locator=count:2,start:0",
+			NextHref: "/app/rest/projects?locator=count:2,start:2",
+			Projects: []api.Project{
+				{ID: "_Root", Name: "Root"},
+				{ID: "TestProject", Name: "Test Project", ParentProjectID: "_Root"},
+			},
+		})
+	})
+
+	stdout, _ := cmdtest.CaptureSplitOutput(t, ts.Factory, "project", "list", "--json", "--limit", "2")
+
+	var result struct {
+		Count    int           `json:"count"`
+		Items    []api.Project `json:"items"`
+		Continue string        `json:"continue"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(stdout), &result))
+	assert.Equal(t, 2, result.Count)
+	assert.Len(t, result.Items, 2)
+
+	path, offset, err := cmdutil.DecodeContinueToken("teamcity project list", result.Continue)
+	require.NoError(t, err)
+	assert.Equal(t, "/app/rest/projects?locator=count:2,start:2", path)
+	assert.Zero(t, offset)
 }
 
 func TestProjectView(T *testing.T) {

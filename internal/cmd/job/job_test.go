@@ -1,11 +1,16 @@
 package job_test
 
 import (
+	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const testJob = "TestProject_Build"
@@ -25,6 +30,60 @@ func TestJobView(T *testing.T) {
 
 	cmdtest.RunCmdWithFactory(T, f, "job", "view", testJob)
 	cmdtest.RunCmdWithFactory(T, f, "job", "view", testJob, "--json")
+}
+
+func TestJobListContinuePreservesAllMode(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/buildTypes", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.RawQuery, "start%3A1") {
+			cmdtest.JSON(w, api.BuildTypeList{
+				Count: 1,
+				Href:  "/app/rest/buildTypes?locator=count:30,start:1",
+				BuildTypes: []api.BuildType{
+					{ID: "TestProject_CI_Build", Name: "Pipeline Build", ProjectID: "TestProject"},
+				},
+			})
+			return
+		}
+
+		cmdtest.JSON(w, api.BuildTypeList{
+			Count:    1,
+			Href:     "/app/rest/buildTypes?locator=count:1,start:0",
+			NextHref: "/app/rest/buildTypes?locator=count:1,start:1",
+			BuildTypes: []api.BuildType{
+				{ID: "Library_Build", Name: "Library Build", ProjectID: "Library"},
+			},
+		})
+	})
+
+	stdout := cmdtest.CaptureOutput(t, ts.Factory, "job", "list", "--all", "--json", "--limit", "1")
+
+	var firstPage struct {
+		Count    int             `json:"count"`
+		Items    []api.BuildType `json:"items"`
+		Continue string          `json:"continue"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(stdout), &firstPage))
+	require.Len(t, firstPage.Items, 1)
+	assert.Equal(t, "Library_Build", firstPage.Items[0].ID)
+
+	path, offset, state, err := cmdutil.DecodeContinueTokenWithState("teamcity job list", firstPage.Continue)
+	require.NoError(t, err)
+	assert.Equal(t, "/app/rest/buildTypes?locator=count:1,start:1", path)
+	assert.Zero(t, offset)
+	assert.JSONEq(t, `{"all":true}`, string(state))
+
+	stdout = cmdtest.CaptureOutput(t, ts.Factory, "job", "list", "--continue", firstPage.Continue, "--json")
+
+	var secondPage struct {
+		Count    int             `json:"count"`
+		Items    []api.BuildType `json:"items"`
+		Continue string          `json:"continue"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(stdout), &secondPage))
+	require.Len(t, secondPage.Items, 1)
+	assert.Equal(t, "TestProject_CI_Build", secondPage.Items[0].ID)
+	assert.Empty(t, secondPage.Continue)
 }
 
 func TestJobPauseResume(T *testing.T) {

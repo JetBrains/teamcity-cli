@@ -55,6 +55,8 @@ func newCloudProfileListCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Example: `  teamcity project cloud profile list
   teamcity project cloud profile list --project MyProject
+  teamcity project cloud profile list --limit 50 --skip 50
+  teamcity project cloud profile list --continue <token>
   teamcity project cloud profile list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.CloudProfileFields, opts.fetch)
@@ -62,16 +64,19 @@ func newCloudProfileListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.SetContinueConflicts(cmd, "project")
 
 	return cmd
 }
 
 func (opts *cloudProfileListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	profiles, err := client.GetCloudProfiles(api.CloudProfilesOptions{
-		ProjectID: opts.project,
-		Limit:     opts.Limit,
-		Fields:    fields,
+		ProjectID:    opts.project,
+		Limit:        opts.Limit,
+		Skip:         opts.Skip,
+		ContinuePath: opts.ContinuePath,
+		Fields:       fields,
 	})
 	if err != nil {
 		return nil, err
@@ -89,9 +94,10 @@ func (opts *cloudProfileListOptions) fetch(client api.ClientInterface, fields []
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     profiles,
+		JSON:     profiles.Profiles,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1}},
 		EmptyMsg: "No cloud profiles found",
+		Page:     &cmdutil.ListPageInfo{Count: len(profiles.Profiles), ContinuePath: profiles.NextHref},
 	}, nil
 }
 
@@ -178,6 +184,8 @@ func newCloudImageListCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Example: `  teamcity project cloud image list
   teamcity project cloud image list --project MyProject --profile aws-prod
+  teamcity project cloud image list --limit 50 --skip 50
+  teamcity project cloud image list --continue <token>
   teamcity project cloud image list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.CloudImageFields, opts.fetch)
@@ -186,17 +194,20 @@ func newCloudImageListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().StringVar(&opts.profile, "profile", "", "Filter by cloud profile")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.SetContinueConflicts(cmd, "project", "profile")
 
 	return cmd
 }
 
 func (opts *cloudImageListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	images, err := client.GetCloudImages(api.CloudImagesOptions{
-		ProjectID: opts.project,
-		Profile:   opts.profile,
-		Limit:     opts.Limit,
-		Fields:    fields,
+		ProjectID:    opts.project,
+		Profile:      opts.profile,
+		Limit:        opts.Limit,
+		Skip:         opts.Skip,
+		ContinuePath: opts.ContinuePath,
+		Fields:       fields,
 	})
 	if err != nil {
 		return nil, err
@@ -219,9 +230,10 @@ func (opts *cloudImageListOptions) fetch(client api.ClientInterface, fields []st
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     images,
+		JSON:     images.Images,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2}},
 		EmptyMsg: "No cloud images found",
+		Page:     &cmdutil.ListPageInfo{Count: len(images.Images), ContinuePath: images.NextHref},
 	}, nil
 }
 
@@ -352,6 +364,8 @@ func newCloudInstanceListCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Example: `  teamcity project cloud instance list
   teamcity project cloud instance list --project MyProject --image ubuntu-22-large
+  teamcity project cloud instance list --limit 50 --skip 50
+  teamcity project cloud instance list --continue <token>
   teamcity project cloud instance list --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.CloudInstanceFields, opts.fetch)
@@ -360,17 +374,20 @@ func newCloudInstanceListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().StringVar(&opts.image, "image", "", "Filter by cloud image")
-	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddPaginatedListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.SetContinueConflicts(cmd, "project", "image")
 
 	return cmd
 }
 
 func (opts *cloudInstanceListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	instances, err := client.GetCloudInstances(api.CloudInstancesOptions{
-		ProjectID: opts.project,
-		Image:     opts.image,
-		Limit:     opts.Limit,
-		Fields:    fields,
+		ProjectID:    opts.project,
+		Image:        opts.image,
+		Limit:        opts.Limit,
+		Skip:         opts.Skip,
+		ContinuePath: opts.ContinuePath,
+		Fields:       fields,
 	})
 	if err != nil {
 		return nil, err
@@ -406,9 +423,10 @@ func (opts *cloudInstanceListOptions) fetch(client api.ClientInterface, fields [
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     instances,
+		JSON:     instances.Instances,
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2, 3, 5}},
 		EmptyMsg: "No cloud instances found",
+		Page:     &cmdutil.ListPageInfo{Count: len(instances.Instances), ContinuePath: instances.NextHref},
 	}, nil
 }
 

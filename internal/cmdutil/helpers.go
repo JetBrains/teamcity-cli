@@ -31,6 +31,14 @@ func ValidateLimit(limit int) error {
 	return nil
 }
 
+// ValidateSkip returns an error if skip is negative.
+func ValidateSkip(skip int) error {
+	if skip < 0 {
+		return fmt.Errorf("--skip must be zero or a positive number, got %d", skip)
+	}
+	return nil
+}
+
 // ParseID converts a string argument to an integer ID.
 func ParseID(s string, entity string) (int, error) {
 	id, err := strconv.Atoi(s)

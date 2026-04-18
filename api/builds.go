@@ -12,19 +12,21 @@ import (
 
 // BuildsOptions represents options for listing builds
 type BuildsOptions struct {
-	BuildTypeID string
-	Branch      string
-	Status      string
-	State       string
-	User        string
-	Project     string
-	Number      string
-	Revision    string
-	Favorites   bool
-	Limit       int
-	SinceDate   string
-	UntilDate   string
-	Fields      []string
+	BuildTypeID  string
+	Branch       string
+	Status       string
+	State        string
+	User         string
+	Project      string
+	Number       string
+	Revision     string
+	Favorites    bool
+	Limit        int
+	Skip         int
+	SinceDate    string
+	UntilDate    string
+	ContinuePath string
+	Fields       []string
 }
 
 const favoriteBuildTag = ".teamcity.star"
@@ -66,20 +68,31 @@ func currentUserFavoriteBuildsTagLocator() *Locator {
 
 // GetBuilds returns a list of builds
 func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
-	locator := opts.Locator().
-		AddIntDefault("count", opts.Limit, 30)
-
 	buildFields := opts.Fields
 	if len(buildFields) == 0 {
 		buildFields = BuildFields.Default
 	}
-	fields := fmt.Sprintf("count,build(%s)", ToAPIFields(buildFields))
-	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
+	fields := paginatedFieldsParam("build", buildFields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fields)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := opts.Locator().
+			AddIntDefault("count", opts.Limit, 30).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
+	}
 
 	var result BuildList
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 
 	for i := range result.Builds {
 		cleanupBuildTriggered(&result.Builds[i])
@@ -408,16 +421,7 @@ func (c *Client) GetBuildSnapshotDependencies(buildID string) (*BuildList, error
 		}
 		combined.Builds = append(combined.Builds, page.Builds...)
 		combined.Count += page.Count
-		path = page.NextHref
-		if next, err := url.Parse(path); err == nil && next.IsAbs() {
-			path = next.RequestURI()
-		}
-		if base, err := url.Parse(c.BaseURL); err == nil && len(base.Path) > 1 {
-			path = strings.TrimPrefix(path, base.Path)
-		}
-		if c.APIVersion != "" && strings.HasPrefix(path, "/app/rest/") {
-			path = strings.Replace(path, "/app/rest/"+c.APIVersion+"/", "/app/rest/", 1)
-		}
+		path = c.normalizeContinuationPath(page.NextHref)
 	}
 	return &combined, nil
 }

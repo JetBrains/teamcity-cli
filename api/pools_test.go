@@ -21,7 +21,7 @@ func TestGetAgentPools(t *testing.T) {
 		})
 	})
 
-	result, err := client.GetAgentPools(nil)
+	result, err := client.GetAgentPools(AgentPoolsOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, 2, result.Count)
 }

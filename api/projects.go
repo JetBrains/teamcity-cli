@@ -11,28 +11,41 @@ import (
 
 // ProjectsOptions represents options for listing projects
 type ProjectsOptions struct {
-	Parent string
-	Limit  int
-	Fields []string
+	Parent       string
+	Limit        int
+	Skip         int
+	ContinuePath string
+	Fields       []string
 }
 
 // GetProjects returns a list of projects
 func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
-	locator := NewLocator().
-		Add("parentProject", opts.Parent).
-		AddIntDefault("count", opts.Limit, 30)
-
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = ProjectFields.Default
 	}
-	fieldsParam := fmt.Sprintf("count,project(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/projects?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	fieldsParam := paginatedFieldsParam("project", fields)
+
+	path := opts.ContinuePath
+	if path != "" {
+		var err error
+		path, err = c.rewriteContinuationPath(path, opts.Limit, fieldsParam)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		locator := NewLocator().
+			Add("parentProject", opts.Parent).
+			AddIntDefault("count", opts.Limit, 30).
+			AddInt("start", opts.Skip)
+		path = fmt.Sprintf("/app/rest/projects?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
+	}
 
 	var result ProjectList
 	if err := c.get(path, &result); err != nil {
 		return nil, err
 	}
+	c.normalizePageHrefs(&result.Href, &result.NextHref)
 
 	return &result, nil
 }
