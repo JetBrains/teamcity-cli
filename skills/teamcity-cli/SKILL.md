@@ -20,6 +20,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 - **Composite builds have empty logs** — drill into child builds for the actual failure.
 - **Build chains fail bottom-up** — the deepest failed dependency is the root cause, not the top-level build. Use `teamcity run tree <id>`.
 - **`--local-changes` excludes Kotlin DSL** — push `.teamcity/` changes before running.
+- **`TEAMCITY_URL` alone bypasses stored auth** — for env override mode set both `TEAMCITY_URL` and `TEAMCITY_TOKEN`; otherwise leave `TEAMCITY_URL` unset to use `auth login` credentials.
 - **Always use `--raw` for logs** and dump to a temp file. Always use `--watch` when starting builds.
 - **VCS triggers aren't always configured** — after pushing a fix, you may need to start builds manually.
 - **`pipeline push` does not validate** — always run `teamcity pipeline validate` first.
