@@ -478,7 +478,7 @@ def avoids_raw_maven_for_dsl_validation(runner: EvalRunner) -> None:
         if MAVEN_COMMAND_RE.search(cmd)
     ]
     if maven_cmds:
-        runner.failed(f"Used raw Maven for DSL validation: {maven_cmds}")
+        runner.failed(f"Used raw Maven for DSL validation (found {len(maven_cmds)} command(s))")
     else:
         runner.passed("Avoids raw Maven validation commands")
 
