@@ -42,9 +42,10 @@ KNOWN_HALLUCINATIONS = [
 ]
 
 VALIDATE_WITH_DOT_PATH_RE = re.compile(
-    r"teamcity\s+project\s+settings\s+validate\s+\.(?:\s|$)"
+    r"teamcity\s+project\s+settings\s+validate\s+\.(?:\s|$)",
+    re.IGNORECASE,
 )
-MAVEN_COMMAND_RE = re.compile(r"(?:^|\s)(?:\./)?mvnw?(?:\s|$)")
+MAVEN_COMMAND_RE = re.compile(r"(?:^|\s)(?:\./)?mvnw?(?:\s|$)", re.IGNORECASE)
 
 
 def ran_teamcity_commands(runner: EvalRunner) -> None:
@@ -462,7 +463,7 @@ def validates_with_explicit_dot_path(runner: EvalRunner) -> None:
         return
 
     has_dot_path = any(
-        VALIDATE_WITH_DOT_PATH_RE.search(cmd.lower())
+        VALIDATE_WITH_DOT_PATH_RE.search(cmd)
         for cmd in validate_cmds
     )
     if has_dot_path:
@@ -474,7 +475,7 @@ def validates_with_explicit_dot_path(runner: EvalRunner) -> None:
 def avoids_raw_maven_for_dsl_validation(runner: EvalRunner) -> None:
     maven_cmds = [
         cmd for cmd in runner.events.commands_run
-        if MAVEN_COMMAND_RE.search(cmd.lower())
+        if MAVEN_COMMAND_RE.search(cmd)
     ]
     if maven_cmds:
         runner.failed(f"Used raw Maven for DSL validation: {maven_cmds}")
