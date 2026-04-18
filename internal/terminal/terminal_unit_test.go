@@ -62,12 +62,43 @@ func TestExtractExecOutput(T *testing.T) {
 			input: "pre\r\n" + execMarker + "\r\nresult\r\n" + execMarker + "\r\npost",
 			want:  "result",
 		},
+		{
+			name: "powershell absolute cursor positioning between output and closing marker",
+			input: "\x1b[m" + execMarker + "\x1b[?25l\r\nhello_5840" +
+				"\x1b[11;1H" + execMarker + "\r\n\x1b[?25h",
+			want: "hello_5840",
+		},
 	}
 
 	for _, tc := range tests {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tc.want, extractExecOutput(tc.input))
+		})
+	}
+}
+
+func TestStripANSI(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"plain text unchanged", "hello world", "hello world"},
+		{"CSI color sequence", "\x1b[93mwarn\x1b[m", "warn"},
+		{"CSI cursor hide/show", "\x1b[?25lA\x1b[?25h", "A"},
+		{"CSI absolute cursor positioning", "A\x1b[11;1HB", "AB"},
+		{"OSC window title with BEL terminator", "\x1b]0;title\aX", "X"},
+		{"OSC with ESC \\ terminator", "\x1b]0;title\x1b\\X", "X"},
+		{"preserves CR and LF", "line1\r\nline2\n", "line1\r\nline2\n"},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tc.want, stripANSI(tc.input))
 		})
 	}
 }

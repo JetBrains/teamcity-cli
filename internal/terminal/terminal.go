@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +28,9 @@ const (
 	// writeTimeout is the maximum time to wait for a WebSocket write to complete.
 	// 10s is generous for small control messages; prevents hanging on network issues.
 	writeTimeout = 10 * time.Second
+
+	// readTimeout: 2.5x pingInterval — tolerates one missed pong.
+	readTimeout = pingInterval*2 + pingInterval/2
 )
 
 // Session holds the session token and node ID from TeamCity's agent terminal plugin
@@ -138,7 +142,7 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 		header.Set("Cookie", strings.Join(cookies, "; "))
 	}
 
-	c.debugf("WebSocket URL: %s", wsURL)
+	c.debugf("WebSocket URL: %s://%s/app/agentTerminal/terminal/<redacted>?cols=%d&rows=%d", scheme, u.Host, cols, rows)
 
 	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err != nil {
@@ -179,6 +183,11 @@ func (tc *Conn) RunInteractive(ctx context.Context) error {
 		return fmt.Errorf("failed to set raw terminal mode: %w", err)
 	}
 	defer func() { _ = term.RestoreTerminal(fd, oldState) }()
+
+	_ = tc.conn.SetReadDeadline(time.Now().Add(readTimeout))
+	tc.conn.SetPongHandler(func(string) error {
+		return tc.conn.SetReadDeadline(time.Now().Add(readTimeout))
+	})
 
 	errChan := make(chan error, 2)
 	go tc.copyToWriter(stdout, errChan)
@@ -248,8 +257,8 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 				}
 			}
 
-			content := normalizeLineEndings(buf.String())
-			if strings.Count(content, "\n"+execMarker) >= 2 {
+			content := normalizeLineEndings(stripANSI(buf.String()))
+			if strings.Count(content, execMarker+"\n") >= 2 {
 				resultCh <- result{output: extractExecOutput(content)}
 				return
 			}
@@ -264,12 +273,12 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 
 	time.Sleep(100 * time.Millisecond)
 
-	if err := tc.writeMessage(websocket.TextMessage, []byte("stty -echo\n")); err != nil {
+	if err := tc.writeMessage(websocket.TextMessage, []byte("stty -echo\r")); err != nil {
 		return fmt.Errorf("failed to send stty: %w", err)
 	}
 	time.Sleep(100 * time.Millisecond)
 
-	fullCmd := fmt.Sprintf("echo %s; %s; echo; echo %s; exit\n", execMarker, command, execMarker)
+	fullCmd := fmt.Sprintf("echo %s; %s; echo \"\"; echo %s; exit\r", execMarker, command, execMarker)
 	if err := tc.writeMessage(websocket.TextMessage, []byte(fullCmd)); err != nil {
 		return fmt.Errorf("failed to send command: %w", err)
 	}
@@ -294,8 +303,14 @@ func normalizeLineEndings(s string) string {
 	return s
 }
 
+var ansiEscapeRE = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\a\x1b]*(?:\a|\x1b\\)|\x1b[A-Z@\\^_]`)
+
+func stripANSI(s string) string {
+	return ansiEscapeRE.ReplaceAllString(s, "")
+}
+
 func extractExecOutput(raw string) string {
-	raw = normalizeLineEndings(raw)
+	raw = normalizeLineEndings(stripANSI(raw))
 	startPattern := execMarker + "\n"
 	startIdx := strings.Index(raw, startPattern)
 	if startIdx == -1 {
@@ -342,6 +357,7 @@ func (tc *Conn) copyToWriterWithReady(w io.Writer, errChan chan<- error, readyCh
 			}
 			return
 		}
+		_ = tc.conn.SetReadDeadline(time.Now().Add(readTimeout))
 
 		if !signalledReady && readyCh != nil {
 			signalledReady = true
@@ -398,6 +414,9 @@ func (tc *Conn) sendResize() {
 }
 
 func (tc *Conn) sendPing() {
+	if err := tc.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(writeTimeout)); err != nil {
+		tc.debugf("terminal: failed to send WS ping: %v", err)
+	}
 	tc.sendJSON("ping", map[string]string{
 		"ts": strconv.FormatInt(time.Now().UnixMilli(), 10),
 	})
