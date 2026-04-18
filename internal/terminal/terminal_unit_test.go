@@ -63,8 +63,6 @@ func TestExtractExecOutput(T *testing.T) {
 			want:  "result",
 		},
 		{
-			// PSReadLine uses absolute cursor positioning between command output and
-			// the closing marker instead of \r\n; stripANSI must remove it.
 			name: "powershell absolute cursor positioning between output and closing marker",
 			input: "\x1b[m" + execMarker + "\x1b[?25l\r\nhello_5840" +
 				"\x1b[11;1H" + execMarker + "\r\n\x1b[?25h",

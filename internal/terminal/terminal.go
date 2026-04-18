@@ -29,9 +29,7 @@ const (
 	// 10s is generous for small control messages; prevents hanging on network issues.
 	writeTimeout = 10 * time.Second
 
-	// readTimeout caps how long we tolerate silence on the socket before giving up.
-	// 2.5x pingInterval allows one missed pong; recovers from the case where the
-	// server never sends a close frame (e.g. when the remote shell dies uncleanly).
+	// readTimeout: 2.5x pingInterval — tolerates one missed pong.
 	readTimeout = pingInterval*2 + pingInterval/2
 )
 
@@ -260,7 +258,6 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 				}
 			}
 
-			// marker+"\n" (not "\n"+marker): the echoed input has markers followed by `;`, not \n.
 			content := normalizeLineEndings(stripANSI(buf.String()))
 			if strings.Count(content, execMarker+"\n") >= 2 {
 				resultCh <- result{output: extractExecOutput(content)}
@@ -307,7 +304,6 @@ func normalizeLineEndings(s string) string {
 	return s
 }
 
-// Strips ANSI escapes so PSReadLine cursor-positioning doesn't break marker detection.
 var ansiEscapeRE = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\a\x1b]*(?:\a|\x1b\\)|\x1b[A-Z@\\^_]`)
 
 func stripANSI(s string) string {
@@ -419,13 +415,9 @@ func (tc *Conn) sendResize() {
 }
 
 func (tc *Conn) sendPing() {
-	// WS-level ping: server's underlying stack auto-responds with pong, which
-	// refreshes the read deadline via SetPongHandler even when the plugin has
-	// no app-level data to emit.
 	if err := tc.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(writeTimeout)); err != nil {
 		tc.debugf("terminal: failed to send WS ping: %v", err)
 	}
-	// App-level ping preserved for the plugin's own keepalive accounting.
 	tc.sendJSON("ping", map[string]string{
 		"ts": strconv.FormatInt(time.Now().UnixMilli(), 10),
 	})
