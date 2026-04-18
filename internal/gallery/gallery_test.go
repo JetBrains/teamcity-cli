@@ -59,6 +59,7 @@ func TestGenerateGallery(t *testing.T) {
 
 	t.Logf("Gallery written to %s", outPath)
 }
+
 var mockURLReplacer *strings.Replacer
 
 func capture(t *testing.T, ts *cmdtest.TestServer, args ...string) string {
