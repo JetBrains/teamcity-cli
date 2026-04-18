@@ -41,6 +41,9 @@ func TestSkillInstallRemoveDefault(t *testing.T) {
 	cmdtest.RunCmd(t, "skill", "install", "--agent", "claude-code")
 	_, err := os.Stat(filepath.Join(skillDir, "SKILL.md"))
 	require.NoError(t, err, "SKILL.md should exist after install")
+	content, err := os.ReadFile(filepath.Join(skillDir, "SKILL.md"))
+	require.NoError(t, err, "SKILL.md should be readable after install")
+	assert.Contains(t, string(content), "teamcity project vcs list --project <project-id>")
 
 	refs, err := os.ReadDir(filepath.Join(skillDir, "references"))
 	require.NoError(t, err, "references dir should exist")
