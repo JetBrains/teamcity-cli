@@ -581,6 +581,31 @@ func TestGetCurrentUserUnknownServer(T *testing.T) {
 	assert.Equal(T, "", got)
 }
 
+func TestWriteConfigCreatesFile0600(T *testing.T) {
+	saveCfgState(T)
+	tmpDir := T.TempDir()
+	configPath = filepath.Join(tmpDir, "config.yml")
+	cfg = &Config{
+		DefaultServer: "https://tc.example.com",
+		Servers: map[string]ServerConfig{
+			"https://tc.example.com": {Token: "secret-token", User: "user"},
+		},
+	}
+
+	require.NoError(T, writeConfig())
+
+	info, err := os.Stat(configPath)
+	require.NoError(T, err)
+	assert.Equal(T, os.FileMode(0600), info.Mode().Perm(), "config with tokens must never be readable by other users")
+
+	// No stale .tmp siblings left behind.
+	entries, err := os.ReadDir(tmpDir)
+	require.NoError(T, err)
+	for _, e := range entries {
+		assert.NotContains(T, e.Name(), ".tmp", "atomic write left a temp file behind")
+	}
+}
+
 func TestSetServerWriteError(T *testing.T) {
 	saveCfgState(T)
 	configPath = "/dev/null/impossible/path/config.yml"
