@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -248,8 +249,9 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 				}
 			}
 
-			content := normalizeLineEndings(buf.String())
-			if strings.Count(content, "\n"+execMarker) >= 2 {
+			// marker+"\n" (not "\n"+marker): the echoed input has markers followed by `;`, not \n.
+			content := normalizeLineEndings(stripANSI(buf.String()))
+			if strings.Count(content, execMarker+"\n") >= 2 {
 				resultCh <- result{output: extractExecOutput(content)}
 				return
 			}
@@ -294,8 +296,15 @@ func normalizeLineEndings(s string) string {
 	return s
 }
 
+// Strips ANSI escapes so PSReadLine cursor-positioning doesn't break marker detection.
+var ansiEscapeRE = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\a\x1b]*(?:\a|\x1b\\)|\x1b[A-Z@\\^_]`)
+
+func stripANSI(s string) string {
+	return ansiEscapeRE.ReplaceAllString(s, "")
+}
+
 func extractExecOutput(raw string) string {
-	raw = normalizeLineEndings(raw)
+	raw = normalizeLineEndings(stripANSI(raw))
 	startPattern := execMarker + "\n"
 	startIdx := strings.Index(raw, startPattern)
 	if startIdx == -1 {
