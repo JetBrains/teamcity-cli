@@ -42,7 +42,7 @@ KNOWN_HALLUCINATIONS = [
     "--count", "--max", "--tail", "--follow",
 ]
 
-VALIDATE_WITH_DOT_PATH_RE = re.compile(
+VALIDATE_WITH_DOT_PATH_RE: Pattern[str] = re.compile(
     r"teamcity\s+project\s+settings\s+validate\s+\.(?:\s|$)",
     re.IGNORECASE,
 )
