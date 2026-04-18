@@ -4,6 +4,7 @@ package gallery_test
 
 import (
 	"bytes"
+	"html/template"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -31,34 +32,95 @@ func TestGenerateGallery(t *testing.T) {
 	_, _ = yamlFile.WriteString("version: v1.0\njobs:\n  build:\n    steps:\n      - script: go build ./...\n  test:\n    needs: [build]\n    steps:\n      - script: go test -race ./...\n")
 	yamlFile.Close()
 
-	book := termbook.New("TeamCity CLI — Screen Gallery",
+	book := termbook.New("teamcity cli screen gallery",
 		termbook.WithGitHub("https://github.com/jetbrains/teamcity-cli/"),
-		termbook.WithAccent("#07C3F2"),
-		termbook.WithIntro("Auto-generated from real command output. Click terminals to expand. Regenerate with just gallery"),
+		termbook.WithCSS(jetBrainsCSS),
+		termbook.WithDecor(termbook.Decor{
+			BrandName:    "teamcity cli",
+			BrandVersion: "v0.9.0",
+			Crumbs:       []string{"jetbrains", "teamcity-cli", "gallery"},
+			Facts: []termbook.Fact{
+				{Value: "134", Label: "screens"},
+				{Value: "16", Label: "command groups"},
+			},
+			Notes: termbook.Notes{
+				Title: "Reading this gallery",
+				Body: template.HTML(`
+			<p>Every block is real CLI output, captured on each release — not screenshots or mockups. Skim top-to-bottom, jump by section from the sidebar, or filter by name.</p>
+			<p class="mono-hint">press <span class="kbd">/</span> to filter ·
+			<span class="kbd">T</span> to toggle theme ·
+			<span class="kbd">Esc</span> to clear</p>
+		`), //nolint:gosec // trusted
+			},
+			Footer: "teamcity cli · screen gallery",
+			Attribution: template.HTML(`
+			<span class="jb-wordmark">JetBrains</span>
+			<span class="dot">·</span>
+			<span>Developer Tools</span>
+			<span class="dot">·</span>
+			<span>The Drive to Develop</span>
+			<span style="margin-left:auto">© 2026 JetBrains s.r.o.</span>
+		`), //nolint:gosec // trusted
+			BloomDark:  "radial-gradient(closest-side, oklch(0.74 0.20 20 / 0.28), oklch(0.78 0.18 45 / 0.16) 45%, transparent 72%)",
+			BloomLight: "radial-gradient(closest-side, oklch(0.78 0.18 340 / 0.30), oklch(0.82 0.14 60 / 0.18) 45%, transparent 72%)",
+		}),
 	)
 
-	book.Category("Style Guide", "style-guide", styleGuideScreens()...)
-	book.Category("Runs", "runs", runScreens(t, ts)...)
-	book.Category("Jobs", "jobs", jobScreens(t, ts)...)
-	book.Category("Agents", "agents", agentScreens(t, ts)...)
-	book.Category("Queue", "queue", queueScreens(t, ts)...)
-	book.Category("Pools", "pools", poolScreens(t, ts)...)
-	book.Category("Projects", "projects", projectScreens(t, ts)...)
-	book.Category("Pipelines", "pipelines", pipelineScreens(t, ts, yamlFile.Name())...)
-	book.Category("Auth", "auth", authScreens(t, ts)...)
-	book.Category("Config", "config", configScreens(t, ts)...)
-	book.Category("Aliases", "aliases", aliasScreens(t, ts)...)
-	book.Category("Skills", "skills", skillScreens(t, ts)...)
-	book.Category("API", "api", apiScreens(t, ts)...)
-	book.Category("Update", "update", updateScreens(t, ts)...)
-	book.Category("Errors", "errors", errorScreens()...)
-	book.Category("Help Screens", "help", helpScreens(t, ts)...)
+	book.CategoryWithBlurb("Style Guide", "style-guide",
+		"The atoms the CLI uses to communicate. Treat these as non-negotiable until we decide to rework them together.",
+		styleGuideScreens()...)
+	book.CategoryWithBlurb("Runs", "runs",
+		"List, start, watch, diff, and manage builds.",
+		runScreens(t, ts)...)
+	book.CategoryWithBlurb("Jobs", "jobs",
+		"Build configurations: list, view, pause, parameters.",
+		jobScreens(t, ts)...)
+	book.CategoryWithBlurb("Agents", "agents",
+		"List agents, view status, open terminals, execute commands.",
+		agentScreens(t, ts)...)
+	book.CategoryWithBlurb("Queue", "queue",
+		"Inspect and reorder the build queue.",
+		queueScreens(t, ts)...)
+	book.CategoryWithBlurb("Pools", "pools",
+		"Agent pools and project assignments.",
+		poolScreens(t, ts)...)
+	book.CategoryWithBlurb("Projects", "projects",
+		"Project tree, VCS, SSH, cloud, parameters, tokens.",
+		projectScreens(t, ts)...)
+	book.CategoryWithBlurb("Pipelines", "pipelines",
+		"YAML pipeline lifecycle: validate, push, pull.",
+		pipelineScreens(t, ts, yamlFile.Name())...)
+	book.CategoryWithBlurb("Auth", "auth",
+		"Login, logout, multi-server status.",
+		authScreens(t, ts)...)
+	book.CategoryWithBlurb("Config", "config",
+		"CLI configuration values.",
+		configScreens(t, ts)...)
+	book.CategoryWithBlurb("Aliases", "aliases",
+		"Command shortcuts.",
+		aliasScreens(t, ts)...)
+	book.CategoryWithBlurb("Skills", "skills",
+		"AI coding agent skills: install, update, remove.",
+		skillScreens(t, ts)...)
+	book.CategoryWithBlurb("API", "api",
+		"Raw authenticated REST calls.",
+		apiScreens(t, ts)...)
+	book.CategoryWithBlurb("Update", "update",
+		"Check for new CLI releases.",
+		updateScreens(t, ts)...)
+	book.CategoryWithBlurb("Errors", "errors",
+		"Error message shapes and hints.",
+		errorScreens()...)
+	book.CategoryWithBlurb("Help Screens", "help",
+		"Built-in --help output for every command group.",
+		helpScreens(t, ts)...)
 
 	outPath := filepath.Join(repoRoot(), "docs", "index.html")
 	require.NoError(t, book.Generate(outPath))
 
 	t.Logf("Gallery written to %s", outPath)
 }
+
 var mockURLReplacer *strings.Replacer
 
 func capture(t *testing.T, ts *cmdtest.TestServer, args ...string) string {
@@ -91,3 +153,21 @@ func repoRoot() string {
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "..", "..")
 }
+
+const jetBrainsCSS = `
+.mast h1 .slash {
+  background: linear-gradient(135deg, #FE2857 0%, #FF9E2C 45%, #E1309B 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+.attrib .jb-wordmark {
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  font-size: 12px;
+}
+`
+

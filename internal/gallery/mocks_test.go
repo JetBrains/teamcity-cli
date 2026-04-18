@@ -80,7 +80,25 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		}})
 	})
 
+	dependents := map[string][]api.BuildType{
+		"MyApp_Lint":    {{ID: "MyApp_Build", Name: "Build", ProjectID: "MyApp"}},
+		"MyApp_Build":   {{ID: "MyApp_Test", Name: "Run Tests", ProjectID: "MyApp"}, {ID: "MyApp_IntTest", Name: "Integration Tests", ProjectID: "MyApp"}},
+		"MyApp_Test":    {{ID: "MyApp_Deploy", Name: "Deploy Staging", ProjectID: "MyApp"}},
+		"MyApp_IntTest": {{ID: "MyApp_Deploy", Name: "Deploy Staging", ProjectID: "MyApp"}},
+		"MyApp_Deploy":  nil,
+	}
 	ts.Handle("GET /app/rest/buildTypes", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.RawQuery
+		if strings.Contains(q, "snapshotDependency") && strings.Contains(q, "from") {
+			for id, list := range dependents {
+				if strings.Contains(q, "id:"+id) || strings.Contains(q, "id%3A"+id) {
+					cmdtest.JSON(w, api.BuildTypeList{Count: len(list), BuildTypes: list})
+					return
+				}
+			}
+			cmdtest.JSON(w, api.BuildTypeList{Count: 0, BuildTypes: []api.BuildType{}})
+			return
+		}
 		if strings.Contains(r.URL.Path, "id:") {
 			id := cmdtest.ExtractID(r.URL.Path, "id:")
 			cmdtest.JSON(w, api.BuildType{ID: id, Name: "Build", ProjectID: "MyApp", ProjectName: "My Application", WebURL: ts.URL + "/viewType.html?buildTypeId=" + id})
@@ -134,19 +152,19 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		cmdtest.JSON(w, api.PipelineList{Count: 5, Pipelines: []api.Pipeline{
 			{ID: "MyApp_CI", Name: "CI", ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
 				HeadBuildType: &api.BuildTypeRef{ID: "MyApp_CI"},
-				Jobs: &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}},
+				Jobs:          &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}},
 			{ID: "MyApp_Release", Name: "Release", ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
 				HeadBuildType: &api.BuildTypeRef{ID: "MyApp_Release"},
-				Jobs: &api.PipelineJobs{Count: 4, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}, {ID: "stage", Name: "Stage"}, {ID: "prod", Name: "Production"}}}},
+				Jobs:          &api.PipelineJobs{Count: 4, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}, {ID: "stage", Name: "Stage"}, {ID: "prod", Name: "Production"}}}},
 			{ID: "MyApp_Nightly", Name: "Nightly", ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
 				HeadBuildType: &api.BuildTypeRef{ID: "MyApp_Nightly"},
-				Jobs: &api.PipelineJobs{Count: 3, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}, {ID: "perf", Name: "Performance"}}}},
+				Jobs:          &api.PipelineJobs{Count: 3, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}, {ID: "perf", Name: "Performance"}}}},
 			{ID: "Infra_Deploy", Name: "Infrastructure Deploy", ParentProject: &api.ProjectRef{ID: "Infrastructure", Name: "Infrastructure"},
 				HeadBuildType: &api.BuildTypeRef{ID: "Infra_Deploy"},
-				Jobs: &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "plan", Name: "Plan"}, {ID: "apply", Name: "Apply"}}}},
+				Jobs:          &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "plan", Name: "Plan"}, {ID: "apply", Name: "Apply"}}}},
 			{ID: "Frontend_CI", Name: "Frontend CI", ParentProject: &api.ProjectRef{ID: "MyApp_Frontend", Name: "Frontend"},
 				HeadBuildType: &api.BuildTypeRef{ID: "Frontend_CI"},
-				Jobs: &api.PipelineJobs{Count: 3, Job: []api.PipelineJob{{ID: "lint", Name: "Lint"}, {ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}},
+				Jobs:          &api.PipelineJobs{Count: 3, Job: []api.PipelineJob{{ID: "lint", Name: "Lint"}, {ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}},
 		}})
 	})
 
@@ -180,12 +198,12 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		"45229": {ID: 45229, Number: "830", Status: "", State: "running", BuildTypeID: "MyApp_Deploy", BranchName: "main",
 			BuildType: &api.BuildType{ID: "MyApp_Deploy", Name: "Deploy Staging", ProjectID: "MyApp", ProjectName: "My Application"},
 			Triggered: &api.Triggered{Type: "user", User: &api.User{Name: "Viktor Tiulpin"}},
-			Agent: &api.Agent{ID: 1, Name: "linux-agent-01"}, PercentageComplete: 67,
+			Agent:     &api.Agent{ID: 1, Name: "linux-agent-01"}, PercentageComplete: 67,
 			StartDate: tcTime(-1*time.Minute - 22*time.Second),
-			WebURL: ts.URL + "/viewLog.html?buildId=45229"},
+			WebURL:    ts.URL + "/viewLog.html?buildId=45229"},
 		"45233": {ID: 45233, Number: "", Status: "", State: "queued", BuildTypeID: "MyApp_Build",
 			BuildType: &api.BuildType{ID: "MyApp_Build", Name: "Build", ProjectID: "MyApp", ProjectName: "My Application"},
-			WebURL: ts.URL + "/viewLog.html?buildId=45233"},
+			WebURL:    ts.URL + "/viewLog.html?buildId=45233"},
 	}
 	ts.Handle("GET /app/rest/builds/id:", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -357,6 +375,23 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 	ts.Handle("PUT /app/rest/agents/id:", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
+	ts.Handle("GET /app/rest/agents/id:1/compatibleBuildTypes", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.BuildTypeList{Count: 5, BuildTypes: []api.BuildType{
+			{ID: "MyApp_Build", Name: "Build", ProjectName: "My Application", ProjectID: "MyApp"},
+			{ID: "MyApp_Test", Name: "Run Tests", ProjectName: "My Application", ProjectID: "MyApp"},
+			{ID: "MyApp_Lint", Name: "Lint", ProjectName: "My Application", ProjectID: "MyApp"},
+			{ID: "MyApp_IntTest", Name: "Integration Tests", ProjectName: "My Application", ProjectID: "MyApp"},
+			{ID: "Infra_Validate", Name: "Validate", ProjectName: "Infrastructure", ProjectID: "Infrastructure"},
+		}})
+	})
+	ts.Handle("GET /app/rest/agents/id:1/incompatibleBuildTypes", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.CompatibilityList{Count: 2, Compatibility: []api.Compatibility{
+			{Compatible: false, BuildType: &api.BuildType{ID: "MyApp_Deploy", Name: "Deploy Staging", ProjectName: "My Application"},
+				Reasons: &api.IncompatibleReasons{Reasons: []string{"Missing requirement: docker.server.version >= 20.0"}}},
+			{Compatible: false, BuildType: &api.BuildType{ID: "Infra_Deploy", Name: "Infra Deploy", ProjectName: "Infrastructure"},
+				Reasons: &api.IncompatibleReasons{Reasons: []string{"Missing requirement: terraform >= 1.5", "Missing requirement: aws-cli"}}},
+		}})
+	})
 
 	ts.Handle("GET /app/rest/agentPools/id:", func(w http.ResponseWriter, r *http.Request) {
 		cmdtest.JSON(w, api.Pool{
@@ -373,8 +408,12 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		})
 	})
 
-	ts.Handle("GET /app/rest/projects/id:", func(w http.ResponseWriter, r *http.Request) {
+	projectDetailHandler := func(w http.ResponseWriter, r *http.Request) {
 		id := cmdtest.ExtractID(r.URL.Path, "id:")
+		if id == "" {
+			trimmed := strings.TrimPrefix(r.URL.Path, "/app/rest/projects/")
+			id, _, _ = strings.Cut(trimmed, "/")
+		}
 		if strings.Contains(r.URL.Path, "/parameters/") {
 			cmdtest.JSON(w, api.Parameter{Name: "param1", Value: "value1"})
 			return
@@ -432,6 +471,16 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 			ID: id, Name: "My Application", ParentProjectID: "_Root", Description: "Main product monorepo",
 			WebURL: ts.URL + "/project.html?projectId=" + id,
 		})
+	}
+	ts.Handle("GET /app/rest/projects/id:", projectDetailHandler)
+	ts.Handle("GET /app/rest/projects/", projectDetailHandler)
+
+	ts.Handle("POST /app/rest/projects/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/secure/tokens") {
+			cmdtest.Text(w, "credentialsJSON:abc123")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	})
 
 	ts.Handle("GET /app/rest/vcs-roots", func(w http.ResponseWriter, r *http.Request) {
@@ -443,6 +492,20 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 			{ID: "Legacy_SVN", Name: "Legacy Codebase", VcsName: "svn", Project: &api.Project{ID: "MyApp"}},
 		}})
 	})
+	ts.Handle("GET /app/rest/vcs-roots/id:", func(w http.ResponseWriter, r *http.Request) {
+		id := cmdtest.ExtractID(r.URL.Path, "id:")
+		cmdtest.JSON(w, api.VcsRoot{
+			ID: id, Name: "Main Repo", VcsName: "jetbrains.git",
+			Project: &api.Project{ID: "MyApp", Name: "My Application"},
+			Href:    "/app/rest/vcs-roots/id:" + id,
+			Properties: &api.PropertyList{Property: []api.Property{
+				{Name: "url", Value: "https://github.com/jetbrains/teamcity-cli.git"},
+				{Name: "branch", Value: "refs/heads/main"},
+				{Name: "authMethod", Value: "TEAMCITY_SSH_KEY"},
+				{Name: "teamcitySshKey", Value: "deploy-key"},
+			}},
+		})
+	})
 
 	ts.Handle("GET /app/rest/cloud/profiles", func(w http.ResponseWriter, r *http.Request) {
 		cmdtest.JSON(w, api.CloudProfileList{Count: 5, Profiles: []api.CloudProfile{
@@ -452,6 +515,12 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 			{ID: "gcp-us", Name: "GCP US Central", CloudProviderID: "google", Project: &api.Project{ID: "MyApp"}},
 			{ID: "k8s-local", Name: "Kubernetes On-Prem", CloudProviderID: "kubernetes", Project: &api.Project{ID: "MyApp"}},
 		}})
+	})
+	ts.Handle("GET /app/rest/cloud/profiles/", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.CloudProfile{
+			ID: "aws-prod", Name: "AWS Production", CloudProviderID: "amazon",
+			Project: &api.Project{ID: "MyApp", Name: "My Application"},
+		})
 	})
 	ts.Handle("GET /app/rest/cloud/images", func(w http.ResponseWriter, r *http.Request) {
 		cmdtest.JSON(w, api.CloudImageList{Count: 5, Images: []api.CloudImage{
@@ -472,6 +541,25 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		}})
 	})
 
+	ts.Handle("POST /app/rest/projects/id:MyApp/sshKeys/generated", func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Query().Get("keyName")
+		cmdtest.JSON(w, api.SSHKey{
+			Name:      name,
+			PublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5_generated_key",
+		})
+	})
+	ts.Handle("DELETE /app/rest/projects/id:MyApp/sshKeys/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	ts.Handle("POST /app/pipeline", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Pipeline{ID: "MyApp_Onboarding", Name: "Onboarding",
+			ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
+			HeadBuildType: &api.BuildTypeRef{ID: "MyApp_Onboarding"},
+			WebURL:        ts.URL + "/pipeline/MyApp_Onboarding",
+		})
+	})
+
 	ts.Handle("GET /app/rest/pipelines/id:", func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/yaml") {
 			cmdtest.Text(w, "version: v1.0\njobs:\n  build:\n    steps:\n      - script: go build ./...\n  test:\n    needs: [build]\n    steps:\n      - script: go test -race ./...\n")
@@ -480,7 +568,7 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 		cmdtest.JSON(w, api.Pipeline{ID: "MyApp_CI", Name: "CI",
 			ParentProject: &api.ProjectRef{ID: "MyApp", Name: "My Application"},
 			HeadBuildType: &api.BuildTypeRef{ID: "MyApp_CI"},
-			Jobs: &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}})
+			Jobs:          &api.PipelineJobs{Count: 2, Job: []api.PipelineJob{{ID: "build", Name: "Build"}, {ID: "test", Name: "Test"}}}})
 	})
 	ts.Handle("PUT /app/rest/pipelines/id:", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -492,9 +580,19 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 	ts.Handle("GET /app/rest/buildTypes/id:", func(w http.ResponseWriter, r *http.Request) {
 		id := cmdtest.ExtractID(r.URL.Path, "id:")
 		if strings.Contains(r.URL.Path, "/snapshot-dependencies") {
-			cmdtest.JSON(w, api.SnapshotDependencyList{Count: 1, SnapshotDependency: []api.SnapshotDependency{
-				{ID: "snap1", SourceBuildType: &api.BuildType{ID: "MyApp_Lint", Name: "Lint"}},
-			}})
+			var deps []api.SnapshotDependency
+			switch id {
+			case "MyApp_Build":
+				deps = []api.SnapshotDependency{{ID: "snap-build-lint", SourceBuildType: &api.BuildType{ID: "MyApp_Lint", Name: "Lint"}}}
+			case "MyApp_Test", "MyApp_IntTest":
+				deps = []api.SnapshotDependency{{ID: "snap-dep", SourceBuildType: &api.BuildType{ID: "MyApp_Build", Name: "Build"}}}
+			case "MyApp_Deploy":
+				deps = []api.SnapshotDependency{
+					{ID: "snap-dep-test", SourceBuildType: &api.BuildType{ID: "MyApp_Test", Name: "Run Tests"}},
+					{ID: "snap-dep-int", SourceBuildType: &api.BuildType{ID: "MyApp_IntTest", Name: "Integration Tests"}},
+				}
+			}
+			cmdtest.JSON(w, api.SnapshotDependencyList{Count: len(deps), SnapshotDependency: deps})
 			return
 		}
 		if strings.Contains(r.URL.Path, "/parameters/") {
