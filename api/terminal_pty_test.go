@@ -24,6 +24,7 @@ const (
 
 	ptyDefaultHost = "https://cli.teamcity.com"
 	ptyIdleWait    = 75 * time.Second // > pingInterval (60s) so a missed pong would be visible
+	ptyExitWait    = 30 * time.Second // grace period for the spawned binary to exit after remote EOF
 )
 
 func ptyBinary(t *testing.T) string {
@@ -73,7 +74,31 @@ func ptyEnv() []string {
 	return env
 }
 
-func ptySpawn(t *testing.T, args ...string) *expect.Console {
+// ptyProc bundles the pty console with the spawned `teamcity` process so
+// callers can assert the process exited cleanly after the remote shell EOFs.
+// Without the exit-status assertion, a subprocess that prints the expected
+// output but crashes on teardown would still pass these tests.
+type ptyProc struct {
+	*expect.Console
+	cmd     *exec.Cmd
+	done    chan struct{}
+	waitErr error
+}
+
+// AssertCleanExit waits for the spawned `teamcity` process to exit and fails
+// the test if it either times out or returns a non-zero status. Call after
+// `ExpectEOF`.
+func (p *ptyProc) AssertCleanExit(t *testing.T) {
+	t.Helper()
+	select {
+	case <-p.done:
+		require.NoError(t, p.waitErr, "teamcity process exited with error")
+	case <-time.After(ptyExitWait):
+		t.Fatalf("teamcity process did not exit within %s after shell EOF", ptyExitWait)
+	}
+}
+
+func ptySpawn(t *testing.T, args ...string) *ptyProc {
 	t.Helper()
 	c, err := expect.NewConsole(expect.WithDefaultTimeout(45 * time.Second))
 	require.NoError(t, err)
@@ -86,13 +111,24 @@ func ptySpawn(t *testing.T, args ...string) *expect.Console {
 	cmd.Stderr = c.Tty()
 	require.NoError(t, cmd.Start())
 
+	p := &ptyProc{Console: c, cmd: cmd, done: make(chan struct{})}
+	go func() {
+		p.waitErr = cmd.Wait()
+		close(p.done)
+	}()
+
 	t.Cleanup(func() {
+		select {
+		case <-p.done:
+			return
+		default:
+		}
 		if cmd.Process != nil {
 			_ = cmd.Process.Kill()
-			_, _ = cmd.Process.Wait()
 		}
+		<-p.done
 	})
-	return c
+	return p
 }
 
 func TestTerminalPtyLinux(t *testing.T) {
@@ -102,35 +138,37 @@ func TestTerminalPtyLinux(t *testing.T) {
 	}
 
 	t.Run("prompt echo exit", func(t *testing.T) {
-		c := ptySpawn(t, "agent", "term", agentID)
-		_, err := c.Expect(expect.String("$ "))
+		p := ptySpawn(t, "agent", "term", agentID)
+		_, err := p.Expect(expect.String("$ "))
 		require.NoError(t, err, "no shell prompt seen")
-		_, err = c.SendLine("echo pty-linux-ok")
+		_, err = p.SendLine("echo pty-linux-ok")
 		require.NoError(t, err)
-		_, err = c.Expect(expect.String("pty-linux-ok"))
+		_, err = p.Expect(expect.String("pty-linux-ok"))
 		require.NoError(t, err)
-		_, err = c.SendLine("exit")
+		_, err = p.SendLine("exit")
 		require.NoError(t, err)
-		_, err = c.ExpectEOF()
+		_, err = p.ExpectEOF()
 		require.NoError(t, err, "process did not exit cleanly after remote exit")
+		p.AssertCleanExit(t)
 	})
 
 	t.Run("survives idle over ping interval", func(t *testing.T) {
 		if testing.Short() {
 			t.Skip("75s idle — skipped under -short")
 		}
-		c := ptySpawn(t, "agent", "term", agentID)
-		_, err := c.Expect(expect.String("$ "))
+		p := ptySpawn(t, "agent", "term", agentID)
+		_, err := p.Expect(expect.String("$ "))
 		require.NoError(t, err)
 		time.Sleep(ptyIdleWait)
-		_, err = c.SendLine("echo post-idle-ok")
+		_, err = p.SendLine("echo post-idle-ok")
 		require.NoError(t, err)
-		_, err = c.Expect(expect.String("post-idle-ok"))
+		_, err = p.Expect(expect.String("post-idle-ok"))
 		require.NoError(t, err, "session died during idle — pong handler not refreshing deadline")
-		_, err = c.SendLine("exit")
+		_, err = p.SendLine("exit")
 		require.NoError(t, err)
-		_, err = c.ExpectEOF()
+		_, err = p.ExpectEOF()
 		require.NoError(t, err)
+		p.AssertCleanExit(t)
 	})
 }
 
@@ -141,17 +179,18 @@ func TestTerminalPtyWindows(t *testing.T) {
 	}
 
 	t.Run("powershell prompt echo exit", func(t *testing.T) {
-		c := ptySpawn(t, "agent", "term", agentID)
-		_, err := c.Expect(expect.String("PS "))
+		p := ptySpawn(t, "agent", "term", agentID)
+		_, err := p.Expect(expect.String("PS "))
 		require.NoError(t, err, "no PowerShell prompt seen")
-		_, err = c.SendLine("Write-Host pty-ps-ok")
+		_, err = p.SendLine("Write-Host pty-ps-ok")
 		require.NoError(t, err)
-		_, err = c.Expect(expect.String("pty-ps-ok"))
+		_, err = p.Expect(expect.String("pty-ps-ok"))
 		require.NoError(t, err, "Write-Host output not seen — Enter keystroke not submitting on PS")
-		_, err = c.SendLine("exit")
+		_, err = p.SendLine("exit")
 		require.NoError(t, err)
-		_, err = c.ExpectEOF()
+		_, err = p.ExpectEOF()
 		require.NoError(t, err, "process did not exit cleanly after PS exit")
+		p.AssertCleanExit(t)
 	})
 }
 
