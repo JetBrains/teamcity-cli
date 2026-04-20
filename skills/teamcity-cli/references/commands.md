@@ -13,6 +13,10 @@ Login options:
 - `-t, --token <token>` - Access token
 - `--insecure-storage` - Store token in plain text config file instead of system keyring
 
+Environment override note:
+- `TEAMCITY_URL` + `TEAMCITY_TOKEN` should be set together when overriding auth in scripts
+- `TEAMCITY_URL` alone bypasses stored `teamcity auth login` credentials
+
 ## Builds/Runs (`teamcity run`)
 
 | Command                          | Description              |
