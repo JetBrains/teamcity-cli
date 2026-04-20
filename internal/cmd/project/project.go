@@ -96,10 +96,10 @@ func (opts *projectListOptions) fetch(client api.ClientInterface, fields []strin
 	}
 
 	return &cmdutil.ListResult{
-		JSON:      projects,
-		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg:  "No projects found",
-		EmptyHint: output.HintNoProjects,
+		JSON:     projects,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg: "No projects found",
+		EmptyTip: output.TipNoProjects,
 	}, nil
 }
 

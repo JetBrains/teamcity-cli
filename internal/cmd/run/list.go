@@ -120,7 +120,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	}
 
 	if runs.Count == 0 {
-		f.Printer.Empty(request.emptyMsg, request.emptyHint)
+		f.Printer.Empty(request.emptyMsg, request.emptyTip)
 		return nil
 	}
 
@@ -194,10 +194,10 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 }
 
 type runListRequest struct {
-	builds    api.BuildsOptions
-	webPath   string
-	emptyMsg  string
-	emptyHint string
+	builds   api.BuildsOptions
+	webPath  string
+	emptyMsg string
+	emptyTip string
 }
 
 func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fields []string) (*runListRequest, error) {
@@ -241,9 +241,9 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 			UntilDate:   untilDate,
 			Fields:      fields,
 		},
-		webPath:   resolveRunListWebPath(opts),
-		emptyMsg:  resolveRunListEmptyMessage(opts),
-		emptyHint: resolveRunListEmptyHint(opts),
+		webPath:  resolveRunListWebPath(opts),
+		emptyMsg: resolveRunListEmptyMessage(opts),
+		emptyTip: resolveRunListEmptyTip(opts),
 	}, nil
 }
 
@@ -360,11 +360,11 @@ func resolveRunListEmptyMessage(opts *runListOptions) string {
 	return "No runs found"
 }
 
-func resolveRunListEmptyHint(opts *runListOptions) string {
+func resolveRunListEmptyTip(opts *runListOptions) string {
 	if opts.favorites {
-		return output.HintNoFavoriteRuns
+		return output.TipNoFavoriteRuns
 	}
-	return output.HintNoRuns
+	return output.TipNoRuns
 }
 
 func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -164,8 +165,7 @@ func NewClient(baseURL, token string, opts ...ClientOption) *Client {
 	return c
 }
 
-// NewClientWithBasicAuth creates a new TeamCity API client with Basic authentication.
-// Use empty username with superuser token, or username/password for regular users.
+// NewClientWithBasicAuth creates a TeamCity API client with Basic authentication.
 func NewClientWithBasicAuth(baseURL, username, password string, opts ...ClientOption) *Client {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 
@@ -186,8 +186,7 @@ func NewClientWithBasicAuth(baseURL, username, password string, opts ...ClientOp
 	return c
 }
 
-// NewGuestClient creates a new TeamCity API client with guest authentication.
-// Guest auth uses the /guestAuth/ URL prefix and sends no credentials.
+// NewGuestClient creates a TeamCity API client with guest authentication (no credentials).
 func NewGuestClient(baseURL string, opts ...ClientOption) *Client {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 
@@ -355,6 +354,9 @@ func (c *Client) doGetStream(ctx context.Context, path string) (*http.Response, 
 			defer func() { _ = resp.Body.Close() }()
 			return nil, c.handleErrorResponse(resp)
 		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, err
+		}
 		return nil, &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -372,6 +374,9 @@ func (c *Client) getWithRetry(ctx context.Context, path string, result any, retr
 		if resp != nil { // exhausted on HTTP status, preserve the typed error
 			defer func() { _ = resp.Body.Close() }()
 			return c.handleErrorResponse(resp)
+		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
 		}
 		return &NetworkError{URL: c.BaseURL, Cause: err}
 	}
@@ -433,7 +438,6 @@ func (c *Client) postWithRetry(ctx context.Context, path string, body io.Reader,
 }
 
 // doNoContent performs a request expecting 200/204 with no response body.
-// Use for mutations (PUT/DELETE/POST) that don't return data.
 func (c *Client) doNoContent(ctx context.Context, method, path string, body io.Reader, contentType string) error {
 	var resp *http.Response
 	var err error

@@ -70,10 +70,10 @@ func (opts *connectionListOptions) fetch(client api.ClientInterface, fields []st
 	}
 
 	return &cmdutil.ListResult{
-		JSON:      filterJSONList(items, fields, connectionToMap),
-		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg:  "No connections found",
-		EmptyHint: output.HintNoConnections,
+		JSON:     filterJSONList(items, fields, connectionToMap),
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg: "No connections found",
+		EmptyTip: output.TipNoConnections,
 	}, nil
 }
 

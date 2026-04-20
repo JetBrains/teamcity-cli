@@ -106,7 +106,7 @@ func runParamList(f *cmdutil.Factory, id string, opts *paramListOptions, paramAP
 
 	p := f.Printer
 	if params.Count == 0 {
-		p.Empty("No parameters found", output.HintNoParameters)
+		p.Empty("No parameters found", output.TipNoParameters)
 		return nil
 	}
 

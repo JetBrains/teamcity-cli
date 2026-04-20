@@ -261,7 +261,7 @@ func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, op
 	}
 
 	if log == "" {
-		f.Printer.Empty("No log available", output.HintNoLog)
+		f.Printer.Empty("No log available", output.TipNoLog)
 		return nil
 	}
 
@@ -304,7 +304,7 @@ func printMessages(f *cmdutil.Factory, runID string, messages []api.BuildMessage
 	}
 
 	if len(messages) == 0 {
-		f.Printer.Empty("No log messages available", output.HintNoLog)
+		f.Printer.Empty("No log messages available", output.TipNoLog)
 		return nil
 	}
 
@@ -333,7 +333,7 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 			_, _ = fmt.Fprintln(p.Out)
 			if !opts.json {
 				_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
-				p.Hint("Resume: teamcity run log -f %s", runID)
+				p.Tip("Resume: teamcity run log -f %s", runID)
 			}
 			cancel()
 		case <-ctx.Done():

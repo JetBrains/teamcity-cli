@@ -38,12 +38,12 @@ type ListTable struct {
 
 // ListResult is returned by a list command's fetch function.
 // Set either JSON (for JSON output) or Table (for table output).
-// EmptyHint is shown alongside EmptyMsg when the table is empty.
+// EmptyTip is shown alongside EmptyMsg when the table is empty.
 type ListResult struct {
-	JSON      any
-	Table     ListTable
-	EmptyMsg  string
-	EmptyHint string
+	JSON     any
+	Table    ListTable
+	EmptyMsg string
+	EmptyTip string
 }
 
 // RunList handles the shared boilerplate for list commands:
@@ -88,7 +88,7 @@ func RunList(
 		if msg == "" {
 			msg = "No items found"
 		}
-		f.Printer.Empty(msg, result.EmptyHint)
+		f.Printer.Empty(msg, result.EmptyTip)
 		return nil
 	}
 

@@ -174,8 +174,7 @@ func TestErrorFromBody(T *testing.T) {
 	})
 }
 
-// TestErrReadOnlySentinel covers the sentinel contract: bare equality, through
-// a fmt.Errorf %w wrap, and the Category() surface for the renderer.
+// TestErrReadOnlySentinel covers the sentinel contract: equality, %w wrap, Category().
 func TestErrReadOnlySentinel(T *testing.T) {
 	T.Parallel()
 

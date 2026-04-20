@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,8 +10,7 @@ import (
 	"strings"
 )
 
-// encodeArtifactPath escapes each segment of an artifact path individually,
-// preserving "/" as path separators.
+// encodeArtifactPath escapes each path segment individually, preserving "/" separators.
 func encodeArtifactPath(p string) string {
 	segments := strings.Split(p, "/")
 	for i, s := range segments {
@@ -40,8 +40,7 @@ type Artifacts struct {
 	File  []Artifact `json:"file"`
 }
 
-// GetArtifacts returns the artifacts for a build (accepts ID or #number).
-// If subpath is non-empty, it lists artifacts under that subdirectory.
+// GetArtifacts returns a build's artifacts, optionally scoped to subpath.
 func (c *Client) GetArtifacts(ctx context.Context, buildID string, subpath string) (*Artifacts, error) {
 	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
@@ -100,6 +99,9 @@ func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath s
 		if resp != nil {
 			defer func() { _ = resp.Body.Close() }()
 			return 0, c.handleErrorResponse(resp)
+		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return 0, err
 		}
 		return 0, &NetworkError{URL: c.BaseURL, Cause: err}
 	}

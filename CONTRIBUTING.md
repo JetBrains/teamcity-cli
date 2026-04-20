@@ -125,7 +125,7 @@ All output through `*output.Printer`. Never `fmt.Printf` in commands.
 
 1. API errors → typed (`api.PermissionError`, `api.NotFoundError`, `api.HTTPError`), all implementing the `api.UserError` interface
 2. User-input errors → `api.Validation(msg, hint)` / `api.RequiredFlag(flag)` / `api.MutuallyExclusive(arg, flag)`
-3. Root `Execute()` prints `Error: <msg>\nHint: <suggestion>` and maps `Category()` to the JSON error envelope
+3. Root `Execute()` prints `Error: <msg>\nTip: <suggestion>` and maps `Category()` to the JSON error envelope
 
 Error strings: lowercase, no trailing punctuation. Wrap with `%w`, not bare `return err`.
 
