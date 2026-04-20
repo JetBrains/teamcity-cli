@@ -123,9 +123,9 @@ All output through `*output.Printer`. Never `fmt.Printf` in commands.
 
 ### Error handling
 
-1. API errors → typed (`api.NotFoundError`, `api.PermissionError`)
-2. Commands → `tcerrors.UserError` with suggestions via `tcerrors.WithSuggestion(msg, hint)`
-3. Root `Execute()` prints `Error: <msg>\nHint: <suggestion>`
+1. API errors → typed (`api.PermissionError`, `api.NotFoundError`, `api.HTTPError`), all implementing the `api.UserError` interface
+2. User-input errors → `api.Validation(msg, hint)` / `api.RequiredFlag(flag)` / `api.MutuallyExclusive(arg, flag)`
+3. Root `Execute()` prints `Error: <msg>\nHint: <suggestion>` and maps `Category()` to the JSON error envelope
 
 Error strings: lowercase, no trailing punctuation. Wrap with `%w`, not bare `return err`.
 

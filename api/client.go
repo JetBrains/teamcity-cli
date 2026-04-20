@@ -2,8 +2,8 @@ package api
 
 import (
 	"cmp"
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -143,9 +143,6 @@ func WithCommandName(name string) ClientOption {
 		c.commandName = name
 	}
 }
-
-// ErrReadOnly is returned when a non-GET request is attempted in read-only mode.
-var ErrReadOnly = errors.New("read-only mode: write operations are not allowed")
 
 // NewClient creates a new TeamCity API client with Bearer token authentication
 func NewClient(baseURL, token string, opts ...ClientOption) *Client {
@@ -300,26 +297,26 @@ func (c *Client) SupportsFeature(feature string) bool {
 	}
 }
 
-func (c *Client) doRequest(method, path string, body io.Reader) (*http.Response, error) {
-	return c.doRequestWithContentType(method, path, body, "application/json")
+func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
+	return c.doRequestWithContentType(ctx, method, path, body, "application/json")
 }
 
-func (c *Client) doRequestWithContentType(method, path string, body io.Reader, contentType string) (*http.Response, error) {
-	return c.doRequestFull(method, path, body, contentType, "application/json")
+func (c *Client) doRequestWithContentType(ctx context.Context, method, path string, body io.Reader, contentType string) (*http.Response, error) {
+	return c.doRequestFull(ctx, method, path, body, contentType, "application/json")
 }
 
-func (c *Client) doRequestWithAccept(method, path string, body io.Reader, accept string) (*http.Response, error) {
-	return c.doRequestFull(method, path, body, "application/json", accept)
+func (c *Client) doRequestWithAccept(ctx context.Context, method, path string, body io.Reader, accept string) (*http.Response, error) {
+	return c.doRequestFull(ctx, method, path, body, "application/json", accept)
 }
 
-func (c *Client) doRequestFull(method, path string, body io.Reader, contentType, accept string) (*http.Response, error) {
+func (c *Client) doRequestFull(ctx context.Context, method, path string, body io.Reader, contentType, accept string) (*http.Response, error) {
 	if c.ReadOnly && method != "GET" {
 		return nil, fmt.Errorf("%w: %s %s", ErrReadOnly, method, path)
 	}
 
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
 
-	req, err := http.NewRequest(method, reqURL, body)
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -344,15 +341,38 @@ func (c *Client) doRequestFull(method, path string, body io.Reader, contentType,
 	return resp, nil
 }
 
-func (c *Client) get(path string, result any) error {
-	return c.getWithRetry(path, result, ReadRetry)
+func (c *Client) get(ctx context.Context, path string, result any) error {
+	return c.getWithRetry(ctx, path, result, ReadRetry)
 }
 
-func (c *Client) getWithRetry(path string, result any, retry RetryConfig) error {
-	resp, err := withRetry(retry, func() (*http.Response, error) {
-		return c.doRequest("GET", path, nil)
+// doGetStream GETs with ReadRetry and returns the raw 2xx response; non-2xx → typed api error.
+func (c *Client) doGetStream(ctx context.Context, path string) (*http.Response, error) {
+	resp, err := withRetry(ReadRetry, func() (*http.Response, error) {
+		return c.doRequest(ctx, "GET", path, nil)
 	})
 	if err != nil {
+		if resp != nil {
+			defer func() { _ = resp.Body.Close() }()
+			return nil, c.handleErrorResponse(resp)
+		}
+		return nil, &NetworkError{URL: c.BaseURL, Cause: err}
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		defer func() { _ = resp.Body.Close() }()
+		return nil, c.handleErrorResponse(resp)
+	}
+	return resp, nil
+}
+
+func (c *Client) getWithRetry(ctx context.Context, path string, result any, retry RetryConfig) error {
+	resp, err := withRetry(retry, func() (*http.Response, error) {
+		return c.doRequest(ctx, "GET", path, nil)
+	})
+	if err != nil {
+		if resp != nil { // exhausted on HTTP status, preserve the typed error
+			defer func() { _ = resp.Body.Close() }()
+			return c.handleErrorResponse(resp)
+		}
 		return &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -370,156 +390,31 @@ func (c *Client) getWithRetry(path string, result any, retry RetryConfig) error 
 	return nil
 }
 
+// handleErrorResponse is a method-receiver alias for ErrorFromResponse.
 func (c *Client) handleErrorResponse(resp *http.Response) error {
-	bodyBytes, _ := io.ReadAll(resp.Body)
-
-	message := ExtractErrorMessage(bodyBytes)
-
-	switch resp.StatusCode {
-	case http.StatusUnauthorized:
-		return ErrAuthentication
-	case http.StatusForbidden:
-		return &PermissionError{Action: "perform this action"}
-	case http.StatusNotFound:
-		if message != "" {
-			resource, id := parseNotFoundMessage(message)
-			return &NotFoundError{Resource: resource, ID: id, Message: message}
-		}
-		return &NotFoundError{Message: "resource not found"}
-	default:
-		if message != "" {
-			return errors.New(message)
-		}
-		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(bodyBytes))
-	}
+	return ErrorFromResponse(resp)
 }
 
-// ExtractErrorMessage extracts a clean error message from a JSON or XML API response.
+// ExtractErrorMessage returns the primary message from a TeamCity error body.
 func ExtractErrorMessage(body []byte) string {
-	var errResp APIErrorResponse
-	if err := json.Unmarshal(body, &errResp); err == nil {
-		if len(errResp.Errors) > 0 {
-			return humanizeErrorMessage(errResp.Errors[0].Message)
-		}
-		return ""
-	}
-
-	if xmlErrs := ParseXMLErrors(body); xmlErrs != nil {
-		return humanizeErrorMessage(xmlErrs.Errors[0].Message)
-	}
-
-	text := strings.TrimSpace(string(body))
-	if len(text) > 0 && len(text) < 200 && !strings.HasPrefix(text, "<") {
-		return humanizeErrorMessage(text)
-	}
-
-	return ""
-}
-
-// humanizeErrorMessage converts TeamCity's technical error messages to user-friendly ones
-func humanizeErrorMessage(msg string) string {
-	// "No build types found by locator 'X'." -> "job 'X' not found"
-	if strings.HasPrefix(msg, "No build types found by locator '") {
-		id := extractIDFromLocator(msg, "No build types found by locator '")
-		return fmt.Sprintf("job '%s' not found", id)
-	}
-
-	// "No build found by locator 'X'." -> "run 'X' not found"
-	if strings.HasPrefix(msg, "No build found by locator '") {
-		id := extractIDFromLocator(msg, "No build found by locator '")
-		return fmt.Sprintf("run '%s' not found", id)
-	}
-
-	// "No project found by locator 'X'." -> "project 'X' not found"
-	if strings.HasPrefix(msg, "No project found by locator '") {
-		id := extractIDFromLocator(msg, "No project found by locator '")
-		return fmt.Sprintf("project '%s' not found", id)
-	}
-
-	// "Nothing is found by locator 'count:1,buildType:(id:X)'" -> "no runs found for job 'X'"
-	if strings.Contains(msg, "Nothing is found by locator") && strings.Contains(msg, "buildType:(id:") {
-		start := strings.Index(msg, "buildType:(id:")
-		if start != -1 {
-			start += len("buildType:(id:")
-			end := strings.Index(msg[start:], ")")
-			if end != -1 {
-				id := msg[start : start+end]
-				return fmt.Sprintf("no runs found for job '%s'", id)
-			}
-		}
-	}
-
-	// Generic "Nothing is found by locator" errors
-	if strings.Contains(msg, "Nothing is found by locator") {
-		if start := strings.Index(msg, "id:"); start != -1 {
-			start += 3
-			end := strings.IndexAny(msg[start:], "',)")
-			if end != -1 {
-				id := msg[start : start+end]
-				return fmt.Sprintf("resource '%s' not found", id)
-			}
-		}
-	}
-
-	// Content-Type error typically means the build was not found in queue
-	if strings.Contains(msg, "Content-Type") && strings.Contains(msg, "header") {
-		return "build not found in queue"
-	}
-
-	return msg
-}
-
-// extractIDFromLocator extracts the ID from an error message containing a locator.
-// For "No X found by locator 'count:1,id:foo'...", returns "foo".
-// For simple locators like "id:foo", also returns "foo".
-func extractIDFromLocator(msg, prefix string) string {
-	locator := strings.TrimPrefix(msg, prefix)
-	// Find the closing quote of the locator
-	endQuote := strings.Index(locator, "'")
-	if endQuote != -1 {
-		locator = locator[:endQuote]
-	}
-
-	// Try to find "id:" in the locator and extract its value
-	if _, after, ok := strings.Cut(locator, "id:"); ok {
-		idValue := after
-		// The ID ends at comma, closing paren, or end of string
-		endIdx := strings.IndexAny(idValue, ",)")
-		if endIdx != -1 {
-			return idValue[:endIdx]
-		}
-		return idValue
-	}
-
-	// Fallback: return the whole locator if no "id:" found
-	return locator
-}
-
-// parseNotFoundMessage extracts the resource type and ID from a humanized not-found message.
-// Matches patterns like "job 'Foo_Bar' not found" or "project 'MyProject' not found".
-func parseNotFoundMessage(msg string) (resource, id string) {
-	quote1 := strings.Index(msg, "'")
-	if quote1 == -1 {
-		return "", ""
-	}
-	quote2 := strings.Index(msg[quote1+1:], "'")
-	if quote2 == -1 {
-		return "", ""
-	}
-	return strings.TrimSpace(msg[:quote1]), msg[quote1+1 : quote1+1+quote2]
+	return parseWire(body).Message
 }
 
 // post performs a POST request without retry (non-idempotent by default).
-func (c *Client) post(path string, body io.Reader, result any) error {
-	return c.postWithRetry(path, body, result, NoRetry)
+func (c *Client) post(ctx context.Context, path string, body io.Reader, result any) error {
+	return c.postWithRetry(ctx, path, body, result, NoRetry)
 }
 
 // postWithRetry performs a POST request with configurable retry.
-func (c *Client) postWithRetry(path string, body io.Reader, result any, retry RetryConfig) error {
+func (c *Client) postWithRetry(ctx context.Context, path string, body io.Reader, result any, retry RetryConfig) error {
 	resp, err := withRetry(retry, func() (*http.Response, error) {
-		return c.doRequest("POST", path, body)
+		return c.doRequest(ctx, "POST", path, body)
 	})
 	if err != nil {
+		if resp != nil {
+			defer func() { _ = resp.Body.Close() }()
+			return c.handleErrorResponse(resp)
+		}
 		return &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -539,18 +434,18 @@ func (c *Client) postWithRetry(path string, body io.Reader, result any, retry Re
 
 // doNoContent performs a request expecting 200/204 with no response body.
 // Use for mutations (PUT/DELETE/POST) that don't return data.
-func (c *Client) doNoContent(method, path string, body io.Reader, contentType string) error {
+func (c *Client) doNoContent(ctx context.Context, method, path string, body io.Reader, contentType string) error {
 	var resp *http.Response
 	var err error
 
 	if contentType == "" {
-		resp, err = c.doRequest(method, path, body)
+		resp, err = c.doRequest(ctx, method, path, body)
 	} else {
 		accept := "application/json"
 		if contentType == "text/plain" {
 			accept = "text/plain"
 		}
-		resp, err = c.doRequestFull(method, path, body, contentType, accept)
+		resp, err = c.doRequestFull(ctx, method, path, body, contentType, accept)
 	}
 	if err != nil {
 		return err
@@ -572,12 +467,12 @@ type RawResponse struct {
 }
 
 // RawRequest performs a raw HTTP request and returns the response without parsing.
-func (c *Client) RawRequest(method, path string, body io.Reader, headers map[string]string) (*RawResponse, error) {
+func (c *Client) RawRequest(ctx context.Context, method, path string, body io.Reader, headers map[string]string) (*RawResponse, error) {
 	if c.ReadOnly && method != "GET" {
 		return nil, fmt.Errorf("%w: %s %s", ErrReadOnly, method, path)
 	}
 
-	resp, err := c.doRawRequest(method, path, body, headers, "application/json")
+	resp, err := c.doRawRequest(ctx, method, path, body, headers, "application/json")
 	if err != nil {
 		return nil, err
 	}
@@ -585,7 +480,7 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 	// TeamCity returns 406 when it can only produce XML for an error but the client
 	// requested JSON. Retry with Accept: */* to get the real error.
 	if resp.StatusCode == http.StatusNotAcceptable {
-		resp, err = c.doRawRequest(method, path, body, headers, "*/*")
+		resp, err = c.doRawRequest(ctx, method, path, body, headers, "*/*")
 		if err != nil {
 			return nil, err
 		}
@@ -594,10 +489,10 @@ func (c *Client) RawRequest(method, path string, body io.Reader, headers map[str
 	return resp, nil
 }
 
-func (c *Client) doRawRequest(method, path string, body io.Reader, headers map[string]string, accept string) (*RawResponse, error) {
+func (c *Client) doRawRequest(ctx context.Context, method, path string, body io.Reader, headers map[string]string, accept string) (*RawResponse, error) {
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
 
-	req, err := http.NewRequest(method, reqURL, body)
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

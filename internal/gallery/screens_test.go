@@ -45,7 +45,7 @@ func styleGuideScreens() []termbook.Screen {
 			p.Success("Logged in as Viktor Tiulpin")
 			p.Info("3 runs matched your filters")
 			p.Warn("Token expires in 2 days")
-			fmt.Fprintf(w, "Error: job '%s' not found\n\nHint: Use 'teamcity job list' to see available jobs\n", "NonExistent_Build")
+			fmt.Fprintf(w, "Error: job %q not found\n\nHint: Run 'teamcity job list' to see available jobs\n", "NonExistent_Build")
 		}),
 		termbook.Manual("table", "Table Rendering", "Auto-sized columns with colored cells", "", func(w io.Writer) {
 			p := &output.Printer{Out: w, ErrOut: w}
@@ -432,13 +432,13 @@ func updateScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 func errorScreens() []termbook.Screen {
 	return []termbook.Screen{
 		termbook.Manual("error-not-found", "Not Found", "Resource not found with contextual hint", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: run '999999' not found\n\nHint: Use 'teamcity run list' to see available resources")
+			fmt.Fprintln(w, "Error: run \"999999\" not found\n\nHint: Run 'teamcity run list' to see available runs")
 		}),
 		termbook.Manual("error-auth", "Authentication Failed", "Invalid or expired token", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: Authentication failed: invalid or expired token\n\nHint: Run 'teamcity auth login' to re-authenticate")
+			fmt.Fprintln(w, "Error: authentication failed: invalid or expired credentials\n\nHint: Run 'teamcity auth login' to re-authenticate")
 		}),
 		termbook.Manual("error-permission", "Permission Denied", "Insufficient permissions", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: permission denied: cannot reboot agent\n\nHint: Check your TeamCity permissions or contact your administrator")
+			fmt.Fprintln(w, "Error: missing \"Manage agents\" permission\n\nHint: Ask your TeamCity administrator to grant this permission")
 		}),
 		termbook.Manual("error-network", "Network Error", "Cannot reach the server", "", func(w io.Writer) {
 			fmt.Fprintln(w, "Error: cannot connect to https://tc.example.com: dial tcp: lookup tc.example.com: no such host\n\nHint: Check your network connection and verify the server URL")
@@ -450,8 +450,8 @@ func errorScreens() []termbook.Screen {
 			fmt.Fprintln(w, `{`)
 			fmt.Fprintln(w, `  "error": {`)
 			fmt.Fprintln(w, `    "code": "not_found",`)
-			fmt.Fprintln(w, `    "message": "run '999999' not found",`)
-			fmt.Fprintln(w, `    "suggestion": "Use 'teamcity run list' to see available resources"`)
+			fmt.Fprintln(w, `    "message": "run \"999999\" not found",`)
+			fmt.Fprintln(w, `    "suggestion": "Run 'teamcity run list' to see available runs"`)
 			fmt.Fprintln(w, `  }`)
 			fmt.Fprintln(w, `}`)
 		}),

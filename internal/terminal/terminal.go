@@ -14,7 +14,9 @@ import (
 	"sync"
 	"time"
 
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
+	"errors"
+
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/gorilla/websocket"
 	"github.com/moby/term"
@@ -82,21 +84,18 @@ func (c *Client) OpenSession(agentID int) (*Session, error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, tcerrors.NetworkError(c.baseURL, err)
+		return nil, &api.NetworkError{URL: c.baseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	c.debugf("< %s", resp.Status)
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, tcerrors.AuthenticationFailed()
-	}
-	if resp.StatusCode == http.StatusForbidden {
-		return nil, tcerrors.PermissionDenied("open terminal session")
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return nil, api.ErrorFromResponse(resp)
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, tcerrors.WithSuggestion(
+		return nil, api.Validation(
 			fmt.Sprintf("Failed to open terminal session: %s", strings.TrimSpace(string(body))),
 			"Check if the agent-terminal plugin is installed on the server",
 		)
@@ -173,7 +172,7 @@ func (tc *Conn) RunInteractive(ctx context.Context) error {
 	stdin, stdout, _ := term.StdStreams()
 	fd, isTerminal := term.GetFdInfo(stdin)
 	if !isTerminal {
-		return tcerrors.New("terminal command requires an interactive terminal")
+		return errors.New("terminal command requires an interactive terminal")
 	}
 
 	defer tc.Close()
@@ -267,7 +266,7 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 
 	select {
 	case <-ctx.Done():
-		return tcerrors.New("command timed out")
+		return errors.New("command timed out")
 	case <-readyCh:
 	}
 
@@ -285,7 +284,7 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 
 	select {
 	case <-ctx.Done():
-		return tcerrors.New("command timed out")
+		return errors.New("command timed out")
 	case res := <-resultCh:
 		if res.err != nil {
 			return res.err

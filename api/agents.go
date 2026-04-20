@@ -53,7 +53,7 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 
 	agents, err := collectPages(c, path, opts.Limit, func(p string) ([]Agent, string, error) {
 		var page AgentList
-		if err := c.get(p, &page); err != nil {
+		if err := c.get(context.Background(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Agents, page.NextHref, nil
@@ -72,7 +72,7 @@ func (c *Client) AuthorizeAgent(id int, authorized bool) error {
 	if authorized {
 		value = "true"
 	}
-	return c.doNoContent("PUT", path, strings.NewReader(value), "text/plain")
+	return c.doNoContent(context.Background(), "PUT", path, strings.NewReader(value), "text/plain")
 }
 
 // agentDetailFields is the fields parameter used for agent detail requests
@@ -83,7 +83,7 @@ func (c *Client) GetAgent(id int) (*Agent, error) {
 	path := fmt.Sprintf("/app/rest/agents/id:%d?fields=%s", id, url.QueryEscape(agentDetailFields))
 
 	var result Agent
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 
@@ -97,7 +97,7 @@ func (c *Client) GetAgentByName(name string) (*Agent, error) {
 	path := fmt.Sprintf("/app/rest/agents/name:%s?fields=%s", url.PathEscape(name), url.QueryEscape(agentDetailFields))
 
 	var result Agent
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +111,7 @@ func (c *Client) EnableAgent(id int, enabled bool) error {
 	if enabled {
 		value = "true"
 	}
-	return c.doNoContent("PUT", path, strings.NewReader(value), "text/plain")
+	return c.doNoContent(context.Background(), "PUT", path, strings.NewReader(value), "text/plain")
 }
 
 // GetAgentCompatibleBuildTypes returns build types compatible with an agent
@@ -120,7 +120,7 @@ func (c *Client) GetAgentCompatibleBuildTypes(id int) (*BuildTypeList, error) {
 	path := fmt.Sprintf("/app/rest/agents/id:%d/compatibleBuildTypes?fields=%s", id, url.QueryEscape(fields))
 
 	var result BuildTypeList
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 
@@ -133,7 +133,7 @@ func (c *Client) GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, err
 	path := fmt.Sprintf("/app/rest/agents/id:%d/incompatibleBuildTypes?fields=%s", id, url.QueryEscape(fields))
 
 	var result CompatibilityList
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 
@@ -173,16 +173,8 @@ func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error
 
 	c.debugLogResponse(resp)
 
-	switch resp.StatusCode {
-	case http.StatusOK, http.StatusNoContent, http.StatusFound:
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusFound {
 		return nil
-	case http.StatusUnauthorized:
-		return ErrAuthentication
-	case http.StatusForbidden:
-		return &PermissionError{Action: "reboot agent"}
-	case http.StatusNotFound:
-		return &NotFoundError{Resource: "agent", ID: fmt.Sprintf("%d", id)}
-	default:
-		return fmt.Errorf("server returned status %d", resp.StatusCode)
 	}
+	return ErrorFromResponse(resp)
 }

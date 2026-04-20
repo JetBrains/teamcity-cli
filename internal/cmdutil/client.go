@@ -5,7 +5,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/version"
 )
 
@@ -21,7 +20,7 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 
 	if config.IsGuestAuth() {
 		if serverURL == "" {
-			return nil, tcerrors.WithSuggestion(
+			return nil, api.Validation(
 				"TEAMCITY_GUEST is set but no server URL configured",
 				fmt.Sprintf("Set %s environment variable or run 'teamcity auth login --guest -s <url>'", config.EnvServerURL),
 			)
@@ -59,7 +58,7 @@ func ProbeGuestAccess(serverURL string) bool {
 
 // NotAuthenticatedError returns a not-authenticated error with a hint that covers
 // all authentication methods: environment variables, interactive login, and guest access.
-func NotAuthenticatedError(serverURL string, keyringErr error) *tcerrors.UserError {
+func NotAuthenticatedError(serverURL string, keyringErr error) *api.ValidationError {
 	msg := "Not authenticated"
 	if keyringErr != nil {
 		msg = fmt.Sprintf("Not authenticated (could not access system keyring: %v)", keyringErr)
@@ -70,8 +69,5 @@ func NotAuthenticatedError(serverURL string, keyringErr error) *tcerrors.UserErr
 		suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
 	}
 
-	return &tcerrors.UserError{
-		Message:    msg,
-		Suggestion: suggestion,
-	}
+	return api.Validation(msg, suggestion)
 }
