@@ -1,7 +1,10 @@
 package cmdutil
 
 import (
+	"io"
+
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -92,13 +95,16 @@ func RunList(
 		return nil
 	}
 
-	if flags.Plain {
-		f.Printer.PrintPlainTable(result.Table.Headers, result.Table.Rows, flags.NoHeader)
-	} else {
-		if len(result.Table.FlexCols) > 0 {
-			output.AutoSizeColumns(result.Table.Headers, result.Table.Rows, 2, result.Table.FlexCols...)
-		}
-		f.Printer.PrintTable(result.Table.Headers, result.Table.Rows)
+	if len(result.Table.FlexCols) > 0 && !flags.Plain {
+		output.AutoSizeColumns(result.Table.Headers, result.Table.Rows, 2, result.Table.FlexCols...)
 	}
+
+	output.WithPagerUsing(config.ResolvePager(), output.PagerOpts{ChopLongLines: true}, f.Printer.Out, func(w io.Writer) {
+		if flags.Plain {
+			f.Printer.PrintPlainTableTo(w, result.Table.Headers, result.Table.Rows, flags.NoHeader)
+		} else {
+			f.Printer.PrintTableTo(w, result.Table.Headers, result.Table.Rows)
+		}
+	})
 	return nil
 }

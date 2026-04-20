@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
@@ -79,6 +80,10 @@ func (f *Factory) InitOutput() {
 
 	f.Printer.Quiet = f.Quiet
 	f.Printer.Verbose = f.Verbose
+
+	// Wire the pager resolver so the output package can pull the user's
+	// configured pager without importing config.
+	output.PagerResolver = config.ResolvePager
 }
 
 // IsInteractive returns true if the CLI can prompt the user.

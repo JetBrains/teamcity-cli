@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"time"
@@ -184,12 +185,16 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	}
 
 	p := f.Printer
-	if opts.plain {
-		p.PrintPlainTable(headers, rows, opts.noHeader)
-	} else {
+	if !opts.plain {
 		output.AutoSizeColumns(headers, rows, 2, 2, 3, 4)
-		p.PrintTable(headers, rows)
 	}
+	output.WithPagerUsing(config.ResolvePager(), output.PagerOpts{ChopLongLines: true}, p.Out, func(w io.Writer) {
+		if opts.plain {
+			p.PrintPlainTableTo(w, headers, rows, opts.noHeader)
+		} else {
+			p.PrintTableTo(w, headers, rows)
+		}
+	})
 	return nil
 }
 

@@ -2,12 +2,14 @@ package alias
 
 import (
 	"fmt"
+	"io"
 	"maps"
 	"slices"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -155,7 +157,9 @@ func newAliasListCmd(f *cmdutil.Factory) *cobra.Command {
 				}
 				rows = append(rows, []string{name, displayExp, aliasType})
 			}
-			f.Printer.PrintTable(headers, rows)
+			output.WithPagerUsing(config.ResolvePager(), output.PagerOpts{ChopLongLines: true}, f.Printer.Out, func(w io.Writer) {
+				f.Printer.PrintTableTo(w, headers, rows)
+			})
 			return nil
 		},
 	}

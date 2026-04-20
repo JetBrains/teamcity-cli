@@ -2,10 +2,12 @@ package agent
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -96,12 +98,16 @@ func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID i
 		})
 	}
 
-	if opts.plain {
-		p.PrintPlainTable(headers, rows, opts.noHeader)
-	} else {
+	if !opts.plain {
 		output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
-		p.PrintTable(headers, rows)
 	}
+	output.WithPagerUsing(config.ResolvePager(), output.PagerOpts{ChopLongLines: true}, p.Out, func(w io.Writer) {
+		if opts.plain {
+			p.PrintPlainTableTo(w, headers, rows, opts.noHeader)
+		} else {
+			p.PrintTableTo(w, headers, rows)
+		}
+	})
 	return nil
 }
 
@@ -166,6 +172,8 @@ func showIncompatibleJobsPlain(p *output.Printer, compat *api.CompatibilityList,
 		})
 	}
 
-	p.PrintPlainTable(headers, rows, noHeader)
+	output.WithPagerUsing(config.ResolvePager(), output.PagerOpts{ChopLongLines: true}, p.Out, func(w io.Writer) {
+		p.PrintPlainTableTo(w, headers, rows, noHeader)
+	})
 	return nil
 }

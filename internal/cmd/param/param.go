@@ -2,9 +2,11 @@ package param
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -130,12 +132,16 @@ func runParamList(f *cmdutil.Factory, id string, opts *paramListOptions, paramAP
 		})
 	}
 
-	if opts.plain {
-		p.PrintPlainTable(headers, rows, opts.noHeader)
-	} else {
+	if !opts.plain {
 		output.AutoSizeColumns(headers, rows, 2, 0, 1)
-		p.PrintTable(headers, rows)
 	}
+	output.WithPagerUsing(config.ResolvePager(), output.PagerOpts{ChopLongLines: true}, p.Out, func(w io.Writer) {
+		if opts.plain {
+			p.PrintPlainTableTo(w, headers, rows, opts.noHeader)
+		} else {
+			p.PrintTableTo(w, headers, rows)
+		}
+	})
 	return nil
 }
 

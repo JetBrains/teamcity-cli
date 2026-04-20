@@ -11,6 +11,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/param"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -429,7 +430,9 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int, j
 	if jsonOut {
 		return f.Printer.PrintJSON(node)
 	}
-	f.Printer.PrintTree(node.toDisplayNode())
+	output.WithPagerUsing(config.ResolvePager(), output.PagerOpts{ChopLongLines: true}, f.Printer.Out, func(w io.Writer) {
+		f.Printer.PrintTreeTo(w, node.toDisplayNode())
+	})
 	return nil
 }
 

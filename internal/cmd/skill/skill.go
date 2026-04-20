@@ -2,9 +2,11 @@ package skill
 
 import (
 	"fmt"
+	"io"
 
 	teamcitycli "github.com/JetBrains/teamcity-cli"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/tiulpin/instill"
@@ -58,7 +60,9 @@ func newSkillListCmd(f *cmdutil.Factory) *cobra.Command {
 				}
 				rows[i] = []string{s.Name, s.Version, s.Description, def}
 			}
-			f.Printer.PrintTable([]string{"Name", "Version", "Description", ""}, rows)
+			output.WithPagerUsing(config.ResolvePager(), output.PagerOpts{ChopLongLines: true}, f.Printer.Out, func(w io.Writer) {
+				f.Printer.PrintTableTo(w, []string{"Name", "Version", "Description", ""}, rows)
+			})
 			return nil
 		},
 	}

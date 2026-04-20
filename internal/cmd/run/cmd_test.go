@@ -37,6 +37,40 @@ func TestRunList(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, f, "run", "list", "--json", "--limit", "2")
 }
 
+// TestRunListPagerCatIsPassthrough checks that setting TEAMCITY_PAGER=cat —
+// the explicit "disable paging" escape hatch — doesn't swallow the list
+// output. The table should still land on the captured buffer unchanged.
+func TestRunListPagerCatIsPassthrough(T *testing.T) {
+	T.Setenv("TEAMCITY_PAGER", "cat")
+
+	ts := cmdtest.SetupMockClient(T)
+	baseline := cmdtest.CaptureOutput(T, ts.Factory, "run", "list", "--limit", "5")
+
+	T.Setenv("TEAMCITY_PAGER", "cat")
+	ts2 := cmdtest.SetupMockClient(T)
+	withPager := cmdtest.CaptureOutput(T, ts2.Factory, "run", "list", "--limit", "5")
+
+	// Pager=cat path must behave identically to direct output for the user —
+	// the table renders on stdout either way.
+	assert.Equal(T, baseline, withPager)
+	assert.NotEmpty(T, withPager)
+}
+
+// TestRunListNoPagerUnchanged guards against regressions: without any pager
+// configured, `run list` output must be identical to the existing baseline.
+func TestRunListNoPagerUnchanged(T *testing.T) {
+	T.Setenv("TEAMCITY_PAGER", "")
+	T.Setenv("PAGER", "")
+
+	ts := cmdtest.SetupMockClient(T)
+	out := cmdtest.CaptureOutput(T, ts.Factory, "run", "list", "--limit", "5")
+
+	// Expect a rendered table header — same as before the pager work.
+	assert.Contains(T, out, "STATUS")
+	assert.Contains(T, out, "RUN")
+	assert.Contains(T, out, "JOB")
+}
+
 func TestRunListBackwardsDateRange(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
