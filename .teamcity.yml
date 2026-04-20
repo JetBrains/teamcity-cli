@@ -174,16 +174,24 @@ jobs:
         script-content: |-
           set -eu
 
+          sudo add-apt-repository -y ppa:longsleep/golang-backports
+          sudo apt-get update
+          sudo apt-get install -y golang-1.26-go jq
+
+          go install ./tc
+          export TEAMCITY_URL="${TC_PTY_HOST:-https://cli.teamcity.com}"
+          export TEAMCITY_TOKEN="${TC_PTY_TOKEN:-${TC_ACCEPTANCE_TOKEN:-${TEAMCITY_TOKEN:-}}}"
+          if [ -z "$TEAMCITY_TOKEN" ]; then
+            echo "No token available (set TC_PTY_TOKEN or TC_ACCEPTANCE_TOKEN); skipping"
+            exit 0
+          fi
+
           CHANGES=$(teamcity run changes "%teamcity.build.id%" 2>/dev/null || true)
           if [ -n "$CHANGES" ] && ! echo "$CHANGES" | grep -qE '^\s+\S+\s+(internal/terminal/|api/terminal)'; then
             echo "No terminal-related changes, skipping"
             exit 0
           fi
 
-          sudo add-apt-repository -y ppa:longsleep/golang-backports
-          sudo apt-get update
-          sudo apt-get install -y golang-1.26-go jq
-          go mod download
           go install gotest.tools/gotestsum@latest
 
           teamcity run start CLI_LinuxAgentTerminal   --json --no-input >/dev/null
