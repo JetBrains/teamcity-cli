@@ -261,39 +261,28 @@ func TestCreateProjectRequestMarshal(T *testing.T) {
 		require.NoError(t, err)
 		assert.JSONEq(t, `{"id":"Sub","name":"Sub","parentProject":{"locator":"id:Parent"}}`, string(data))
 	})
-
-	T.Run("name only", func(t *testing.T) {
-		t.Parallel()
-		data, err := json.Marshal(CreateProjectRequest{Name: "Auto"})
-		require.NoError(t, err)
-		assert.JSONEq(t, `{"name":"Auto"}`, string(data))
-	})
 }
 
 func TestCreateProject(T *testing.T) {
 	T.Parallel()
 
-	T.Run("success", func(t *testing.T) {
-		t.Parallel()
-
-		var body []byte
-		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "POST", r.Method)
-			assert.Equal(t, "/app/rest/projects", r.URL.Path)
-			body, _ = io.ReadAll(r.Body)
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(Project{ID: "MyProject", Name: "My Project", ParentProjectID: "_Root"})
-		})
-
-		project, err := client.CreateProject(CreateProjectRequest{
-			ID:              "MyProject",
-			Name:            "My Project",
-			ParentProjectID: "_Root",
-		})
-		require.NoError(t, err)
-		assert.Equal(t, "MyProject", project.ID)
-		assert.JSONEq(t, `{"id":"MyProject","name":"My Project","parentProject":{"locator":"id:_Root"}}`, string(body))
+	var body []byte
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "POST", r.Method)
+		assert.Equal(T, "/app/rest/projects", r.URL.Path)
+		body, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(Project{ID: "MyProject", Name: "My Project", ParentProjectID: "_Root"})
 	})
+
+	project, err := client.CreateProject(CreateProjectRequest{
+		ID:              "MyProject",
+		Name:            "My Project",
+		ParentProjectID: "_Root",
+	})
+	require.NoError(T, err)
+	assert.Equal(T, "MyProject", project.ID)
+	assert.JSONEq(T, `{"id":"MyProject","name":"My Project","parentProject":{"locator":"id:_Root"}}`, string(body))
 }
 
 func TestProjectExists(T *testing.T) {

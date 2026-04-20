@@ -33,7 +33,6 @@ If --parent is omitted, the project is created under the Root project.`,
   teamcity project create MyProject --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			f.JSONOutput = opts.json
 			return runProjectCreate(f, args[0], opts)
 		},
 	}

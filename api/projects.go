@@ -63,8 +63,7 @@ type CreateProjectRequest struct {
 	ParentProjectID string `json:"-"`
 }
 
-// MarshalJSON serializes a CreateProjectRequest into the nested structure
-// TeamCity's REST API expects: {"parentProject": {"locator": "id:<parent>"}}.
+// MarshalJSON wraps ParentProjectID into the nested {"locator":"id:<parent>"} object the REST API requires.
 func (r CreateProjectRequest) MarshalJSON() ([]byte, error) {
 	type parentRef struct {
 		Locator string `json:"locator"`
