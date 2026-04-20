@@ -60,7 +60,25 @@ func (c *Client) GetProject(id string) (*Project, error) {
 type CreateProjectRequest struct {
 	ID              string `json:"id,omitempty"`
 	Name            string `json:"name"`
-	ParentProjectID string `json:"parentProject,omitempty"`
+	ParentProjectID string `json:"-"`
+}
+
+// MarshalJSON serializes a CreateProjectRequest into the nested structure
+// TeamCity's REST API expects: {"parentProject": {"locator": "id:<parent>"}}.
+func (r CreateProjectRequest) MarshalJSON() ([]byte, error) {
+	type parentRef struct {
+		Locator string `json:"locator"`
+	}
+	type payload struct {
+		ID            string     `json:"id,omitempty"`
+		Name          string     `json:"name"`
+		ParentProject *parentRef `json:"parentProject,omitempty"`
+	}
+	p := payload{ID: r.ID, Name: r.Name}
+	if r.ParentProjectID != "" {
+		p.ParentProject = &parentRef{Locator: "id:" + r.ParentProjectID}
+	}
+	return json.Marshal(p)
 }
 
 // CreateProject creates a new project
