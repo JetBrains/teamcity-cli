@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,7 +29,7 @@ func (c *Client) GetPipelines(opts PipelinesOptions) (*PipelineList, error) {
 
 	pipelines, err := collectPages(c, path, opts.Limit, func(p string) ([]Pipeline, string, error) {
 		var page PipelineList
-		if err := c.get(p, &page); err != nil {
+		if err := c.get(context.Background(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Pipelines, page.NextHref, nil
@@ -45,7 +46,7 @@ func (c *Client) GetPipeline(id string) (*Pipeline, error) {
 	path := fmt.Sprintf("/app/rest/pipelines/id:%s?fields=%s", id, url.QueryEscape(fields))
 
 	var result Pipeline
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -56,7 +57,7 @@ func (c *Client) GetPipeline(id string) (*Pipeline, error) {
 func (c *Client) getPipelineRaw(id string) (map[string]any, error) {
 	path := fmt.Sprintf("/app/pipeline/%s", id)
 	var raw map[string]any
-	if err := c.get(path, &raw); err != nil {
+	if err := c.get(context.Background(), path, &raw); err != nil {
 		return nil, err
 	}
 	return raw, nil
@@ -96,7 +97,7 @@ func (c *Client) CreatePipeline(parentProjectID, name, yaml, vcsRootID string) (
 
 	path := fmt.Sprintf("/app/pipeline?parentProjectExtId=%s", url.QueryEscape(parentProjectID))
 	var result Pipeline
-	if err := c.post(path, bytes.NewReader(body), &result); err != nil {
+	if err := c.post(context.Background(), path, bytes.NewReader(body), &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -132,7 +133,7 @@ func (c *Client) UpdatePipelineYAML(id string, yamlContent string) error {
 
 	path := fmt.Sprintf("/app/pipeline/%s", id)
 	var result json.RawMessage
-	return c.post(path, bytes.NewReader(body), &result)
+	return c.post(context.Background(), path, bytes.NewReader(body), &result)
 }
 
 // GetBuildPipelineRun fetches pipeline run metadata for a build.
@@ -144,7 +145,7 @@ func (c *Client) GetBuildPipelineRun(buildID string) (*PipelineRun, error) {
 	var result struct {
 		PipelineRun *PipelineRun `json:"pipelineRun,omitempty"`
 	}
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 	return result.PipelineRun, nil
@@ -152,12 +153,12 @@ func (c *Client) GetBuildPipelineRun(buildID string) (*PipelineRun, error) {
 
 // DeletePipeline deletes a pipeline by removing its project.
 func (c *Client) DeletePipeline(id string) error {
-	return c.doNoContent("DELETE", fmt.Sprintf("/app/rest/projects/id:%s", id), nil, "")
+	return c.doNoContent(context.Background(), "DELETE", fmt.Sprintf("/app/rest/projects/id:%s", id), nil, "")
 }
 
 // GetPipelineSchema fetches the pipeline JSON schema from the server.
 func (c *Client) GetPipelineSchema() ([]byte, error) {
-	resp, err := c.doRequest("POST", "/app/pipeline/schema/generate", nil)
+	resp, err := c.doRequest(context.Background(), "POST", "/app/pipeline/schema/generate", nil)
 	if err != nil {
 		return nil, &NetworkError{URL: c.BaseURL, Cause: err}
 	}

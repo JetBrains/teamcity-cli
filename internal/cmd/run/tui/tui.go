@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ type logMsg string
 type errMsg error
 
 type watchModel struct {
+	ctx       context.Context
 	client    api.ClientInterface
 	runID     string
 	interval  time.Duration
@@ -33,10 +35,11 @@ type watchModel struct {
 	spinner   spinner.Model
 }
 
-func newWatchModel(client api.ClientInterface, runID string, interval int) watchModel {
+func newWatchModel(ctx context.Context, client api.ClientInterface, runID string, interval int) watchModel {
 	sp := spinner.New()
 	sp.Spinner = spinner.Line
 	return watchModel{
+		ctx:      ctx,
 		client:   client,
 		runID:    runID,
 		interval: time.Duration(interval) * time.Second,
@@ -50,7 +53,7 @@ func (m watchModel) Init() tea.Cmd {
 }
 
 func (m watchModel) fetchBuild() tea.Msg {
-	build, err := m.client.GetBuild(m.runID)
+	build, err := m.client.GetBuild(m.ctx, m.runID)
 	if err != nil {
 		return errMsg(err)
 	}
@@ -58,7 +61,7 @@ func (m watchModel) fetchBuild() tea.Msg {
 }
 
 func (m watchModel) fetchLog() tea.Msg {
-	log, err := m.client.GetBuildLog(m.runID)
+	log, err := m.client.GetBuildLog(m.ctx, m.runID)
 	if err != nil {
 		return logMsg("")
 	}
@@ -252,8 +255,8 @@ func (m watchModel) renderLogs(height int) string {
 }
 
 // RunWatchTUI launches the interactive TUI for watching a build.
-func RunWatchTUI(client api.ClientInterface, runID string, interval int) error {
-	m := newWatchModel(client, runID, interval)
+func RunWatchTUI(ctx context.Context, client api.ClientInterface, runID string, interval int) error {
+	m := newWatchModel(ctx, client, runID, interval)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	finalModel, err := p.Run()
@@ -271,5 +274,5 @@ func RunWatchTUI(client api.ClientInterface, runID string, interval int) error {
 		return nil
 	}
 
-	return cmdutil.BuildResultError(printer, client, fm.build, true)
+	return cmdutil.BuildResultError(ctx, printer, client, fm.build, true)
 }

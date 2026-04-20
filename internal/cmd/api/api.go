@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -158,7 +159,7 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 		return runAPIPaginated(f.Printer, client, endpoint, headers, opts)
 	}
 
-	resp, err := client.RawRequest(opts.method, endpoint, body, headers)
+	resp, err := client.RawRequest(context.Background(), opts.method, endpoint, body, headers)
 	if err != nil {
 		return err
 	}
@@ -256,7 +257,7 @@ func fetchAllPages(client api.ClientInterface, endpoint string, headers map[stri
 	currentEndpoint := endpoint
 
 	for range maxPaginationPages {
-		resp, err := client.RawRequest("GET", currentEndpoint, nil, headers)
+		resp, err := client.RawRequest(context.Background(), "GET", currentEndpoint, nil, headers)
 		if err != nil {
 			return nil, err
 		}

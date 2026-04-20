@@ -108,7 +108,7 @@ func TestGetBuildChanges(t *testing.T) {
 		json.NewEncoder(w).Encode(ChangeList{Count: 1, Change: []Change{{ID: 42, Username: "dev"}}})
 	})
 
-	changes, err := client.GetBuildChanges("1")
+	changes, err := client.GetBuildChanges(t.Context(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, 1, changes.Count)
 }
@@ -135,7 +135,7 @@ func TestGetBuildTests(t *testing.T) {
 		}
 	})
 
-	tests, err := client.GetBuildTests("1", true, 10)
+	tests, err := client.GetBuildTests(t.Context(), "1", true, 10)
 	require.NoError(t, err)
 	assert.Equal(t, 1, tests.Failed)
 	assert.Len(t, tests.TestOccurrence, 1)

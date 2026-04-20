@@ -84,7 +84,7 @@ type mockArtifactClient struct {
 	responses map[string]*api.Artifacts
 }
 
-func (m *mockArtifactClient) GetArtifacts(buildID, path string) (*api.Artifacts, error) {
+func (m *mockArtifactClient) GetArtifacts(_ context.Context, buildID, path string) (*api.Artifacts, error) {
 	key := fmt.Sprintf("%s:%s", buildID, path)
 	resp, ok := m.responses[key]
 	if !ok {

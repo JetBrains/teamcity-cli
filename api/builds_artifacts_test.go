@@ -25,7 +25,7 @@ func TestGetArtifacts(t *testing.T) {
 		})
 	})
 
-	artifacts, err := client.GetArtifacts("1", "")
+	artifacts, err := client.GetArtifacts(t.Context(), "1", "")
 	require.NoError(t, err)
 	assert.Equal(t, 2, artifacts.Count)
 }
@@ -43,7 +43,7 @@ func TestGetArtifactsWithSubpath(t *testing.T) {
 		json.NewEncoder(w).Encode(Artifacts{Count: 1, File: []Artifact{{Name: "build.log"}}})
 	})
 
-	artifacts, err := client.GetArtifacts("1", "logs")
+	artifacts, err := client.GetArtifacts(t.Context(), "1", "logs")
 	require.NoError(t, err)
 	assert.Equal(t, 1, artifacts.Count)
 }
@@ -61,7 +61,7 @@ func TestDownloadArtifact(t *testing.T) {
 		w.Write([]byte("fake-jar-content"))
 	})
 
-	data, err := client.DownloadArtifact("1", "build.jar")
+	data, err := client.DownloadArtifact(t.Context(), "1", "build.jar")
 	require.NoError(t, err)
 	assert.Equal(t, "fake-jar-content", string(data))
 }
@@ -78,7 +78,7 @@ func TestGetBuildLog(t *testing.T) {
 		w.Write([]byte("[12:00:00] Build started\n[12:00:01] Done"))
 	})
 
-	log, err := client.GetBuildLog("1")
+	log, err := client.GetBuildLog(t.Context(), "1")
 	require.NoError(t, err)
 	assert.Contains(t, log, "Build started")
 }

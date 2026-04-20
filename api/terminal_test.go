@@ -66,7 +66,7 @@ func TestTerminalSession(T *testing.T) {
 	T.Run("connect websocket", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
 
-		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(T.Context(), 5*time.Second)
 		defer cancel()
 		_ = conn.Exec(ctx, "true")
 
@@ -98,7 +98,7 @@ func TestTerminalExec(T *testing.T) {
 	T.Run("simple command", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
 
-		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(T.Context(), 30*time.Second)
 		defer cancel()
 
 		err := conn.Exec(ctx, "echo hello-terminal")
@@ -108,7 +108,7 @@ func TestTerminalExec(T *testing.T) {
 	T.Run("multiline with env vars", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
 
-		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(T.Context(), 30*time.Second)
 		defer cancel()
 
 		err := conn.Exec(ctx, "echo L1; echo L2; echo $HOME")
@@ -118,7 +118,7 @@ func TestTerminalExec(T *testing.T) {
 	T.Run("pipes and special chars", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
 
-		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(T.Context(), 30*time.Second)
 		defer cancel()
 
 		err := conn.Exec(ctx, `echo "test" | tr 'a-z' 'A-Z'`)
@@ -128,7 +128,7 @@ func TestTerminalExec(T *testing.T) {
 	T.Run("long output", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
 
-		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(T.Context(), 30*time.Second)
 		defer cancel()
 
 		err := conn.Exec(ctx, "seq 1 50")
@@ -138,7 +138,7 @@ func TestTerminalExec(T *testing.T) {
 	T.Run("timeout", func(t *testing.T) {
 		conn := openTerminalConn(t, agent.ID)
 
-		ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+		ctx, cancel := context.WithTimeout(T.Context(), 500*time.Millisecond)
 		defer cancel()
 
 		err := conn.Exec(ctx, "sleep 2")

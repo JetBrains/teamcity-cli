@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net"
@@ -20,8 +21,8 @@ var fastRetry = RetryConfig{MaxRetries: 3, Interval: 10 * time.Millisecond}
 func TestIsRetryableStatusCode(T *testing.T) {
 	T.Parallel()
 
-	retryable := []int{500, 502, 503, 504, 507, 508, 509, 510, 511}
-	notRetryable := []int{200, 201, 204, 400, 401, 403, 404, 409, 422, 501}
+	retryable := []int{429, 500, 502, 503, 504, 507, 508, 509, 510, 511}
+	notRetryable := []int{200, 201, 204, 400, 401, 403, 404, 409, 422, 501, 505}
 
 	for _, code := range retryable {
 		assert.True(T, isRetryableStatusCode(code), "%d should be retryable", code)
@@ -45,6 +46,17 @@ type timeoutErr struct{}
 func (e timeoutErr) Error() string   { return "timeout" }
 func (e timeoutErr) Timeout() bool   { return true }
 func (e timeoutErr) Temporary() bool { return true }
+
+// TestIsRetryableNetworkError_ContextCancellation pins that caller-triggered
+// deadline expiry is NOT retried. context.DeadlineExceeded is a net.Error with
+// Timeout()==true, and http.Client also wraps it in net.OpError — either shape
+// would previously pass the timeout check and get retried, overrunning the
+// caller's --timeout budget.
+func TestIsRetryableNetworkError_ContextCancellation(T *testing.T) {
+	T.Parallel()
+	assert.False(T, isRetryableNetworkError(context.DeadlineExceeded))
+	assert.False(T, isRetryableNetworkError(&net.OpError{Op: "read", Err: context.DeadlineExceeded}))
+}
 
 func TestRetryableError(T *testing.T) {
 	T.Parallel()
@@ -77,15 +89,112 @@ func TestWithRetry_RetriesOnServerError(T *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	T.Cleanup(server.Close)
+	client := server.Client()
 
 	resp, err := withRetry(fastRetry, func() (*http.Response, error) {
-		return http.Get(server.URL)
+		return client.Get(server.URL)
 	})
 
 	require.NoError(T, err)
 	assert.Equal(T, http.StatusOK, resp.StatusCode)
 	assert.Equal(T, int32(3), atomic.LoadInt32(&attempts))
 	resp.Body.Close()
+}
+
+func TestRetryAfterSeconds(T *testing.T) {
+	T.Parallel()
+	resp := &http.Response{Header: http.Header{}}
+	resp.Header.Set("Retry-After", "5")
+	assert.Equal(T, 5*time.Second, retryAfter(resp))
+}
+
+func TestRetryAfterMissing(T *testing.T) {
+	T.Parallel()
+	resp := &http.Response{Header: http.Header{}}
+	assert.Zero(T, retryAfter(resp))
+	assert.Zero(T, retryAfter(nil))
+}
+
+func TestWithRetry_RetriesOn429(T *testing.T) {
+	T.Parallel()
+
+	var attempts int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&attempts, 1) < 2 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	T.Cleanup(server.Close)
+	client := server.Client()
+
+	resp, err := withRetry(fastRetry, func() (*http.Response, error) {
+		return client.Get(server.URL)
+	})
+
+	require.NoError(T, err)
+	assert.Equal(T, http.StatusOK, resp.StatusCode)
+	assert.Equal(T, int32(2), atomic.LoadInt32(&attempts))
+	resp.Body.Close()
+}
+
+// TestWithRetry_HonorsRetryAfter verifies the client waits the server-specified
+// delay rather than the exponential schedule.
+func TestWithRetry_HonorsRetryAfter(T *testing.T) {
+	T.Parallel()
+
+	var attempts int32
+	var firstAt, secondAt time.Time
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := atomic.AddInt32(&attempts, 1)
+		if n == 1 {
+			firstAt = time.Now()
+			w.Header().Set("Retry-After", "1")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		secondAt = time.Now()
+		w.WriteHeader(http.StatusOK)
+	}))
+	T.Cleanup(server.Close)
+	client := server.Client()
+
+	// InitialInterval 10ms — far less than the server's 1s hint, so any sleep
+	// between 1.0s and 1.1s proves the Retry-After header won over exponential.
+	resp, err := withRetry(RetryConfig{MaxRetries: 2, Interval: 10 * time.Millisecond}, func() (*http.Response, error) {
+		return client.Get(server.URL)
+	})
+
+	require.NoError(T, err)
+	assert.Equal(T, http.StatusOK, resp.StatusCode)
+	elapsed := secondAt.Sub(firstAt)
+	assert.GreaterOrEqual(T, elapsed, 900*time.Millisecond,
+		"second attempt should wait for Retry-After hint; waited %v", elapsed)
+	assert.Less(T, elapsed, 2*time.Second, "shouldn't wait excessively; waited %v", elapsed)
+	resp.Body.Close()
+}
+
+// TestGetWithRetry_ExhaustionPreservesHTTPError guards against regressing
+// getWithRetry to wrap exhausted 429/5xx responses as NetworkError instead of
+// surfacing the typed HTTP error with the server's message.
+func TestGetWithRetry_ExhaustionPreservesHTTPError(T *testing.T) {
+	T.Parallel()
+
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"errors":[{"message":"maintenance window"}]}`))
+	})
+
+	var result Server
+	err := client.getWithRetry(T.Context(), "/app/rest/server", &result, fastRetry)
+
+	require.Error(T, err)
+	var he *HTTPError
+	require.True(T, errors.As(err, &he), "expected *HTTPError, got %T: %v", err, err)
+	assert.Equal(T, http.StatusServiceUnavailable, he.Status)
+	assert.Contains(T, err.Error(), "maintenance window")
 }
 
 func TestWithRetry_RetriesOnNetworkError(T *testing.T) {
@@ -124,7 +233,7 @@ func TestClientRetryBehavior(T *testing.T) {
 
 		client := NewClient(server.URL, "test-token")
 		var result Server
-		err := client.get("/app/rest/server", &result)
+		err := client.get(t.Context(), "/app/rest/server", &result)
 
 		require.NoError(t, err)
 		assert.Equal(t, "2024.1", result.Version)
@@ -142,7 +251,7 @@ func TestClientRetryBehavior(T *testing.T) {
 		t.Cleanup(server.Close)
 
 		client := NewClient(server.URL, "test-token")
-		client.post("/app/rest/buildQueue", nil, nil)
+		client.post(t.Context(), "/app/rest/buildQueue", nil, nil)
 
 		assert.Equal(t, int32(1), atomic.LoadInt32(&attempts))
 	})

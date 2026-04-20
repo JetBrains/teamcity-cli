@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -30,7 +31,7 @@ func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 
 	buildTypes, err := collectPages(c, path, opts.Limit, func(p string) ([]BuildType, string, error) {
 		var page BuildTypeList
-		if err := c.get(p, &page); err != nil {
+		if err := c.get(context.Background(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.BuildTypes, page.NextHref, nil
@@ -47,7 +48,7 @@ func (c *Client) GetBuildType(id string) (*BuildType, error) {
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s", id)
 
 	var buildType BuildType
-	if err := c.get(path, &buildType); err != nil {
+	if err := c.get(context.Background(), path, &buildType); err != nil {
 		return nil, err
 	}
 
@@ -58,7 +59,7 @@ func (c *Client) GetBuildType(id string) (*BuildType, error) {
 func (c *Client) SetBuildTypePaused(id string, paused bool) error {
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/paused", id)
 
-	resp, err := c.doRequestFull("PUT", path, strings.NewReader(fmt.Sprintf("%t", paused)), "text/plain", "text/plain")
+	resp, err := c.doRequestFull(context.Background(), "PUT", path, strings.NewReader(fmt.Sprintf("%t", paused)), "text/plain", "text/plain")
 	if err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func (c *Client) CreateBuildType(projectID string, req CreateBuildTypeRequest) (
 	path := fmt.Sprintf("/app/rest/projects/id:%s/buildTypes", projectID)
 
 	var buildType BuildType
-	if err := c.post(path, bytes.NewReader(body), &buildType); err != nil {
+	if err := c.post(context.Background(), path, bytes.NewReader(body), &buildType); err != nil {
 		return nil, err
 	}
 
@@ -116,7 +117,7 @@ func (c *Client) CreateBuildStep(buildTypeID string, step BuildStep) error {
 	}
 
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps", buildTypeID)
-	return c.doNoContent("POST", path, bytes.NewReader(body), "")
+	return c.doNoContent(context.Background(), "POST", path, bytes.NewReader(body), "")
 }
 
 // GetSnapshotDependencies returns the snapshot dependencies for a build configuration
@@ -124,7 +125,7 @@ func (c *Client) GetSnapshotDependencies(buildTypeID string) (*SnapshotDependenc
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/snapshot-dependencies?fields=count,snapshot-dependency(id,source-buildType(id,name,projectId))", buildTypeID)
 
 	var result SnapshotDependencyList
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 
@@ -136,7 +137,7 @@ func (c *Client) GetDependentBuildTypes(buildTypeID string) (*BuildTypeList, err
 	path := fmt.Sprintf("/app/rest/buildTypes?locator=snapshotDependency:(from:(id:%s),recursive:false)&fields=count,buildType(id,name,projectId)", buildTypeID)
 
 	var result BuildTypeList
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 
@@ -148,7 +149,7 @@ func (c *Client) GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error) 
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/vcs-root-entries", buildTypeID)
 
 	var result VcsRootEntries
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 
@@ -158,5 +159,5 @@ func (c *Client) GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error) 
 // SetBuildTypeSetting sets a build configuration setting
 func (c *Client) SetBuildTypeSetting(buildTypeID, setting, value string) error {
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings/%s", buildTypeID, setting)
-	return c.doNoContent("PUT", path, strings.NewReader(value), "text/plain")
+	return c.doNoContent(context.Background(), "PUT", path, strings.NewReader(value), "text/plain")
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 )
@@ -11,7 +12,7 @@ func (c *Client) GetProjectConnections(projectID string) (*ProjectFeatureList, e
 	path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures?locator=type:OAuthProvider&fields=%s", projectID, fields)
 
 	var result ProjectFeatureList
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

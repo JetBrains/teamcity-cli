@@ -233,7 +233,7 @@ func TestIsPkceEnabled(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		enabled, err := IsPkceEnabled(t.Context(), server.URL)
+		enabled, err := IsPkceEnabled(T.Context(), server.URL)
 		assert.NoError(t, err)
 		assert.True(t, enabled)
 	})
@@ -246,7 +246,7 @@ func TestIsPkceEnabled(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		enabled, err := IsPkceEnabled(t.Context(), server.URL)
+		enabled, err := IsPkceEnabled(T.Context(), server.URL)
 		assert.NoError(t, err)
 		assert.False(t, enabled)
 	})
@@ -254,7 +254,7 @@ func TestIsPkceEnabled(T *testing.T) {
 	T.Run("returns error on network failure", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(T.Context(), 100*time.Millisecond)
 		defer cancel()
 		enabled, err := IsPkceEnabled(ctx, "http://localhost:1")
 		assert.Error(t, err)
@@ -335,7 +335,7 @@ func TestExchangeCodeForToken(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		token, err := ExchangeCodeForToken(t.Context(), server.URL, "testcode", "testverifier", "http://localhost:19000/callback")
+		token, err := ExchangeCodeForToken(T.Context(), server.URL, "testcode", "testverifier", "http://localhost:19000/callback")
 		require.NoError(t, err)
 		assert.Equal(t, "token123", token.AccessToken)
 		assert.Equal(t, "Bearer", token.TokenType)
@@ -351,7 +351,7 @@ func TestExchangeCodeForToken(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		_, err := ExchangeCodeForToken(t.Context(), server.URL, "invalidcode", "verifier", "http://localhost:19000/callback")
+		_, err := ExchangeCodeForToken(T.Context(), server.URL, "invalidcode", "verifier", "http://localhost:19000/callback")
 		assert.Error(t, err)
 	})
 }

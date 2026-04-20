@@ -314,7 +314,7 @@ func (e *testEnv) ensureBuild() error {
 		return fmt.Errorf("config ID not set")
 	}
 
-	builds, err := e.Client.GetBuilds(api.BuildsOptions{BuildTypeID: e.ConfigID, State: "finished", Limit: 1})
+	builds, err := e.Client.GetBuilds(context.Background(), api.BuildsOptions{BuildTypeID: e.ConfigID, State: "finished", Limit: 1})
 	if err != nil {
 		return err
 	}

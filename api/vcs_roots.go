@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,7 +25,7 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 
 	roots, err := collectPages(c, path, opts.Limit, func(p string) ([]VcsRoot, string, error) {
 		var page VcsRootList
-		if err := c.get(p, &page); err != nil {
+		if err := c.get(context.Background(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.VcsRoot, page.NextHref, nil
@@ -40,7 +41,7 @@ func (c *Client) GetVcsRoot(id string) (*VcsRoot, error) {
 	path := fmt.Sprintf("/app/rest/vcs-roots/id:%s", id)
 
 	var result VcsRoot
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -49,7 +50,7 @@ func (c *Client) GetVcsRoot(id string) (*VcsRoot, error) {
 // DeleteVcsRoot deletes a VCS root by ID
 func (c *Client) DeleteVcsRoot(id string) error {
 	path := fmt.Sprintf("/app/rest/vcs-roots/id:%s", id)
-	return c.doNoContent("DELETE", path, nil, "")
+	return c.doNoContent(context.Background(), "DELETE", path, nil, "")
 }
 
 // CreateVcsRoot creates a new VCS root
@@ -60,7 +61,7 @@ func (c *Client) CreateVcsRoot(root VcsRoot) (*VcsRoot, error) {
 	}
 
 	var result VcsRoot
-	if err := c.post("/app/rest/vcs-roots", bytes.NewReader(body), &result); err != nil {
+	if err := c.post(context.Background(), "/app/rest/vcs-roots", bytes.NewReader(body), &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -75,7 +76,7 @@ func (c *Client) TestVcsConnection(req TestConnectionRequest, projectID string) 
 	}
 
 	path := fmt.Sprintf("/app/pipeline/repository/testConnection?parentProjectExtId=%s", projectID)
-	resp, err := c.doRequest("POST", path, bytes.NewReader(body))
+	resp, err := c.doRequest(context.Background(), "POST", path, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

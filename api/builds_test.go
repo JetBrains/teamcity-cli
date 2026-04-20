@@ -83,7 +83,7 @@ func TestGetBuildsUsesFavoritesLocator(T *testing.T) {
 		json.NewEncoder(w).Encode(BuildList{Count: 0, Builds: []Build{}})
 	})
 
-	_, err := client.GetBuilds(BuildsOptions{Favorites: true, Limit: 5})
+	_, err := client.GetBuilds(T.Context(), BuildsOptions{Favorites: true, Limit: 5})
 	require.NoError(T, err)
 
 	assert.Contains(T, capturedQuery, BuildsOptions{Favorites: true}.Locator().Encode())
