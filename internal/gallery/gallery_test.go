@@ -170,4 +170,3 @@ const jetBrainsCSS = `
   font-size: 12px;
 }
 `
-
