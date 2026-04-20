@@ -2,11 +2,12 @@ package output
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
@@ -52,46 +53,167 @@ func TerminalWidth() int {
 	return w
 }
 
-// pagerCmdFn creates the pager command. Tests can override this.
-var pagerCmdFn = func() (*exec.Cmd, error) {
-	if pager := os.Getenv("PAGER"); pager != "" {
-		parts := strings.Fields(pager)
-		if len(parts) == 0 {
-			return nil, fmt.Errorf("PAGER is set but empty")
-		}
-		bin, err := exec.LookPath(parts[0])
-		if err != nil {
-			return nil, err
-		}
-		return exec.Command(bin, parts[1:]...), nil
-	}
-	lessPath, err := exec.LookPath("less")
-	if err != nil {
-		return nil, err
-	}
-	return exec.Command(lessPath, "-FIRX", "--mouse", "--incsearch"), nil
+// defaultLongFormPager is the fallback pager for long-form content
+// (`run log`, `run diff`) when neither TEAMCITY_PAGER, the config `pager`
+// key, nor the PAGER env var is set. It matches gh's less defaults plus
+// `-R` for ANSI colors and `-X` to avoid clearing the screen on exit.
+const defaultLongFormPager = "less -FIRX --mouse --incsearch"
+
+// PagerResolver returns the pager command string (as the user would type it).
+// The main package wires this to config.ResolvePager so the output package
+// doesn't need to import config. An empty return value means paging is
+// disabled; callers decide whether to fall back to a default pager.
+var PagerResolver = func() string { return "" }
+
+// PagerOpts tunes pager invocation.
+type PagerOpts struct {
+	// ChopLongLines asks the pager not to wrap lines. Used for wide tables
+	// where wrapping breaks column alignment. Only applied when the resolved
+	// pager is `less` (or unspecified, i.e. the default less fallback).
+	ChopLongLines bool
 }
 
-// WithPager pipes output through less if it exceeds terminal height.
-// The out writer is used as a fallback when paging is not available.
+// WithPager pipes long-form output through the resolved pager, defaulting to
+// less when nothing is configured. Used by `run log` and `run diff`, which
+// auto-page regardless of user config.
 func WithPager(out io.Writer, fn func(w io.Writer)) {
+	cmd := PagerResolver()
+	if cmd == "" {
+		cmd = defaultLongFormPager
+	}
+	WithPagerUsing(cmd, PagerOpts{}, out, fn)
+}
+
+// WithPagerUsing pipes output through the given pager command. An empty
+// pagerCmd (or one that resolves to `cat`) writes directly to out. When the
+// content is short enough to fit on screen, it also writes directly — no
+// reason to invoke a pager for a few lines.
+func WithPagerUsing(pagerCmd string, opts PagerOpts, out io.Writer, fn func(w io.Writer)) {
+	if isPagingDisabled(pagerCmd) || !IsTerminal() {
+		fn(out)
+		return
+	}
+
 	var buf bytes.Buffer
 	fn(&buf)
 
 	_, height := TerminalSize()
 	lineCount := bytes.Count(buf.Bytes(), []byte{'\n'})
-	pager, err := pagerCmdFn()
-
-	if !IsTerminal() || err != nil || lineCount <= height-2 {
+	if lineCount <= height-2 {
 		_, _ = out.Write(buf.Bytes())
 		return
 	}
 
-	data := buf.Bytes()
-	pager.Stdin = bytes.NewReader(data)
-	pager.Stdout = os.Stdout // must be a real terminal fd; using `out` here breaks pager rendering
-	pager.Stderr = os.Stderr
-	if err := pager.Run(); err != nil {
-		_, _ = out.Write(data)
+	cmd, err := buildPagerCmd(pagerCmd, opts)
+	if err != nil {
+		_, _ = out.Write(buf.Bytes())
+		return
 	}
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		_, _ = out.Write(buf.Bytes())
+		return
+	}
+	// Stdout/Stderr must be the real terminal fds; using out here breaks
+	// pager rendering when out is a buffer.
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		_, _ = out.Write(buf.Bytes())
+		return
+	}
+
+	// Copy the buffer into the pager's stdin. If the user quits the pager
+	// before we finish writing, the pipe closes and we get EPIPE — that's
+	// expected and we swallow it. Any other copy error means the pager
+	// didn't receive the content, so we fall back to a direct write; but
+	// only if the process hasn't started displaying it yet. Since we can't
+	// tell, we prefer not to re-dump to avoid showing content twice.
+	_, copyErr := io.Copy(stdin, bytes.NewReader(buf.Bytes()))
+	_ = stdin.Close()
+	_ = cmd.Wait()
+
+	if copyErr != nil && !isEPIPE(copyErr) {
+		// An unusual pipe failure — the pager may not have shown anything.
+		// Re-dump content so the user still sees it.
+		_, _ = out.Write(buf.Bytes())
+	}
+}
+
+// isPagingDisabled returns true when the resolved pager should be treated
+// as a no-op: empty, or `cat` (a common way to disable paging via PAGER=cat).
+func isPagingDisabled(pagerCmd string) bool {
+	pagerCmd = strings.TrimSpace(pagerCmd)
+	if pagerCmd == "" {
+		return true
+	}
+	parts := strings.Fields(pagerCmd)
+	if len(parts) == 0 {
+		return true
+	}
+	base := parts[0]
+	if i := strings.LastIndexAny(base, "/\\"); i >= 0 {
+		base = base[i+1:]
+	}
+	return base == "cat"
+}
+
+// buildPagerCmd turns a user-facing pager string like `less -R` into an
+// *exec.Cmd. When the resolved pager's basename is `less` and ChopLongLines
+// is requested, `-S` is added if the user didn't already specify it.
+func buildPagerCmd(pagerCmd string, opts PagerOpts) (*exec.Cmd, error) {
+	parts := strings.Fields(pagerCmd)
+	if len(parts) == 0 {
+		return nil, errors.New("pager command is empty")
+	}
+
+	bin, err := exec.LookPath(parts[0])
+	if err != nil {
+		return nil, err
+	}
+
+	args := parts[1:]
+	if opts.ChopLongLines && isLessBinary(parts[0]) && !hasLessChopFlag(args) {
+		args = append([]string{"-S"}, args...)
+	}
+
+	return exec.Command(bin, args...), nil
+}
+
+func isLessBinary(cmd string) bool {
+	base := cmd
+	if i := strings.LastIndexAny(base, "/\\"); i >= 0 {
+		base = base[i+1:]
+	}
+	base = strings.TrimSuffix(base, ".exe")
+	return base == "less"
+}
+
+// hasLessChopFlag reports whether the user already passed -S (or --chop-long-lines)
+// to less. Matches `-S` alone, combined short flags like `-FIRSX`, and the long
+// form `--chop-long-lines`.
+func hasLessChopFlag(args []string) bool {
+	for _, a := range args {
+		if a == "--chop-long-lines" {
+			return true
+		}
+		if strings.HasPrefix(a, "-") && !strings.HasPrefix(a, "--") && strings.ContainsRune(a, 'S') {
+			return true
+		}
+	}
+	return false
+}
+
+// isEPIPE reports whether err is (or wraps) syscall.EPIPE. Needed because
+// io.Copy wraps the underlying errno in an *os.PathError on Unix and an
+// *exec.ExitError or similar on Windows.
+func isEPIPE(err error) bool {
+	if errors.Is(err, syscall.EPIPE) {
+		return true
+	}
+	// On some platforms the error surfaces as ERROR_BROKEN_PIPE (Windows);
+	// errors.Is handles the wrapped *PathError on Unix.
+	return false
 }

@@ -89,25 +89,41 @@ func (p *Printer) PrintViewHeader(title, webURL string, details func()) {
 }
 
 func (p *Printer) PrintTable(headers []string, rows [][]string) {
-	_, _ = fmt.Fprintln(p.Out, renderTable(headers, rows))
+	p.PrintTableTo(p.Out, headers, rows)
+}
+
+// PrintTableTo is like PrintTable but writes to w instead of p.Out. Used
+// when wrapping output in WithPagerUsing, whose closure exposes a writer.
+func (p *Printer) PrintTableTo(w io.Writer, headers []string, rows [][]string) {
+	_, _ = fmt.Fprintln(w, renderTable(headers, rows))
 }
 
 func (p *Printer) PrintPlainTable(headers []string, rows [][]string, noHeader bool) {
-	_, _ = fmt.Fprint(p.Out, renderPlainTable(headers, rows, noHeader))
+	p.PrintPlainTableTo(p.Out, headers, rows, noHeader)
+}
+
+// PrintPlainTableTo is like PrintPlainTable but writes to w instead of p.Out.
+func (p *Printer) PrintPlainTableTo(w io.Writer, headers []string, rows [][]string, noHeader bool) {
+	_, _ = fmt.Fprint(w, renderPlainTable(headers, rows, noHeader))
 }
 
 func (p *Printer) PrintTree(root TreeNode) {
-	_, _ = fmt.Fprintln(p.Out, root.Label)
-	p.printTreeNodes(root.Children, "")
+	p.PrintTreeTo(p.Out, root)
 }
 
-func (p *Printer) printTreeNodes(nodes []TreeNode, prefix string) {
+// PrintTreeTo is like PrintTree but writes to w instead of p.Out.
+func (p *Printer) PrintTreeTo(w io.Writer, root TreeNode) {
+	_, _ = fmt.Fprintln(w, root.Label)
+	printTreeNodesTo(w, root.Children, "")
+}
+
+func printTreeNodesTo(w io.Writer, nodes []TreeNode, prefix string) {
 	for i, n := range nodes {
 		conn, next := "├── ", "│   "
 		if i == len(nodes)-1 {
 			conn, next = "└── ", "    "
 		}
-		_, _ = fmt.Fprintf(p.Out, "%s%s%s\n", prefix, conn, n.Label)
-		p.printTreeNodes(n.Children, prefix+next)
+		_, _ = fmt.Fprintf(w, "%s%s%s\n", prefix, conn, n.Label)
+		printTreeNodesTo(w, n.Children, prefix+next)
 	}
 }
