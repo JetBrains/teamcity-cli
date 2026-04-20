@@ -9,7 +9,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -190,7 +189,7 @@ func runSSHGenerate(f *cmdutil.Factory, opts *sshGenerateOptions) error {
 
 	if name == "" {
 		if !f.IsInteractive() {
-			return tcerrors.RequiredFlag("name")
+			return api.RequiredFlag("name")
 		}
 		prompt := &survey.Input{Message: "Key name:"}
 		if err := survey.AskOne(prompt, &name, survey.WithValidator(survey.Required)); err != nil {

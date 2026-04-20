@@ -5,6 +5,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -68,8 +69,9 @@ func (opts *pipelineListOptions) fetch(client api.ClientInterface, fields []stri
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     pipelines,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg: "No pipelines found",
+		JSON:      pipelines,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg:  "No pipelines found",
+		EmptyHint: output.HintNoPipelines,
 	}, nil
 }

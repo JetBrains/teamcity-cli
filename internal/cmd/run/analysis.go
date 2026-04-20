@@ -1,12 +1,12 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/cobra"
@@ -46,7 +46,7 @@ func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) er
 		return err
 	}
 
-	changes, err := client.GetBuildChanges(runID)
+	changes, err := client.GetBuildChanges(context.Background(), runID)
 	if err != nil {
 		return fmt.Errorf("failed to get changes: %w", err)
 	}
@@ -139,7 +139,7 @@ func newRunTestsCmd(f *cmdutil.Factory) *cobra.Command {
 You can specify a run ID directly, or use --job to get the latest run's tests.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.Flags().Changed("job") {
-				return tcerrors.MutuallyExclusive("id", "job")
+				return api.MutuallyExclusive("id", "job")
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
@@ -171,7 +171,7 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	}
 
 	if opts.job != "" {
-		runs, err := client.GetBuilds(api.BuildsOptions{
+		runs, err := client.GetBuilds(context.Background(), api.BuildsOptions{
 			BuildTypeID: opts.job,
 			Limit:       1,
 		})
@@ -179,19 +179,22 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 			return err
 		}
 		if runs.Count == 0 || len(runs.Builds) == 0 {
-			return fmt.Errorf("no runs found for job %s", opts.job)
+			return api.Validation(
+				fmt.Sprintf("no runs found for job %q", opts.job),
+				"Try --all, or verify the job ID with 'teamcity job list'",
+			)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
 
-	build, err := client.GetBuild(runID)
+	build, err := client.GetBuild(context.Background(), runID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
 
-	tests, err := client.GetBuildTests(runID, opts.failed, opts.limit)
+	tests, err := client.GetBuildTests(context.Background(), runID, opts.failed, opts.limit)
 	if err != nil {
 		return fmt.Errorf("failed to get tests: %w", err)
 	}

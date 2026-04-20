@@ -10,7 +10,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/pkg/browser"
@@ -85,7 +84,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 			if detectedServer != "" {
 				serverURL = detectedServer
 			} else {
-				return tcerrors.RequiredFlag("server")
+				return api.RequiredFlag("server")
 			}
 		} else {
 			prompt := &survey.Input{
@@ -128,7 +127,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 
 	if token == "" {
 		if !isInteractive {
-			return tcerrors.RequiredFlag("token")
+			return api.RequiredFlag("token")
 		}
 
 		tokenURL := fmt.Sprintf("%s/profile.html?item=accessTokens", serverURL)
@@ -203,7 +202,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 
 func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 	if token != "" {
-		return tcerrors.WithSuggestion(
+		return api.Validation(
 			"cannot use --guest with --token",
 			"Use either --guest for guest access or --token for token authentication",
 		)
@@ -213,7 +212,7 @@ func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 
 	if serverURL == "" {
 		if !isInteractive {
-			return tcerrors.RequiredFlag("server")
+			return api.RequiredFlag("server")
 		}
 		prompt := &survey.Input{
 			Message: "TeamCity server URL:",
@@ -234,7 +233,7 @@ func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 	server, err := client.GetServer()
 	if err != nil {
 		p.Info("%s", output.Red("✗"))
-		return tcerrors.WithSuggestion(
+		return api.Validation(
 			"Guest access validation failed",
 			"Verify the server URL and that guest access is enabled on the server",
 		)

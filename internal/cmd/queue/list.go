@@ -5,6 +5,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -72,8 +73,9 @@ func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string)
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     queue,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2, 4}},
-		EmptyMsg: "No runs in queue",
+		JSON:      queue,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2, 4}},
+		EmptyMsg:  "No runs in queue",
+		EmptyHint: output.HintNoQueue,
 	}, nil
 }

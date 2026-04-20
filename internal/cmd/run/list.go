@@ -1,6 +1,7 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -109,7 +110,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		return browser.OpenURL(url)
 	}
 
-	runs, err := client.GetBuilds(request.builds)
+	runs, err := client.GetBuilds(context.Background(), request.builds)
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	}
 
 	if runs.Count == 0 {
-		f.Printer.Info(request.emptyMsg)
+		f.Printer.Empty(request.emptyMsg, request.emptyHint)
 		return nil
 	}
 
@@ -193,9 +194,10 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 }
 
 type runListRequest struct {
-	builds   api.BuildsOptions
-	webPath  string
-	emptyMsg string
+	builds    api.BuildsOptions
+	webPath   string
+	emptyMsg  string
+	emptyHint string
 }
 
 func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fields []string) (*runListRequest, error) {
@@ -239,8 +241,9 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 			UntilDate:   untilDate,
 			Fields:      fields,
 		},
-		webPath:  resolveRunListWebPath(opts),
-		emptyMsg: resolveRunListEmptyMessage(opts),
+		webPath:   resolveRunListWebPath(opts),
+		emptyMsg:  resolveRunListEmptyMessage(opts),
+		emptyHint: resolveRunListEmptyHint(opts),
 	}, nil
 }
 
@@ -357,6 +360,13 @@ func resolveRunListEmptyMessage(opts *runListOptions) string {
 	return "No runs found"
 }
 
+func resolveRunListEmptyHint(opts *runListOptions) string {
+	if opts.favorites {
+		return output.HintNoFavoriteRuns
+	}
+	return output.HintNoRuns
+}
+
 func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &cmdutil.ViewOptions{}
 	cmd := &cobra.Command{
@@ -382,7 +392,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 		return err
 	}
 
-	build, err := client.GetBuild(runID)
+	build, err := client.GetBuild(context.Background(), runID)
 	if err != nil {
 		return err
 	}

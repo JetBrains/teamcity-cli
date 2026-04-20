@@ -12,7 +12,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -313,7 +312,7 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	repoURL := opts.repoURL
 	if repoURL == "" {
 		if !interactive {
-			return tcerrors.RequiredFlag("url")
+			return api.RequiredFlag("url")
 		}
 		prompt := &survey.Input{Message: "Repository URL:"}
 		if err := survey.AskOne(prompt, &repoURL, survey.WithValidator(survey.Required)); err != nil {
@@ -419,7 +418,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 			password = data
 		}
 		if password == "" {
-			return nil, testReq, tcerrors.WithSuggestion(
+			return nil, testReq, api.Validation(
 				"password is required for password auth",
 				"Use --password, --stdin, or run interactively",
 			)
@@ -437,7 +436,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 		keyName := opts.sshKeyName
 		if keyName == "" {
 			if !interactive {
-				return nil, testReq, tcerrors.RequiredFlag("ssh-key-name")
+				return nil, testReq, api.RequiredFlag("ssh-key-name")
 			}
 			names, err := sshKeyNames(client, projectID)
 			if err != nil {
@@ -473,7 +472,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 		keyPath := opts.keyPath
 		if keyPath == "" {
 			if !interactive {
-				return nil, testReq, tcerrors.RequiredFlag("key-path")
+				return nil, testReq, api.RequiredFlag("key-path")
 			}
 			prompt := &survey.Input{Message: "Path to SSH key on build agent:"}
 			if err := survey.AskOne(prompt, &keyPath, survey.WithValidator(survey.Required)); err != nil {
@@ -494,7 +493,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 		connID := opts.connectionID
 		if connID == "" {
 			if !interactive {
-				return nil, testReq, tcerrors.RequiredFlag("connection-id")
+				return nil, testReq, api.RequiredFlag("connection-id")
 			}
 			ids, labels, err := connectionOptions(client, projectID)
 			if err != nil {

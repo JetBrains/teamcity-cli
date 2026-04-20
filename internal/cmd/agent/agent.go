@@ -102,9 +102,10 @@ func (opts *agentListOptions) fetch(client api.ClientInterface, fields []string)
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     agents,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
-		EmptyMsg: "No agents found",
+		JSON:      agents,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
+		EmptyMsg:  "No agents found",
+		EmptyHint: output.HintNoAgents,
 	}, nil
 }
 

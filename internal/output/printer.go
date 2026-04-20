@@ -35,6 +35,25 @@ func (p *Printer) Info(format string, args ...any) {
 	}
 }
 
+// Empty prints an empty-state message with an optional next-step hint.
+func (p *Printer) Empty(message, hint string) {
+	if p.Quiet {
+		return
+	}
+	_, _ = fmt.Fprintln(p.Out, message)
+	if hint != "" {
+		_, _ = fmt.Fprintf(p.Out, "\n%s\n", FormatHint(hint))
+	}
+}
+
+// Hint prints a "Hint: <text>" line for next-step guidance on non-error events.
+func (p *Printer) Hint(format string, args ...any) {
+	if p.Quiet {
+		return
+	}
+	_, _ = fmt.Fprintln(p.Out, FormatHint(fmt.Sprintf(format, args...)))
+}
+
 func (p *Printer) Infof(format string, args ...any) {
 	if !p.Quiet {
 		_, _ = fmt.Fprintf(p.Out, format, args...)
