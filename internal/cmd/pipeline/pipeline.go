@@ -15,7 +15,7 @@ Pipelines are YAML-defined workflows that orchestrate one or more jobs
 end-to-end. Use these commands to validate pipeline YAML against the
 server schema, push changes, and pull the current definition.
 
-See: https://www.jetbrains.com/help/teamcity/pipelines.html`,
+See: https://www.jetbrains.com/help/teamcity/create-and-edit-pipelines.html`,
 		Args: cobra.NoArgs,
 		RunE: cmdutil.SubcommandRequired,
 	}
