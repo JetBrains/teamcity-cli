@@ -10,9 +10,16 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:     "run",
 		Aliases: []string{"build"},
 		Short:   "Manage runs (builds)",
-		Long:    `List, view, start, and manage TeamCity runs (builds).`,
-		Args:    cobra.NoArgs,
-		RunE:    cmdutil.SubcommandRequired,
+		Long: `List, view, start, and manage TeamCity runs (builds).
+
+A run (called a build in the TeamCity UI) is a single execution of a
+job. Use these commands to trigger runs, watch them live, download
+artifacts and logs, inspect test results and VCS changes, and manage
+run metadata (tags, comments, pins).
+
+See: https://www.jetbrains.com/help/teamcity/build-results-page.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newRunListCmd(f))

@@ -3,6 +3,9 @@
 # Root help contains all commands and global flags
 exec teamcity --help
 stdout 'TeamCity CLI'
+stdout 'CORE COMMANDS'
+stdout 'INFRASTRUCTURE'
+stdout 'CONFIGURATION'
 stdout 'auth'
 stdout 'project'
 stdout 'run'

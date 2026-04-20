@@ -15,9 +15,13 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "alias",
 		Short: "Manage command aliases",
-		Long:  "Create, list, and delete command shortcuts.",
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `Create, list, and delete command shortcuts.
+
+Aliases expand to full teamcity commands, so you can type 'tc rl'
+instead of 'tc run list'. Aliases support positional placeholders
+($1, $2, ...) and shell-style expansions via the --shell flag.`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newAliasSetCmd(f))

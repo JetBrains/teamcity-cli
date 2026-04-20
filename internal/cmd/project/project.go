@@ -20,9 +20,16 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project",
 		Short: "Manage projects",
-		Long:  `List and view TeamCity projects.`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `List, view, and manage TeamCity projects.
+
+A project groups related jobs, pipelines, VCS roots, parameters, and
+cloud profiles. Use these commands to navigate the project hierarchy
+and manage project-scoped resources (VCS roots, SSH keys, secure
+tokens, versioned settings, cloud integrations, and connections).
+
+See: https://www.jetbrains.com/help/teamcity/creating-and-editing-projects.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newProjectListCmd(f))

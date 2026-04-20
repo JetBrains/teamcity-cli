@@ -13,9 +13,15 @@ func newConnectionCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "connection",
 		Short: "Manage project connections",
-		Long:  `List OAuth and other connections configured in a project.`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `List OAuth and other connections configured in a project.
+
+Connections let TeamCity talk to external services (GitHub, GitLab,
+Bitbucket, Slack, Jira, Docker registries, ...) without storing
+credentials in individual jobs.
+
+See: https://www.jetbrains.com/help/teamcity/configuring-connections.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newConnectionListCmd(f))

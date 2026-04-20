@@ -21,9 +21,15 @@ func newVcsCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vcs",
 		Short: "Manage VCS roots",
-		Long:  `List, view, create, test, and delete VCS roots in a project.`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `List, view, create, test, and delete VCS roots in a project.
+
+A VCS root defines how TeamCity connects to a version control
+repository (Git, Mercurial, Perforce, SVN, ...) so that jobs can
+check out sources and react to changes.
+
+See: https://www.jetbrains.com/help/teamcity/vcs-root.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newVcsListCmd(f))

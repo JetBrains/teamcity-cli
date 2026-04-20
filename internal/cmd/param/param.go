@@ -46,9 +46,15 @@ func NewCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *cobra.Comma
 	cmd := &cobra.Command{
 		Use:   "param",
 		Short: fmt.Sprintf("Manage %s parameters", resource),
-		Long:  fmt.Sprintf("List, get, set, and delete %s parameters.", resource),
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: fmt.Sprintf(`List, get, set, and delete %s parameters.
+
+Parameters are typed key-value pairs attached to a %s. They drive
+build behavior, can reference other parameters, and may be marked
+as password (secure) so their values never appear in logs.
+
+See: https://www.jetbrains.com/help/teamcity/configuring-build-parameters.html`, resource, resource),
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newParamListCmd(f, resource, paramAPI))

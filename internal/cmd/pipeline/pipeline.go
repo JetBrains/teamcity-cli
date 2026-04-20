@@ -9,9 +9,15 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pipeline",
 		Short: "Manage pipelines (YAML configurations)",
-		Long:  `List, view, validate, and manage TeamCity pipelines.`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `List, view, validate, and manage TeamCity pipelines.
+
+Pipelines are YAML-defined workflows that orchestrate one or more jobs
+end-to-end. Use these commands to validate pipeline YAML against the
+server schema, push changes, and pull the current definition.
+
+See: https://www.jetbrains.com/help/teamcity/pipelines.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newPipelineListCmd(f))

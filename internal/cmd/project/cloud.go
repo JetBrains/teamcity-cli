@@ -14,9 +14,15 @@ func newCloudCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cloud",
 		Short: "Manage cloud profiles, images, and instances",
-		Long:  `List and manage cloud profiles, images, and instances for a project.`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `List and manage cloud profiles, images, and instances for a project.
+
+A cloud profile binds a project to a cloud provider (AWS, GCP, Azure,
+Kubernetes, ...) and defines one or more images that TeamCity uses to
+start ephemeral build agents on demand.
+
+See: https://www.jetbrains.com/help/teamcity/agent-cloud-profile.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newCloudProfileCmd(f))

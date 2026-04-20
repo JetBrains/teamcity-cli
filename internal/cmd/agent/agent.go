@@ -14,9 +14,15 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Short: "Manage build agents",
-		Long:  `List, view, and manage TeamCity build agents.`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `List, view, and manage TeamCity build agents.
+
+Build agents run the jobs assigned by the TeamCity server. Use these
+commands to inspect agent state, toggle availability, and open a shell
+to a running agent.
+
+See: https://www.jetbrains.com/help/teamcity/build-agent.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newAgentListCmd(f))
