@@ -93,6 +93,9 @@ exec "$@"
 			binary, "api", "/app/rest/server",
 		)
 		out, _ := cmd.CombinedOutput()
-		assert.Contains(T, string(out), "blocked by sandbox")
+		// The renderer surfaces the raw transport error plus the category-default
+		// sandbox hint. Assert on the hint phrasing — it's the signal that the
+		// CLI recognised this as a sandbox block rather than a generic network error.
+		assert.Contains(T, string(out), "sandbox allowlist")
 	})
 }

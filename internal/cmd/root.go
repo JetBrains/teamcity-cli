@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -22,7 +21,6 @@ import (
 	updatecmd "github.com/JetBrains/teamcity-cli/internal/cmd/update"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/JetBrains/teamcity-cli/internal/update"
 	"github.com/JetBrains/teamcity-cli/internal/version"
@@ -120,16 +118,16 @@ func Execute() error {
 			}
 		}
 	}
-	if err != nil && errors.Is(err, api.ErrAuthentication) && !f.JSONOutput {
+	if err != nil && isCategory(err, api.CatAuth) && !f.JSONOutput {
 		tryAutoReauth(f)
 	}
 	if err != nil {
 		if _, ok := errors.AsType[*cmdutil.ExitError](err); !ok {
 			if f.JSONOutput {
-				code, message, suggestion := classifyError(err)
+				code, message, suggestion := output.ClassifyError(err)
 				output.PrintJSONError(f.Printer.ErrOut, code, message, suggestion)
 			} else {
-				_, _ = fmt.Fprintf(f.Printer.ErrOut, "Error: %v\n", enrichAPIError(err))
+				_, _ = fmt.Fprintf(f.Printer.ErrOut, "Error: %v\n", output.RenderError(err))
 			}
 		}
 	}
@@ -151,119 +149,9 @@ func tryAutoReauth(f *cmdutil.Factory) {
 	_, _ = fmt.Fprintf(f.Printer.ErrOut, "\n%s Token expired. Run %s to re-authenticate.\n", output.Yellow("!"), output.Cyan("teamcity auth login"))
 }
 
-func enrichAPIError(err error) error {
-	if errors.Is(err, api.ErrReadOnly) {
-		return tcerrors.WithSuggestion(
-			err.Error(),
-			"Unset the TEAMCITY_RO environment variable to allow write operations",
-		)
-	}
-
-	if errors.Is(err, api.ErrAuthentication) {
-		return tcerrors.WithSuggestion(
-			"Authentication failed: invalid or expired token",
-			"Run 'teamcity auth login' to re-authenticate",
-		)
-	}
-
-	if _, ok := errors.AsType[*api.PermissionError](err); ok {
-		return tcerrors.WithSuggestion(err.Error(), "Check your TeamCity permissions or contact your administrator")
-	}
-
-	if _, ok := errors.AsType[*api.NotFoundError](err); ok {
-		return tcerrors.WithSuggestion(err.Error(), notFoundHint(err.Error()))
-	}
-
-	if netErr, ok := errors.AsType[*api.NetworkError](err); ok {
-		if api.IsSandboxBlockedError(netErr) {
-			return tcerrors.WithSuggestion("Network access blocked by sandbox",
-				"Add the server domain to the sandbox allowlist, or exclude teamcity from sandboxing")
-		}
-		return tcerrors.WithSuggestion(err.Error(), "Check your network connection and verify the server URL")
-	}
-
-	return err
-}
-
-func classifyError(err error) (output.JSONErrorCode, string, string) {
-	if errors.Is(err, api.ErrReadOnly) {
-		return output.ErrCodeReadOnly, err.Error(),
-			"Unset the TEAMCITY_RO environment variable to allow write operations"
-	}
-	if errors.Is(err, api.ErrAuthentication) {
-		return output.ErrCodeAuth,
-			"Authentication failed: invalid or expired token",
-			"teamcity auth login"
-	}
-	if _, ok := errors.AsType[*api.PermissionError](err); ok {
-		return output.ErrCodePermission, err.Error(),
-			"Check your TeamCity permissions or contact your administrator"
-	}
-	if _, ok := errors.AsType[*api.NotFoundError](err); ok {
-		return output.ErrCodeNotFound, err.Error(), notFoundHint(err.Error())
-	}
-	if netErr, ok := errors.AsType[*api.NetworkError](err); ok {
-		if api.IsSandboxBlockedError(netErr) {
-			return output.ErrCodeNetwork, "Network access blocked by sandbox",
-				"Add the server domain to the sandbox allowlist, or exclude teamcity from sandboxing"
-		}
-		return output.ErrCodeNetwork, err.Error(),
-			"Check your network connection and verify the server URL"
-	}
-	if ue, ok := errors.AsType[*tcerrors.UserError](err); ok {
-		return output.ErrCodeValidation, ue.Message, ue.Suggestion
-	}
-	if isInputError(err) {
-		return output.ErrCodeValidation, err.Error(), ""
-	}
-	return output.ErrCodeInternal, err.Error(), ""
-}
-
-func isInputError(err error) bool {
-	msg := err.Error()
-	for _, prefix := range []string{
-		"unknown command",
-		"unknown flag",
-		"required flag",
-		"invalid argument",
-		"invalid status",
-		"accepts ", // "accepts between 1 and 2 arg(s)"
-		"if any flags in the group",
-		"--limit must be",
-		"unknown fields:",
-		"unknown key",
-	} {
-		if strings.HasPrefix(msg, prefix) {
-			return true
-		}
-	}
-	for _, substr := range []string{
-		"flag needs an argument",
-		"mutually exclusive",
-		"required (or use",
-		"not found in configuration",
-	} {
-		if strings.Contains(msg, substr) {
-			return true
-		}
-	}
-	return false
-}
-
-func notFoundHint(message string) string {
-	msg := strings.ToLower(message)
-	switch {
-	case strings.Contains(msg, "agent pool"), strings.Contains(msg, "pool"):
-		return "Use 'teamcity pool list' to see available pools"
-	case strings.Contains(msg, "agent"):
-		return "Use 'teamcity agent list' to see available agents"
-	case strings.Contains(msg, "project"):
-		return "Use 'teamcity project list' to see available projects"
-	case strings.Contains(msg, "build type"), strings.Contains(msg, "job"):
-		return "Use 'teamcity job list' to see available jobs"
-	default:
-		return "Use 'teamcity job list' or 'teamcity run list' to see available resources"
-	}
+func isCategory(err error, cat api.Category) bool {
+	var ue api.UserError
+	return errors.As(err, &ue) && ue.Category() == cat
 }
 
 // RegisterAliases forwards to alias.RegisterAliases.

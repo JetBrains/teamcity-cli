@@ -258,7 +258,7 @@ func TestHandleErrorResponse(T *testing.T) {
 				w.Write([]byte(tc.body))
 			})
 
-			_, err := client.GetBuild("123")
+			_, err := client.GetBuild(T.Context(), "123")
 			assert.Error(t, err)
 		})
 	}
@@ -273,7 +273,7 @@ func TestHandleErrorResponseWithStructuredError(T *testing.T) {
 		w.Write([]byte(`{"errors":[{"message":"Invalid parameter value"}]}`))
 	})
 
-	_, err := client.GetBuild("invalid")
+	_, err := client.GetBuild(T.Context(), "invalid")
 	require.Error(T, err)
 	assert.Contains(T, err.Error(), "Invalid parameter value")
 }
@@ -347,11 +347,11 @@ func TestExtractErrorMessage(T *testing.T) {
 		body string
 		want string
 	}{
-		{"valid error response", `{"errors":[{"message":"No build types found by locator 'Test'."}]}`, "job 'Test' not found"},
+		{"valid error response", `{"errors":[{"message":"No build types found by locator 'Test'."}]}`, "No build types found by locator 'Test'."},
 		{"empty errors array", `{"errors":[]}`, ""},
-		{"malformed JSON", `not json`, "not json"}, // Now handled as plain text
+		{"malformed JSON", `not json`, "not json"},
 		{"empty body", ``, ""},
-		{"missing errors field", `{"other":"field"}`, ""}, // Valid JSON with no errors field
+		{"missing errors field", `{"other":"field"}`, ""},
 		{"XML error response", `<errors><error><message>Field 'snapshot-dependencies' is not supported. Supported are: number, status, statusText, id.</message></error></errors>`, "Field 'snapshot-dependencies' is not supported. Supported are: number, status, statusText, id."},
 		{"XML error with declaration", `<?xml version="1.0" encoding="UTF-8"?><errors><error><message>Not found</message></error></errors>`, "Not found"},
 		{"XML non-error element", `<server><version>2025.7</version></server>`, ""},
@@ -362,40 +362,6 @@ func TestExtractErrorMessage(T *testing.T) {
 			t.Parallel()
 
 			got := ExtractErrorMessage([]byte(tc.body))
-			assert.Equal(t, tc.want, got)
-		})
-	}
-}
-
-func TestHumanizeErrorMessage(T *testing.T) {
-	T.Parallel()
-
-	tests := []struct {
-		name  string
-		input string
-		want  string
-	}{
-		{"build type not found with period", "No build types found by locator 'Sandbox_Demo'.", "job 'Sandbox_Demo' not found"},
-		{"build type not found without period", "No build types found by locator 'Sandbox_Demo'", "job 'Sandbox_Demo' not found"},
-		{"build not found", "No build found by locator '12345'.", "run '12345' not found"},
-		{"project not found", "No project found by locator 'MyProject'.", "project 'MyProject' not found"},
-		{"nothing found with buildType locator", "Nothing is found by locator 'count:1,buildType:(id:Sandbox_Demo)'.", "no runs found for job 'Sandbox_Demo'"},
-		{"unrecognized message", "Some other error message", "Some other error message"},
-		{"empty message", "", ""},
-		{"nested parentheses", "No build types found by locator 'project:(id:Test)'.", "job 'Test' not found"}, // Now extracts ID
-		{"special chars in id", "No build types found by locator 'My_Project-Config'.", "job 'My_Project-Config' not found"},
-		{"complex locator", "Nothing is found by locator 'count:1,buildType:(id:My_Project_Build),branch:(default:any)'.", "no runs found for job 'My_Project_Build'"},
-		{"without buildType", "Nothing is found by locator 'count:1,project:(id:Test)'.", "resource 'Test' not found"}, // Now extracts ID
-		{"unicode", "No project found by locator '日本語プロジェクト'.", "project '日本語プロジェクト' not found"},
-		{"no locator pattern", "Some error without locator pattern", "Some error without locator pattern"},
-		{"incomplete buildType", "Nothing is found by locator 'buildType:(id:'.", "resource '' not found"}, // Empty ID
-	}
-
-	for _, tc := range tests {
-		T.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := humanizeErrorMessage(tc.input)
 			assert.Equal(t, tc.want, got)
 		})
 	}
@@ -422,7 +388,7 @@ func TestResolveBuildID(T *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				got, err := client.ResolveBuildID(tc.input)
+				got, err := client.ResolveBuildID(T.Context(), tc.input)
 				require.NoError(t, err)
 				assert.Equal(t, tc.want, got)
 			})
@@ -441,7 +407,7 @@ func TestResolveBuildID(T *testing.T) {
 			})
 		})
 
-		got, err := client.ResolveBuildID("#42")
+		got, err := client.ResolveBuildID(T.Context(), "#42")
 		require.NoError(t, err)
 		assert.Equal(t, "99999", got)
 	})
@@ -454,7 +420,7 @@ func TestResolveBuildID(T *testing.T) {
 			json.NewEncoder(w).Encode(BuildList{Count: 0, Builds: []Build{}})
 		})
 
-		_, err := client.ResolveBuildID("#999999")
+		_, err := client.ResolveBuildID(T.Context(), "#999999")
 		assert.Error(t, err)
 	})
 
@@ -465,7 +431,7 @@ func TestResolveBuildID(T *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 		})
 
-		_, err := client.ResolveBuildID("#42")
+		_, err := client.ResolveBuildID(T.Context(), "#42")
 		assert.Error(t, err)
 	})
 }
@@ -545,7 +511,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 		})
 
 		var buf bytes.Buffer
-		written, err := client.DownloadArtifactTo(t.Context(), "123", "test.txt", &buf)
+		written, err := client.DownloadArtifactTo(T.Context(), "123", "test.txt", &buf)
 
 		require.NoError(t, err)
 		assert.Equal(t, int64(len(content)), written)
@@ -562,7 +528,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 		})
 
 		var buf bytes.Buffer
-		_, _ = client.DownloadArtifactTo(t.Context(), "123", "file with spaces#1.txt", &buf)
+		_, _ = client.DownloadArtifactTo(T.Context(), "123", "file with spaces#1.txt", &buf)
 
 		assert.Contains(t, escapedPath, "file%20with%20spaces%231.txt")
 	})
@@ -575,10 +541,10 @@ func TestDownloadArtifactTo(T *testing.T) {
 		})
 
 		var buf bytes.Buffer
-		_, err := client.DownloadArtifactTo(t.Context(), "123", "missing.txt", &buf)
+		_, err := client.DownloadArtifactTo(T.Context(), "123", "missing.txt", &buf)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "status 404")
+		assert.Contains(t, err.Error(), "not found")
 	})
 
 	T.Run("uses correct auth header", func(t *testing.T) {
@@ -593,7 +559,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 
 		client := NewClient(server.URL, "my-secret-token")
 		var buf bytes.Buffer
-		_, _ = client.DownloadArtifactTo(t.Context(), "123", "test.txt", &buf)
+		_, _ = client.DownloadArtifactTo(T.Context(), "123", "test.txt", &buf)
 
 		assert.Equal(t, "Bearer my-secret-token", authHeader)
 	})
@@ -611,7 +577,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 
 		client := NewClientWithBasicAuth(server.URL, "myuser", "mypass")
 		var buf bytes.Buffer
-		_, _ = client.DownloadArtifactTo(t.Context(), "123", "test.txt", &buf)
+		_, _ = client.DownloadArtifactTo(T.Context(), "123", "test.txt", &buf)
 
 		assert.True(t, hasBasicAuth)
 		assert.Equal(t, "myuser", user)
@@ -635,7 +601,7 @@ func TestDebugLogging(T *testing.T) {
 			fmt.Fprintf(&buf, format+"\n", args...)
 		}
 
-		_, _ = client.RawRequest("GET", "/api/test", nil, nil)
+		_, _ = client.RawRequest(T.Context(), "GET", "/api/test", nil, nil)
 
 		captured := buf.String()
 		assert.Contains(t, captured, "> GET")
@@ -653,7 +619,7 @@ func TestDebugLogging(T *testing.T) {
 		})
 		// No DebugFunc set — should not panic or produce output
 
-		_, _ = client.RawRequest("GET", "/api/test", nil, nil)
+		_, _ = client.RawRequest(T.Context(), "GET", "/api/test", nil, nil)
 	})
 }
 
@@ -726,7 +692,7 @@ func TestRebootAgentHTTPErrors(T *testing.T) {
 				w.WriteHeader(tc.statusCode)
 			})
 
-			err := client.RebootAgent(t.Context(), 42, false)
+			err := client.RebootAgent(T.Context(), 42, false)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})
@@ -757,7 +723,7 @@ func TestUploadDiffChangesServerError(T *testing.T) {
 
 	_, err := client.UploadDiffChanges([]byte("diff content"), "test change")
 	require.Error(T, err)
-	assert.Contains(T, err.Error(), "500")
+	assert.Contains(T, err.Error(), "Internal Server Error")
 }
 
 func TestCreateProjectServerError(T *testing.T) {
@@ -911,7 +877,7 @@ func TestWaitForBuild(T *testing.T) {
 			})
 		})
 
-		build, err := client.WaitForBuild(t.Context(), "42", WaitForBuildOptions{
+		build, err := client.WaitForBuild(T.Context(), "42", WaitForBuildOptions{
 			Interval: 10 * time.Millisecond,
 			OnProgress: func(state, status string, percent int) error {
 				progressCalls = append(progressCalls, percent)
@@ -952,7 +918,7 @@ func TestWaitForBuild(T *testing.T) {
 			})
 		})
 
-		build, err := client.WaitForBuild(t.Context(), "42", WaitForBuildOptions{
+		build, err := client.WaitForBuild(T.Context(), "42", WaitForBuildOptions{
 			Interval: 10 * time.Millisecond,
 		})
 
@@ -969,7 +935,7 @@ func TestWaitForBuild(T *testing.T) {
 			json.NewEncoder(w).Encode(buildState{State: "running"})
 		})
 
-		ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+		ctx, cancel := context.WithTimeout(T.Context(), 50*time.Millisecond)
 		defer cancel()
 
 		_, err := client.WaitForBuild(ctx, "1", WaitForBuildOptions{
@@ -996,7 +962,7 @@ func TestReadOnlyMode(T *testing.T) {
 		require.ErrorIs(t, err, ErrReadOnly)
 
 		// PUT via RawRequest
-		_, err = client.RawRequest("PUT", "/app/rest/something", nil, nil)
+		_, err = client.RawRequest(T.Context(), "PUT", "/app/rest/something", nil, nil)
 		require.ErrorIs(t, err, ErrReadOnly)
 	})
 

@@ -28,7 +28,7 @@ gotestsum_format := env("GOTESTSUM_FORMAT", "pkgname")
 
 # Run unit tests
 unit:
-    gotestsum --format {{gotestsum_format}} -- -race -shuffle=on ./internal/config ./internal/errors ./internal/output ./internal/cmd
+    gotestsum --format {{gotestsum_format}} -- -race -shuffle=on ./internal/config ./internal/output ./internal/cmd
 
 # Run all tests with coverage
 test:

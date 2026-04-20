@@ -569,7 +569,7 @@ body {
       </button>
     </div>
 
-    <div class="sidebar-meta">134 screens · 2026-04-18 17:43</div>
+    <div class="sidebar-meta">134 screens · 2026-04-20 18:20</div>
 
     <div class="search">
       <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
@@ -1049,7 +1049,7 @@ body {
     <div class="side-foot">
       <a href="https://github.com/jetbrains/teamcity-cli/" target="_blank" rel="noopener">↗ github</a><br>
       134 screens · 16 groups<br>
-      generated 2026-04-18 17:43
+      generated 2026-04-20 18:20
     </div>
   </aside>
 
@@ -1160,9 +1160,9 @@ body {
                 <pre class="term-body no-prompt"><span class="term-fg32">✓</span> Logged in as Viktor Tiulpin
 3 runs matched your filters
 <span class="term-fg33">!</span> Token expires in 2 days
-Error: job &#39;NonExistent_Build&#39; not found
+Error: job &quot;NonExistent_Build&quot; not found
 &nbsp;
-Hint: Use &#39;teamcity job list&#39; to see available jobs</pre>
+Hint: Run &#39;teamcity job list&#39; to see available jobs</pre>
               </div>
             </div>
           </article>
@@ -1695,7 +1695,9 @@ TESTS: <span class="term-fg32">145 passed</span>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity run comment 1</span></div>
-                <pre class="term-body">No comment set on #1</pre>
+                <pre class="term-body">No comment set on #1
+&nbsp;
+<span class="term-fg33">Hint:</span> Add one with &#39;teamcity run comment &lt;id&gt; --set &quot;&lt;text&gt;&quot;&#39;</pre>
               </div>
             </div>
           </article>
@@ -3510,7 +3512,7 @@ testing    run        expansion</pre>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill list</span></div>
                 <pre class="term-body">Name          Version  Description
-teamcity-cli  0.9.0    Use when working with TeamCity CI&#47;CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, agents, and pipelines.  (default)</pre>
+teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, agents, and pipelines.  (default)</pre>
               </div>
             </div>
           </article>
@@ -3529,14 +3531,14 @@ teamcity-cli  0.9.0    Use when working with TeamCity CI&#47;CD or when user pro
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill install teamcity-cli</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Installed teamcity-cli for warp (0.9.0)
-<span class="term-fg32">✓</span> Installed teamcity-cli for claude-code (0.9.0)
-<span class="term-fg32">✓</span> Installed teamcity-cli for codex (0.9.0)
-<span class="term-fg32">✓</span> Installed teamcity-cli for opencode (0.9.0)
-<span class="term-fg32">✓</span> Installed teamcity-cli for cursor (0.9.0)
-<span class="term-fg32">✓</span> Installed teamcity-cli for antigravity (0.9.0)
-<span class="term-fg32">✓</span> Installed teamcity-cli for gemini-cli (0.9.0)
-<span class="term-fg32">✓</span> Installed teamcity-cli for junie (0.9.0)</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Updated teamcity-cli for warp (0.9.0 → 0.9.1)
+<span class="term-fg32">✓</span> Updated teamcity-cli for claude-code (0.9.0 → 0.9.1)
+<span class="term-fg32">✓</span> Updated teamcity-cli for codex (0.9.0 → 0.9.1)
+<span class="term-fg32">✓</span> Updated teamcity-cli for opencode (0.9.0 → 0.9.1)
+<span class="term-fg32">✓</span> Updated teamcity-cli for cursor (0.9.0 → 0.9.1)
+<span class="term-fg32">✓</span> Updated teamcity-cli for antigravity (0.9.0 → 0.9.1)
+<span class="term-fg32">✓</span> Updated teamcity-cli for gemini-cli (0.9.0 → 0.9.1)
+<span class="term-fg32">✓</span> Updated teamcity-cli for junie (0.9.0 → 0.9.1)</pre>
               </div>
             </div>
           </article>
@@ -3555,7 +3557,7 @@ teamcity-cli  0.9.0    Use when working with TeamCity CI&#47;CD or when user pro
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill update</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (0.9.0)</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (0.9.1)</pre>
               </div>
             </div>
           </article>
@@ -3646,8 +3648,8 @@ teamcity-cli  0.9.0    Use when working with TeamCity CI&#47;CD or when user pro
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity update</span></div>
                 <pre class="term-body">Checking for updates...
-<span class="term-fg2">vdev</span> → <span class="term-fg32">v0.9.0</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
-<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v0.9.0</span></pre>
+<span class="term-fg2">vdev</span> → <span class="term-fg32">v0.9.1</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
+<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v0.9.1</span></pre>
               </div>
             </div>
           </article>
@@ -3676,9 +3678,9 @@ teamcity-cli  0.9.0    Use when working with TeamCity CI&#47;CD or when user pro
                   <div class="term-head-pad"></div>
                 </div>
                 
-                <pre class="term-body no-prompt">Error: run &#39;999999&#39; not found
+                <pre class="term-body no-prompt">Error: run &quot;999999&quot; not found
 &nbsp;
-Hint: Use &#39;teamcity run list&#39; to see available resources</pre>
+Hint: Run &#39;teamcity run list&#39; to see available runs</pre>
               </div>
             </div>
           </article>
@@ -3697,7 +3699,7 @@ Hint: Use &#39;teamcity run list&#39; to see available resources</pre>
                   <div class="term-head-pad"></div>
                 </div>
                 
-                <pre class="term-body no-prompt">Error: Authentication failed: invalid or expired token
+                <pre class="term-body no-prompt">Error: authentication failed: invalid or expired credentials
 &nbsp;
 Hint: Run &#39;teamcity auth login&#39; to re-authenticate</pre>
               </div>
@@ -3718,9 +3720,9 @@ Hint: Run &#39;teamcity auth login&#39; to re-authenticate</pre>
                   <div class="term-head-pad"></div>
                 </div>
                 
-                <pre class="term-body no-prompt">Error: permission denied: cannot reboot agent
+                <pre class="term-body no-prompt">Error: missing &quot;Manage agents&quot; permission
 &nbsp;
-Hint: Check your TeamCity permissions or contact your administrator</pre>
+Hint: Ask your TeamCity administrator to grant this permission</pre>
               </div>
             </div>
           </article>
@@ -3784,8 +3786,8 @@ Hint: Unset TEAMCITY_RO to allow write operations</pre>
                 <pre class="term-body no-prompt">{
   &quot;error&quot;: {
     &quot;code&quot;: &quot;not_found&quot;,
-    &quot;message&quot;: &quot;run &#39;999999&#39; not found&quot;,
-    &quot;suggestion&quot;: &quot;Use &#39;teamcity run list&#39; to see available resources&quot;
+    &quot;message&quot;: &quot;run \&quot;999999\&quot; not found&quot;,
+    &quot;suggestion&quot;: &quot;Run &#39;teamcity run list&#39; to see available runs&quot;
   }
 }</pre>
               </div>
@@ -4806,7 +4808,7 @@ Use &quot;teamcity job param [command] --help&quot; for more information about a
 
     <footer class="foot">
       <div>teamcity cli · screen gallery</div>
-      <div>134 screens · 2026-04-18 17:43</div>
+      <div>134 screens · 2026-04-20 18:20</div>
     </footer>
     <div class="attrib">
 			<span class="jb-wordmark">JetBrains</span>
