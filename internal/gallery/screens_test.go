@@ -45,7 +45,7 @@ func styleGuideScreens() []termbook.Screen {
 			p.Success("Logged in as Viktor Tiulpin")
 			p.Info("3 runs matched your filters")
 			p.Warn("Token expires in 2 days")
-			fmt.Fprintf(w, "Error: job %q not found\n\nHint: Run 'teamcity job list' to see available jobs\n", "NonExistent_Build")
+			fmt.Fprintf(w, "Error: job %q not found\n\nTip: Run 'teamcity job list' to see available jobs\n", "NonExistent_Build")
 		}),
 		termbook.Manual("table", "Table Rendering", "Auto-sized columns with colored cells", "", func(w io.Writer) {
 			p := &output.Printer{Out: w, ErrOut: w}
@@ -432,19 +432,19 @@ func updateScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 func errorScreens() []termbook.Screen {
 	return []termbook.Screen{
 		termbook.Manual("error-not-found", "Not Found", "Resource not found with contextual hint", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: run \"999999\" not found\n\nHint: Run 'teamcity run list' to see available runs")
+			fmt.Fprintln(w, "Error: run \"999999\" not found\n\nTip: Run 'teamcity run list' to see available runs")
 		}),
 		termbook.Manual("error-auth", "Authentication Failed", "Invalid or expired token", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: authentication failed: invalid or expired credentials\n\nHint: Run 'teamcity auth login' to re-authenticate")
+			fmt.Fprintln(w, "Error: authentication failed: invalid or expired credentials\n\nTip: Run 'teamcity auth login' to re-authenticate")
 		}),
 		termbook.Manual("error-permission", "Permission Denied", "Insufficient permissions", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: missing \"Manage agents\" permission\n\nHint: Ask your TeamCity administrator to grant this permission")
+			fmt.Fprintln(w, "Error: missing \"Manage agents\" permission\n\nTip: Ask your TeamCity administrator to grant this permission")
 		}),
 		termbook.Manual("error-network", "Network Error", "Cannot reach the server", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: cannot connect to https://tc.example.com: dial tcp: lookup tc.example.com: no such host\n\nHint: Check your network connection and verify the server URL")
+			fmt.Fprintln(w, "Error: cannot connect to https://tc.example.com: dial tcp: lookup tc.example.com: no such host\n\nTip: Check your network connection and verify the server URL")
 		}),
 		termbook.Manual("error-readonly", "Read-Only Mode", "Write operation blocked by TEAMCITY_RO", "", func(w io.Writer) {
-			fmt.Fprintln(w, "Error: read-only mode: write operations are not allowed: POST /app/rest/buildQueue\n\nHint: Unset TEAMCITY_RO to allow write operations")
+			fmt.Fprintln(w, "Error: read-only mode: write operations are not allowed: POST /app/rest/buildQueue\n\nTip: Unset TEAMCITY_RO to allow write operations")
 		}),
 		termbook.Manual("error-json", "JSON Error Format", "Structured error with --json flag", "", func(w io.Writer) {
 			fmt.Fprintln(w, `{`)

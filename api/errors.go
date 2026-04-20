@@ -102,34 +102,34 @@ func (e *NetworkError) Error() string {
 func (e *NetworkError) Unwrap() error    { return e.Cause }
 func (*NetworkError) Category() Category { return CatNetwork }
 
-// ValidationError is a CLI-constructed user-input error with an optional imperative Hint.
+// ValidationError is a CLI-constructed user-input error with an optional imperative Tip.
 type ValidationError struct {
-	Msg  string
-	Hint string
+	Msg string
+	Tip string
 }
 
 func (e *ValidationError) Error() string      { return e.Msg }
 func (*ValidationError) Category() Category   { return CatValidation }
-func (e *ValidationError) Suggestion() string { return e.Hint }
+func (e *ValidationError) Suggestion() string { return e.Tip }
 
-// Validation wraps a user-input error with an imperative hint.
-func Validation(msg, hint string) *ValidationError {
-	return &ValidationError{Msg: msg, Hint: hint}
+// Validation wraps a user-input error with an imperative tip.
+func Validation(msg, tip string) *ValidationError {
+	return &ValidationError{Msg: msg, Tip: tip}
 }
 
 // RequiredFlag is a validation error for missing required flags in non-interactive mode.
 func RequiredFlag(flag string) *ValidationError {
 	return &ValidationError{
-		Msg:  fmt.Sprintf("--%s is required in non-interactive mode", flag),
-		Hint: "Provide the flag value or run without --no-input for interactive prompts",
+		Msg: fmt.Sprintf("--%s is required in non-interactive mode", flag),
+		Tip: "Provide the flag value or run without --no-input for interactive prompts",
 	}
 }
 
 // MutuallyExclusive is a validation error for conflicting options.
 func MutuallyExclusive(arg, flag string) *ValidationError {
 	return &ValidationError{
-		Msg:  fmt.Sprintf("cannot specify both %s argument and --%s flag", arg, flag),
-		Hint: fmt.Sprintf("Use either '%s' or '--%s', not both", arg, flag),
+		Msg: fmt.Sprintf("cannot specify both %s argument and --%s flag", arg, flag),
+		Tip: fmt.Sprintf("Use either '%s' or '--%s', not both", arg, flag),
 	}
 }
 

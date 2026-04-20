@@ -201,7 +201,7 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 		if config.IsBuildEnvironment() {
 			_, _ = fmt.Fprintln(p.Out, "\n"+output.Yellow("!")+" Build environment detected but credentials not found in properties file")
 		}
-		renderDSLHint(p, results)
+		renderDSLTip(p, results)
 		return nil
 	}
 
@@ -214,11 +214,10 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 
 	if len(results) > 1 {
 		_, _ = fmt.Fprintln(p.Out)
-		_, _ = fmt.Fprintf(p.Out, "%s To switch the default server, run %s\n",
-			output.Faint("Tip:"), output.Cyan("teamcity config set default_server <url>"))
+		p.Tip("To switch the default server, run %s", output.Cyan("teamcity config set default_server <url>"))
 	}
 
-	renderDSLHint(p, results)
+	renderDSLTip(p, results)
 	return nil
 }
 
@@ -319,7 +318,7 @@ func renderCredentialsDiagnostic(p *output.Printer, s authStatus) {
 	}
 }
 
-func renderDSLHint(p *output.Printer, results []authStatus) {
+func renderDSLTip(p *output.Printer, results []authStatus) {
 	dslURL := config.DetectServerFromDSL()
 	if dslURL == "" {
 		return

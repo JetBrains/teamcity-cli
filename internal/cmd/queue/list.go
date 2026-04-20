@@ -73,9 +73,9 @@ func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string)
 	}
 
 	return &cmdutil.ListResult{
-		JSON:      queue,
-		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2, 4}},
-		EmptyMsg:  "No runs in queue",
-		EmptyHint: output.HintNoQueue,
+		JSON:     queue,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2, 4}},
+		EmptyMsg: "No runs in queue",
+		EmptyTip: output.TipNoQueue,
 	}, nil
 }

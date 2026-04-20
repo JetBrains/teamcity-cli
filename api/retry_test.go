@@ -47,11 +47,7 @@ func (e timeoutErr) Error() string   { return "timeout" }
 func (e timeoutErr) Timeout() bool   { return true }
 func (e timeoutErr) Temporary() bool { return true }
 
-// TestIsRetryableNetworkError_ContextCancellation pins that caller-triggered
-// deadline expiry is NOT retried. context.DeadlineExceeded is a net.Error with
-// Timeout()==true, and http.Client also wraps it in net.OpError — either shape
-// would previously pass the timeout check and get retried, overrunning the
-// caller's --timeout budget.
+// TestIsRetryableNetworkError_ContextCancellation pins that ctx deadline/cancel is not retried.
 func TestIsRetryableNetworkError_ContextCancellation(T *testing.T) {
 	T.Parallel()
 	assert.False(T, isRetryableNetworkError(context.DeadlineExceeded))
@@ -139,8 +135,7 @@ func TestWithRetry_RetriesOn429(T *testing.T) {
 	resp.Body.Close()
 }
 
-// TestWithRetry_HonorsRetryAfter verifies the client waits the server-specified
-// delay rather than the exponential schedule.
+// TestWithRetry_HonorsRetryAfter verifies Retry-After wins over the exponential schedule.
 func TestWithRetry_HonorsRetryAfter(T *testing.T) {
 	T.Parallel()
 
@@ -175,9 +170,30 @@ func TestWithRetry_HonorsRetryAfter(T *testing.T) {
 	resp.Body.Close()
 }
 
-// TestGetWithRetry_ExhaustionPreservesHTTPError guards against regressing
-// getWithRetry to wrap exhausted 429/5xx responses as NetworkError instead of
-// surfacing the typed HTTP error with the server's message.
+// TestGetWithRetry_ContextCancelUnwraps pins that caller-cancelled ctx surfaces bare, not as NetworkError.
+func TestGetWithRetry_ContextCancelUnwraps(T *testing.T) {
+	T.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	T.Cleanup(server.Close)
+	c := NewClient(server.URL, "test-token")
+
+	ctx, cancel := context.WithCancel(T.Context())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+	err := c.getWithRetry(ctx, "/app/rest/server", nil, NoRetry)
+
+	require.Error(T, err)
+	assert.True(T, errors.Is(err, context.Canceled), "expected context.Canceled, got %v", err)
+	var ne *NetworkError
+	assert.False(T, errors.As(err, &ne), "should not be wrapped as NetworkError")
+}
+
+// TestGetWithRetry_ExhaustionPreservesHTTPError pins that exhausted 429/5xx keeps the typed HTTP error.
 func TestGetWithRetry_ExhaustionPreservesHTTPError(T *testing.T) {
 	T.Parallel()
 

@@ -8,20 +8,20 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 )
 
-// RenderError returns a terminal-ready error with a Hint line appended when available.
+// RenderError returns a terminal-ready error with a Tip line appended when available.
 func RenderError(err error) error {
-	hint := hintFor(err)
-	if hint == "" {
+	tip := tipFor(err)
+	if tip == "" {
 		return err
 	}
-	return fmt.Errorf("%s\n\n%s", err.Error(), FormatHint(hint))
+	return fmt.Errorf("%s\n\n%s", err.Error(), FormatTip(tip))
 }
 
-// ClassifyError maps an error to a JSON error envelope (code + message + hint).
+// ClassifyError maps an error to a JSON error envelope (code + message + tip).
 func ClassifyError(err error) (JSONErrorCode, string, string) {
 	var ue api.UserError
 	if errors.As(err, &ue) {
-		return JSONErrorCode(ue.Category()), ue.Error(), hintFor(err)
+		return JSONErrorCode(ue.Category()), ue.Error(), tipFor(err)
 	}
 	if isInputError(err) {
 		return ErrCodeValidation, err.Error(), ""
@@ -29,8 +29,8 @@ func ClassifyError(err error) (JSONErrorCode, string, string) {
 	return ErrCodeInternal, err.Error(), ""
 }
 
-// hintFor returns the next-step suggestion: explicit Suggestion() first, then category default.
-func hintFor(err error) string {
+// tipFor returns the next-step suggestion: explicit Suggestion() first, then category default.
+func tipFor(err error) string {
 	if h, ok := err.(interface{ Suggestion() string }); ok {
 		if s := h.Suggestion(); s != "" {
 			return s
@@ -49,14 +49,20 @@ func hintFor(err error) string {
 	case api.CatAuth:
 		return "Run 'teamcity auth login' to re-authenticate"
 	case api.CatPermission:
-		return "Ask your TeamCity administrator to grant this permission"
+		// Only confident default when we identified the specific permission;
+		// otherwise (e.g. TeamCity's ambiguous queue-remove 403) the server's
+		// own message is the clearer guidance.
+		if pe, ok := errors.AsType[*api.PermissionError](ue); ok && pe.Permission != "" {
+			return "Ask your TeamCity administrator to grant this permission"
+		}
+		return ""
 	case api.CatReadOnly:
 		return "Unset the TEAMCITY_RO environment variable to allow write operations"
 	case api.CatNotFound:
 		if nf, ok := errors.AsType[*api.NotFoundError](ue); ok && nf.Resource != "" {
 			return fmt.Sprintf("Run 'teamcity %s list' to see available %ss", nf.Resource, nf.Resource)
 		}
-		return notFoundHint(ue.Error())
+		return notFoundTip(ue.Error())
 	case api.CatNetwork:
 		if netErr, ok := errors.AsType[*api.NetworkError](ue); ok && api.IsSandboxBlocked(netErr) {
 			return "Add the server domain to the sandbox allowlist, or exclude teamcity from sandboxing"
@@ -66,8 +72,8 @@ func hintFor(err error) string {
 	return ""
 }
 
-// notFoundHint suggests the matching 'teamcity X list' command for a 404 message.
-func notFoundHint(message string) string {
+// notFoundTip suggests the matching 'teamcity X list' command for a 404 message.
+func notFoundTip(message string) string {
 	msg := strings.ToLower(message)
 	switch {
 	case strings.Contains(msg, "agent pool"), strings.Contains(msg, "pool"):

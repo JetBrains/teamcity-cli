@@ -2,8 +2,12 @@ package output
 
 import (
 	"bytes"
+	"io"
+	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -94,24 +98,40 @@ func TestPrinterInfo(t *testing.T) {
 	assert.Equal(t, "line 42\n", out.String())
 }
 
-func TestPrinterHint(t *testing.T) {
+func TestPrinterTip(t *testing.T) {
 	var out bytes.Buffer
 	p := &Printer{Out: &out, ErrOut: &out}
-	p.Hint("Run 'teamcity %s' to continue", "foo")
-	assert.Contains(t, out.String(), "Hint: Run 'teamcity foo' to continue")
+	p.Tip("Run 'teamcity %s' to continue", "foo")
+	assert.Contains(t, out.String(), "Tip: Run 'teamcity foo' to continue")
 }
 
-func TestPrinterHintQuiet(t *testing.T) {
+func TestPrinterTipQuiet(t *testing.T) {
 	var out bytes.Buffer
 	p := &Printer{Out: &out, ErrOut: &out, Quiet: true}
-	p.Hint("should not appear")
+	p.Tip("should not appear")
 	assert.Empty(t, out.String())
 }
 
-func TestPrinterEmptyUsesFormatHint(t *testing.T) {
+func TestPrinterEmptyUsesFormatTip(t *testing.T) {
 	var out bytes.Buffer
 	p := &Printer{Out: &out, ErrOut: &out}
 	p.Empty("No items", "do a thing")
 	assert.Contains(t, out.String(), "No items")
-	assert.Contains(t, out.String(), "Hint: do a thing")
+	assert.Contains(t, out.String(), "Tip: do a thing")
+}
+
+// TestTipFor_PermissionOnlyWhenIdentified pins that CatPermission's default fires only for parsed permissions.
+func TestTipFor_PermissionOnlyWhenIdentified(t *testing.T) {
+	parsed := newForbidden(`{"errors":[{"message":"You do not have \"Comment build\" permission in project with internal id: 'p1'"}]}`)
+	assert.Equal(t, "Ask your TeamCity administrator to grant this permission", tipFor(parsed))
+
+	ambiguous := newForbidden(`{"errors":[{"message":"Build was not canceled. Probably not sufficient permissions."}]}`)
+	assert.Empty(t, tipFor(ambiguous))
+}
+
+func newForbidden(body string) error {
+	return api.ErrorFromResponse(&http.Response{
+		StatusCode: http.StatusForbidden,
+		Body:       io.NopCloser(strings.NewReader(body)),
+	})
 }

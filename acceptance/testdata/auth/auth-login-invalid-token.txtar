@@ -5,4 +5,4 @@ env TEAMCITY_TOKEN=
 env TEAMCITY_GUEST=
 
 ! exec teamcity auth login --server $TC_HOST --token invalid-token-value --no-input
-stderr 'Hint: Run ''teamcity auth login'' to re-authenticate'
+stderr 'Tip: Run ''teamcity auth login'' to re-authenticate'

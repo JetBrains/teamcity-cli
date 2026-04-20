@@ -104,10 +104,10 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 	}
 
 	return &cmdutil.ListResult{
-		JSON:      jobs,
-		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg:  "No jobs found",
-		EmptyHint: output.HintNoJobs,
+		JSON:     jobs,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg: "No jobs found",
+		EmptyTip: output.TipNoJobs,
 	}, nil
 }
 

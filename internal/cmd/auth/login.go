@@ -134,7 +134,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 
 		_, _ = fmt.Fprintln(p.Out)
 		if pkceChecked {
-			_, _ = fmt.Fprintln(p.Out, output.Faint("Tip: Use --no-browser to skip browser login and enter a token manually"))
+			p.Tip("Use --no-browser to skip browser login and enter a token manually")
 			_, _ = fmt.Fprintln(p.Out)
 		}
 		_, _ = fmt.Fprintln(p.Out, output.Yellow("!"), "To authenticate, you need an access token.")

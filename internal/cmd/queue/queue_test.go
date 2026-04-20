@@ -22,7 +22,7 @@ func TestQueueList(T *testing.T) {
 func TestQueueList_empty(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	got := cmdtest.CaptureOutput(t, ts.Factory, "queue", "list")
-	assert.Equal(t, "No runs in queue\n\nHint: Nothing is queued; 'teamcity run list' shows recent runs\n", got)
+	assert.Equal(t, "No runs in queue\n\nTip: Nothing is queued; 'teamcity run list' shows recent runs\n", got)
 }
 
 func TestQueueList_waitReason(t *testing.T) {

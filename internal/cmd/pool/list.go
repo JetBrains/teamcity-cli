@@ -56,10 +56,10 @@ func fetchPools(client api.ClientInterface, fields []string) (*cmdutil.ListResul
 	}
 
 	return &cmdutil.ListResult{
-		JSON:      pools,
-		Table:     cmdutil.ListTable{Headers: headers, Rows: rows},
-		EmptyMsg:  "No agent pools found",
-		EmptyHint: output.HintNoPools,
+		JSON:     pools,
+		Table:    cmdutil.ListTable{Headers: headers, Rows: rows},
+		EmptyMsg: "No agent pools found",
+		EmptyTip: output.TipNoPools,
 	}, nil
 }
 
