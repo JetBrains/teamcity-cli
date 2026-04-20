@@ -6,7 +6,10 @@ import (
 	"strings"
 )
 
-var validKeys = []string{"default_server", "guest", "ro", "token_expiry"}
+var validKeys = []string{"default_server", "pager", "guest", "ro", "token_expiry"}
+
+// globalKeys are configuration keys that are not scoped to a specific server.
+var globalKeys = []string{"default_server", "pager"}
 
 func IsValidKey(key string) bool {
 	return slices.Contains(validKeys, key)
@@ -16,12 +19,19 @@ func ValidKeys() []string {
 	return validKeys
 }
 
+func isGlobalKey(key string) bool {
+	return slices.Contains(globalKeys, key)
+}
+
 func GetField(key, serverURL string) (string, error) {
 	if !IsValidKey(key) {
 		return "", unknownKeyError(key)
 	}
-	if key == "default_server" {
+	switch key {
+	case "default_server":
 		return Get().DefaultServer, nil
+	case "pager":
+		return Get().Pager, nil
 	}
 	serverURL, err := resolveServerForConfig(serverURL)
 	if err != nil {
@@ -46,7 +56,11 @@ func SetField(key, value, serverURL string) error {
 	if !IsValidKey(key) {
 		return unknownKeyError(key)
 	}
-	if key == "default_server" {
+	if isGlobalKey(key) && serverURL != "" {
+		return fmt.Errorf("key %q is global; drop --server", key)
+	}
+	switch key {
+	case "default_server":
 		if value == "" {
 			return fmt.Errorf("value cannot be empty")
 		}
@@ -55,6 +69,9 @@ func SetField(key, value, serverURL string) error {
 			return fmt.Errorf("server %q not found in configuration; run 'teamcity auth login --server %s' first", normalized, value)
 		}
 		cfg.DefaultServer = normalized
+		return writeConfig()
+	case "pager":
+		cfg.Pager = value
 		return writeConfig()
 	}
 	serverURL, err := resolveServerForConfig(serverURL)

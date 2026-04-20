@@ -21,6 +21,7 @@ const (
 	EnvGuestAuth = "TEAMCITY_GUEST"
 	EnvReadOnly  = "TEAMCITY_RO"
 	EnvDSLDir    = "TEAMCITY_DSL_DIR"
+	EnvPager     = "TEAMCITY_PAGER"
 
 	DefaultDSLDirTeamCity = ".teamcity"
 	DefaultDSLDirTC       = ".tc"
@@ -38,6 +39,7 @@ type ServerConfig struct {
 
 type Config struct {
 	DefaultServer string                  `mapstructure:"default_server"`
+	Pager         string                  `mapstructure:"pager,omitempty"`
 	Servers       map[string]ServerConfig `mapstructure:"servers"`
 	Aliases       map[string]string       `mapstructure:"aliases"`
 }
@@ -255,6 +257,9 @@ func writeConfig() error {
 	w.SetConfigType("yaml")
 
 	w.Set("default_server", cfg.DefaultServer)
+	if cfg.Pager != "" {
+		w.Set("pager", cfg.Pager)
+	}
 
 	servers := make(map[string]any, len(cfg.Servers))
 	for url, sc := range cfg.Servers {
@@ -337,6 +342,22 @@ func RemoveServer(serverURL string) error {
 
 func ConfigPath() string {
 	return configPath
+}
+
+// ResolvePager returns the pager command as the user would type it. Precedence:
+// TEAMCITY_PAGER, config `pager` key, PAGER env var, then empty (no pager).
+// Callers treat empty (or `cat`) as explicit disable.
+func ResolvePager() string {
+	if v := os.Getenv(EnvPager); v != "" {
+		return v
+	}
+	if cfg != nil && cfg.Pager != "" {
+		return cfg.Pager
+	}
+	if v := os.Getenv("PAGER"); v != "" {
+		return v
+	}
+	return ""
 }
 
 // IsGuestAuth returns true if guest authentication is enabled via env var or server config

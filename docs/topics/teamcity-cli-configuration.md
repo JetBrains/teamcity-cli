@@ -75,6 +75,23 @@ The default TeamCity server URL.
 <tr>
 <td>
 
+`pager`
+
+</td>
+<td>
+
+Global
+
+</td>
+<td>
+
+Pager command to use for long output. List commands (`run list`, `job list`, and so on) opt in when this is set; `run log` and `run diff` page by default. Set to an empty string to clear, or to `cat` to explicitly disable paging. Overridden by `TEAMCITY_PAGER`.
+
+</td>
+</tr>
+<tr>
+<td>
+
 `guest`
 
 </td>
@@ -277,6 +294,18 @@ Set to `1`, `true`, or `yes` to enable read-only mode. When enabled, all non-GET
 <td>
 
 Path to the Kotlin DSL directory. Overrides automatic detection of `.teamcity/` or `.tc/` directories.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`TEAMCITY_PAGER`
+
+</td>
+<td>
+
+Pager command to pipe long output through. Takes precedence over the `pager` config key and the generic `PAGER` environment variable. Set to `cat` to explicitly disable paging.
 
 </td>
 </tr>
