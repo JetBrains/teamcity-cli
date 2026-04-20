@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ func newRunPinCmd(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			if err := client.PinBuild(args[0], comment); err != nil {
-				return fmt.Errorf("failed to pin run: %w", err)
+				return fmt.Errorf("failed to pin run #%s: %w", args[0], err)
 			}
 			f.Printer.Success("Pinned #%s", args[0])
 			if comment != "" {
@@ -49,7 +50,7 @@ func newRunUnpinCmd(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			if err := client.UnpinBuild(args[0]); err != nil {
-				return fmt.Errorf("failed to unpin run: %w", err)
+				return fmt.Errorf("failed to unpin run #%s: %w", args[0], err)
 			}
 			f.Printer.Success("Unpinned #%s", args[0])
 			return nil
@@ -223,7 +224,7 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 
 	p := f.Printer
 	if existingComment == "" {
-		p.Info("No comment set on #%s", runID)
+		p.Empty(fmt.Sprintf("No comment set on #%s", runID), output.HintNoComment)
 	} else {
 		_, _ = fmt.Fprintln(p.Out, existingComment)
 	}

@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
+	"github.com/JetBrains/teamcity-cli/api"
 )
 
 func isGitRepo() bool {
@@ -20,12 +20,12 @@ func getCurrentBranch() (string, error) {
 		checkCmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 		checkOut, checkErr := checkCmd.Output()
 		if checkErr == nil && strings.TrimSpace(string(checkOut)) == "HEAD" {
-			return "", tcerrors.WithSuggestion(
+			return "", api.Validation(
 				"cannot determine branch: you are in detached HEAD state",
 				"Check out a branch with 'git checkout <branch>' or specify --branch explicitly",
 			)
 		}
-		return "", tcerrors.WithSuggestion(
+		return "", api.Validation(
 			"failed to get current branch",
 			"Ensure you are in a git repository and on a branch",
 		)
@@ -41,7 +41,7 @@ func resolveRevision(rev string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", rev)
 	out, err := cmd.Output()
 	if err != nil {
-		return "", tcerrors.WithSuggestion(
+		return "", api.Validation(
 			"failed to resolve revision '"+rev+"'",
 			"Ensure you are in a git repository and the revision exists",
 		)
@@ -75,12 +75,12 @@ func pushBranch(branch string) error {
 	if err != nil {
 		outStr := strings.TrimSpace(string(out))
 		if outStr != "" {
-			return tcerrors.WithSuggestion(
+			return api.Validation(
 				"failed to push branch: "+outStr,
 				"Ensure you have push access to the remote repository",
 			)
 		}
-		return tcerrors.WithSuggestion(
+		return api.Validation(
 			"failed to push branch",
 			"Ensure you have push access to the remote repository",
 		)

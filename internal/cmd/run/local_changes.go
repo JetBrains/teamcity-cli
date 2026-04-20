@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
+	"github.com/JetBrains/teamcity-cli/api"
 )
 
 type localChangesValue struct {
@@ -33,7 +33,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 	switch source {
 	case "git":
 		if !isGitRepo() {
-			return nil, tcerrors.WithSuggestion(
+			return nil, api.Validation(
 				"not a git repository",
 				"Run this command from within a git repository, or use --local-changes <path> to specify a diff file",
 			)
@@ -43,7 +43,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 			return nil, err
 		}
 		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
+			return nil, api.Validation(
 				"no uncommitted changes found",
 				"Make some changes to your files before running a personal build, or use --local-changes <path> to specify a diff file",
 			)
@@ -55,7 +55,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 			return nil, fmt.Errorf("failed to read from stdin: %w", err)
 		}
 		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
+			return nil, api.Validation(
 				"no changes provided via stdin",
 				"Pipe a diff file to stdin, e.g.: git diff | teamcity run start Job --local-changes -",
 			)
@@ -65,7 +65,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 		patch, err := os.ReadFile(source)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return nil, tcerrors.WithSuggestion(
+				return nil, api.Validation(
 					fmt.Sprintf("diff file not found: %s", source),
 					"Check the file path and try again",
 				)
@@ -73,7 +73,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 			return nil, fmt.Errorf("failed to read diff file: %w", err)
 		}
 		if len(patch) == 0 {
-			return nil, tcerrors.WithSuggestion(
+			return nil, api.Validation(
 				fmt.Sprintf("diff file is empty: %s", source),
 				"Provide a non-empty diff file",
 			)
@@ -102,7 +102,7 @@ func getGitDiff() ([]byte, error) {
 	cmd := exec.Command("git", "diff", "HEAD")
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, tcerrors.WithSuggestion(
+		return nil, api.Validation(
 			"failed to generate git diff",
 			"Ensure you have at least one commit in your repository",
 		)

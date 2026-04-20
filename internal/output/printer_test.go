@@ -93,3 +93,25 @@ func TestPrinterInfo(t *testing.T) {
 	p.Info("line %d", 42)
 	assert.Equal(t, "line 42\n", out.String())
 }
+
+func TestPrinterHint(t *testing.T) {
+	var out bytes.Buffer
+	p := &Printer{Out: &out, ErrOut: &out}
+	p.Hint("Run 'teamcity %s' to continue", "foo")
+	assert.Contains(t, out.String(), "Hint: Run 'teamcity foo' to continue")
+}
+
+func TestPrinterHintQuiet(t *testing.T) {
+	var out bytes.Buffer
+	p := &Printer{Out: &out, ErrOut: &out, Quiet: true}
+	p.Hint("should not appear")
+	assert.Empty(t, out.String())
+}
+
+func TestPrinterEmptyUsesFormatHint(t *testing.T) {
+	var out bytes.Buffer
+	p := &Printer{Out: &out, ErrOut: &out}
+	p.Empty("No items", "do a thing")
+	assert.Contains(t, out.String(), "No items")
+	assert.Contains(t, out.String(), "Hint: do a thing")
+}

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/JetBrains/teamcity-cli/internal/terminal"
 	"github.com/spf13/cobra"
@@ -79,19 +79,19 @@ func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, sh
 	}
 
 	if !agent.Connected {
-		return nil, tcerrors.WithSuggestion(
+		return nil, api.Validation(
 			fmt.Sprintf("Agent %s is not connected", agent.Name),
 			"Wait for the agent to connect or check agent status with 'teamcity agent view'",
 		)
 	}
 	if !agent.Authorized {
-		return nil, tcerrors.WithSuggestion(
+		return nil, api.Validation(
 			fmt.Sprintf("Agent %s is not authorized", agent.Name),
 			"Authorize the agent in TeamCity or use 'teamcity agent authorize'",
 		)
 	}
 	if !agent.Enabled {
-		return nil, tcerrors.WithSuggestion(
+		return nil, api.Validation(
 			fmt.Sprintf("Agent %s is disabled", agent.Name),
 			"Enable the agent in TeamCity or use 'teamcity agent enable'",
 		)

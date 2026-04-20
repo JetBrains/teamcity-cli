@@ -7,7 +7,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/dustin/go-humanize"
 	"github.com/dustin/go-humanize/english"
@@ -31,7 +30,7 @@ func newRunArtifactsCmd(f *cmdutil.Factory) *cobra.Command {
 Shows artifact names and sizes. Use teamcity run download to download artifacts.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.Flags().Changed("job") {
-				return tcerrors.MutuallyExclusive("id", "job")
+				return api.MutuallyExclusive("id", "job")
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
@@ -63,7 +62,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 	}
 
 	if opts.job != "" {
-		runs, err := client.GetBuilds(api.BuildsOptions{
+		runs, err := client.GetBuilds(context.Background(), api.BuildsOptions{
 			BuildTypeID: opts.job,
 			State:       "finished",
 			Limit:       1,
@@ -72,7 +71,10 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 			return err
 		}
 		if runs.Count == 0 || len(runs.Builds) == 0 {
-			return fmt.Errorf("no runs found for job %s", opts.job)
+			return api.Validation(
+				fmt.Sprintf("no runs found for job %q", opts.job),
+				"Try --all, or verify the job ID with 'teamcity job list'",
+			)
 		}
 		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
 		p.Info("Listing artifacts for run %s  #%s", runID, runs.Builds[0].Number)
@@ -80,7 +82,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}
 
-	artifacts, err := client.GetArtifacts(runID, opts.path)
+	artifacts, err := client.GetArtifacts(context.Background(), runID, opts.path)
 	if err != nil {
 		return fmt.Errorf("failed to get artifacts: %w", err)
 	}
@@ -90,7 +92,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 	}
 
 	if artifacts.Count == 0 {
-		p.Info("No artifacts found for this run")
+		p.Empty("No artifacts found for this run", output.HintNoArtifacts)
 		return nil
 	}
 
@@ -168,7 +170,7 @@ func fetchArtifactsRecursive(ctx context.Context, client api.ClientInterface, ru
 	default:
 	}
 
-	artifacts, err := client.GetArtifacts(runID, basePath)
+	artifacts, err := client.GetArtifacts(ctx, runID, basePath)
 	if err != nil {
 		return nil, 0, err
 	}

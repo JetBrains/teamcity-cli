@@ -11,7 +11,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/param"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -97,9 +96,10 @@ func (opts *projectListOptions) fetch(client api.ClientInterface, fields []strin
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     projects,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg: "No projects found",
+		JSON:      projects,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg:  "No projects found",
+		EmptyHint: output.HintNoProjects,
 	}, nil
 }
 
@@ -232,7 +232,7 @@ func runProjectTokenPut(f *cmdutil.Factory, projectID, value string, opts *proje
 	}
 
 	if value == "" && !f.IsInteractive() {
-		return tcerrors.WithSuggestion(
+		return api.Validation(
 			"value is required",
 			"Provide value as argument or use --stdin",
 		)

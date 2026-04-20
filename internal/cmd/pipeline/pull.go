@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,7 @@ func runPipelinePull(f *cmdutil.Factory, id string, opts *pullOptions) error {
 	}
 
 	if yaml == "" {
-		return tcerrors.WithSuggestion(
+		return api.Validation(
 			fmt.Sprintf("pipeline %s stores its YAML in the VCS repository", id),
 			"Edit .teamcity.yml in your repo directly",
 		)

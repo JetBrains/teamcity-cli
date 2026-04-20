@@ -2,6 +2,7 @@ package run
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -59,7 +59,7 @@ func fetchReuseDeps(client api.ClientInterface, ids []int) []reuseDep {
 	var wg sync.WaitGroup
 	for i, id := range ids {
 		wg.Go(func() {
-			b, err := client.GetBuild(strconv.Itoa(id))
+			b, err := client.GetBuild(context.Background(), strconv.Itoa(id))
 			out[i] = reuseDep{id: id, build: b, err: err}
 		})
 	}
@@ -207,7 +207,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 			return err
 		}
 		if !client.BuildTypeExists(jobID) {
-			return tcerrors.WithSuggestion(
+			return api.Validation(
 				fmt.Sprintf("job %q not found", jobID),
 				"Check the job ID with: teamcity job list",
 			)
@@ -269,7 +269,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 
 	if opts.localChanges != "" && opts.branch == "" {
 		if !isGitRepo() {
-			return tcerrors.WithSuggestion(
+			return api.Validation(
 				"not a git repository",
 				"Run this command from within a git repository, or specify --branch explicitly",
 			)

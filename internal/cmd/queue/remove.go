@@ -59,7 +59,7 @@ func runQueueRemove(f *cmdutil.Factory, runID string, opts *queueRemoveOptions) 
 	}
 
 	if err := client.RemoveFromQueue(runID); err != nil {
-		return fmt.Errorf("failed to remove run from queue: %w", err)
+		return fmt.Errorf("failed to remove run #%s from queue: %w", runID, err)
 	}
 
 	f.Printer.Success("Removed #%s from queue", runID)

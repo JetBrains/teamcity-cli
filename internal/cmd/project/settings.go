@@ -403,7 +403,8 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 		}
 
 		if !opts.verbose {
-			_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint("Hint: Run with --verbose for full compiler output"))
+			_, _ = fmt.Fprintln(p.Out)
+			p.Hint("Run with --verbose for full compiler output")
 		}
 		return fmt.Errorf("validation failed")
 	}

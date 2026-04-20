@@ -2,6 +2,7 @@ package run
 
 import (
 	"cmp"
+	"context"
 	"fmt"
 	"io"
 	"slices"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	tcerrors "github.com/JetBrains/teamcity-cli/internal/errors"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -93,8 +93,8 @@ func runRunDiff(f *cmdutil.Factory, args []string, opts *runDiffOptions) error {
 	}
 
 	if opts.web {
-		b1, err1 := client.GetBuild(id1)
-		b2, err2 := client.GetBuild(id2)
+		b1, err1 := client.GetBuild(context.Background(), id1)
+		b2, err2 := client.GetBuild(context.Background(), id2)
 		if err1 != nil {
 			return fmt.Errorf("resolving #%s: %w", id1, err1)
 		}
@@ -132,12 +132,12 @@ func resolveDiffBuildIDs(client api.ClientInterface, args []string) (string, str
 		return args[0], args[1], nil
 	}
 
-	build, err := client.GetBuild(args[0])
+	build, err := client.GetBuild(context.Background(), args[0])
 	if err != nil {
 		return "", "", fmt.Errorf("could not resolve: %w", err)
 	}
 
-	builds, err := client.GetBuilds(api.BuildsOptions{
+	builds, err := client.GetBuilds(context.Background(), api.BuildsOptions{
 		BuildTypeID: build.BuildTypeID,
 		Limit:       1,
 		State:       "finished",
@@ -153,25 +153,25 @@ func resolveDiffBuildIDs(client api.ClientInterface, args []string) (string, str
 		}
 	}
 
-	return "", "", tcerrors.WithSuggestion(
+	return "", "", api.Validation(
 		"no previous finished build found for "+build.BuildTypeID,
 		"provide two run IDs explicitly: teamcity run diff <id1> <id2>",
 	)
 }
 
 func fetchBuildData(client api.ClientInterface, id string, p *output.Printer) (buildData, error) {
-	b, err := client.GetBuild(id)
+	b, err := client.GetBuild(context.Background(), id)
 	if err != nil {
 		return buildData{}, fmt.Errorf("#%s: %w", id, err)
 	}
 	d := buildData{build: b}
-	if d.tests, err = client.GetBuildTests(id, true, 0); err != nil {
+	if d.tests, err = client.GetBuildTests(context.Background(), id, true, 0); err != nil {
 		p.Warn("Could not fetch tests for #%s: %v", id, err)
 	}
 	if d.testSummary, err = client.GetBuildTestSummary(id); err != nil {
 		p.Warn("Could not fetch test summary for #%s: %v", id, err)
 	}
-	if d.changes, err = client.GetBuildChanges(id); err != nil {
+	if d.changes, err = client.GetBuildChanges(context.Background(), id); err != nil {
 		p.Warn("Could not fetch changes for #%s: %v", id, err)
 	}
 	if d.problems, err = client.GetBuildProblems(id); err != nil {
@@ -197,23 +197,23 @@ func fetchBothBuilds(client api.ClientInterface, id1, id2 string, p *output.Prin
 	return d1, d2, err2
 }
 
-func runLogDiff(f *cmdutil.Factory, client api.ClientInterface, id1, id2 string, context int) error {
+func runLogDiff(f *cmdutil.Factory, client api.ClientInterface, id1, id2 string, contextLines int) error {
 	p := f.Printer
 
-	b1, err := client.GetBuild(id1)
+	b1, err := client.GetBuild(context.Background(), id1)
 	if err != nil {
 		return err
 	}
-	b2, err := client.GetBuild(id2)
+	b2, err := client.GetBuild(context.Background(), id2)
 	if err != nil {
 		return err
 	}
 
-	log1, err := client.GetBuildLog(id1)
+	log1, err := client.GetBuildLog(context.Background(), id1)
 	if err != nil {
 		return fmt.Errorf("log for #%s: %w", id1, err)
 	}
-	log2, err := client.GetBuildLog(id2)
+	log2, err := client.GetBuildLog(context.Background(), id2)
 	if err != nil {
 		return fmt.Errorf("log for #%s: %w", id2, err)
 	}
@@ -223,7 +223,7 @@ func runLogDiff(f *cmdutil.Factory, client api.ClientInterface, id1, id2 string,
 
 	output.WithPager(p.Out, func(w io.Writer) {
 		hasDiff, err := output.UnifiedDiff(w, lines1, lines2,
-			fmt.Sprintf("Run #%s", b1.Number), fmt.Sprintf("Run #%s", b2.Number), context)
+			fmt.Sprintf("Run #%s", b1.Number), fmt.Sprintf("Run #%s", b2.Number), contextLines)
 		if err != nil {
 			_, _ = fmt.Fprintf(w, "Error: %v\n", err)
 			return
