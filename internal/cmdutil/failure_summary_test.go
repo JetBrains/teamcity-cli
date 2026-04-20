@@ -34,7 +34,7 @@ func failureSummaryFixture(t *testing.T, tests api.TestOccurrences, problems api
 	var buf bytes.Buffer
 	p := &output.Printer{Out: &buf, ErrOut: &buf}
 	client := api.NewClient(ts.URL, "test")
-	PrintFailureSummary(p, client, "123", "42", "https://tc/build/123", statusText)
+	PrintFailureSummary(t.Context(), p, client, "123", "42", "https://tc/build/123", statusText)
 	return stripansi.Strip(buf.String())
 }
 
@@ -181,7 +181,7 @@ func TestPrintFailureSummary(t *testing.T) {
 		var buf bytes.Buffer
 		p := &output.Printer{Out: &buf, ErrOut: &buf}
 		client := api.NewClient(ts.URL, "test")
-		PrintFailureSummary(p, client, "1", "42", "https://tc/build/1", "")
+		PrintFailureSummary(t.Context(), p, client, "1", "42", "https://tc/build/1", "")
 		out := stripansi.Strip(buf.String())
 		// Should still print header and URL, not panic
 		assert.Contains(t, out, "#42 failed")

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -34,7 +35,7 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 
 	builds, err := collectPages(c, path, opts.Limit, func(p string) ([]QueuedBuild, string, error) {
 		var page BuildQueue
-		if err := c.get(p, &page); err != nil {
+		if err := c.get(context.Background(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Builds, page.NextHref, nil
@@ -48,13 +49,13 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 // RemoveFromQueue removes a build from the queue
 func (c *Client) RemoveFromQueue(id string) error {
 	path := fmt.Sprintf("/app/rest/buildQueue/id:%s", id)
-	return c.doNoContent("DELETE", path, nil, "")
+	return c.doNoContent(context.Background(), "DELETE", path, nil, "")
 }
 
 // SetQueuedBuildPosition moves a queued build to a specific position in the queue
 func (c *Client) SetQueuedBuildPosition(buildID string, position int) error {
 	path := fmt.Sprintf("/app/rest/buildQueue/order/%s", buildID)
-	return c.doNoContent("PUT", path, strings.NewReader(fmt.Sprintf("%d", position)), "text/plain")
+	return c.doNoContent(context.Background(), "PUT", path, strings.NewReader(fmt.Sprintf("%d", position)), "text/plain")
 }
 
 // MoveQueuedBuildToTop moves a queued build to the top of the queue
@@ -65,7 +66,7 @@ func (c *Client) MoveQueuedBuildToTop(buildID string) error {
 // ApproveQueuedBuild approves a queued build that requires approval
 func (c *Client) ApproveQueuedBuild(buildID string) error {
 	path := fmt.Sprintf("/app/rest/buildQueue/id:%s/approval/status", buildID)
-	return c.doNoContent("PUT", path, strings.NewReader(`"approved"`), "application/json")
+	return c.doNoContent(context.Background(), "PUT", path, strings.NewReader(`"approved"`), "application/json")
 }
 
 // GetQueuedBuildApprovalInfo returns approval information for a queued build
@@ -73,7 +74,7 @@ func (c *Client) GetQueuedBuildApprovalInfo(buildID string) (*ApprovalInfo, erro
 	path := fmt.Sprintf("/app/rest/buildQueue/id:%s/approval", buildID)
 
 	var info ApprovalInfo
-	if err := c.get(path, &info); err != nil {
+	if err := c.get(context.Background(), path, &info); err != nil {
 		return nil, err
 	}
 

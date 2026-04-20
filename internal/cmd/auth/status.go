@@ -147,7 +147,7 @@ func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string
 	if err != nil {
 		s.Status = "error"
 		if netErr, ok := errors.AsType[*api.NetworkError](err); ok {
-			if api.IsSandboxBlockedError(netErr) {
+			if api.IsSandboxBlocked(netErr) {
 				s.Error = "network access blocked by sandbox"
 			} else {
 				s.Error = netErr.Error()

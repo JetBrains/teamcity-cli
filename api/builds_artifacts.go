@@ -42,8 +42,8 @@ type Artifacts struct {
 
 // GetArtifacts returns the artifacts for a build (accepts ID or #number).
 // If subpath is non-empty, it lists artifacts under that subdirectory.
-func (c *Client) GetArtifacts(buildID string, subpath string) (*Artifacts, error) {
-	id, err := c.ResolveBuildID(buildID)
+func (c *Client) GetArtifacts(ctx context.Context, buildID string, subpath string) (*Artifacts, error) {
+	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (c *Client) GetArtifacts(buildID string, subpath string) (*Artifacts, error
 	}
 
 	var artifacts Artifacts
-	if err := c.get(p, &artifacts); err != nil {
+	if err := c.get(ctx, p, &artifacts); err != nil {
 		return nil, err
 	}
 
@@ -61,73 +61,70 @@ func (c *Client) GetArtifacts(buildID string, subpath string) (*Artifacts, error
 }
 
 // DownloadArtifact downloads an artifact and returns its content (accepts ID or #number)
-func (c *Client) DownloadArtifact(buildID, artifactPath string) ([]byte, error) {
-	id, err := c.ResolveBuildID(buildID)
+func (c *Client) DownloadArtifact(ctx context.Context, buildID, artifactPath string) ([]byte, error) {
+	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
 		return nil, err
 	}
 	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, encodeArtifactPath(artifactPath))
 
-	resp, err := c.doRequest("GET", path, nil)
+	resp, err := c.doGetStream(ctx, path)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to download artifact: status %d", resp.StatusCode)
-	}
-
 	return io.ReadAll(resp.Body)
 }
 
-// DownloadArtifactTo streams an artifact to a writer (accepts ID or #number)
+// DownloadArtifactTo streams an artifact to w using a timeout-less client bounded by ctx.
 func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath string, w io.Writer) (int64, error) {
-	id, err := c.ResolveBuildID(buildID)
+	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
 		return 0, err
 	}
 
 	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, encodeArtifactPath(artifactPath))
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
+	streamClient := &http.Client{Transport: c.HTTPClient.Transport}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	resp, err := withRetry(ReadRetry, func() (*http.Response, error) {
+		req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setAuth(req)
+		return streamClient.Do(req)
+	})
 	if err != nil {
-		return 0, err
-	}
-	c.setAuth(req)
-
-	client := &http.Client{Transport: c.HTTPClient.Transport}
-	resp, err := client.Do(req)
-	if err != nil {
-		return 0, err
+		if resp != nil {
+			defer func() { _ = resp.Body.Close() }()
+			return 0, c.handleErrorResponse(resp)
+		}
+		return 0, &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("failed to download artifact %q: status %d", artifactPath, resp.StatusCode)
+		return 0, c.handleErrorResponse(resp)
 	}
 
 	return io.Copy(w, resp.Body)
 }
 
 // GetBuildLog returns the build log (accepts ID or #number)
-func (c *Client) GetBuildLog(buildID string) (string, error) {
-	id, err := c.ResolveBuildID(buildID)
+func (c *Client) GetBuildLog(ctx context.Context, buildID string) (string, error) {
+	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
 		return "", err
 	}
 	path := fmt.Sprintf("/downloadBuildLog.html?buildId=%s", id)
 
-	resp, err := c.doRequest("GET", path, nil)
+	resp, err := c.doGetStream(ctx, path)
 	if err != nil {
 		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("failed to get build log: status %d", resp.StatusCode)
-	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {

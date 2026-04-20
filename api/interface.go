@@ -46,15 +46,15 @@ type ClientInterface interface {
 	SetBuildTypeSetting(buildTypeID, setting, value string) error
 
 	// Builds (Runs)
-	GetBuilds(opts BuildsOptions) (*BuildList, error)
-	GetBuild(ref string) (*Build, error)
+	GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList, error)
+	GetBuild(ctx context.Context, ref string) (*Build, error)
 	GetBuildUsedByOtherBuilds(id string) (bool, error)
 	WaitForBuild(ctx context.Context, buildID string, opts WaitForBuildOptions) (*Build, error)
-	ResolveBuildID(ref string) (string, error)
+	ResolveBuildID(ctx context.Context, ref string) (string, error)
 	RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, error)
 	CancelBuild(buildID string, comment string) error
-	GetBuildLog(buildID string) (string, error)
-	GetBuildMessages(buildID string, opts BuildMessagesOptions) (*BuildMessagesResponse, error)
+	GetBuildLog(ctx context.Context, buildID string) (string, error)
+	GetBuildMessages(ctx context.Context, buildID string, opts BuildMessagesOptions) (*BuildMessagesResponse, error)
 	PinBuild(buildID string, comment string) error
 	UnpinBuild(buildID string) error
 	AddBuildTags(buildID string, tags []string) error
@@ -64,16 +64,16 @@ type ClientInterface interface {
 	GetBuildComment(buildID string) (string, error)
 	DeleteBuildComment(buildID string) error
 	GetBuildSnapshotDependencies(buildID string) (*BuildList, error)
-	GetBuildChanges(buildID string) (*ChangeList, error)
-	GetBuildTests(buildID string, failedOnly bool, limit int) (*TestOccurrences, error)
+	GetBuildChanges(ctx context.Context, buildID string) (*ChangeList, error)
+	GetBuildTests(ctx context.Context, buildID string, failedOnly bool, limit int) (*TestOccurrences, error)
 	GetBuildTestSummary(buildID string) (*TestOccurrences, error)
 	GetBuildProblems(buildID string) (*ProblemOccurrences, error)
 	GetBuildResultingProperties(buildID string) (*ParameterList, error)
 	UploadDiffChanges(patch []byte, description string) (string, error)
 
 	// Artifacts
-	GetArtifacts(buildID string, path string) (*Artifacts, error)
-	DownloadArtifact(buildID, artifactPath string) ([]byte, error)
+	GetArtifacts(ctx context.Context, buildID string, path string) (*Artifacts, error)
+	DownloadArtifact(ctx context.Context, buildID, artifactPath string) ([]byte, error)
 	DownloadArtifactTo(ctx context.Context, buildID, artifactPath string, w io.Writer) (int64, error)
 
 	// Build Queue
@@ -149,7 +149,7 @@ type ClientInterface interface {
 	GetProjectConnections(projectID string) (*ProjectFeatureList, error)
 
 	// Raw API access
-	RawRequest(method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)
+	RawRequest(ctx context.Context, method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)
 
 	// Client metadata
 	SetCommandName(name string)

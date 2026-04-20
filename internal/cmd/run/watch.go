@@ -74,13 +74,6 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		return err
 	}
 
-	if opts.logs && !opts.quiet {
-		if watchHasTTYFn() {
-			return runWatchTUIFn(client, runID, opts.interval)
-		}
-		p.Warn("--logs requires a TTY; falling back to standard watch mode")
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -88,6 +81,13 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		var timeoutCancel context.CancelFunc
 		ctx, timeoutCancel = context.WithTimeout(ctx, opts.timeout)
 		defer timeoutCancel()
+	}
+
+	if opts.logs && !opts.quiet {
+		if watchHasTTYFn() {
+			return runWatchTUIFn(ctx, client, runID, opts.interval)
+		}
+		p.Warn("--logs requires a TTY; falling back to standard watch mode")
 	}
 
 	sigCh := make(chan os.Signal, 1)
@@ -102,7 +102,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 			if !opts.quiet && !opts.json {
 				_, _ = fmt.Fprintln(p.Out)
 				_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
-				_, _ = fmt.Fprintf(p.Out, "%s Resume watching: teamcity run watch %s\n", output.Faint("Hint:"), runID)
+				p.Hint("Resume watching: teamcity run watch %s", runID)
 			}
 			cancel()
 		case <-ctx.Done():
@@ -110,7 +110,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		}
 	}()
 
-	build, err := client.GetBuild(runID)
+	build, err := client.GetBuild(ctx, runID)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		default:
 		}
 
-		build, err = client.GetBuild(runID)
+		build, err = client.GetBuild(ctx, runID)
 		if err != nil {
 			return err
 		}
@@ -228,7 +228,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 				_, _ = fmt.Fprintln(p.Out)
 			}
 
-			return cmdutil.BuildResultError(p, client, build, !opts.quiet)
+			return cmdutil.BuildResultError(ctx, p, client, build, !opts.quiet)
 		}
 
 		select {

@@ -24,7 +24,7 @@ func collectPages[T any](c *Client, path string, limit int, fetch func(string) (
 }
 
 // normalizePaginationPath converts a TeamCity NextHref value into a path
-// suitable for c.get(). It strips the scheme/host, context path, guestAuth
+// suitable for c.get(context.Background(), ). It strips the scheme/host, context path, guestAuth
 // prefix, and API version so that apiPath() can re-apply them consistently.
 func (c *Client) normalizePaginationPath(href string) string {
 	if href == "" {

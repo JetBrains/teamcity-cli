@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 const maxFailedTestsToShow = 10
 
-func PrintFailureSummary(p *output.Printer, client api.ClientInterface, buildID, buildNumber, webURL, statusText string) {
+func PrintFailureSummary(ctx context.Context, p *output.Printer, client api.ClientInterface, buildID, buildNumber, webURL, statusText string) {
 	header := fmt.Sprintf("%s %s  #%s failed", output.Red("✗"), buildID, buildNumber)
 	if statusText != "" {
 		header += ": " + statusText
@@ -22,7 +23,7 @@ func PrintFailureSummary(p *output.Printer, client api.ClientInterface, buildID,
 	var testsErr error
 	var tests *api.TestOccurrences
 
-	tests, testsErr = client.GetBuildTests(buildID, true, maxFailedTestsToShow)
+	tests, testsErr = client.GetBuildTests(ctx, buildID, true, maxFailedTestsToShow)
 	if testsErr != nil {
 		p.Debug("Failed to fetch tests: %v", testsErr)
 	} else if tests.Failed > 0 {
@@ -75,7 +76,7 @@ func PrintFailureSummary(p *output.Printer, client api.ClientInterface, buildID,
 
 // BuildResultError prints the final build result and returns an appropriate exit error.
 // Used by both the standard watch and TUI watch paths.
-func BuildResultError(p *output.Printer, client api.ClientInterface, build *api.Build, showDetails bool) error {
+func BuildResultError(ctx context.Context, p *output.Printer, client api.ClientInterface, build *api.Build, showDetails bool) error {
 	jobName := build.BuildTypeID
 	if build.BuildType != nil {
 		jobName = build.BuildType.Name
@@ -89,7 +90,7 @@ func BuildResultError(p *output.Printer, client api.ClientInterface, build *api.
 		}
 		return nil
 	case "FAILURE":
-		PrintFailureSummary(p, client, fmt.Sprintf("%d", build.ID), build.Number, build.WebURL, build.StatusText)
+		PrintFailureSummary(ctx, p, client, fmt.Sprintf("%d", build.ID), build.Number, build.WebURL, build.StatusText)
 		return &ExitError{Code: ExitFailure}
 	default:
 		_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s canceled\n", output.Yellow("○"), output.Cyan(jobName), build.ID, build.Number)

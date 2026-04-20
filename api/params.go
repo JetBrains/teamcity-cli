@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,7 +30,7 @@ func (c *Client) getParameters(basePath string) (*ParameterList, error) {
 	path := basePath + "/parameters"
 
 	var params ParameterList
-	if err := c.get(path, &params); err != nil {
+	if err := c.get(context.Background(), path, &params); err != nil {
 		return nil, err
 	}
 
@@ -40,7 +41,7 @@ func (c *Client) getParameter(basePath, name string) (*Parameter, error) {
 	path := fmt.Sprintf("%s/parameters/%s", basePath, name)
 
 	var param Parameter
-	if err := c.get(path, &param); err != nil {
+	if err := c.get(context.Background(), path, &param); err != nil {
 		return nil, err
 	}
 
@@ -64,12 +65,12 @@ func (c *Client) setParameter(basePath, name, value string, secure bool) error {
 		return fmt.Errorf("failed to marshal parameter: %w", err)
 	}
 
-	return c.doNoContent("PUT", path, bytes.NewReader(body), "")
+	return c.doNoContent(context.Background(), "PUT", path, bytes.NewReader(body), "")
 }
 
 func (c *Client) deleteParameter(basePath, name string) error {
 	path := fmt.Sprintf("%s/parameters/%s", basePath, name)
-	return c.doNoContent("DELETE", path, nil, "")
+	return c.doNoContent(context.Background(), "DELETE", path, nil, "")
 }
 
 // GetProjectParameters returns parameters for a project
@@ -114,7 +115,7 @@ func (c *Client) DeleteBuildTypeParameter(buildTypeID, name string) error {
 
 // GetParameterValue returns just the raw value of a parameter
 func (c *Client) GetParameterValue(path string) (string, error) {
-	resp, err := c.doRequestWithAccept("GET", path, nil, "text/plain")
+	resp, err := c.doRequestWithAccept(context.Background(), "GET", path, nil, "text/plain")
 	if err != nil {
 		return "", err
 	}

@@ -55,7 +55,7 @@ func requireIdleAgent(t *testing.T) api.Agent {
 			time.Sleep(2 * time.Second)
 			continue
 		}
-		running, _ := client.GetBuilds(api.BuildsOptions{State: "running", Limit: 10})
+		running, _ := client.GetBuilds(t.Context(), api.BuildsOptions{State: "running", Limit: 10})
 		queued, _ := client.GetBuildQueue(api.QueueOptions{Limit: 10})
 		if running != nil {
 			for _, b := range running.Builds {
@@ -95,7 +95,7 @@ func cancelAndWait(t *testing.T, buildID string) {
 	_ = client.CancelBuild(buildID, "test cleanup")
 	deadline := time.Now().Add(60 * time.Second)
 	for time.Until(deadline) > 0 {
-		b, err := client.GetBuild(buildID)
+		b, err := client.GetBuild(t.Context(), buildID)
 		if err != nil || b.State == "finished" {
 			return
 		}
@@ -198,7 +198,7 @@ func TestGetBuilds(T *testing.T) {
 	T.Run("basic list", func(t *testing.T) {
 		t.Parallel()
 
-		builds, err := client.GetBuilds(api.BuildsOptions{BuildTypeID: testConfig, Limit: 5})
+		builds, err := client.GetBuilds(t.Context(), api.BuildsOptions{BuildTypeID: testConfig, Limit: 5})
 		require.NoError(t, err)
 		t.Logf("Found %d builds", builds.Count)
 	})
@@ -206,7 +206,7 @@ func TestGetBuilds(T *testing.T) {
 	T.Run("with filters", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.GetBuilds(api.BuildsOptions{
+		_, err := client.GetBuilds(t.Context(), api.BuildsOptions{
 			BuildTypeID: testConfig,
 			Status:      "success",
 			State:       "finished",
@@ -219,7 +219,7 @@ func TestGetBuilds(T *testing.T) {
 	T.Run("by project", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.GetBuilds(api.BuildsOptions{Project: testProject, Limit: 3})
+		_, err := client.GetBuilds(t.Context(), api.BuildsOptions{Project: testProject, Limit: 3})
 		require.NoError(t, err)
 	})
 }
@@ -234,11 +234,11 @@ func TestResolveBuildID_Integration(T *testing.T) {
 		}
 
 		ref := fmt.Sprintf("#%s", testBuild.Number)
-		resolvedID, err := client.ResolveBuildID(ref)
+		resolvedID, err := client.ResolveBuildID(t.Context(), ref)
 		require.NoError(t, err)
 		assert.NotEmpty(t, resolvedID)
 
-		build, err := client.GetBuild(resolvedID)
+		build, err := client.GetBuild(t.Context(), resolvedID)
 		require.NoError(t, err)
 		assert.Equal(t, testBuild.Number, build.Number, "resolved build should have the requested number")
 	})
@@ -249,7 +249,7 @@ func TestResolveBuildID_Integration(T *testing.T) {
 		}
 
 		ref := fmt.Sprintf("#%s", testBuild.Number)
-		build, err := client.GetBuild(ref)
+		build, err := client.GetBuild(t.Context(), ref)
 		require.NoError(t, err)
 		assert.Equal(t, testBuild.Number, build.Number, "returned build should have the requested number")
 	})
@@ -271,7 +271,7 @@ func TestRunBuildAndCancel(T *testing.T) {
 	T.Cleanup(func() { cancelAndWait(T, buildID) })
 
 	// Verify build was created
-	_, err = client.GetBuild(buildID)
+	_, err = client.GetBuild(T.Context(), buildID)
 	require.NoError(T, err)
 }
 
@@ -393,7 +393,7 @@ func TestBuildLog(T *testing.T) {
 	}
 
 	buildID := fmt.Sprintf("%d", testBuild.ID)
-	log, err := client.GetBuildLog(buildID)
+	log, err := client.GetBuildLog(T.Context(), buildID)
 	require.NoError(T, err)
 	assert.NotEmpty(T, log)
 }
@@ -510,7 +510,7 @@ func TestGetArtifacts(T *testing.T) {
 	}
 
 	buildID := fmt.Sprintf("%d", testBuild.ID)
-	artifacts, err := client.GetArtifacts(buildID, "")
+	artifacts, err := client.GetArtifacts(T.Context(), buildID, "")
 	if err != nil {
 		T.Logf("GetArtifacts: %v (may be empty)", err)
 		return
@@ -536,7 +536,7 @@ func TestGetArtifactsSubdirectory(T *testing.T) {
 	buildID := fmt.Sprintf("%d", testBuild.ID)
 
 	// First get root artifacts and find a directory entry
-	rootArtifacts, err := client.GetArtifacts(buildID, "")
+	rootArtifacts, err := client.GetArtifacts(T.Context(), buildID, "")
 	if err != nil {
 		T.Skip("could not list root artifacts:", err)
 	}
@@ -553,7 +553,7 @@ func TestGetArtifactsSubdirectory(T *testing.T) {
 	}
 
 	// Browse into the subdirectory
-	subArtifacts, err := client.GetArtifacts(buildID, dirName)
+	subArtifacts, err := client.GetArtifacts(T.Context(), buildID, dirName)
 	if err != nil {
 		T.Fatalf("GetArtifacts(%s, %q): %v", buildID, dirName, err)
 	}
@@ -565,7 +565,7 @@ func TestGetArtifactsSubdirectory(T *testing.T) {
 	}
 
 	// Nonexistent path should return an error
-	_, err = client.GetArtifacts(buildID, "nonexistent_path_12345")
+	_, err = client.GetArtifacts(T.Context(), buildID, "nonexistent_path_12345")
 	assert.Error(T, err, "nonexistent path should return error")
 }
 
@@ -578,7 +578,7 @@ func TestDownloadArtifact(T *testing.T) {
 
 	buildID := fmt.Sprintf("%d", testBuild.ID)
 
-	artifacts, err := client.GetArtifacts(buildID, "")
+	artifacts, err := client.GetArtifacts(T.Context(), buildID, "")
 	if err != nil {
 		T.Skip("could not list artifacts:", err)
 	}
@@ -598,7 +598,7 @@ func TestDownloadArtifact(T *testing.T) {
 		T.Skip("no downloadable artifacts found")
 	}
 
-	data, err := client.DownloadArtifact(buildID, artifactPath)
+	data, err := client.DownloadArtifact(T.Context(), buildID, artifactPath)
 	require.NoError(T, err)
 	assert.NotEmpty(T, data, "artifact should have content")
 	T.Logf("Downloaded %d bytes from %s", len(data), artifactPath)
@@ -611,7 +611,7 @@ func TestGetBuildChanges(T *testing.T) {
 
 	T.Run("by_id", func(t *testing.T) {
 		buildID := fmt.Sprintf("%d", testBuild.ID)
-		changes, err := client.GetBuildChanges(buildID)
+		changes, err := client.GetBuildChanges(t.Context(), buildID)
 		require.NoError(t, err)
 		t.Logf("Build %s has %d changes", buildID, changes.Count)
 	})
@@ -621,7 +621,7 @@ func TestGetBuildChanges(T *testing.T) {
 			t.Skip("no build number")
 		}
 		buildRef := fmt.Sprintf("#%s", testBuild.Number)
-		changes, err := client.GetBuildChanges(buildRef)
+		changes, err := client.GetBuildChanges(t.Context(), buildRef)
 		if err != nil {
 			t.Logf("GetBuildChanges with build number: %v", err)
 			return
@@ -630,7 +630,7 @@ func TestGetBuildChanges(T *testing.T) {
 	})
 
 	T.Run("not_found", func(t *testing.T) {
-		_, err := client.GetBuildChanges("999999999")
+		_, err := client.GetBuildChanges(t.Context(), "999999999")
 		assert.Error(t, err)
 	})
 }
@@ -658,7 +658,7 @@ func TestGetBuildTests(T *testing.T) {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			tests, err := client.GetBuildTests(buildID, tc.failedOnly, tc.limit)
+			tests, err := client.GetBuildTests(t.Context(), buildID, tc.failedOnly, tc.limit)
 			if err != nil {
 				t.Logf("GetBuildTests: %v", err)
 				return
@@ -730,7 +730,7 @@ func TestPersonalBuildWithLocalChanges(T *testing.T) {
 	T.Logf("Started personal build #%d", build.ID)
 	T.Cleanup(func() { cancelAndWait(T, buildID) })
 
-	fetched, err := client.GetBuild(buildID)
+	fetched, err := client.GetBuild(T.Context(), buildID)
 	require.NoError(T, err)
 	assert.True(T, fetched.Personal, "build should be marked as personal")
 	T.Logf("Build personal=%v", fetched.Personal)
@@ -837,7 +837,7 @@ teamcity auth status
 		cancel()
 		require.NoError(T, err)
 
-		buildLog, err = client.GetBuildLog(buildID)
+		buildLog, err = client.GetBuildLog(T.Context(), buildID)
 		require.NoError(T, err)
 		T.Logf("Build log:\n%s", buildLog)
 
@@ -1113,7 +1113,7 @@ func TestGetBuildLogEmpty(T *testing.T) {
 	T.Cleanup(func() { cancelAndWait(T, buildID) })
 	cancelAndWait(T, buildID)
 
-	log, err := client.GetBuildLog(buildID)
+	log, err := client.GetBuildLog(T.Context(), buildID)
 	if err != nil {
 		T.Logf("GetBuildLog on cancelled build: %v", err)
 		return
@@ -1132,7 +1132,7 @@ func TestGetParameterValueNonExistent(T *testing.T) {
 func TestGetBuildInvalidRef(T *testing.T) {
 	T.Parallel()
 
-	_, err := client.GetBuild("999999999")
+	_, err := client.GetBuild(T.Context(), "999999999")
 	assert.Error(T, err, "should error for invalid build ID")
 }
 
@@ -1279,7 +1279,7 @@ func TestRawRequestInvalidField(T *testing.T) {
 	require.NotNil(T, testBuild, "need a finished build")
 
 	endpoint := fmt.Sprintf("/app/rest/builds/id:%d/snapshot-dependencies", testBuild.ID)
-	resp, err := client.RawRequest("GET", endpoint, nil, nil)
+	resp, err := client.RawRequest(T.Context(), "GET", endpoint, nil, nil)
 	require.NoError(T, err)
 
 	assert.NotEqual(T, 406, resp.StatusCode)
@@ -1311,7 +1311,7 @@ func TestRequestHeadersServerSide(T *testing.T) {
 	_, _ = io.ReadAll(output)
 
 	adminClient := api.NewClient(testEnvRef.URL, testEnvRef.Token)
-	_, _ = adminClient.RawRequest("POST",
+	_, _ = adminClient.RawRequest(T.Context(), "POST",
 		"/app/rest/server/internals/diagnostics/threadDumps/reload", nil, nil)
 	time.Sleep(10 * time.Second)
 

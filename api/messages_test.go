@@ -35,7 +35,7 @@ func TestGetBuildMessages(t *testing.T) {
 		})
 	})
 
-	resp, err := client.GetBuildMessages("1", BuildMessagesOptions{
+	resp, err := client.GetBuildMessages(t.Context(), "1", BuildMessagesOptions{
 		Count:     -10,
 		Tail:      true,
 		ExpandAll: true,
@@ -67,7 +67,7 @@ func TestGetBuildMessages_head(t *testing.T) {
 		})
 	})
 
-	resp, err := client.GetBuildMessages("1", BuildMessagesOptions{
+	resp, err := client.GetBuildMessages(t.Context(), "1", BuildMessagesOptions{
 		Count:     5,
 		ExpandAll: true,
 	})
@@ -93,7 +93,7 @@ func TestGetBuildMessages_withSinceID(t *testing.T) {
 		})
 	})
 
-	_, err := client.GetBuildMessages("1", BuildMessagesOptions{
+	_, err := client.GetBuildMessages(t.Context(), "1", BuildMessagesOptions{
 		SinceID:   50,
 		Count:     -100,
 		Tail:      true,

@@ -1,9 +1,9 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/url"
 )
 
@@ -43,8 +43,8 @@ type BuildMessagesOptions struct {
 }
 
 // GetBuildMessages fetches structured log messages via /app/messages.
-func (c *Client) GetBuildMessages(buildID string, opts BuildMessagesOptions) (*BuildMessagesResponse, error) {
-	id, err := c.ResolveBuildID(buildID)
+func (c *Client) GetBuildMessages(ctx context.Context, buildID string, opts BuildMessagesOptions) (*BuildMessagesResponse, error) {
+	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,16 +61,11 @@ func (c *Client) GetBuildMessages(buildID string, opts BuildMessagesOptions) (*B
 
 	path := "/app/messages?" + params.Encode()
 
-	resp, err := c.doRequest("GET", path, nil)
+	resp, err := c.doGetStream(ctx, path)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to get build messages: status %d: %s", resp.StatusCode, string(body))
-	}
 
 	var result BuildMessagesResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

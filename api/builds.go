@@ -65,7 +65,7 @@ func currentUserFavoriteBuildsTagLocator() *Locator {
 }
 
 // GetBuilds returns a list of builds, automatically following pagination.
-func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
+func (c *Client) GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList, error) {
 	locator := opts.Locator().
 		AddIntDefault("count", opts.Limit, 30)
 
@@ -78,7 +78,7 @@ func (c *Client) GetBuilds(opts BuildsOptions) (*BuildList, error) {
 
 	builds, err := collectPages(c, path, opts.Limit, func(p string) ([]Build, string, error) {
 		var page BuildList
-		if err := c.get(p, &page); err != nil {
+		if err := c.get(ctx, p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Builds, page.NextHref, nil
@@ -107,13 +107,13 @@ func cleanupBuildTriggered(b *Build) {
 // ResolveBuildID resolves a build reference to an ID.
 // If ref starts with #, it's treated as a build number and looked up.
 // Otherwise it's used as-is (assumed to be an ID).
-func (c *Client) ResolveBuildID(ref string) (string, error) {
+func (c *Client) ResolveBuildID(ctx context.Context, ref string) (string, error) {
 	if !strings.HasPrefix(ref, "#") {
 		return ref, nil
 	}
 
 	number := strings.TrimPrefix(ref, "#")
-	builds, err := c.GetBuilds(BuildsOptions{Limit: 1, Number: number})
+	builds, err := c.GetBuilds(ctx, BuildsOptions{Limit: 1, Number: number})
 	if err != nil {
 		return "", err
 	}
@@ -124,8 +124,8 @@ func (c *Client) ResolveBuildID(ref string) (string, error) {
 }
 
 // GetBuild returns a single build by ID or #number
-func (c *Client) GetBuild(ref string) (*Build, error) {
-	id, err := c.ResolveBuildID(ref)
+func (c *Client) GetBuild(ctx context.Context, ref string) (*Build, error) {
+	id, err := c.ResolveBuildID(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (c *Client) GetBuild(ref string) (*Build, error) {
 	path := fmt.Sprintf("/app/rest/builds/id:%s", id)
 
 	var build Build
-	if err := c.get(path, &build); err != nil {
+	if err := c.get(ctx, path, &build); err != nil {
 		return nil, err
 	}
 
@@ -147,7 +147,7 @@ func (c *Client) GetBuildUsedByOtherBuilds(id string) (bool, error) {
 	var result struct {
 		UsedByOtherBuilds bool `json:"usedByOtherBuilds"`
 	}
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return false, err
 	}
 	return result.UsedByOtherBuilds, nil
@@ -171,7 +171,7 @@ type WaitForBuildOptions struct {
 // WaitForBuild polls a build until it reaches state "finished", then returns the full build.
 // Uses lightweight field-limited requests for polling, and fetches the complete build only once.
 func (c *Client) WaitForBuild(ctx context.Context, buildID string, opts WaitForBuildOptions) (*Build, error) {
-	id, err := c.ResolveBuildID(buildID)
+	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (c *Client) WaitForBuild(ctx context.Context, buildID string, opts WaitForB
 
 	for {
 		var bs buildState
-		if err := c.get(pollPath, &bs); err != nil {
+		if err := c.get(ctx, pollPath, &bs); err != nil {
 			return nil, err
 		}
 
@@ -212,7 +212,7 @@ func (c *Client) WaitForBuild(ctx context.Context, buildID string, opts WaitForB
 // a few times to let the final status (SUCCESS/FAILURE/etc.) settle.
 func (c *Client) getFinishedBuild(ctx context.Context, id string) (*Build, error) {
 	for range 10 {
-		build, err := c.GetBuild(id)
+		build, err := c.GetBuild(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +225,7 @@ func (c *Client) getFinishedBuild(ctx context.Context, id string) (*Build, error
 		case <-time.After(500 * time.Millisecond):
 		}
 	}
-	return c.GetBuild(id) // final attempt
+	return c.GetBuild(ctx, id) // final attempt
 }
 
 // RunBuildOptions represents options for running a build
@@ -355,7 +355,7 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 	}
 
 	var build Build
-	if err := c.post("/app/rest/buildQueue", bytes.NewReader(body), &build); err != nil {
+	if err := c.post(context.Background(), "/app/rest/buildQueue", bytes.NewReader(body), &build); err != nil {
 		return nil, err
 	}
 
@@ -364,12 +364,12 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 
 // CancelBuild cancels a running or queued build (accepts ID or #number)
 func (c *Client) CancelBuild(buildID string, comment string) error {
-	id, err := c.ResolveBuildID(buildID)
+	id, err := c.ResolveBuildID(context.Background(), buildID)
 	if err != nil {
 		return err
 	}
 
-	build, err := c.GetBuild(id)
+	build, err := c.GetBuild(context.Background(), id)
 	if err != nil {
 		return err
 	}
@@ -397,7 +397,7 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	return c.doNoContent("POST", path, bytes.NewReader(bodyBytes), "")
+	return c.doNoContent(context.Background(), "POST", path, bytes.NewReader(bodyBytes), "")
 }
 
 // GetBuildSnapshotDependencies returns all immediate dependency builds in a snapshot dependency chain.
@@ -408,7 +408,7 @@ func (c *Client) GetBuildSnapshotDependencies(buildID string) (*BuildList, error
 
 	builds, err := collectPages(c, path, 0, func(p string) ([]Build, string, error) {
 		var page BuildList
-		if err := c.get(p, &page); err != nil {
+		if err := c.get(context.Background(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Builds, page.NextHref, nil
