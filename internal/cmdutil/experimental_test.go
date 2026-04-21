@@ -70,4 +70,3 @@ func TestMarkExperimental_Quiet(t *testing.T) {
 	require.NoError(t, cmd.Execute())
 	assert.Empty(t, stderr.String())
 }
-

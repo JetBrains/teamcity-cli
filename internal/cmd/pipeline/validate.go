@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -140,7 +141,7 @@ func validateAgainstSchema(schemaData []byte, doc any) ([]validationError, error
 		return nil, nil
 	}
 
-	valErr, ok := err.(*jsonschema.ValidationError)
+	valErr, ok := errors.AsType[*jsonschema.ValidationError](err)
 	if !ok {
 		return nil, err
 	}
