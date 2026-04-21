@@ -58,26 +58,9 @@ func (c *Client) GetProject(id string) (*Project, error) {
 
 // CreateProjectRequest represents a request to create a project
 type CreateProjectRequest struct {
-	ID              string `json:"id,omitempty"`
-	Name            string `json:"name"`
-	ParentProjectID string `json:"-"`
-}
-
-// MarshalJSON wraps ParentProjectID into the nested {"locator":"id:<parent>"} object the REST API requires.
-func (r CreateProjectRequest) MarshalJSON() ([]byte, error) {
-	type parentRef struct {
-		Locator string `json:"locator"`
-	}
-	type payload struct {
-		ID            string     `json:"id,omitempty"`
-		Name          string     `json:"name"`
-		ParentProject *parentRef `json:"parentProject,omitempty"`
-	}
-	p := payload{ID: r.ID, Name: r.Name}
-	if r.ParentProjectID != "" {
-		p.ParentProject = &parentRef{Locator: "id:" + r.ParentProjectID}
-	}
-	return json.Marshal(p)
+	ID            string      `json:"id,omitempty"`
+	Name          string      `json:"name"`
+	ParentProject *ProjectRef `json:"parentProject,omitempty"`
 }
 
 // CreateProject creates a new project

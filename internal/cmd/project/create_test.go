@@ -44,7 +44,7 @@ func TestProjectCreateWithParent(T *testing.T) {
 	require.NoError(T, json.Unmarshal(captured, &payload))
 	parent, ok := payload["parentProject"].(map[string]any)
 	require.True(T, ok, "parentProject should be an object")
-	assert.Equal(T, "id:Parent", parent["locator"])
+	assert.Equal(T, "Parent", parent["id"])
 	assert.Equal(T, "Child", payload["id"])
 	assert.Equal(T, "Child", payload["name"])
 }

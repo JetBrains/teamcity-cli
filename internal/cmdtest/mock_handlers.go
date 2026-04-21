@@ -59,28 +59,22 @@ func SetupMockClient(t *testing.T) *TestServer {
 	})
 
 	ts.Handle("POST /app/rest/projects", func(w http.ResponseWriter, r *http.Request) {
-		var payload struct {
-			ID            string `json:"id"`
-			Name          string `json:"name"`
-			ParentProject *struct {
-				Locator string `json:"locator"`
-			} `json:"parentProject"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		var req api.CreateProjectRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			Error(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		id := payload.ID
+		id := req.ID
 		if id == "" {
-			id = payload.Name
+			id = req.Name
 		}
 		parent := "_Root"
-		if payload.ParentProject != nil {
-			parent = strings.TrimPrefix(payload.ParentProject.Locator, "id:")
+		if req.ParentProject != nil {
+			parent = req.ParentProject.ID
 		}
 		JSON(w, api.Project{
 			ID:              id,
-			Name:            payload.Name,
+			Name:            req.Name,
 			ParentProjectID: parent,
 			WebURL:          ts.URL + "/project.html?projectId=" + id,
 		})

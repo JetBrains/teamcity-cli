@@ -244,24 +244,6 @@ func TestGetSecureValue(T *testing.T) {
 	})
 }
 
-func TestCreateProjectRequestMarshal(T *testing.T) {
-	T.Parallel()
-
-	T.Run("without parent", func(t *testing.T) {
-		t.Parallel()
-		data, err := json.Marshal(CreateProjectRequest{ID: "MyProject", Name: "My Project"})
-		require.NoError(t, err)
-		assert.JSONEq(t, `{"id":"MyProject","name":"My Project"}`, string(data))
-	})
-
-	T.Run("with parent", func(t *testing.T) {
-		t.Parallel()
-		data, err := json.Marshal(CreateProjectRequest{ID: "Sub", Name: "Sub", ParentProjectID: "Parent"})
-		require.NoError(t, err)
-		assert.JSONEq(t, `{"id":"Sub","name":"Sub","parentProject":{"locator":"id:Parent"}}`, string(data))
-	})
-}
-
 func TestProjectExists(T *testing.T) {
 	T.Parallel()
 

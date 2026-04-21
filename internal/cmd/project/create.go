@@ -52,9 +52,11 @@ func runProjectCreate(f *cmdutil.Factory, name string, opts *projectCreateOption
 	}
 
 	req := api.CreateProjectRequest{
-		ID:              opts.id,
-		Name:            name,
-		ParentProjectID: opts.parent,
+		ID:   opts.id,
+		Name: name,
+	}
+	if opts.parent != "" {
+		req.ParentProject = &api.ProjectRef{ID: opts.parent}
 	}
 
 	project, err := client.CreateProject(req)
