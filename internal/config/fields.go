@@ -26,7 +26,7 @@ func GetField(key, serverURL string) (string, error) {
 		return Get().DefaultServer, nil
 	}
 	if key == "analytics" {
-		return fmt.Sprintf("%t", IsAnalyticsEnabled()), nil
+		return strconv.FormatBool(IsAnalyticsEnabled()), nil
 	}
 	serverURL, err := resolveServerForConfig(serverURL)
 	if err != nil {
