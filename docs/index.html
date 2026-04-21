@@ -569,7 +569,7 @@ body {
       </button>
     </div>
 
-    <div class="sidebar-meta">134 screens · 2026-04-20 21:12</div>
+    <div class="sidebar-meta">134 screens · 2026-04-21 10:43</div>
 
     <div class="search">
       <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
@@ -585,7 +585,7 @@ body {
         <a href="#status-icons" data-cmd="status-icons" data-search="status-icons status icons status indicators in tables and views ">
           <span class="dot">·</span><span>Status Icons</span>
         </a>
-        <a href="#messages" data-cmd="messages" data-search="messages messages info, success, warning, error patterns ">
+        <a href="#messages" data-cmd="messages" data-search="messages messages info, success, warning, tip, error patterns ">
           <span class="dot">·</span><span>Messages</span>
         </a>
         <a href="#table" data-cmd="table" data-search="table table rendering auto-sized columns with colored cells ">
@@ -1049,7 +1049,7 @@ body {
     <div class="side-foot">
       <a href="https://github.com/jetbrains/teamcity-cli/" target="_blank" rel="noopener">↗ github</a><br>
       134 screens · 16 groups<br>
-      generated 2026-04-20 21:12
+      generated 2026-04-21 10:43
     </div>
   </aside>
 
@@ -1142,11 +1142,11 @@ body {
               </div>
             </div>
           </article>
-          <article class="entry" id="messages" data-cmd="messages" data-search="messages messages info, success, warning, error patterns ">
+          <article class="entry" id="messages" data-cmd="messages" data-search="messages messages info, success, warning, tip, error patterns ">
             <div class="entry-meta">
               <div class="id">messages</div>
               <h4>Messages</h4>
-              <p>Info, success, warning, error patterns</p>
+              <p>Info, success, warning, tip, error patterns</p>
               <div class="tags"><span>style-guide</span></div>
             </div>
             <div class="entry-term">
@@ -1160,9 +1160,10 @@ body {
                 <pre class="term-body no-prompt"><span class="term-fg32">✓</span> Logged in as Viktor Tiulpin
 3 runs matched your filters
 <span class="term-fg33">!</span> Token expires in 2 days
+<span class="term-fg33">Tip:</span> Use --limit to show more runs
 Error: job &quot;NonExistent_Build&quot; not found
 &nbsp;
-Tip: Run &#39;teamcity job list&#39; to see available jobs</pre>
+<span class="term-fg33">Tip:</span> Run &#39;teamcity job list&#39; to see available jobs</pre>
               </div>
             </div>
           </article>
@@ -1697,7 +1698,7 @@ TESTS: <span class="term-fg32">145 passed</span>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity run comment 1</span></div>
                 <pre class="term-body">No comment set on #1
 &nbsp;
-<span class="term-fg33">Tip:</span> Add one with &#39;teamcity run comment &lt;id&gt; --set &quot;&lt;text&gt;&quot;&#39;</pre>
+<span class="term-fg33">Tip:</span> Add one with &#39;teamcity run comment 1 --set &quot;&lt;text&gt;&quot;&#39;</pre>
               </div>
             </div>
           </article>
@@ -3536,6 +3537,7 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
 <span class="term-fg32">✓</span> Installed teamcity-cli for codex (0.9.1)
 <span class="term-fg32">✓</span> Installed teamcity-cli for opencode (0.9.1)
 <span class="term-fg32">✓</span> Installed teamcity-cli for cursor (0.9.1)
+<span class="term-fg32">✓</span> Installed teamcity-cli for droid (0.9.1)
 <span class="term-fg32">✓</span> Installed teamcity-cli for antigravity (0.9.1)
 <span class="term-fg32">✓</span> Installed teamcity-cli for gemini-cli (0.9.1)
 <span class="term-fg32">✓</span> Installed teamcity-cli for junie (0.9.1)</pre>
@@ -3581,6 +3583,7 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
 <span class="term-fg32">✓</span> Removed teamcity-cli from codex
 <span class="term-fg32">✓</span> Removed teamcity-cli from opencode
 <span class="term-fg32">✓</span> Removed teamcity-cli from cursor
+<span class="term-fg32">✓</span> Removed teamcity-cli from droid
 <span class="term-fg32">✓</span> Removed teamcity-cli from antigravity
 <span class="term-fg32">✓</span> Removed teamcity-cli from gemini-cli
 <span class="term-fg32">✓</span> Removed teamcity-cli from junie</pre>
@@ -3680,7 +3683,7 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
                 
                 <pre class="term-body no-prompt">Error: run &quot;999999&quot; not found
 &nbsp;
-Tip: Run &#39;teamcity run list&#39; to see available runs</pre>
+<span class="term-fg33">Tip:</span> Run &#39;teamcity run list&#39; to see available runs</pre>
               </div>
             </div>
           </article>
@@ -3701,7 +3704,7 @@ Tip: Run &#39;teamcity run list&#39; to see available runs</pre>
                 
                 <pre class="term-body no-prompt">Error: authentication failed: invalid or expired credentials
 &nbsp;
-Tip: Run &#39;teamcity auth login&#39; to re-authenticate</pre>
+<span class="term-fg33">Tip:</span> Run &#39;teamcity auth login&#39; to re-authenticate</pre>
               </div>
             </div>
           </article>
@@ -3722,7 +3725,7 @@ Tip: Run &#39;teamcity auth login&#39; to re-authenticate</pre>
                 
                 <pre class="term-body no-prompt">Error: missing &quot;Manage agents&quot; permission
 &nbsp;
-Tip: Ask your TeamCity administrator to grant this permission</pre>
+<span class="term-fg33">Tip:</span> Ask your TeamCity administrator to grant this permission</pre>
               </div>
             </div>
           </article>
@@ -3743,7 +3746,7 @@ Tip: Ask your TeamCity administrator to grant this permission</pre>
                 
                 <pre class="term-body no-prompt">Error: cannot connect to https:&#47;&#47;tc.example.com: dial tcp: lookup tc.example.com: no such host
 &nbsp;
-Tip: Check your network connection and verify the server URL</pre>
+<span class="term-fg33">Tip:</span> Check your network connection and verify the server URL</pre>
               </div>
             </div>
           </article>
@@ -3764,7 +3767,7 @@ Tip: Check your network connection and verify the server URL</pre>
                 
                 <pre class="term-body no-prompt">Error: read-only mode: write operations are not allowed: POST &#47;app&#47;rest&#47;buildQueue
 &nbsp;
-Tip: Unset TEAMCITY_RO to allow write operations</pre>
+<span class="term-fg33">Tip:</span> Unset the TEAMCITY_RO environment variable to allow write operations</pre>
               </div>
             </div>
           </article>
@@ -3832,22 +3835,28 @@ Usage:
   teamcity [flags]
   teamcity [command]
 &nbsp;
-Available Commands:
+CORE COMMANDS
+  job         Manage jobs (build configurations)
+  pipeline    Manage pipelines (YAML configurations)
+  project     Manage projects
+  run         Manage runs (builds)
+&nbsp;
+INFRASTRUCTURE
   agent       Manage build agents
+  pool        Manage agent pools
+  queue       Manage build queue
+&nbsp;
+CONFIGURATION
   alias       Manage command aliases
   api         Make an authenticated API request
   auth        Authenticate with TeamCity
-  completion  Generate the autocompletion script for the specified shell
   config      Manage CLI configuration
-  help        Help about any command
-  job         Manage jobs (build configurations)
-  pipeline    Manage pipelines (YAML configurations)
-  pool        Manage agent pools
-  project     Manage projects
-  queue       Manage build queue
-  run         Manage runs (builds)
   skill       Manage AI coding agent skills
-  update      Check for CLI updates and show how to upgrade
+  update      Check for CLI updates
+&nbsp;
+ADDITIONAL COMMANDS
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
 &nbsp;
 Flags:
       --debug      Alias for --verbose
@@ -3879,6 +3888,13 @@ Use &quot;teamcity [command] --help&quot; for more information about a command.<
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity run --help</span></div>
                 <pre class="term-body">List, view, start, and manage TeamCity runs (builds).
 &nbsp;
+A run (called a build in the TeamCity UI) is a single execution of a
+job. Use these commands to trigger runs, watch them live, download
+artifacts and logs, inspect test results and VCS changes, and manage
+run metadata (tags, comments, pins).
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;build-results-page.html
+&nbsp;
 Usage:
   teamcity run [flags]
   teamcity run [command]
@@ -3886,25 +3902,31 @@ Usage:
 Aliases:
   run, build
 &nbsp;
-Available Commands:
-  artifacts   List artifacts
+LIFECYCLE
   cancel      Cancel a run
-  changes     Show VCS changes
-  comment     Set or view comment
   diff        [experimental] Compare two runs and show differences
-  download    Download artifacts
   list        List recent runs
-  log         View log
-  pin         Pin to prevent cleanup
   restart     Restart a run
   start       Start a new run
-  tag         Add tags
-  tests       Show test results
   tree        Display snapshot dependency tree
-  unpin       Unpin a run
-  untag       Remove tags
   view        View details
   watch       Watch a run until it completes
+&nbsp;
+ARTIFACTS &amp; LOGS
+  artifacts   List artifacts
+  download    Download artifacts
+  log         View log
+&nbsp;
+METADATA
+  comment     Set or view comment
+  pin         Pin to prevent cleanup
+  tag         Add tags
+  unpin       Unpin a run
+  untag       Remove tags
+&nbsp;
+ANALYSIS
+  changes     Show VCS changes
+  tests       Show test results
 &nbsp;
 Flags:
   -h, --help   help for run
@@ -3936,6 +3958,13 @@ Use &quot;teamcity run [command] --help&quot; for more information about a comma
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job --help</span></div>
                 <pre class="term-body">List and manage TeamCity jobs (build configurations).
+&nbsp;
+A job (referred to as a build configuration in the TeamCity UI) is the
+recipe that turns source revisions into builds: VCS roots, build steps,
+parameters, and triggers. Use these commands to browse jobs, inspect
+their parameters and dependencies, and pause or resume them.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;creating-and-editing-build-configurations.html
 &nbsp;
 Usage:
   teamcity job [flags]
@@ -3983,22 +4012,32 @@ Use &quot;teamcity job [command] --help&quot; for more information about a comma
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity agent --help</span></div>
                 <pre class="term-body">List, view, and manage TeamCity build agents.
 &nbsp;
+Build agents run the jobs assigned by the TeamCity server. Use these
+commands to inspect agent state, toggle availability, and open a shell
+to a running agent.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;build-agent.html
+&nbsp;
 Usage:
   teamcity agent [flags]
   teamcity agent [command]
 &nbsp;
-Available Commands:
+VIEW
+  jobs        Show jobs an agent can run
+  list        List build agents
+  view        View agent details
+&nbsp;
+STATE
   authorize   Authorize an agent
   deauthorize Deauthorize an agent
   disable     Disable an agent
   enable      Enable an agent
-  exec        Execute command on agent
-  jobs        Show jobs an agent can run
-  list        List build agents
   move        Move an agent to a different pool
   reboot      Reboot an agent
+&nbsp;
+SHELL
+  exec        Execute command on agent
   term        Open interactive terminal to agent
-  view        View agent details
 &nbsp;
 Flags:
   -h, --help   help for agent
@@ -4030,6 +4069,12 @@ Use &quot;teamcity agent [command] --help&quot; for more information about a com
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity queue --help</span></div>
                 <pre class="term-body">List and manage the TeamCity build queue.
+&nbsp;
+The queue holds runs that are waiting for a compatible agent. Use
+these commands to inspect pending runs, reorder them, approve guarded
+runs, or remove entries.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;build-queue.html
 &nbsp;
 Usage:
   teamcity queue [flags]
@@ -4072,6 +4117,12 @@ Use &quot;teamcity queue [command] --help&quot; for more information about a com
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity pool --help</span></div>
                 <pre class="term-body">List agent pools and manage project assignments.
 &nbsp;
+Agent pools group build agents and bind them to specific projects,
+so a project&#39;s builds only run on approved agents. Use these commands
+to inspect pools and link or unlink projects.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-agent-pools.html
+&nbsp;
 Usage:
   teamcity pool [flags]
   teamcity pool [command]
@@ -4111,7 +4162,14 @@ Use &quot;teamcity pool [command] --help&quot; for more information about a comm
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project --help</span></div>
-                <pre class="term-body">List and view TeamCity projects.
+                <pre class="term-body">List, view, and manage TeamCity projects.
+&nbsp;
+A project groups related jobs, pipelines, VCS roots, parameters, and
+cloud profiles. Use these commands to navigate the project hierarchy
+and manage project-scoped resources (VCS roots, SSH keys, secure
+tokens, versioned settings, cloud integrations, and connections).
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;creating-and-editing-projects.html
 &nbsp;
 Usage:
   teamcity project [flags]
@@ -4120,6 +4178,7 @@ Usage:
 Available Commands:
   cloud       Manage cloud profiles, images, and instances
   connection  Manage project connections
+  create      Create a project
   list        List projects
   param       Manage project parameters
   settings    Manage versioned settings
@@ -4159,6 +4218,12 @@ Use &quot;teamcity project [command] --help&quot; for more information about a c
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity pipeline --help</span></div>
                 <pre class="term-body">List, view, validate, and manage TeamCity pipelines.
+&nbsp;
+Pipelines are YAML-defined workflows that orchestrate one or more jobs
+end-to-end. Use these commands to validate pipeline YAML against the
+server schema, push changes, and pull the current definition.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;create-and-edit-pipelines.html
 &nbsp;
 Usage:
   teamcity pipeline [flags]
@@ -4202,7 +4267,13 @@ Use &quot;teamcity pipeline [command] --help&quot; for more information about a 
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity auth --help</span></div>
-                <pre class="term-body">Manage authentication state for TeamCity servers.
+                <pre class="term-body">Log in, log out, and inspect authentication state for TeamCity servers.
+&nbsp;
+Credentials are stored in the system keyring by default and can be
+overridden via TEAMCITY_URL and TEAMCITY_TOKEN environment variables
+for CI&#47;CD usage.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;managing-your-user-account.html#Managing+Access+Tokens
 &nbsp;
 Usage:
   teamcity auth [flags]
@@ -4244,6 +4315,11 @@ Use &quot;teamcity auth [command] --help&quot; for more information about a comm
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity config --help</span></div>
                 <pre class="term-body">Get, set, and list CLI configuration values.
 &nbsp;
+Configuration is stored in ~&#47;.teamcity&#47;config.toml and covers the
+default server, per-server flags (guest, read-only), and aliases.
+Environment variables (TEAMCITY_URL, TEAMCITY_TOKEN, ...) override
+the persisted values at runtime.
+&nbsp;
 Usage:
   teamcity config [flags]
   teamcity config [command]
@@ -4284,6 +4360,10 @@ Use &quot;teamcity config [command] --help&quot; for more information about a co
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity alias --help</span></div>
                 <pre class="term-body">Create, list, and delete command shortcuts.
 &nbsp;
+Aliases expand to full teamcity commands, so you can type &#39;tc rl&#39;
+instead of &#39;tc run list&#39;. Aliases support positional placeholders
+($1, $2, ...) and shell-style expansions via the --shell flag.
+&nbsp;
 Usage:
   teamcity alias [flags]
   teamcity alias [command]
@@ -4322,7 +4402,11 @@ Use &quot;teamcity alias [command] --help&quot; for more information about a com
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill --help</span></div>
-                <pre class="term-body">Install, update, or remove TeamCity skills for AI coding agents (Claude Code, Cursor, etc.).
+                <pre class="term-body">Install, update, or remove TeamCity skills for AI coding agents.
+&nbsp;
+Skills teach AI coding agents (Claude Code, Cursor, and others) how
+to drive the teamcity CLI effectively. Skills can be installed
+globally for the current user or locally into a project.
 &nbsp;
 Usage:
   teamcity skill [flags]
@@ -4410,6 +4494,12 @@ Use &quot;teamcity project settings [command] --help&quot; for more information 
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project vcs --help</span></div>
                 <pre class="term-body">List, view, create, test, and delete VCS roots in a project.
 &nbsp;
+A VCS root defines how TeamCity connects to a version control
+repository (Git, Mercurial, Perforce, SVN, ...) so that jobs can
+check out sources and react to changes.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;vcs-root.html
+&nbsp;
 Usage:
   teamcity project vcs [flags]
   teamcity project vcs [command]
@@ -4452,6 +4542,12 @@ Use &quot;teamcity project vcs [command] --help&quot; for more information about
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project ssh --help</span></div>
                 <pre class="term-body">List, upload, generate, and delete SSH keys in a project.
 &nbsp;
+SSH keys uploaded to a project can be used by VCS roots and build
+steps to authenticate with remote services without exposing private
+keys in configuration or source control.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;ssh-keys-management.html
+&nbsp;
 Usage:
   teamcity project ssh [flags]
   teamcity project ssh [command]
@@ -4493,6 +4589,12 @@ Use &quot;teamcity project ssh [command] --help&quot; for more information about
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project connection --help</span></div>
                 <pre class="term-body">List OAuth and other connections configured in a project.
 &nbsp;
+Connections let TeamCity talk to external services (GitHub, GitLab,
+Bitbucket, Slack, Jira, Docker registries, ...) without storing
+credentials in individual jobs.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-connections.html
+&nbsp;
 Usage:
   teamcity project connection [flags]
   teamcity project connection [command]
@@ -4530,6 +4632,12 @@ Use &quot;teamcity project connection [command] --help&quot; for more informatio
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project cloud --help</span></div>
                 <pre class="term-body">List and manage cloud profiles, images, and instances for a project.
+&nbsp;
+A cloud profile binds a project to a cloud provider (AWS, GCP, Azure,
+Kubernetes, ...) and defines one or more images that TeamCity uses to
+start ephemeral build agents on demand.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;agent-cloud-profile.html
 &nbsp;
 Usage:
   teamcity project cloud [flags]
@@ -4735,6 +4843,12 @@ Use &quot;teamcity project token [command] --help&quot; for more information abo
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project param --help</span></div>
                 <pre class="term-body">List, get, set, and delete project parameters.
 &nbsp;
+Parameters are typed key-value pairs attached to a project. They drive
+build behavior, can reference other parameters, and may be marked
+as password (secure) so their values never appear in logs.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-parameters.html
+&nbsp;
 Usage:
   teamcity project param [flags]
   teamcity project param [command]
@@ -4776,6 +4890,12 @@ Use &quot;teamcity project param [command] --help&quot; for more information abo
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job param --help</span></div>
                 <pre class="term-body">List, get, set, and delete job parameters.
 &nbsp;
+Parameters are typed key-value pairs attached to a job. They drive
+build behavior, can reference other parameters, and may be marked
+as password (secure) so their values never appear in logs.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-parameters.html
+&nbsp;
 Usage:
   teamcity job param [flags]
   teamcity job param [command]
@@ -4808,7 +4928,7 @@ Use &quot;teamcity job param [command] --help&quot; for more information about a
 
     <footer class="foot">
       <div>teamcity cli · screen gallery</div>
-      <div>134 screens · 2026-04-20 21:12</div>
+      <div>134 screens · 2026-04-21 10:43</div>
     </footer>
     <div class="attrib">
 			<span class="jb-wordmark">JetBrains</span>
