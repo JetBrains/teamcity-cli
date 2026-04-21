@@ -8,26 +8,22 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 )
 
-// isTerminalFn is the function used to detect whether stdout is a terminal.
-// Tests can override this to simulate terminal mode.
-var isTerminalFn = func() bool { return isatty.IsTerminal(os.Stdout.Fd()) }
+// isTerminalFn returns whether stdout is a terminal; tests override to force modes.
+var isTerminalFn = func() bool { return term.IsTerminal(int(os.Stdout.Fd())) }
 
-// getTermSizeFn is the function used to get the terminal size.
-// Tests can override this to return controlled values.
+// getTermSizeFn returns the terminal size; tests override to return fixed values.
 var getTermSizeFn = func() (int, int, error) { return term.GetSize(int(os.Stdout.Fd())) }
 
-// IsTerminal returns true if stdout is a terminal
+// IsTerminal returns true if stdout is a terminal.
 func IsTerminal() bool {
 	return isTerminalFn()
 }
 
-// isStdinTerminalFn is the function used to detect whether stdin is a terminal.
-// Tests can override this to simulate interactive mode.
-var isStdinTerminalFn = func() bool { return isatty.IsTerminal(os.Stdin.Fd()) }
+// isStdinTerminalFn returns whether stdin is a terminal; tests override to force modes.
+var isStdinTerminalFn = func() bool { return term.IsTerminal(int(os.Stdin.Fd())) }
 
 // IsStdinTerminal returns true if stdin is a terminal
 func IsStdinTerminal() bool {
