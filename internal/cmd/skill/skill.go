@@ -16,9 +16,13 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "skill",
 		Short: "Manage AI coding agent skills",
-		Long:  "Install, update, or remove TeamCity skills for AI coding agents (Claude Code, Cursor, etc.).",
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `Install, update, or remove TeamCity skills for AI coding agents.
+
+Skills teach AI coding agents (Claude Code, Cursor, and others) how
+to drive the teamcity CLI effectively. Skills can be installed
+globally for the current user or locally into a project.`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newSkillListCmd(f))

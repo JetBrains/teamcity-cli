@@ -16,9 +16,15 @@ func newSSHCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ssh",
 		Short: "Manage SSH keys",
-		Long:  `List, upload, generate, and delete SSH keys in a project.`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `List, upload, generate, and delete SSH keys in a project.
+
+SSH keys uploaded to a project can be used by VCS roots and build
+steps to authenticate with remote services without exposing private
+keys in configuration or source control.
+
+See: https://www.jetbrains.com/help/teamcity/ssh-keys-management.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
 	cmd.AddCommand(newSSHListCmd(f))

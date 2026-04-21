@@ -14,8 +14,14 @@ import (
 
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:     "update",
-		Short:   "Check for CLI updates and show how to upgrade",
+		Use:   "update",
+		Short: "Check for CLI updates",
+		Long: `Check for CLI updates and show how to upgrade.
+
+Queries the releases feed for the latest TeamCity CLI
+version. When a newer release exists, prints the upgrade command
+matching the install method detected on this machine (Homebrew,
+Scoop, Winget, Chocolatey, or raw binary).`,
 		Args:    cobra.NoArgs,
 		Example: `  teamcity update`,
 		RunE: func(cmd *cobra.Command, args []string) error {

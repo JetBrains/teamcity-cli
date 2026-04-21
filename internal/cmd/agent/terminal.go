@@ -20,8 +20,12 @@ func newAgentTerminalCmd(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "term <agent>",
 		Short: "Open interactive terminal to agent",
-		Long:  `Open an interactive shell session to a TeamCity build agent.`,
-		Args:  cobra.ExactArgs(1),
+		Long: `Open an interactive shell session to a TeamCity build agent.
+
+Requires the agent to be connected, authorized, and enabled. The
+session runs over a WebSocket and exits when the remote shell exits
+or the connection drops.`,
+		Args: cobra.ExactArgs(1),
 		Example: `  teamcity agent term 1
   teamcity agent term Agent-Linux-01`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -40,8 +44,12 @@ func newAgentExecCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "exec <agent> <command>",
 		Short: "Execute command on agent",
-		Long:  `Execute a command on a TeamCity build agent and return the output.`,
-		Args:  cobra.MinimumNArgs(2),
+		Long: `Run a one-shot command on an agent and return its output.
+
+Use 'teamcity agent term' for an interactive shell. Commands longer
+than the default timeout (5m) need --timeout; use -- to separate
+agent-side commands from teamcity flags.`,
+		Args: cobra.MinimumNArgs(2),
 		Example: `  teamcity agent exec 1 "ls -la"
   teamcity agent exec Agent-Linux-01 "cat /etc/os-release"
   teamcity agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh`,

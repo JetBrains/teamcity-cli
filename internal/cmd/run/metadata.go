@@ -14,8 +14,12 @@ func newRunPinCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pin <id>",
 		Short: "Pin to prevent cleanup",
-		Long:  `Pin a run to prevent it from being automatically cleaned up by retention policies.`,
-		Args:  cobra.ExactArgs(1),
+		Long: `Pin a run to exclude it from cleanup by retention policies.
+
+Use --comment to record the reason (e.g. "release candidate"). A
+pinned run stays visible in the UI and can be unpinned with
+'teamcity run unpin'.`,
+		Args: cobra.ExactArgs(1),
 		Example: `  teamcity run pin 12345
   teamcity run pin 12345 --comment "Release candidate"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -39,9 +43,12 @@ func newRunPinCmd(f *cmdutil.Factory) *cobra.Command {
 
 func newRunUnpinCmd(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:     "unpin <id>",
-		Short:   "Unpin a run",
-		Long:    `Remove the pin from a run, allowing it to be cleaned up by retention policies.`,
+		Use:   "unpin <id>",
+		Short: "Unpin a run",
+		Long: `Remove the pin from a run, re-enabling cleanup by retention policies.
+
+The mirror of 'teamcity run pin'. A pinned run stays until it is
+unpinned; once unpinned, normal retention rules apply again.`,
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity run unpin 12345`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -62,8 +69,11 @@ func newRunTagCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tag <id> <tag>...",
 		Short: "Add tags",
-		Long:  `Add one or more tags for categorization and filtering.`,
-		Args:  cobra.MinimumNArgs(2),
+		Long: `Add one or more tags to a run.
+
+Tags are free-form labels for categorization and filtering. Use
+'teamcity run list --tag <tag>' to find runs by tag.`,
+		Args: cobra.MinimumNArgs(2),
 		Example: `  teamcity run tag 12345 release
   teamcity run tag 12345 release v1.0 production`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -104,7 +114,6 @@ func newRunUntagCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "untag <id> <tag>...",
 		Short: "Remove tags",
-		Long:  `Remove one or more tags.`,
 		Args:  cobra.MinimumNArgs(2),
 		Example: `  teamcity run untag 12345 release
   teamcity run untag 12345 release v1.0`,

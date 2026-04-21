@@ -23,7 +23,6 @@ func newRunChangesCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "changes <id>",
 		Short: "Show VCS changes",
-		Long:  `Show the VCS changes (commits) included in a run.`,
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run changes 12345
   teamcity run changes 12345 --no-files

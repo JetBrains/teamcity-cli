@@ -21,8 +21,12 @@ func newJobListCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &jobListOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "list",
-		Short:   "List jobs",
+		Use:   "list",
+		Short: "List jobs",
+		Long: `List jobs across all projects or in a specific project.
+
+Jobs backed by pipelines are hidden by default; pass --all to include
+them alongside classic build configurations.`,
 		Aliases: []string{"ls"},
 		Example: `  teamcity job list
   teamcity job list --project Falcon

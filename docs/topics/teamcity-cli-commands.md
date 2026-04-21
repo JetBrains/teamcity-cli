@@ -1357,7 +1357,7 @@ Description
 </td>
 <td>
 
-Check for CLI updates and show how to upgrade
+Check for CLI updates
 
 </td>
 </tr>

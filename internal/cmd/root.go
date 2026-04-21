@@ -63,6 +63,13 @@ Report issues:  https://jb.gg/tc/issues`,
 	cmd.SetVersionTemplate("teamcity version {{.Version}}\n")
 	cmd.SuggestionsMinimumDistance = 2
 
+	cmd.AddGroup(
+		&cobra.Group{ID: "core", Title: "CORE COMMANDS"},
+		&cobra.Group{ID: "infra", Title: "INFRASTRUCTURE"},
+		&cobra.Group{ID: "config", Title: "CONFIGURATION"},
+		&cobra.Group{ID: "misc", Title: "ADDITIONAL COMMANDS"},
+	)
+
 	cmd.PersistentFlags().BoolVar(&f.NoColor, "no-color", false, "Disable colored output")
 	cmd.PersistentFlags().BoolVarP(&f.Quiet, "quiet", "q", false, "Suppress non-essential output")
 	cmd.PersistentFlags().BoolVarP(&f.Verbose, "verbose", "V", false, "Show detailed output including debug info")
@@ -83,19 +90,19 @@ Report issues:  https://jb.gg/tc/issues`,
 		}
 	}
 
-	cmd.AddCommand(auth.NewCmd(f))
-	cmd.AddCommand(project.NewCmd(f))
-	cmd.AddCommand(job.NewCmd(f))
-	cmd.AddCommand(run.NewCmd(f))
-	cmd.AddCommand(queue.NewCmd(f))
-	cmd.AddCommand(agent.NewCmd(f))
-	cmd.AddCommand(pool.NewCmd(f))
-	cmd.AddCommand(pipeline.NewCmd(f))
-	cmd.AddCommand(apicmd.NewCmd(f))
-	cmd.AddCommand(skill.NewCmd(f))
-	cmd.AddCommand(configcmd.NewCmd(f))
-	cmd.AddCommand(alias.NewCmd(f))
-	cmd.AddCommand(updatecmd.NewCmd(f))
+	addGrouped(cmd, "core", run.NewCmd(f), job.NewCmd(f), project.NewCmd(f), pipeline.NewCmd(f))
+	addGrouped(cmd, "infra", queue.NewCmd(f), agent.NewCmd(f), pool.NewCmd(f))
+	addGrouped(cmd, "config",
+		auth.NewCmd(f),
+		configcmd.NewCmd(f),
+		alias.NewCmd(f),
+		apicmd.NewCmd(f),
+		skill.NewCmd(f),
+		updatecmd.NewCmd(f),
+	)
+
+	cmd.SetHelpCommandGroupID("misc")
+	cmd.SetCompletionCommandGroupID("misc")
 
 	return cmd
 }
@@ -152,6 +159,14 @@ func tryAutoReauth(f *cmdutil.Factory) {
 func isCategory(err error, cat api.Category) bool {
 	var ue api.UserError
 	return errors.As(err, &ue) && ue.Category() == cat
+}
+
+// addGrouped registers subcommands under a shared group ID on the parent command.
+func addGrouped(parent *cobra.Command, groupID string, cmds ...*cobra.Command) {
+	for _, c := range cmds {
+		c.GroupID = groupID
+		parent.AddCommand(c)
+	}
 }
 
 // RegisterAliases forwards to alias.RegisterAliases.

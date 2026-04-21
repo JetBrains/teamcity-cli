@@ -19,8 +19,12 @@ func newRunCancelCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cancel <id>",
 		Short: "Cancel a run",
-		Long:  `Cancel a running or queued run.`,
-		Args:  cobra.ExactArgs(1),
+		Long: `Cancel a running or queued run.
+
+Prompts for confirmation when run interactively without --yes or
+--comment. The cancellation comment is stored on the run and shown
+in the TeamCity UI.`,
+		Args: cobra.ExactArgs(1),
 		Example: `  teamcity run cancel 12345
   teamcity run cancel 12345 --comment "Canceling for hotfix"
   teamcity run cancel 12345 --yes`,

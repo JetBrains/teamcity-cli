@@ -14,22 +14,47 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Short: "Manage build agents",
-		Long:  `List, view, and manage TeamCity build agents.`,
-		Args:  cobra.NoArgs,
-		RunE:  cmdutil.SubcommandRequired,
+		Long: `List, view, and manage TeamCity build agents.
+
+Build agents run the jobs assigned by the TeamCity server. Use these
+commands to inspect agent state, toggle availability, and open a shell
+to a running agent.
+
+See: https://www.jetbrains.com/help/teamcity/build-agent.html`,
+		Args: cobra.NoArgs,
+		RunE: cmdutil.SubcommandRequired,
 	}
 
-	cmd.AddCommand(newAgentListCmd(f))
-	cmd.AddCommand(newAgentViewCmd(f))
-	cmd.AddCommand(newAgentJobsCmd(f))
-	cmd.AddCommand(newAgentMoveCmd(f))
-	cmd.AddCommand(newAgentActionCmd(f, agentActions["enable"]))
-	cmd.AddCommand(newAgentActionCmd(f, agentActions["disable"]))
-	cmd.AddCommand(newAgentActionCmd(f, agentActions["authorize"]))
-	cmd.AddCommand(newAgentActionCmd(f, agentActions["deauthorize"]))
-	cmd.AddCommand(newAgentTerminalCmd(f))
-	cmd.AddCommand(newAgentExecCmd(f))
-	cmd.AddCommand(newAgentRebootCmd(f))
+	cmd.AddGroup(
+		&cobra.Group{ID: "view", Title: "VIEW"},
+		&cobra.Group{ID: "state", Title: "STATE"},
+		&cobra.Group{ID: "shell", Title: "SHELL"},
+	)
+
+	addInGroup := func(groupID string, cmds ...*cobra.Command) {
+		for _, c := range cmds {
+			c.GroupID = groupID
+			cmd.AddCommand(c)
+		}
+	}
+
+	addInGroup("view",
+		newAgentListCmd(f),
+		newAgentViewCmd(f),
+		newAgentJobsCmd(f),
+	)
+	addInGroup("state",
+		newAgentActionCmd(f, agentActions["enable"]),
+		newAgentActionCmd(f, agentActions["disable"]),
+		newAgentActionCmd(f, agentActions["authorize"]),
+		newAgentActionCmd(f, agentActions["deauthorize"]),
+		newAgentMoveCmd(f),
+		newAgentRebootCmd(f),
+	)
+	addInGroup("shell",
+		newAgentTerminalCmd(f),
+		newAgentExecCmd(f),
+	)
 
 	return cmd
 }

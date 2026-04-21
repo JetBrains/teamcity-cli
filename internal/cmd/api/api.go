@@ -50,7 +50,9 @@ are handled automatically.
 This command is useful for:
 - Accessing API features not yet supported by the CLI
 - Scripting and automation
-- Debugging and exploration`,
+- Debugging and exploration
+
+See: https://www.jetbrains.com/help/teamcity/rest/teamcity-rest-api-documentation.html`,
 		Args: cobra.ExactArgs(1),
 		Example: `  # Get server info
   teamcity api '/app/rest/server'

@@ -20,8 +20,12 @@ func newRunRestartCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "restart <id>",
 		Short: "Restart a run",
-		Long:  `Restart a run with the same configuration.`,
-		Args:  cobra.ExactArgs(1),
+		Long: `Re-queue a run with the same job, branch, revision, and parameters.
+
+The new run is a fresh build (new ID, new number) that reuses the
+source configuration from the original. Use --watch to stream the
+restarted run until it completes.`,
+		Args: cobra.ExactArgs(1),
 		Example: `  teamcity run restart 12345
   teamcity run restart 12345 --watch`,
 		RunE: func(cmd *cobra.Command, args []string) error {

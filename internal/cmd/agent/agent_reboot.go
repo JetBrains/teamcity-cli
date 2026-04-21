@@ -13,7 +13,6 @@ func newAgentMoveCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "move <agent> <pool-id>",
 		Short: "Move an agent to a different pool",
-		Long:  `Move an agent to a different agent pool.`,
 		Args:  cobra.ExactArgs(2),
 		Example: `  teamcity agent move 1 0
   teamcity agent move Agent-Linux-01 2`,

@@ -20,7 +20,6 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List queued runs",
-		Long:    `List all runs in the TeamCity queue.`,
 		Aliases: []string{"ls"},
 		Example: `  teamcity queue list
   teamcity queue list --job Falcon_Build
