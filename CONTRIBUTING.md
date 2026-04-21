@@ -147,7 +147,7 @@ All new features and bug fixes must include tests. We have a solid integration t
 - **Test env vars**: `t.Setenv(k, v)` only; use `t.Setenv(k, "")` to clear. Never `os.Unsetenv` — it doesn't restore.
 - **Test cwd**: small `chdir(t, dir)` helper using `t.Cleanup` to restore. Don't return defer functions.
 - **Test surface split**: unit tests cover internal helpers (parsers, cascades, etc.); acceptance scripts (`acceptance/testdata/<sub>/*.txtar`) cover the user-facing binary surface. Don't duplicate — if a `.txtar` asserts `--clear` removes a file, no parallel unit test for the same.
-- **Test isolation**: `cmdtest.NewTestServer` calls `Factory.SkipLinkLookup()` so unit tests don't pick up the host's `teamcity.toml`. Pattern this for any future per-cwd config you add.
+- **Test isolation**: `cmdtest.NewTestServer` sets `TEAMCITY_URL` and `TEAMCITY_TOKEN` via `t.Setenv` so unit tests don't pick up the host's `config.yml`. Pattern this for any future per-cwd config you add.
 
 ### JSON output contract
 
@@ -290,7 +290,7 @@ Follow these rules when adding flags:
 |-------------------------------|------------|---------------|
 | Limit number of results       | `--limit`  | `-n`          |
 | Filter by branch              | `--branch` | `-b`          |
-| Skip confirmation prompt      | `--force`  | `-f`          |
+| Skip confirmation prompt      | `--yes`    | `-y`          |
 | JSON output                   | `--json`   | —             |
 | Suppress non-essential output | `--quiet`  | `-q` (global) |
 
@@ -333,7 +333,9 @@ Command old-cmd is deprecated, use "new-cmd" instead (will be removed in v2.0)
 
 The command still runs — users are warned but not broken. Remove it in the target version.
 
-No flags or commands are deprecated today; these are the patterns for when the first deprecation is needed.
+Currently deprecated flags:
+- `--after-build` on `agent reboot` (use `--graceful`)
+- `--force` on `agent reboot`, `pipeline delete`, `project ssh delete`, `project vcs delete`, `queue remove`, `run cancel` (use `--yes`)
 
 ## Submit a pull request
 
