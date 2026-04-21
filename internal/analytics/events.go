@@ -53,6 +53,8 @@ const (
 	AuthSourceNone            = "none"
 )
 
+const AIAgentNone = "none"
+
 const (
 	AuthMethodToken = "token"
 	AuthMethodGuest = "guest"

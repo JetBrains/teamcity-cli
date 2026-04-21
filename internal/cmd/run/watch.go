@@ -124,7 +124,6 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (err er
 		})
 	}()
 
-
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
 	defer signal.Stop(sigCh)
@@ -298,13 +297,13 @@ func buildFinalStatus(s string) string {
 
 // watchExitStatus maps the TUI's return error to a final-status enum (TUI doesn't expose the build state).
 func watchExitStatus(err error) string {
-	var ee *cmdutil.ExitError
 	switch {
 	case err == nil:
 		return analytics.BuildStatusSuccess
 	case errors.Is(err, context.Canceled):
 		return analytics.BuildStatusCanceled
-	case errors.As(err, &ee):
+	}
+	if ee, ok := errors.AsType[*cmdutil.ExitError](err); ok {
 		switch ee.Code {
 		case cmdutil.ExitFailure:
 			return analytics.BuildStatusFailure

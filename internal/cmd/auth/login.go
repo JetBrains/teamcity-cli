@@ -356,8 +356,7 @@ func loginErrorType(err error) string {
 	if err == nil {
 		return analytics.ErrorNone
 	}
-	var ue api.UserError
-	if errors.As(err, &ue) {
+	if ue, ok := errors.AsType[api.UserError](err); ok {
 		switch ue.Category() {
 		case api.CatAuth:
 			return analytics.ErrorAuth

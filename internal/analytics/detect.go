@@ -44,7 +44,7 @@ func NormalizeArch(goarch string) string {
 func DetectAIAgent() string {
 	r := instill.DetectRuntime()
 	if r == nil {
-		return CINone
+		return AIAgentNone
 	}
 	return NormalizeAIAgent(r.Name)
 }
