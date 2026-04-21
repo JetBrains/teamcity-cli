@@ -340,12 +340,7 @@ func ConfigPath() string {
 	return configPath
 }
 
-// ResolvePager returns the pager command as the user would type it.
-// Precedence: TEAMCITY_PAGER, then PAGER, then empty (no pager).
-// Callers treat empty (or `cat`) as explicit disable. We intentionally
-// do NOT persist a pager choice to config.yml — env vars cover the
-// per-shell and machine-wide use cases, matching the kubectl / docker
-// model.
+// ResolvePager returns the pager command with precedence TEAMCITY_PAGER > PAGER > "" (callers treat "" / `cat` as disabled).
 func ResolvePager() string {
 	if v := os.Getenv(EnvPager); v != "" {
 		return v

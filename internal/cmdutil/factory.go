@@ -81,8 +81,7 @@ func (f *Factory) InitOutput() {
 	f.Printer.Quiet = f.Quiet
 	f.Printer.Verbose = f.Verbose
 
-	// Wire the pager resolver so the output package can pull the user's
-	// configured pager without importing config.
+	// Inject the pager resolver so output doesn't import config.
 	output.PagerResolver = config.ResolvePager
 }
 

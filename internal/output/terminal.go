@@ -52,29 +52,19 @@ func TerminalWidth() int {
 	return w
 }
 
-// defaultLongFormPager is the fallback pager for long-form content
-// (`run log`, `run diff`) when neither TEAMCITY_PAGER, the config `pager`
-// key, nor the PAGER env var is set. It matches gh's less defaults plus
-// `-R` for ANSI colors and `-X` to avoid clearing the screen on exit.
+// defaultLongFormPager is the built-in pager for `run log` / `run diff` when nothing is configured.
 const defaultLongFormPager = "less -FIRX --mouse --incsearch"
 
-// PagerResolver returns the pager command string (as the user would type it).
-// The main package wires this to config.ResolvePager so the output package
-// doesn't need to import config. An empty return value means paging is
-// disabled; callers decide whether to fall back to a default pager.
+// PagerResolver returns the pager command string; wired by the main package so output doesn't import config.
 var PagerResolver = func() string { return "" }
 
 // PagerOpts tunes pager invocation.
 type PagerOpts struct {
-	// ChopLongLines asks the pager not to wrap lines. Used for wide tables
-	// where wrapping breaks column alignment. Only applied when the resolved
-	// pager is `less` (or unspecified, i.e. the default less fallback).
+	// ChopLongLines injects `-S` when the resolved pager is `less`, keeping wide tables aligned.
 	ChopLongLines bool
 }
 
-// WithPager pipes long-form output through the resolved pager, defaulting to
-// less when nothing is configured. Used by `run log` and `run diff`, which
-// auto-page regardless of user config.
+// WithPager pipes long-form output (logs, diffs) through the resolved pager, defaulting to less.
 func WithPager(out io.Writer, fn func(w io.Writer)) {
 	cmd := PagerResolver()
 	if cmd == "" {
@@ -83,10 +73,7 @@ func WithPager(out io.Writer, fn func(w io.Writer)) {
 	WithPagerUsing(cmd, PagerOpts{}, out, fn)
 }
 
-// WithPagerUsing pipes output through the given pager command. An empty
-// pagerCmd (or one that resolves to `cat`) writes directly to out. When the
-// content is short enough to fit on screen, it also writes directly — no
-// reason to invoke a pager for a few lines.
+// WithPagerUsing pipes output through pagerCmd; empty, `cat`, short content, or a non-terminal writes directly.
 func WithPagerUsing(pagerCmd string, opts PagerOpts, out io.Writer, fn func(w io.Writer)) {
 	if isPagingDisabled(pagerCmd) || !IsTerminal() {
 		fn(out)
@@ -114,8 +101,7 @@ func WithPagerUsing(pagerCmd string, opts PagerOpts, out io.Writer, fn func(w io
 		_, _ = out.Write(buf.Bytes())
 		return
 	}
-	// Stdout/Stderr must be the real terminal fds; using out here breaks
-	// pager rendering when out is a buffer.
+	// Stdout/Stderr must be real terminal fds; using out here breaks pager rendering when out is a buffer.
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -124,25 +110,16 @@ func WithPagerUsing(pagerCmd string, opts PagerOpts, out io.Writer, fn func(w io
 		return
 	}
 
-	// Copy the buffer into the pager's stdin. Ignore the io.Copy error
-	// because an early quit closes the pipe and we'd see EPIPE; the exit
-	// status from Wait is the authoritative signal.
+	// Ignore copy errors: an early pager quit closes the pipe (EPIPE); Wait's exit code is authoritative.
 	_, _ = io.Copy(stdin, bytes.NewReader(buf.Bytes()))
 	_ = stdin.Close()
-	// A non-zero pager exit almost always means a misconfiguration (bad
-	// flag, missing command in the pager's argv, etc.) — `less` / `more`
-	// / `bat` all exit 0 on `q`, so a normal user quit doesn't land here.
-	// Fall back to a direct write so the user doesn't get a blank
-	// terminal. The edge case where a user Ctrl+C's the pager after
-	// partial read will double-display, which is annoying but strictly
-	// better than silently dropping their output.
+	// Non-zero exit → misconfigured pager (bad flag, missing argv); fall back so the user isn't left with a blank terminal. `q` exits 0 on less/more/bat, so normal quits don't land here.
 	if err := cmd.Wait(); err != nil {
 		_, _ = out.Write(buf.Bytes())
 	}
 }
 
-// isPagingDisabled returns true when the resolved pager should be treated
-// as a no-op: empty, or `cat` (a common way to disable paging via PAGER=cat).
+// isPagingDisabled treats empty and `cat` (PAGER=cat is a common explicit disable) as no-ops.
 func isPagingDisabled(pagerCmd string) bool {
 	pagerCmd = strings.TrimSpace(pagerCmd)
 	if pagerCmd == "" {
@@ -159,9 +136,7 @@ func isPagingDisabled(pagerCmd string) bool {
 	return base == "cat"
 }
 
-// buildPagerCmd turns a user-facing pager string like `less -R` into an
-// *exec.Cmd. When the resolved pager's basename is `less` and ChopLongLines
-// is requested, `-S` is added if the user didn't already specify it.
+// buildPagerCmd parses `less -R`-style pager strings into *exec.Cmd and injects -S for less+ChopLongLines.
 func buildPagerCmd(pagerCmd string, opts PagerOpts) (*exec.Cmd, error) {
 	parts := strings.Fields(pagerCmd)
 	if len(parts) == 0 {
@@ -190,9 +165,7 @@ func isLessBinary(cmd string) bool {
 	return base == "less"
 }
 
-// hasLessChopFlag reports whether the user already passed -S (or --chop-long-lines)
-// to less. Matches `-S` alone, combined short flags like `-FIRSX`, and the long
-// form `--chop-long-lines`.
+// hasLessChopFlag matches -S alone, combined short flags like -FIRSX, and --chop-long-lines.
 func hasLessChopFlag(args []string) bool {
 	for _, a := range args {
 		if a == "--chop-long-lines" {

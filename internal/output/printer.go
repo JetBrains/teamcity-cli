@@ -92,8 +92,7 @@ func (p *Printer) PrintTable(headers []string, rows [][]string) {
 	p.PrintTableTo(p.Out, headers, rows)
 }
 
-// PrintTableTo is like PrintTable but writes to w instead of p.Out. Used
-// when wrapping output in WithPagerUsing, whose closure exposes a writer.
+// PrintTableTo is like PrintTable but writes to w, so callers can route through WithPagerUsing.
 func (p *Printer) PrintTableTo(w io.Writer, headers []string, rows [][]string) {
 	_, _ = fmt.Fprintln(w, renderTable(headers, rows))
 }

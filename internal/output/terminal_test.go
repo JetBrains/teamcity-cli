@@ -35,8 +35,7 @@ func overridePagerResolver(t *testing.T, pager string) {
 	t.Cleanup(func() { PagerResolver = old })
 }
 
-// captureStdout replaces os.Stdout with a pipe for the duration of fn and returns what was written.
-// Reading happens concurrently to prevent deadlock when output exceeds the OS pipe buffer.
+// captureStdout redirects os.Stdout through a pipe for fn and returns what was written (concurrent read to avoid pipe-buffer deadlock).
 func captureStdout(t *testing.T, fn func()) string {
 	t.Helper()
 	oldStdout := os.Stdout
@@ -171,10 +170,7 @@ func TestWithPagerUsingFallbackShortContent(T *testing.T) {
 	assert.Contains(T, buf.String(), "short content")
 }
 
-// TestWithPagerUsingEarlyExitPager covers the gh-style fix: a pager that
-// reads only part of its stdin and exits 0 (e.g. less with `q` before
-// consuming everything) must NOT cause the full buffer to be re-dumped
-// to stdout after paging finishes.
+// TestWithPagerUsingEarlyExitPager: pager reads some stdin then exits 0 (user pressed `q`) — must not re-dump to stdout.
 func TestWithPagerUsingEarlyExitPager(T *testing.T) {
 	overrideTerminal(T, true, 80, 5, nil)
 
@@ -199,10 +195,7 @@ func TestWithPagerUsingEarlyExitPager(T *testing.T) {
 	assert.Empty(T, fallback.String(), "fallback buffer must not be written to when pager exits 0 after partial read")
 }
 
-// TestWithPagerUsingNonZeroExitFallsBack covers a misconfigured pager:
-// the binary exists and Start() succeeds, but the pager exits non-zero
-// before displaying anything (bad flag, unsupported option, etc.). We
-// must re-dump the buffer so the user doesn't see a blank terminal.
+// TestWithPagerUsingNonZeroExitFallsBack: misconfigured pager Starts then exits non-zero — buffer must land on out.
 func TestWithPagerUsingNonZeroExitFallsBack(T *testing.T) {
 	overrideTerminal(T, true, 80, 5, nil)
 
@@ -217,20 +210,15 @@ func TestWithPagerUsingNonZeroExitFallsBack(T *testing.T) {
 	content := strings.Join(lines, "\n") + "\n"
 
 	var buf bytes.Buffer
-	// `sh -c 'exit 1'` starts cleanly then exits non-zero without reading
-	// stdin — mimics a misconfigured pager.
+	// `sh -c exit_1` — sh can't find `exit_1`, exits 127 (non-zero), mimicking a misconfigured pager.
 	WithPagerUsing("sh -c exit_1", PagerOpts{}, &buf, func(w io.Writer) {
 		fmt.Fprint(w, content)
 	})
-	// buildPagerCmd's Fields split gives us `sh -c exit_1`, where `exit_1`
-	// is an unknown command to sh → sh exits 127. Either way the exit is
-	// non-zero and the fallback must fire.
 	assert.Contains(T, buf.String(), "line 0")
 	assert.Contains(T, buf.String(), "line 19")
 }
 
-// TestWithPagerUsingStartFailureFallsBack: if the pager binary can't be
-// located, fall back to a direct write.
+// TestWithPagerUsingStartFailureFallsBack: unknown binary → LookPath fails → fall back to direct write.
 func TestWithPagerUsingStartFailureFallsBack(T *testing.T) {
 	overrideTerminal(T, true, 80, 5, nil)
 
@@ -263,9 +251,7 @@ func TestWithPagerEmptyResolverUsesDefault(T *testing.T) {
 	overrideTerminal(T, false, 120, 40, nil)
 	overridePagerResolver(T, "")
 
-	// Non-terminal makes WithPagerUsing skip paging and write directly; this
-	// still exercises the default-pager fallback path in WithPager without
-	// actually invoking a pager process.
+	// Non-terminal short-circuits before exec, so we exercise the default-pager fallback path without spawning less.
 	var buf bytes.Buffer
 	WithPager(&buf, func(w io.Writer) {
 		fmt.Fprintln(w, "log body")
