@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/JetBrains/teamcity-cli/internal/atomicfile"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -296,31 +297,7 @@ func writeConfig() error {
 	if err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
-	return writeFileAtomic0600(configPath, data)
-}
-
-// writeFileAtomic0600 writes data via a 0600 sibling temp file + rename, so a token-bearing config is never exposed at 0644 and concurrent writers can't interleave. If path is a symlink, writes go to the resolved target so dotfile-managed setups don't lose their link on first write.
-func writeFileAtomic0600(path string, data []byte) error {
-	path = resolveSymlink(path)
-	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-	tmpPath := tmp.Name()
-	cleanup := func() { _ = os.Remove(tmpPath) }
-
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		cleanup()
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		cleanup()
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		cleanup()
+	if err := atomicfile.Write(resolveSymlink(configPath), data); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	return nil
