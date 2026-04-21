@@ -7,6 +7,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -96,31 +97,36 @@ func collectAuthStatuses(f *cmdutil.Factory) []authStatus {
 
 	cfg := config.Get()
 	urls := sortedServerURLs(cfg)
-	var results []authStatus
-	for _, serverURL := range urls {
+	results := make([]authStatus, len(urls))
+	var wg sync.WaitGroup
+	for i, serverURL := range urls {
 		sc := cfg.Servers[serverURL]
 		isDefault := len(urls) > 1 && serverURL == cfg.DefaultServer
-
-		if sc.Guest {
-			results = append(results, collectGuestStatus(f, serverURL, isDefault))
-			continue
-		}
-
-		token, src, krErr := config.GetTokenForServer(serverURL)
-		if token != "" {
-			results = append(results, collectTokenStatus(f, serverURL, token, src, isDefault))
-		} else {
-			results = append(results, authStatus{
-				Server:     serverURL,
-				Status:     "error",
-				Error:      "token missing or could not be retrieved",
-				IsDefault:  isDefault,
-				keyringErr: krErr,
-				configUser: sc.User,
-			})
-		}
+		wg.Go(func() {
+			results[i] = collectServerStatus(f, serverURL, sc, isDefault)
+		})
 	}
+	wg.Wait()
 	return results
+}
+
+// collectServerStatus fetches the status for a single configured server (guest, token, or missing).
+func collectServerStatus(f *cmdutil.Factory, serverURL string, sc config.ServerConfig, isDefault bool) authStatus {
+	if sc.Guest {
+		return collectGuestStatus(f, serverURL, isDefault)
+	}
+	token, src, krErr := config.GetTokenForServer(serverURL)
+	if token != "" {
+		return collectTokenStatus(f, serverURL, token, src, isDefault)
+	}
+	return authStatus{
+		Server:     serverURL,
+		Status:     "error",
+		Error:      "token missing or could not be retrieved",
+		IsDefault:  isDefault,
+		keyringErr: krErr,
+		configUser: sc.User,
+	}
 }
 
 func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) authStatus {

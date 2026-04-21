@@ -2,9 +2,11 @@ package auth_test
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
@@ -256,6 +258,45 @@ func TestAuthStatusMultipleServers(T *testing.T) {
 	cfg.Servers[ts.URL+"/other"] = config.ServerConfig{Token: "token-2", User: "admin"}
 
 	cmdtest.RunCmd(T, "auth", "status")
+}
+
+// TestAuthStatusParallelFanOut regresses F18/S1: 3 servers × 2 × 200ms sequential would take ~1200ms; parallel ~400ms.
+func TestAuthStatusParallelFanOut(T *testing.T) {
+	const delay = 200 * time.Millisecond
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(delay)
+		switch r.URL.Path {
+		case "/app/rest/users/current":
+			cmdtest.JSON(w, api.User{ID: 1, Username: "admin", Name: "Administrator"})
+		case "/app/rest/server":
+			cmdtest.JSON(w, api.Server{VersionMajor: 2025, VersionMinor: 7, BuildNumber: "197398"})
+		default:
+			http.NotFound(w, r)
+		}
+	})
+
+	var srvs []*httptest.Server
+	for range 3 {
+		s := httptest.NewServer(handler)
+		T.Cleanup(s.Close)
+		srvs = append(srvs, s)
+	}
+
+	ts := cmdtest.NewTestServer(T)
+	setupConfigAuthStatus(T, ts)
+
+	cfg := config.Get()
+	cfg.DefaultServer = srvs[0].URL
+	for i, s := range srvs {
+		cfg.Servers[s.URL] = config.ServerConfig{Token: "t" + string(rune('A'+i))}
+	}
+
+	start := time.Now()
+	cmdtest.RunCmdWithFactory(T, ts.Factory, "auth", "status")
+	elapsed := time.Since(start)
+
+	assert.Less(T, elapsed, 900*time.Millisecond,
+		"parallel fan-out: 3 servers × 2 × 200ms calls each should complete in ~400ms, sequential would take ~1200ms")
 }
 
 func TestAuthStatusWithDSLHint(T *testing.T) {
