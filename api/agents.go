@@ -148,7 +148,7 @@ func (c *Client) GetBuildCompatibleAgents(buildID int) (*AgentList, error) {
 	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(buildAgentsFields))
 
 	var result AgentList
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -160,7 +160,7 @@ func (c *Client) GetBuildIncompatibleAgents(buildID int) (*AgentList, error) {
 	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(buildAgentsFields))
 
 	var result AgentList
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -177,7 +177,7 @@ func (c *Client) GetAgentBuildTypeCompatibility(agentID int, buildTypeID string,
 		agentID, url.QueryEscape(locator), url.QueryEscape(fields))
 
 	var result CompatibilityList
-	if err := c.get(path, &result); err != nil {
+	if err := c.get(context.Background(), path, &result); err != nil {
 		return nil, err
 	}
 	for i := range result.Compatibility {
