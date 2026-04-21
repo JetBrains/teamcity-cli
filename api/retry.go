@@ -57,7 +57,7 @@ func withRetry(ctx context.Context, cfg RetryConfig, op func() (*http.Response, 
 			return resp, &backoff.RetryAfterError{Duration: d}
 		}
 		return resp, fmt.Errorf("server returned %d", resp.StatusCode)
-	}, backoff.WithBackOff(expo), backoff.WithMaxTries(cfg.MaxRetries+1))
+	}, backoff.WithBackOff(expo), backoff.WithMaxTries(cfg.MaxRetries+1), backoff.WithMaxElapsedTime(0))
 }
 
 // isRetryableNetworkError reports whether err is a transient network issue (not ctx cancellation).

@@ -164,6 +164,8 @@ func TestParseRelativeDuration(T *testing.T) {
 		{"3d", 3 * 24 * time.Hour},
 		{"24h", 24 * time.Hour},
 		{"1w2d3h", (9*24 + 3) * time.Hour},
+		{"1.5h", 90 * time.Minute},
+		{"1.5d", 36 * time.Hour},
 	}
 	for _, c := range cases {
 		got, err := parseRelativeDuration(c.in)
