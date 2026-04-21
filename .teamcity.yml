@@ -163,14 +163,14 @@ jobs:
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
   test_terminal_pty:
-    name: Test Terminal (pty)
+    name: Test Terminal PTY
     runs-on: Ubuntu-24.04-Large
     parameters:
       env.GOROOT: /usr/lib/go-1.26
       env.PATH: /usr/lib/go-1.26/bin:%env.GOBIN%:%env.PATH%
     steps:
       - type: script
-        name: Terminal pty tests
+        name: Terminal PTY tests
         script-content: |-
           set -eu
 
