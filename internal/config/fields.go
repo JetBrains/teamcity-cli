@@ -1,8 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -33,9 +35,9 @@ func GetField(key, serverURL string) (string, error) {
 	}
 	switch key {
 	case "guest":
-		return fmt.Sprintf("%t", sc.Guest), nil
+		return strconv.FormatBool(sc.Guest), nil
 	case "ro":
-		return fmt.Sprintf("%t", sc.RO), nil
+		return strconv.FormatBool(sc.RO), nil
 	case "token_expiry":
 		return sc.TokenExpiry, nil
 	}
@@ -48,7 +50,7 @@ func SetField(key, value, serverURL string) error {
 	}
 	if key == "default_server" {
 		if value == "" {
-			return fmt.Errorf("value cannot be empty")
+			return errors.New("value cannot be empty")
 		}
 		normalized := NormalizeURL(value)
 		if _, ok := cfg.Servers[normalized]; !ok {
@@ -91,7 +93,7 @@ func resolveServerForConfig(serverURL string) (string, error) {
 	}
 	c := Get()
 	if c.DefaultServer == "" {
-		return "", fmt.Errorf("no default server configured; use --server flag or run 'teamcity auth login'")
+		return "", errors.New("no default server configured; use --server flag or run 'teamcity auth login'")
 	}
 	return c.DefaultServer, nil
 }

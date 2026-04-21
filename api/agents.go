@@ -198,13 +198,13 @@ func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error
 	}
 
 	formData := url.Values{}
-	formData.Set("agent", fmt.Sprintf("%d", id))
+	formData.Set("agent", strconv.Itoa(id))
 	if afterBuild {
 		formData.Set("rebootAfterBuild", "true")
 	}
 
-	endpoint := fmt.Sprintf("%s/remoteAccess/reboot.html", c.BaseURL)
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(formData.Encode()))
+	endpoint := c.BaseURL + "/remoteAccess/reboot.html"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(formData.Encode()))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}

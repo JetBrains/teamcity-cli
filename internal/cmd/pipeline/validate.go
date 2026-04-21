@@ -108,7 +108,7 @@ func loadSchema(f *cmdutil.Factory, opts *validateOptions) ([]byte, error) {
 
 	c, ok := client.(*api.Client)
 	if !ok {
-		return nil, fmt.Errorf("schema caching requires a real API client")
+		return nil, errors.New("schema caching requires a real API client")
 	}
 
 	return fetchOrCacheSchema(c, opts.refreshSchema)

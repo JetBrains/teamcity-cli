@@ -96,7 +96,7 @@ func (e *NetworkError) Error() string {
 	if e.Cause != nil {
 		return fmt.Sprintf("cannot connect to %s: %v", e.URL, e.Cause)
 	}
-	return fmt.Sprintf("cannot connect to %s", e.URL)
+	return "cannot connect to " + e.URL
 }
 
 func (e *NetworkError) Unwrap() error    { return e.Cause }

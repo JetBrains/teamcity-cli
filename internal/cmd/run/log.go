@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -219,7 +220,7 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 			f.Printer.Info("Showing log for #%s (%s)", runID, runs.Builds[0].Number)
 		}
 	} else if runID == "" {
-		return fmt.Errorf("run ID required (or use --job to get latest run)")
+		return errors.New("run ID required (or use --job to get latest run)")
 	}
 
 	if opts.web {

@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -186,7 +187,7 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		}
 		runID = strconv.Itoa(runs.Builds[0].ID)
 	} else if runID == "" {
-		return fmt.Errorf("run ID required (or use --job to get latest run)")
+		return errors.New("run ID required (or use --job to get latest run)")
 	}
 
 	build, err := client.GetBuild(context.Background(), runID)

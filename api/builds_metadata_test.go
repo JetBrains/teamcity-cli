@@ -12,7 +12,7 @@ import (
 func TestPinBuild(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
+		if r.Method == http.MethodGet {
 			// ResolveBuildID calls GetBuilds
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1, Number: "1"}}})
@@ -30,7 +30,7 @@ func TestPinBuild(t *testing.T) {
 func TestUnpinBuild(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
+		if r.Method == http.MethodGet {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
 			return
@@ -47,7 +47,7 @@ func TestUnpinBuild(t *testing.T) {
 func TestAddBuildTags(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
+		if r.Method == http.MethodGet {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
 			return
@@ -64,7 +64,7 @@ func TestAddBuildTags(t *testing.T) {
 func TestSetBuildComment(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
+		if r.Method == http.MethodGet {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
 			return
@@ -81,7 +81,7 @@ func TestSetBuildComment(t *testing.T) {
 func TestDeleteBuildComment(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
+		if r.Method == http.MethodGet {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
 			return

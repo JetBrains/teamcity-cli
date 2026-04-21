@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"time"
 
@@ -130,7 +131,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 			return api.RequiredFlag("token")
 		}
 
-		tokenURL := fmt.Sprintf("%s/profile.html?item=accessTokens", serverURL)
+		tokenURL := serverURL + "/profile.html?item=accessTokens"
 
 		_, _ = fmt.Fprintln(p.Out)
 		if pkceChecked {
@@ -287,7 +288,7 @@ func runPkceLogin(p *output.Printer, serverURL string) (*api.TokenResponse, erro
 			return nil, fmt.Errorf("authorization denied: %s", result.Error)
 		}
 		if subtle.ConstantTimeCompare([]byte(result.State), []byte(state)) != 1 {
-			return nil, fmt.Errorf("state mismatch: possible CSRF attack")
+			return nil, errors.New("state mismatch: possible CSRF attack")
 		}
 		_, _ = fmt.Fprintln(p.Out)
 

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 )
@@ -57,7 +58,7 @@ func (c *Client) AddBuildTags(buildID string, tags []string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
 		return c.handleErrorResponse(resp)
 	}
 
@@ -191,7 +192,7 @@ func (c *Client) UploadDiffChanges(patch []byte, description string) (string, er
 		return "", err
 	}
 
-	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return "", errorFromBody(resp.StatusCode, resp.Body)
 	}
 

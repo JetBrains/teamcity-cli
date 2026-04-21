@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -505,7 +506,7 @@ func TestDownloadArtifactTo(T *testing.T) {
 		content := []byte("test artifact content 12345")
 		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 			assert.Contains(t, r.URL.Path, "/artifacts/content/")
-			w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
+			w.Header().Set("Content-Length", strconv.Itoa(len(content)))
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(content)
 		})

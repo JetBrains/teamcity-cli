@@ -218,7 +218,7 @@ func runLogDiff(f *cmdutil.Factory, client api.ClientInterface, id1, id2 string,
 
 	output.WithPager(p.Out, func(w io.Writer) {
 		hasDiff, err := output.UnifiedDiff(w, lines1, lines2,
-			fmt.Sprintf("Run #%s", b1.Number), fmt.Sprintf("Run #%s", b2.Number), contextLines)
+			"Run #"+b1.Number, "Run #"+b2.Number, contextLines)
 		if err != nil {
 			_, _ = fmt.Fprintf(w, "Error: %v\n", err)
 			return

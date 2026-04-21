@@ -3,6 +3,7 @@ package pipeline
 import (
 	"crypto/sha256"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -49,7 +50,7 @@ func loadCachedSchema(serverURL string) ([]byte, error) {
 	}
 
 	if time.Since(info.ModTime()) > schemaTTL {
-		return nil, fmt.Errorf("schema cache expired")
+		return nil, errors.New("schema cache expired")
 	}
 
 	return os.ReadFile(path)

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -37,7 +38,7 @@ func runAuthLogout(f *cmdutil.Factory, serverFlag string) error {
 	} else {
 		serverURL = config.GetServerURL()
 		if serverURL == "" {
-			return fmt.Errorf("not logged in to any server")
+			return errors.New("not logged in to any server")
 		}
 	}
 

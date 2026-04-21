@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -120,7 +122,7 @@ func (c *Client) ResolveBuildID(ctx context.Context, ref string) (string, error)
 	if builds.Count == 0 {
 		return "", fmt.Errorf("no build found with number %s", ref)
 	}
-	return fmt.Sprintf("%d", builds.Builds[0].ID), nil
+	return strconv.Itoa(builds.Builds[0].ID), nil
 }
 
 // GetBuild returns a single build by ID or #number
@@ -130,7 +132,7 @@ func (c *Client) GetBuild(ctx context.Context, ref string) (*Build, error) {
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/app/rest/builds/id:%s", id)
+	path := "/app/rest/builds/id:" + id
 
 	var build Build
 	if err := c.get(ctx, path, &build); err != nil {
@@ -375,14 +377,14 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 	}
 
 	if build.State == "finished" {
-		return fmt.Errorf("cannot cancel finished build")
+		return errors.New("cannot cancel finished build")
 	}
 
 	if build.State == "queued" {
 		return c.RemoveFromQueue(id)
 	}
 
-	path := fmt.Sprintf("/app/rest/builds/id:%s", id)
+	path := "/app/rest/builds/id:" + id
 
 	body := struct {
 		Comment        string `json:"comment"`

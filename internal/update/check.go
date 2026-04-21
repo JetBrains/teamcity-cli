@@ -3,6 +3,7 @@ package update
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -102,7 +103,7 @@ func latestReleaseFromRedirect(ctx context.Context) (*ReleaseInfo, error) {
 
 	location := resp.Header.Get("Location")
 	if location == "" {
-		return nil, fmt.Errorf("GitHub releases page did not provide a redirect location")
+		return nil, errors.New("GitHub releases page did not provide a redirect location")
 	}
 
 	redirectURL, err := url.Parse(location)

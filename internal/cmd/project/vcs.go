@@ -2,6 +2,7 @@ package project
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -597,7 +598,7 @@ func runVcsTest(f *cmdutil.Factory, id string) error {
 	}
 
 	if !client.SupportsFeature("vcs_test_connection") {
-		return fmt.Errorf("connection testing requires TeamCity 2024.12 or later")
+		return errors.New("connection testing requires TeamCity 2024.12 or later")
 	}
 
 	root, err := client.GetVcsRoot(id)

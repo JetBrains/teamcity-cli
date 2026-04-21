@@ -2,6 +2,7 @@ package config
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -250,12 +251,12 @@ func newSetCmd(f *cmdutil.Factory) *cobra.Command {
 
 func selectDefaultServer(f *cmdutil.Factory) (string, error) {
 	if !f.IsInteractive() {
-		return "", fmt.Errorf("value is required for key \"default_server\" in non-interactive mode")
+		return "", errors.New("value is required for key \"default_server\" in non-interactive mode")
 	}
 
 	c := cfg.Get()
 	if len(c.Servers) == 0 {
-		return "", fmt.Errorf("no servers configured; run 'teamcity auth login' first")
+		return "", errors.New("no servers configured; run 'teamcity auth login' first")
 	}
 
 	urls := sortedServerURLs(c)

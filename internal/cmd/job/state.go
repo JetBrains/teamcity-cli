@@ -22,7 +22,7 @@ var jobStateActions = map[string]jobStateAction{
 
 func newJobStateCmd(f *cmdutil.Factory, a jobStateAction) *cobra.Command {
 	return &cobra.Command{
-		Use:     fmt.Sprintf("%s <job-id>", a.use),
+		Use:     a.use + " <job-id>",
 		Short:   a.short,
 		Long:    a.long,
 		Args:    cobra.ExactArgs(1),

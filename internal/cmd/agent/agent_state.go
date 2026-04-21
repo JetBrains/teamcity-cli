@@ -29,7 +29,7 @@ var agentActions = map[string]agentAction{
 
 func newAgentActionCmd(f *cmdutil.Factory, a agentAction) *cobra.Command {
 	return &cobra.Command{
-		Use:   fmt.Sprintf("%s <agent>", a.use),
+		Use:   a.use + " <agent>",
 		Short: a.short,
 		Long:  a.long,
 		Args:  cobra.ExactArgs(1),

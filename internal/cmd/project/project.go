@@ -2,6 +2,7 @@ package project
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -254,7 +255,7 @@ func runProjectTokenPut(f *cmdutil.Factory, projectID, value string, opts *proje
 	}
 
 	if value == "" {
-		return fmt.Errorf("value cannot be empty")
+		return errors.New("value cannot be empty")
 	}
 
 	token, err := client.CreateSecureToken(projectID, value)
