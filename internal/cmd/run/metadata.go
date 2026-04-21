@@ -233,7 +233,7 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 
 	p := f.Printer
 	if existingComment == "" {
-		p.Empty(fmt.Sprintf("No comment set on #%s", runID), output.TipNoComment)
+		p.Empty(fmt.Sprintf("No comment set on #%s", runID), output.TipNoCommentFor(runID))
 	} else {
 		_, _ = fmt.Fprintln(p.Out, existingComment)
 	}

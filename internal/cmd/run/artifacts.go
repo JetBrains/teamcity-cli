@@ -92,7 +92,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 	}
 
 	if artifacts.Count == 0 {
-		p.Empty("No artifacts found for this run", output.TipNoArtifacts)
+		p.Empty("No artifacts found for this run", output.TipNoArtifactsFor(runID))
 		return nil
 	}
 

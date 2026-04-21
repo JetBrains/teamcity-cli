@@ -59,7 +59,7 @@ func tipFor(err error) string {
 	case api.CatReadOnly:
 		return "Unset the TEAMCITY_RO environment variable to allow write operations"
 	case api.CatNotFound:
-		if nf, ok := errors.AsType[*api.NotFoundError](ue); ok && nf.Resource != "" {
+		if nf, ok := errors.AsType[*api.NotFoundError](ue); ok && hasListCommand(nf.Resource) {
 			return fmt.Sprintf("Run 'teamcity %s list' to see available %ss", nf.Resource, nf.Resource)
 		}
 		return notFoundTip(ue.Error())
@@ -70,6 +70,15 @@ func tipFor(err error) string {
 		return "Check your network connection and verify the server URL"
 	}
 	return ""
+}
+
+// hasListCommand reports whether 'teamcity <resource> list' is a real command we can suggest
+func hasListCommand(resource string) bool {
+	switch resource {
+	case "run", "job", "project", "agent":
+		return true
+	}
+	return false
 }
 
 // notFoundTip suggests the matching 'teamcity X list' command for a 404 message.

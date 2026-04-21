@@ -261,7 +261,7 @@ func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, op
 	}
 
 	if log == "" {
-		f.Printer.Empty("No log available", output.TipNoLog)
+		f.Printer.Empty("No log available", output.TipNoLogFor(runID))
 		return nil
 	}
 
@@ -304,7 +304,7 @@ func printMessages(f *cmdutil.Factory, runID string, messages []api.BuildMessage
 	}
 
 	if len(messages) == 0 {
-		f.Printer.Empty("No log messages available", output.TipNoLog)
+		f.Printer.Empty("No log messages available", output.TipNoLogFor(runID))
 		return nil
 	}
 
