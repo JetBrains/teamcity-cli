@@ -5,10 +5,11 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"os"
 	"regexp"
-	"sort"
+	"slices"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/spf13/cobra"
@@ -217,6 +218,6 @@ func pageLinkText(page string) string {
 
 func sortedCommands(c *cobra.Command) []*cobra.Command {
 	cmds := c.Commands()
-	sort.Slice(cmds, func(i, j int) bool { return cmds[i].Name() < cmds[j].Name() })
+	slices.SortFunc(cmds, func(a, b *cobra.Command) int { return cmp.Compare(a.Name(), b.Name()) })
 	return cmds
 }

@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,10 +18,7 @@ func (c *Client) PinBuild(buildID string, comment string) error {
 	}
 	path := fmt.Sprintf("/app/rest/builds/id:%s/pin", id)
 
-	body := comment
-	if body == "" {
-		body = "Pinned via teamcity CLI"
-	}
+	body := cmp.Or(comment, "Pinned via teamcity CLI")
 
 	return c.doNoContent(context.Background(), "PUT", path, strings.NewReader(body), "text/plain")
 }

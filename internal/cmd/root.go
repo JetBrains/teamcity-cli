@@ -152,8 +152,8 @@ func tryAutoReauth(f *cmdutil.Factory) {
 }
 
 func isCategory(err error, cat api.Category) bool {
-	var ue api.UserError
-	return errors.As(err, &ue) && ue.Category() == cat
+	ue, ok := errors.AsType[api.UserError](err)
+	return ok && ue.Category() == cat
 }
 
 // addGrouped registers subcommands under a shared group ID on the parent command.

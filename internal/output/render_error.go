@@ -19,8 +19,7 @@ func RenderError(err error) error {
 
 // ClassifyError maps an error to a JSON error envelope (code + message + tip).
 func ClassifyError(err error) (JSONErrorCode, string, string) {
-	var ue api.UserError
-	if errors.As(err, &ue) {
+	if ue, ok := errors.AsType[api.UserError](err); ok {
 		return JSONErrorCode(ue.Category()), ue.Error(), tipFor(err)
 	}
 	if isInputError(err) {
@@ -31,19 +30,15 @@ func ClassifyError(err error) (JSONErrorCode, string, string) {
 
 // tipFor returns the next-step suggestion: explicit Suggestion() first, then category default.
 func tipFor(err error) string {
-	if h, ok := err.(interface{ Suggestion() string }); ok {
-		if s := h.Suggestion(); s != "" {
+	var hinter interface{ Suggestion() string }
+	if errors.As(err, &hinter) {
+		if s := hinter.Suggestion(); s != "" {
 			return s
 		}
 	}
-	var ue api.UserError
-	if !errors.As(err, &ue) {
+	ue, ok := errors.AsType[api.UserError](err)
+	if !ok {
 		return ""
-	}
-	if h, ok := ue.(interface{ Suggestion() string }); ok {
-		if s := h.Suggestion(); s != "" {
-			return s
-		}
 	}
 	switch ue.Category() {
 	case api.CatAuth:
