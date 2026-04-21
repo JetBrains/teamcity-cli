@@ -2,9 +2,12 @@ package output
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -127,6 +130,46 @@ func TestTipFor_PermissionOnlyWhenIdentified(t *testing.T) {
 
 	ambiguous := newForbidden(`{"errors":[{"message":"Build was not canceled. Probably not sufficient permissions."}]}`)
 	assert.Empty(t, tipFor(ambiguous))
+}
+
+// TestPrinterConcurrentWrites regresses F17: without the mutex, -race fires and writes interleave.
+func TestPrinterConcurrentWrites(t *testing.T) {
+	t.Parallel()
+	var out bytes.Buffer
+	p := &Printer{Out: &out, ErrOut: &out}
+
+	const n = 50
+	var wg sync.WaitGroup
+	for i := range n {
+		wg.Go(func() {
+			switch i % 3 {
+			case 0:
+				p.Progress("progress-%d\n", i)
+			case 1:
+				p.Success("success-%d", i)
+			case 2:
+				p.Warn("warn-%d", i)
+			}
+		})
+	}
+	wg.Wait()
+
+	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+	require.Len(t, lines, n, "expected one line per goroutine (buffer corruption implies torn writes)")
+	for i := range n {
+		var prefix string
+		switch i % 3 {
+		case 0:
+			prefix = "progress-"
+		case 1:
+			prefix = "success-"
+		case 2:
+			prefix = "warn-"
+		}
+		tag := fmt.Sprintf("%s%d", prefix, i)
+		assert.True(t, slices.ContainsFunc(lines, func(l string) bool { return strings.Contains(l, tag) }),
+			"tag %s missing — write was torn or reordered", tag)
+	}
 }
 
 func newForbidden(body string) error {
