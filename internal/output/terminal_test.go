@@ -185,3 +185,30 @@ func TestWithPagerLessError(T *testing.T) {
 	assert.Contains(T, buf.String(), "line 0")
 	assert.Contains(T, buf.String(), "line 19")
 }
+
+// TestWithPagerEarlyQuit guards against re-dump when the pager exits 0 before draining stdin (e.g. user `q` in less → EPIPE on copy, Wait still nil).
+func TestWithPagerEarlyQuit(T *testing.T) {
+	overrideTerminal(T, true, 80, 5, nil)
+
+	oldPager := pagerCmdFn
+	T.Cleanup(func() { pagerCmdFn = oldPager })
+	pagerCmdFn = func() (*exec.Cmd, error) {
+		// head reads the first 10 bytes, exits 0, closes stdin — the remaining copy EPIPEs.
+		return exec.Command("head", "-c", "10"), nil
+	}
+
+	var lines []string
+	for i := range 200 {
+		lines = append(lines, fmt.Sprintf("line %d", i))
+	}
+	content := strings.Join(lines, "\n") + "\n"
+
+	var buf bytes.Buffer
+	captureStdout(T, func() {
+		WithPager(&buf, func(w io.Writer) {
+			fmt.Fprint(w, content)
+		})
+	})
+	// No fallback: buf stays empty because the pager exited 0.
+	assert.Empty(T, buf.String())
+}

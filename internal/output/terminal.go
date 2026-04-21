@@ -83,11 +83,24 @@ func WithPager(out io.Writer, fn func(w io.Writer)) {
 		return
 	}
 
-	data := buf.Bytes()
-	pager.Stdin = bytes.NewReader(data)
+	stdin, err := pager.StdinPipe()
+	if err != nil {
+		_, _ = out.Write(buf.Bytes())
+		return
+	}
 	pager.Stdout = os.Stdout // must be a real terminal fd; using `out` here breaks pager rendering
 	pager.Stderr = os.Stderr
-	if err := pager.Run(); err != nil {
-		_, _ = out.Write(data)
+
+	if err := pager.Start(); err != nil {
+		_, _ = out.Write(buf.Bytes())
+		return
+	}
+
+	// Ignore copy errors: an early pager quit closes the pipe (EPIPE); Wait's exit code is authoritative.
+	_, _ = io.Copy(stdin, bytes.NewReader(buf.Bytes()))
+	_ = stdin.Close()
+	// Non-zero exit → misconfigured pager (bad flag, missing argv); fall back so the user isn't left with a blank terminal. `q` exits 0 on less/more/bat, so normal quits don't land here.
+	if err := pager.Wait(); err != nil {
+		_, _ = out.Write(buf.Bytes())
 	}
 }
