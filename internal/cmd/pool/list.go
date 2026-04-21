@@ -2,6 +2,7 @@ package pool
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -45,11 +46,11 @@ func fetchPools(client api.ClientInterface, fields []string) (*cmdutil.ListResul
 	for _, p := range pools.Pools {
 		maxAgents := "unlimited"
 		if p.MaxAgents > 0 {
-			maxAgents = fmt.Sprintf("%d", p.MaxAgents)
+			maxAgents = strconv.Itoa(p.MaxAgents)
 		}
 
 		rows = append(rows, []string{
-			fmt.Sprintf("%d", p.ID),
+			strconv.Itoa(p.ID),
 			p.Name,
 			maxAgents,
 		})

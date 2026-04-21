@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -213,7 +214,7 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 				"Try --all, or verify the job ID with 'teamcity job list'",
 			)
 		}
-		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
+		runID = strconv.Itoa(runs.Builds[0].ID)
 		if !opts.json {
 			f.Printer.Info("Showing log for #%s (%s)", runID, runs.Builds[0].Number)
 		}

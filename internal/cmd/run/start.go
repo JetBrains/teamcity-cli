@@ -107,7 +107,7 @@ func reuseDepRow(d reuseDep) (icon, summary string) {
 func printQueuedRun(p *output.Printer, build *api.Build, context string) {
 	ref := fmt.Sprintf("%d  #%s", build.ID, build.Number)
 	if build.Number == "" {
-		ref = fmt.Sprintf("%d", build.ID)
+		ref = strconv.Itoa(build.ID)
 	}
 	p.Success("Queued run %s for %s", ref, context)
 }
@@ -118,7 +118,7 @@ func afterQueue(f *cmdutil.Factory, build *api.Build, web bool, wf *watchFlags) 
 	}
 	if wf.watch {
 		_, _ = fmt.Fprintln(f.Printer.Out)
-		return doRunWatch(f, fmt.Sprintf("%d", build.ID), wf.watchOpts(true, false))
+		return doRunWatch(f, strconv.Itoa(build.ID), wf.watchOpts(true, false))
 	}
 	return nil
 }
@@ -342,14 +342,14 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 
 	if opts.json {
 		if opts.watch {
-			return doRunWatch(f, fmt.Sprintf("%d", build.ID), opts.watchOpts(false, true))
+			return doRunWatch(f, strconv.Itoa(build.ID), opts.watchOpts(false, true))
 		}
 		return p.PrintJSON(build)
 	}
 
 	reused := build.State == "finished"
 	if reused {
-		ref := fmt.Sprintf("%d", build.ID)
+		ref := strconv.Itoa(build.ID)
 		if build.Number != "" {
 			ref = fmt.Sprintf("%d  #%s", build.ID, build.Number)
 		}

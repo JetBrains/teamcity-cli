@@ -1,7 +1,7 @@
 package pipeline
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -57,7 +57,7 @@ func (opts *pipelineListOptions) fetch(client api.ClientInterface, fields []stri
 		}
 		jobCount := ""
 		if p.Jobs != nil {
-			jobCount = fmt.Sprintf("%d", p.Jobs.Count)
+			jobCount = strconv.Itoa(p.Jobs.Count)
 		}
 
 		rows = append(rows, []string{

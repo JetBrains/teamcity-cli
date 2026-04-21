@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -144,7 +145,7 @@ func resolveDiffBuildIDs(client api.ClientInterface, args []string) (string, str
 
 	for _, b := range builds.Builds {
 		if b.ID != build.ID {
-			return fmt.Sprintf("%d", b.ID), args[0], nil
+			return strconv.Itoa(b.ID), args[0], nil
 		}
 	}
 

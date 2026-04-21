@@ -1,7 +1,7 @@
 package queue
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -63,7 +63,7 @@ func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string)
 		}
 
 		rows = append(rows, []string{
-			fmt.Sprintf("%d", r.ID),
+			strconv.Itoa(r.ID),
 			r.BuildTypeID,
 			branch,
 			r.State,
