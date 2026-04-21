@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/JetBrains/teamcity-cli/internal/atomicfile"
 )
 
 // ServerInfo is the telemetry-only cache of TC server context, keyed by server URL.
@@ -52,17 +54,7 @@ func SaveServerInfo(serverURL, version, serverType string) error {
 	if err != nil {
 		return err
 	}
-	return atomicWrite(path, data)
-}
-
-// atomicWrite stages bytes to a sibling temp file then renames into place.
-// Rename is atomic on POSIX, so concurrent readers never observe a half-written file.
-func atomicWrite(path string, data []byte) error {
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return atomicfile.Write(path, data)
 }
 
 func readServerInfo(path string) (map[string]ServerInfo, error) {

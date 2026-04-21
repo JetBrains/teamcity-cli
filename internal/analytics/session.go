@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/JetBrains/teamcity-cli/internal/atomicfile"
 )
 
 const SessionWindow = 30 * time.Minute
@@ -64,7 +66,7 @@ func writeSession(path string, s *Session) error {
 	if err != nil {
 		return err
 	}
-	return atomicWrite(path, data)
+	return atomicfile.Write(path, data)
 }
 
 func newSessionID() (string, error) {
