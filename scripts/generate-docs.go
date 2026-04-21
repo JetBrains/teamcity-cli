@@ -48,7 +48,7 @@ var sectionDescriptions = map[string]struct {
 const commandsDocPath = "docs/topics/teamcity-cli-commands.md"
 
 func main() {
-	rootCmd := cmd.GetRootCmd()
+	rootCmd := cmd.NewCommand(nil)
 
 	check := len(os.Args) > 1 && os.Args[1] == "--check"
 	ok := true

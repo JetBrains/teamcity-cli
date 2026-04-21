@@ -295,7 +295,7 @@ func TestRunListWithAtMe(T *testing.T) {
 func TestInvalidStatusFilter(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
-	rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
+	rootCmd := cmd.NewCommand(ts.Factory)
 	rootCmd.SetArgs([]string{"run", "list", "--status", "invalid"})
 	var out bytes.Buffer
 	rootCmd.SetOut(&out)
@@ -311,7 +311,7 @@ func TestValidStatusFilter(T *testing.T) {
 	validStatuses := []string{"success", "failure", "running", "queued", "canceled"}
 	for _, status := range validStatuses {
 		T.Run(status, func(t *testing.T) {
-			rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
+			rootCmd := cmd.NewCommand(ts.Factory)
 			rootCmd.SetArgs([]string{"run", "list", "--status", status, "--limit", "1"})
 			var out bytes.Buffer
 			rootCmd.SetOut(&out)
@@ -353,7 +353,7 @@ func TestStatusFilterLocator(T *testing.T) {
 				cmdtest.JSON(w, api.BuildList{Count: 0, Builds: []api.Build{}})
 			})
 
-			rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
+			rootCmd := cmd.NewCommand(ts.Factory)
 			rootCmd.SetArgs([]string{"run", "list", "--status", tt.status, "--limit", "1"})
 			var out bytes.Buffer
 			rootCmd.SetOut(&out)
@@ -389,7 +389,7 @@ func TestRunListFavoritesLocator(T *testing.T) {
 		cmdtest.JSON(w, api.BuildList{Count: 0, Builds: []api.Build{}})
 	})
 
-	rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
+	rootCmd := cmd.NewCommand(ts.Factory)
 	rootCmd.SetArgs([]string{"run", "list", "--favorites", "--limit", "1"})
 	var out bytes.Buffer
 	rootCmd.SetOut(&out)
