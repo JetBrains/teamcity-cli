@@ -304,10 +304,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		}
 
 		p.Info("Uploading local changes...")
-		description := opts.comment
-		if description == "" {
-			description = "Personal build with local changes"
-		}
+		description := cmp.Or(opts.comment, "Personal build with local changes")
 
 		changeID, err := client.UploadDiffChanges(patch, description)
 		if err != nil {

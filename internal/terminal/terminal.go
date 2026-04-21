@@ -1,6 +1,7 @@
 package terminal
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -74,11 +75,7 @@ func (c *Client) OpenSession(agentID int) (*Session, error) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
-	username := c.username
-	if username == "" {
-		username = "token"
-	}
-	req.SetBasicAuth(username, c.token)
+	req.SetBasicAuth(cmp.Or(c.username, "token"), c.token)
 
 	c.debugf("> POST %s", endpoint)
 

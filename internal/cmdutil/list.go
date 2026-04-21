@@ -1,6 +1,8 @@
 package cmdutil
 
 import (
+	"cmp"
+
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -84,11 +86,7 @@ func RunList(
 	}
 
 	if len(result.Table.Rows) == 0 {
-		msg := result.EmptyMsg
-		if msg == "" {
-			msg = "No items found"
-		}
-		f.Printer.Empty(msg, result.EmptyTip)
+		f.Printer.Empty(cmp.Or(result.EmptyMsg, "No items found"), result.EmptyTip)
 		return nil
 	}
 

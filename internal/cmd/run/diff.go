@@ -183,9 +183,8 @@ func fetchBothBuilds(client api.ClientInterface, id1, id2 string, p *output.Prin
 	var d1, d2 buildData
 	var err1, err2 error
 	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() { defer wg.Done(); d1, err1 = fetchBuildData(client, id1, p) }()
-	go func() { defer wg.Done(); d2, err2 = fetchBuildData(client, id2, p) }()
+	wg.Go(func() { d1, err1 = fetchBuildData(client, id1, p) })
+	wg.Go(func() { d2, err2 = fetchBuildData(client, id2, p) })
 	wg.Wait()
 	if err1 != nil {
 		return d1, d2, err1

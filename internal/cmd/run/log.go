@@ -266,17 +266,15 @@ func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, op
 		return nil
 	}
 
-	lines := strings.Split(log, "\n")
-
 	output.WithPager(f.Printer.Out, func(w io.Writer) {
 		if opts.raw {
 			_, _ = fmt.Fprintln(w, log)
-		} else {
-			for _, line := range lines {
-				formatted := formatLogLine(line)
-				if formatted != "" {
-					_, _ = fmt.Fprintln(w, formatted)
-				}
+			return
+		}
+		for line := range strings.SplitSeq(log, "\n") {
+			formatted := formatLogLine(line)
+			if formatted != "" {
+				_, _ = fmt.Fprintln(w, formatted)
 			}
 		}
 	})

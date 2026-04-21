@@ -206,12 +206,10 @@ func buildRunTree(client api.ClientInterface, b api.Build, depth int, path map[s
 		childPath := make(map[string]bool, len(path)+1)
 		maps.Copy(childPath, path)
 		childPath[sid] = true
-		wg.Add(1)
-		go func(i int, dep api.Build, childPath map[string]bool) {
-			defer wg.Done()
+		wg.Go(func() {
 			child, err := buildRunTree(client, dep, next, childPath)
 			results[i] = result{idx: i, node: child, err: err}
-		}(i, dep, childPath)
+		})
 	}
 	wg.Wait()
 

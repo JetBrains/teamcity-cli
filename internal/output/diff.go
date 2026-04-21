@@ -45,7 +45,7 @@ var (
 // NormalizeBuildLog strips per-run noise (header, ANSI, timestamps, temp paths, agent IDs, git progress).
 func NormalizeBuildLog(lines []string) []string {
 	start := 0
-	for i := 0; i < min(15, len(lines)); i++ {
+	for i := range min(15, len(lines)) {
 		if tcTimestampRe.MatchString(lines[i]) {
 			start = i
 			break
