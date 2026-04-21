@@ -6,24 +6,22 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pmezard/go-difflib/difflib"
+	udiff "github.com/aymanbagabas/go-udiff"
 )
 
 // UnifiedDiff writes a colored unified diff between two line slices, returns true if they differ.
 func UnifiedDiff(w io.Writer, a, b []string, fromLabel, toLabel string, context int) (bool, error) {
-	diff := difflib.UnifiedDiff{
-		A:        a,
-		B:        b,
-		FromFile: fromLabel,
-		ToFile:   toLabel,
-		Context:  context,
+	oldStr := strings.Join(a, "")
+	newStr := strings.Join(b, "")
+	if oldStr == newStr {
+		return false, nil
 	}
 
-	text, err := difflib.GetUnifiedDiffString(diff)
+	edits := udiff.Strings(oldStr, newStr)
+	text, err := udiff.ToUnified(fromLabel, toLabel, oldStr, edits, context)
 	if err != nil {
 		return false, fmt.Errorf("computing diff: %w", err)
 	}
-
 	if text == "" {
 		return false, nil
 	}
@@ -31,7 +29,6 @@ func UnifiedDiff(w io.Writer, a, b []string, fromLabel, toLabel string, context 
 	for line := range strings.SplitSeq(text, "\n") {
 		_, _ = fmt.Fprintln(w, ColorDiffLine(line))
 	}
-
 	return true, nil
 }
 
