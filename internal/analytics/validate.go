@@ -2,7 +2,8 @@ package analytics
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -140,12 +141,7 @@ func LintScheme() ([]SchemeFinding, error) {
 				Group: e.Group.ID, Event: e.Event.ID, Got: validated.Event.ID,
 			})
 		}
-		keys := make([]string, 0, len(validated.Event.Data))
-		for k := range validated.Event.Data {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
+		for _, k := range slices.Sorted(maps.Keys(validated.Event.Data)) {
 			if isSentinel(k) {
 				findings = append(findings, SchemeFinding{
 					Group: e.Group.ID, Event: e.Event.ID, Field: "(unknown key)", Got: k,
