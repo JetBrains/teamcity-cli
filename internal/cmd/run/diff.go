@@ -13,7 +13,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -101,12 +100,8 @@ func runRunDiff(f *cmdutil.Factory, args []string, opts *runDiffOptions) error {
 		if err2 != nil {
 			return fmt.Errorf("resolving #%s: %w", id2, err2)
 		}
-		if b1.WebURL != "" {
-			_ = browser.OpenURL(b1.WebURL)
-		}
-		if b2.WebURL != "" {
-			_ = browser.OpenURL(b2.WebURL)
-		}
+		cmdutil.OpenURLOrWarn(p, b1.WebURL)
+		cmdutil.OpenURLOrWarn(p, b2.WebURL)
 		return nil
 	}
 

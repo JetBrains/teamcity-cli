@@ -58,9 +58,9 @@ func (c *Client) GetProject(id string) (*Project, error) {
 
 // CreateProjectRequest represents a request to create a project
 type CreateProjectRequest struct {
-	ID              string `json:"id,omitempty"`
-	Name            string `json:"name"`
-	ParentProjectID string `json:"parentProject,omitempty"`
+	ID            string      `json:"id,omitempty"`
+	Name          string      `json:"name"`
+	ParentProject *ProjectRef `json:"parentProject,omitempty"`
 }
 
 // CreateProject creates a new project

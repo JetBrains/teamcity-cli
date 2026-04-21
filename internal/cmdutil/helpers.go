@@ -8,6 +8,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -21,6 +22,16 @@ type ViewOptions struct {
 func AddViewFlags(cmd *cobra.Command, opts *ViewOptions) {
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output as JSON")
 	cmd.Flags().BoolVarP(&opts.Web, "web", "w", false, "Open in browser")
+}
+
+// OpenURLOrWarn opens url in the browser, warning on failure. Never returns an error — safe to call after a mutation.
+func OpenURLOrWarn(p *output.Printer, url string) {
+	if url == "" {
+		return
+	}
+	if err := browser.OpenURL(url); err != nil {
+		p.Warn("could not open browser: %v", err)
+	}
 }
 
 // ValidateLimit returns an error if limit is not positive.

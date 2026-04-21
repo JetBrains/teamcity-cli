@@ -491,6 +491,18 @@ List project connections
 <tr>
 <td>
 
+`teamcity project create`
+
+</td>
+<td>
+
+Create a project
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project list`
 
 </td>

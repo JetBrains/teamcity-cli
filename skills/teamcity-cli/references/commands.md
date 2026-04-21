@@ -198,6 +198,7 @@ Shows all branches and all build states (including canceled, personal, composite
 |------------------------------------------------|------------------------------|
 | `teamcity project list`                        | List projects                |
 | `teamcity project view <id>`                   | View project details         |
+| `teamcity project create <name>`               | Create a project             |
 | `teamcity project tree [id]`                   | Show project hierarchy tree  |
 | `teamcity project vcs list --project <id>`     | List VCS roots               |
 | `teamcity project vcs view <id>`              | View VCS root details        |
@@ -228,6 +229,13 @@ Shows all branches and all build states (including canceled, personal, composite
 
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
+
+### Flags for `teamcity project create`
+
+- `--id <id>` - Explicit project ID (default: auto-generated from name)
+- `-p, --parent <id>` - Parent project ID (default: `_Root`)
+- `--json` - Output as JSON
+- `-w, --web` - Open in browser after creation
 
 ### Flags for `teamcity project vcs list`
 

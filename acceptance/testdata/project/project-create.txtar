@@ -1,0 +1,35 @@
+# Test project create subcommand.
+[!has_token] skip 'requires authentication token'
+
+# Create under _Root with explicit ID and auto-cleanup at the end
+exec teamcity project create 'cli-create-$RANDOM_STRING' --id 'cli_create_$RANDOM_STRING' --no-input
+stdout 'Created project'
+stdout 'cli_create_'
+! stderr 'Error'
+
+# Cleanup
+exec teamcity api '/app/rest/projects/id:cli_create_$RANDOM_STRING' -X DELETE --no-input
+! stderr 'Error'
+
+# Create with --json outputs the project object
+exec teamcity project create 'cli-create-json-$RANDOM_STRING' --id 'cli_create_json_$RANDOM_STRING' --json --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+# Cleanup
+exec teamcity api '/app/rest/projects/id:cli_create_json_$RANDOM_STRING' -X DELETE --no-input
+! stderr 'Error'
+
+# Create under a parent project (Sandbox is the sandbox project used by other tests)
+exec teamcity project create 'cli-create-child-$RANDOM_STRING' --id 'cli_create_child_$RANDOM_STRING' --parent Sandbox --no-input
+stdout 'Created project'
+! stderr 'Error'
+
+# Cleanup
+exec teamcity api '/app/rest/projects/id:cli_create_child_$RANDOM_STRING' -X DELETE --no-input
+! stderr 'Error'
+
+# Missing name fails
+! exec teamcity project create --no-input
+stderr '.'

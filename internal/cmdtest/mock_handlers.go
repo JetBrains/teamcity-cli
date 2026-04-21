@@ -64,7 +64,20 @@ func SetupMockClient(t *testing.T) *TestServer {
 			Error(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		JSON(w, api.Project{ID: req.ID, Name: req.Name})
+		id := req.ID
+		if id == "" {
+			id = req.Name
+		}
+		parent := "_Root"
+		if req.ParentProject != nil {
+			parent = req.ParentProject.ID
+		}
+		JSON(w, api.Project{
+			ID:              id,
+			Name:            req.Name,
+			ParentProjectID: parent,
+			WebURL:          ts.URL + "/project.html?projectId=" + id,
+		})
 	})
 
 	// Projects by ID

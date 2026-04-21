@@ -34,6 +34,7 @@ See: https://www.jetbrains.com/help/teamcity/creating-and-editing-projects.html`
 
 	cmd.AddCommand(newProjectListCmd(f))
 	cmd.AddCommand(newProjectViewCmd(f))
+	cmd.AddCommand(newProjectCreateCmd(f))
 	cmd.AddCommand(newProjectTreeCmd(f))
 	cmd.AddCommand(newProjectTokenCmd(f))
 	cmd.AddCommand(newProjectSettingsCmd(f))
