@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
+	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/run/tui"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -60,7 +63,7 @@ For a simpler, pipe-friendly log stream, use "teamcity run log --follow" instead
 	return cmd
 }
 
-func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
+func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (err error) {
 	p := f.Printer
 	if f.Quiet {
 		opts.quiet = true
@@ -85,10 +88,41 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 
 	if opts.logs && !opts.quiet {
 		if watchHasTTYFn() {
-			return runWatchTUIFn(ctx, client, runID, opts.interval)
+			tuiStart := time.Now()
+			tuiErr := runWatchTUIFn(ctx, client, runID, opts.interval)
+			f.Analytics.Track(analytics.GroupBuild, analytics.EventWatchFinished, map[string]any{
+				"duration_seconds": int(time.Since(tuiStart).Seconds()),
+				"final_status":     watchExitStatus(tuiErr),
+				"had_logs":         true,
+				"is_timed_out":     false,
+			})
+			return tuiErr
 		}
 		p.Warn("--logs requires a TTY; falling back to standard watch mode")
 	}
+
+	watchStart := time.Now()
+	var lastBuild *api.Build
+	watchCtx := ctx
+	defer func() {
+		status := analytics.BuildStatusError
+		timedOut := false
+		switch {
+		case watchCtx != nil && errors.Is(watchCtx.Err(), context.DeadlineExceeded):
+			timedOut = true
+			status = analytics.BuildStatusCanceled
+		case lastBuild != nil && lastBuild.State == "finished":
+			status = buildFinalStatus(lastBuild.Status)
+		case err == nil || errors.Is(err, context.Canceled):
+			status = analytics.BuildStatusCanceled
+		}
+		f.Analytics.Track(analytics.GroupBuild, analytics.EventWatchFinished, map[string]any{
+			"duration_seconds": int(time.Since(watchStart).Seconds()),
+			"final_status":     status,
+			"had_logs":         false,
+			"is_timed_out":     timedOut,
+		})
+	}()
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
@@ -114,6 +148,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 	if err != nil {
 		return err
 	}
+	lastBuild = build
 
 	switch {
 	case opts.json:
@@ -146,6 +181,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		if err != nil {
 			return err
 		}
+		lastBuild = build
 
 		jobName := build.BuildTypeID
 		if build.BuildType != nil {
@@ -243,4 +279,37 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		case <-time.After(time.Duration(opts.interval) * time.Second):
 		}
 	}
+}
+
+// buildFinalStatus maps the TeamCity build Status string to the analytics wire enum.
+func buildFinalStatus(s string) string {
+	switch strings.ToLower(s) {
+	case "success":
+		return analytics.BuildStatusSuccess
+	case "failure":
+		return analytics.BuildStatusFailure
+	case "unknown":
+		return analytics.BuildStatusCanceled
+	default:
+		return analytics.BuildStatusError
+	}
+}
+
+// watchExitStatus maps the TUI's return error to a final-status enum (TUI doesn't expose the build state).
+func watchExitStatus(err error) string {
+	switch {
+	case err == nil:
+		return analytics.BuildStatusSuccess
+	case errors.Is(err, context.Canceled):
+		return analytics.BuildStatusCanceled
+	}
+	if ee, ok := errors.AsType[*cmdutil.ExitError](err); ok {
+		switch ee.Code {
+		case cmdutil.ExitFailure:
+			return analytics.BuildStatusFailure
+		case cmdutil.ExitCancelled:
+			return analytics.BuildStatusCanceled
+		}
+	}
+	return analytics.BuildStatusError
 }

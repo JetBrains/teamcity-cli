@@ -3,8 +3,10 @@ package cmdutil
 import (
 	"io"
 	"os"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/fatih/color"
 	"golang.org/x/term"
@@ -46,6 +48,12 @@ type Factory struct {
 
 	// UpdateNotice is called after command execution to print update notices.
 	UpdateNotice func()
+
+	// Analytics is the FUS telemetry client; always nil-safe.
+	Analytics *analytics.Client
+
+	// StartTime captured at PersistentPreRun for duration_ms.
+	StartTime time.Time
 }
 
 // NewFactory creates a Factory with production defaults.
