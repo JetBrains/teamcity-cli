@@ -472,7 +472,7 @@ func waitForBuildStart(ctx context.Context, p *output.Printer, client api.Client
 			return nil
 		}
 		if !jsonOut && build.WaitReason != "" {
-			p.Infof("\r  %s", build.WaitReason)
+			p.Progress("\r  %s", build.WaitReason)
 		}
 	}
 }

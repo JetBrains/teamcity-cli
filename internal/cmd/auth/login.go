@@ -169,7 +169,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 	}
 
 	f.WarnInsecureHTTP(serverURL, "authentication token")
-	p.Infof("Validating... ")
+	p.Progress("Validating... ")
 
 	client := api.NewClient(serverURL, token, api.WithDebugFunc(p.Debug), api.WithVersion(version.String()))
 	user, err := client.GetCurrentUser()
@@ -228,7 +228,7 @@ func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 
 	p := f.Printer
 	f.WarnInsecureHTTP(serverURL, "guest access")
-	p.Infof("Validating guest access... ")
+	p.Progress("Validating guest access... ")
 
 	client := api.NewGuestClient(serverURL, api.WithDebugFunc(p.Debug), api.WithVersion(version.String()))
 	server, err := client.GetServer()

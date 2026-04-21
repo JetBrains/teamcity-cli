@@ -14,7 +14,7 @@ func TestPrinterMethods(T *testing.T) {
 			p := &Printer{Out: &out, ErrOut: &errOut, Quiet: quiet}
 			p.Success("test %s", "message")
 			p.Info("test %s", "info")
-			p.Infof("test %s", "infof")
+			p.Progress("test %s", "progress")
 			p.Warn("test %s", "warn")
 			if quiet {
 				if out.Len() != 0 {
