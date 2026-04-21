@@ -18,7 +18,7 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "Check for CLI updates",
 		Long: `Check for CLI updates and show how to upgrade.
 
-Queries the GitHub Releases feed for the latest teamcity CLI
+Queries the releases feed for the latest TeamCity CLI
 version. When a newer release exists, prints the upgrade command
 matching the install method detected on this machine (Homebrew,
 Scoop, Winget, Chocolatey, or raw binary).`,
