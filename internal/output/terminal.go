@@ -124,15 +124,21 @@ func WithPagerUsing(pagerCmd string, opts PagerOpts, out io.Writer, fn func(w io
 		return
 	}
 
-	// Once Start succeeds the pager owns the terminal. Any copy error at
-	// this point (typically EPIPE because the user quit `less` with `q`)
-	// means the pager already displayed as much as it was going to — we
-	// must NOT re-dump to stdout or the user sees the content twice on
-	// top of the pager's lingering screen. Also ignore the pager's exit
-	// status: `less` may exit non-zero on signal, which isn't our bug.
+	// Copy the buffer into the pager's stdin. Ignore the io.Copy error
+	// because an early quit closes the pipe and we'd see EPIPE; the exit
+	// status from Wait is the authoritative signal.
 	_, _ = io.Copy(stdin, bytes.NewReader(buf.Bytes()))
 	_ = stdin.Close()
-	_ = cmd.Wait()
+	// A non-zero pager exit almost always means a misconfiguration (bad
+	// flag, missing command in the pager's argv, etc.) — `less` / `more`
+	// / `bat` all exit 0 on `q`, so a normal user quit doesn't land here.
+	// Fall back to a direct write so the user doesn't get a blank
+	// terminal. The edge case where a user Ctrl+C's the pager after
+	// partial read will double-display, which is annoying but strictly
+	// better than silently dropping their output.
+	if err := cmd.Wait(); err != nil {
+		_, _ = out.Write(buf.Bytes())
+	}
 }
 
 // isPagingDisabled returns true when the resolved pager should be treated

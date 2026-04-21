@@ -199,6 +199,36 @@ func TestWithPagerUsingEarlyExitPager(T *testing.T) {
 	assert.Empty(T, fallback.String(), "fallback buffer must not be written to when pager exits 0 after partial read")
 }
 
+// TestWithPagerUsingNonZeroExitFallsBack covers a misconfigured pager:
+// the binary exists and Start() succeeds, but the pager exits non-zero
+// before displaying anything (bad flag, unsupported option, etc.). We
+// must re-dump the buffer so the user doesn't see a blank terminal.
+func TestWithPagerUsingNonZeroExitFallsBack(T *testing.T) {
+	overrideTerminal(T, true, 80, 5, nil)
+
+	if _, err := exec.LookPath("sh"); err != nil {
+		T.Skip("sh not available")
+	}
+
+	var lines []string
+	for i := range 20 {
+		lines = append(lines, fmt.Sprintf("line %d", i))
+	}
+	content := strings.Join(lines, "\n") + "\n"
+
+	var buf bytes.Buffer
+	// `sh -c 'exit 1'` starts cleanly then exits non-zero without reading
+	// stdin — mimics a misconfigured pager.
+	WithPagerUsing("sh -c exit_1", PagerOpts{}, &buf, func(w io.Writer) {
+		fmt.Fprint(w, content)
+	})
+	// buildPagerCmd's Fields split gives us `sh -c exit_1`, where `exit_1`
+	// is an unknown command to sh → sh exits 127. Either way the exit is
+	// non-zero and the fallback must fire.
+	assert.Contains(T, buf.String(), "line 0")
+	assert.Contains(T, buf.String(), "line 19")
+}
+
 // TestWithPagerUsingStartFailureFallsBack: if the pager binary can't be
 // located, fall back to a direct write.
 func TestWithPagerUsingStartFailureFallsBack(T *testing.T) {
