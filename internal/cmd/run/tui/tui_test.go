@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/acarl005/stripansi"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +39,7 @@ func TestWatchModelRenderHeader(t *testing.T) {
 
 	t.Run("prefers BuildType.Name over BuildTypeID", func(t *testing.T) {
 		t.Parallel()
-		got := stripansi.Strip(watchModel{build: &api.Build{
+		got := ansi.Strip(watchModel{build: &api.Build{
 			ID: 1, Number: "42", BuildTypeID: "FallbackID", State: "running", Status: "SUCCESS",
 			WebURL: "https://tc/1", BuildType: &api.BuildType{Name: "Pretty Name"},
 		}}.renderHeader())
@@ -142,7 +142,7 @@ func TestWatchModelView(t *testing.T) {
 				WebURL: "https://tc/1",
 			},
 		}
-		got := stripansi.Strip(m.View())
+		got := ansi.Strip(m.View())
 		// spinner tick character should not appear after "q quit" for finished builds
 		parts := got[len(got)-20:]
 		assert.NotContains(t, parts, "/")

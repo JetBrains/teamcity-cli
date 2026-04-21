@@ -3,9 +3,9 @@ package output
 import (
 	"strings"
 
-	"github.com/acarl005/stripansi"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -40,7 +40,7 @@ func renderTable(headers []string, rows [][]string) string {
 func renderPlainTable(headers []string, rows [][]string, noHeader bool) string {
 	for i, row := range rows {
 		for j, cell := range row {
-			rows[i][j] = stripansi.Strip(cell)
+			rows[i][j] = ansi.Strip(cell)
 		}
 	}
 

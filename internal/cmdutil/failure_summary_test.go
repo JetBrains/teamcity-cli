@@ -10,7 +10,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/acarl005/stripansi"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +35,7 @@ func failureSummaryFixture(t *testing.T, tests api.TestOccurrences, problems api
 	p := &output.Printer{Out: &buf, ErrOut: &buf}
 	client := api.NewClient(ts.URL, "test")
 	PrintFailureSummary(t.Context(), p, client, "123", "42", "https://tc/build/123", statusText)
-	return stripansi.Strip(buf.String())
+	return ansi.Strip(buf.String())
 }
 
 func TestPrintFailureSummary(t *testing.T) {
@@ -182,7 +182,7 @@ func TestPrintFailureSummary(t *testing.T) {
 		p := &output.Printer{Out: &buf, ErrOut: &buf}
 		client := api.NewClient(ts.URL, "test")
 		PrintFailureSummary(t.Context(), p, client, "1", "42", "https://tc/build/1", "")
-		out := stripansi.Strip(buf.String())
+		out := ansi.Strip(buf.String())
 		// Should still print header and URL, not panic
 		assert.Contains(t, out, "#42 failed")
 		assert.Contains(t, out, "https://tc/build/1")

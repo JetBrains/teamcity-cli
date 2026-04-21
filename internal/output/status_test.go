@@ -3,7 +3,7 @@ package output
 import (
 	"testing"
 
-	"github.com/acarl005/stripansi"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +37,7 @@ func TestStatusIcon(T *testing.T) {
 		T.Run(tc.status+"/"+tc.state+"/"+tc.statusText, func(t *testing.T) {
 			t.Parallel()
 
-			got := stripansi.Strip(StatusIcon(tc.status, tc.state, tc.statusText))
+			got := ansi.Strip(StatusIcon(tc.status, tc.state, tc.statusText))
 			assert.Contains(t, got, tc.wantContains)
 		})
 	}
@@ -67,7 +67,7 @@ func TestStatusText(T *testing.T) {
 		T.Run(tc.status+"/"+tc.state+"/"+tc.statusText, func(t *testing.T) {
 			t.Parallel()
 
-			got := stripansi.Strip(StatusText(tc.status, tc.state, tc.statusText))
+			got := ansi.Strip(StatusText(tc.status, tc.state, tc.statusText))
 			assert.Contains(t, got, tc.wantContains)
 		})
 	}
