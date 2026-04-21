@@ -50,10 +50,10 @@ func TestPrinterJSON(t *testing.T) {
 	assert.Contains(t, out.String(), `"count": 5`)
 }
 
-func TestPrinterInfof(t *testing.T) {
+func TestPrinterProgress(t *testing.T) {
 	var out bytes.Buffer
 	p := &Printer{Out: &out, ErrOut: &out}
-	p.Infof("hello %s", "world")
+	p.Progress("hello %s", "world")
 	assert.Equal(t, "hello world", out.String())
 }
 

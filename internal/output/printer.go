@@ -54,7 +54,8 @@ func (p *Printer) Tip(format string, args ...any) {
 	_, _ = fmt.Fprintln(p.Out, FormatTip(fmt.Sprintf(format, args...)))
 }
 
-func (p *Printer) Infof(format string, args ...any) {
+// Progress writes an inline progress line to stdout (no newline). Suppressed by --quiet.
+func (p *Printer) Progress(format string, args ...any) {
 	if !p.Quiet {
 		_, _ = fmt.Fprintf(p.Out, format, args...)
 	}
