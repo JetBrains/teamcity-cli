@@ -20,16 +20,3 @@ func MarkExperimental(f *Factory, cmd *cobra.Command) {
 	}
 }
 
-// IsExperimental reports whether the command (or any of its parents) is marked experimental.
-func IsExperimental(cmd *cobra.Command) bool {
-	if cmd.Annotations["experimental"] == "true" {
-		return true
-	}
-	found := false
-	cmd.VisitParents(func(p *cobra.Command) {
-		if p.Annotations["experimental"] == "true" {
-			found = true
-		}
-	})
-	return found
-}
