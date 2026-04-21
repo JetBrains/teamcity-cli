@@ -22,24 +22,46 @@ See: https://www.jetbrains.com/help/teamcity/build-results-page.html`,
 		RunE: cmdutil.SubcommandRequired,
 	}
 
-	cmd.AddCommand(newRunListCmd(f))
-	cmd.AddCommand(newRunViewCmd(f))
-	cmd.AddCommand(newRunStartCmd(f))
-	cmd.AddCommand(newRunCancelCmd(f))
-	cmd.AddCommand(newRunWatchCmd(f))
-	cmd.AddCommand(newRunRestartCmd(f))
-	cmd.AddCommand(newRunDownloadCmd(f))
-	cmd.AddCommand(newRunArtifactsCmd(f))
-	cmd.AddCommand(newRunLogCmd(f))
-	cmd.AddCommand(newRunPinCmd(f))
-	cmd.AddCommand(newRunUnpinCmd(f))
-	cmd.AddCommand(newRunTagCmd(f))
-	cmd.AddCommand(newRunUntagCmd(f))
-	cmd.AddCommand(newRunCommentCmd(f))
-	cmd.AddCommand(newRunChangesCmd(f))
-	cmd.AddCommand(newRunTestsCmd(f))
-	cmd.AddCommand(newRunTreeCmd(f))
-	cmd.AddCommand(newRunDiffCmd(f))
+	cmd.AddGroup(
+		&cobra.Group{ID: "lifecycle", Title: "LIFECYCLE"},
+		&cobra.Group{ID: "artifacts", Title: "ARTIFACTS & LOGS"},
+		&cobra.Group{ID: "metadata", Title: "METADATA"},
+		&cobra.Group{ID: "analysis", Title: "ANALYSIS"},
+	)
+
+	addInGroup := func(groupID string, cmds ...*cobra.Command) {
+		for _, c := range cmds {
+			c.GroupID = groupID
+			cmd.AddCommand(c)
+		}
+	}
+
+	addInGroup("lifecycle",
+		newRunListCmd(f),
+		newRunViewCmd(f),
+		newRunStartCmd(f),
+		newRunCancelCmd(f),
+		newRunWatchCmd(f),
+		newRunRestartCmd(f),
+		newRunDiffCmd(f),
+		newRunTreeCmd(f),
+	)
+	addInGroup("artifacts",
+		newRunArtifactsCmd(f),
+		newRunDownloadCmd(f),
+		newRunLogCmd(f),
+	)
+	addInGroup("metadata",
+		newRunPinCmd(f),
+		newRunUnpinCmd(f),
+		newRunTagCmd(f),
+		newRunUntagCmd(f),
+		newRunCommentCmd(f),
+	)
+	addInGroup("analysis",
+		newRunChangesCmd(f),
+		newRunTestsCmd(f),
+	)
 
 	cmdutil.AliasAwareHelp(cmd, "run", "build")
 	return cmd
