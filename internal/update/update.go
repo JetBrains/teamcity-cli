@@ -11,7 +11,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/JetBrains/teamcity-cli/internal/version"
-	"github.com/mattn/go-isatty"
+	"golang.org/x/term"
 )
 
 const (
@@ -80,7 +80,7 @@ func IsDisabled() bool {
 	if v := os.Getenv(EnvNoUpdateCheck); v == "1" || v == "true" || v == "yes" {
 		return true
 	}
-	if !isatty.IsTerminal(os.Stderr.Fd()) {
+	if !term.IsTerminal(int(os.Stderr.Fd())) {
 		return true
 	}
 	return IsCI()

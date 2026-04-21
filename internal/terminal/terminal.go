@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/gorilla/websocket"
-	"github.com/moby/term"
+	"golang.org/x/term"
 )
 
 const (
@@ -166,9 +167,10 @@ type Conn struct {
 const execMarker = "__TC_EXEC_7f3a9e2b__"
 
 func (tc *Conn) RunInteractive(ctx context.Context) error {
-	stdin, stdout, _ := term.StdStreams()
-	fd, isTerminal := term.GetFdInfo(stdin)
-	if !isTerminal {
+	stdin := os.Stdin
+	stdout := os.Stdout
+	fd := int(stdin.Fd())
+	if !term.IsTerminal(fd) {
 		return errors.New("terminal command requires an interactive terminal")
 	}
 
@@ -178,7 +180,7 @@ func (tc *Conn) RunInteractive(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to set raw terminal mode: %w", err)
 	}
-	defer func() { _ = term.RestoreTerminal(fd, oldState) }()
+	defer func() { _ = term.Restore(fd, oldState) }()
 
 	_ = tc.conn.SetReadDeadline(time.Now().Add(readTimeout))
 	tc.conn.SetPongHandler(func(string) error {
@@ -215,7 +217,7 @@ func (tc *Conn) RunInteractive(ctx context.Context) error {
 }
 
 func (tc *Conn) Exec(ctx context.Context, command string) error {
-	_, stdout, _ := term.StdStreams()
+	stdout := os.Stdout
 	defer tc.Close()
 
 	type result struct {
