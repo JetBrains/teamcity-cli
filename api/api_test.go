@@ -89,20 +89,51 @@ func requireIdleAgent(t *testing.T) api.Agent {
 	return api.Agent{}
 }
 
-// cancelAndWait cancels a build and polls until it finishes.
+// cancelAndWait cancels a build, polls until it finishes, then waits for agents to release.
 func cancelAndWait(t *testing.T, buildID string) {
 	t.Helper()
 	_ = client.CancelBuild(buildID, "test cleanup")
 	deadline := time.Now().Add(60 * time.Second)
 	for time.Until(deadline) > 0 {
 		b, err := client.GetBuild(t.Context(), buildID)
-		if err != nil || b.State == "finished" {
-			return
+		if err != nil {
+			break
+		}
+		if b.State == "finished" {
+			break
 		}
 		_ = client.CancelBuild(buildID, "test cleanup")
 		time.Sleep(time.Second)
 	}
-	t.Logf("cancelAndWait: build %s did not finish within 60s", buildID)
+	waitForAgentsReleased(t)
+}
+
+// waitForAgentsReleased blocks until every authorized+connected agent reports .Build == nil.
+func waitForAgentsReleased(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Minute)
+	for time.Until(deadline) > 0 {
+		agents, err := client.GetAgents(api.AgentsOptions{
+			Authorized: true, Connected: true, Enabled: true, Limit: 10,
+		})
+		if err != nil || len(agents.Agents) == 0 {
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		busy := false
+		for _, a := range agents.Agents {
+			detail, err := client.GetAgent(a.ID)
+			if err != nil || detail.Build != nil {
+				busy = true
+				break
+			}
+		}
+		if !busy {
+			return
+		}
+		time.Sleep(2 * time.Second)
+	}
+	t.Logf("waitForAgentsReleased: agents did not release within 3m")
 }
 
 func TestMain(m *testing.M) {
@@ -811,18 +842,13 @@ teamcity auth status
 		require.NoError(T, err)
 	}
 
-	// Retry up to 3 times — the testcontainers agent can transiently reject builds
-	// with "Could not connect to build agent" or "Agent runs unknown build" when it's
-	// still cleaning up from a prior test.
+	// Retry on transient agent-handoff failures (surfacing as canceled-in-log or stuck queue).
 	var buildLog string
 	var build *api.Build
+	var waitErr error
 	for attempt := range 3 {
 		if attempt > 0 {
-			T.Logf("Retrying (attempt %d): rebooting agent and waiting for idle...", attempt+1)
-			agents, _ := client.GetAgents(api.AgentsOptions{Authorized: true, Connected: true, Limit: 1})
-			if len(agents.Agents) > 0 {
-				_ = client.RebootAgent(T.Context(), agents.Agents[0].ID, true)
-			}
+			T.Logf("Retrying (attempt %d)...", attempt+1)
 			requireIdleAgent(T)
 		}
 
@@ -833,9 +859,13 @@ teamcity auth status
 		T.Cleanup(func() { cancelAndWait(T, buildID) })
 
 		ctx, cancel := context.WithTimeout(T.Context(), 3*time.Minute)
-		build, err = client.WaitForBuild(ctx, buildID, api.WaitForBuildOptions{Interval: 3 * time.Second})
+		build, waitErr = client.WaitForBuild(ctx, buildID, api.WaitForBuildOptions{Interval: 3 * time.Second})
 		cancel()
-		require.NoError(T, err)
+		if waitErr != nil {
+			T.Logf("WaitForBuild: %v — will retry", waitErr)
+			_ = client.CancelBuild(buildID, "test retry")
+			continue
+		}
 
 		buildLog, err = client.GetBuildLog(T.Context(), buildID)
 		require.NoError(T, err)
@@ -849,6 +879,7 @@ teamcity auth status
 		}
 		break
 	}
+	require.NoError(T, waitErr)
 
 	assert.Contains(T, buildLog, "Build-level credentials", "CLI should use build-level auth")
 	assert.Equal(T, "SUCCESS", build.Status)
