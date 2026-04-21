@@ -85,11 +85,16 @@ teamcity run list --revision @head
 
 ### Time-based filtering
 
-Use `--since` and `--until` to filter by time:
+Use `--since` and `--until` to filter by time. Accepts duration offsets
+(`24h`, `7d`, `2w`, `1mo`, `4w2d5h`) or ISO dates (`2026-01-15`,
+`2026-01-15T12:00:00Z`):
 
 ```Shell
 # Builds from the last 24 hours
 teamcity run list --since 24h
+
+# Builds from the last week
+teamcity run list --since 7d
 
 # Builds from a specific date onward
 teamcity run list --since 2026-01-15
@@ -223,7 +228,7 @@ Filter by VCS revision (commit SHA). Use `@head` to resolve the current git HEAD
 </td>
 <td>
 
-Show builds finished after this time (for example, `24h`, `2026-01-21`)
+Show builds finished after this time (for example, `24h`, `7d`, `2026-01-21`)
 
 </td>
 </tr>

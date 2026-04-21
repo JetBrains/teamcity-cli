@@ -50,8 +50,8 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--favorites` - Show favorite builds for the current user
 - `-p, --project <id>` - Filter by project
 - `-n, --limit <n>` - Limit results (default: 30)
-- `--since <time>` - Since time (e.g., 24h, 2026-01-01)
-- `--until <time>` - Until time (e.g., 12h, 2026-01-02)
+- `--since <time>` - Since time (e.g., 24h, 7d, 2w, 2026-01-01)
+- `--until <time>` - Until time (e.g., 12h, 7d, 2026-01-02)
 - `--json` - JSON output (use `--json=` to list fields, `--json=f1,f2` for specific)
 - `--plain` - Plain text output for scripting
 - `--no-header` - Omit header row (use with --plain)

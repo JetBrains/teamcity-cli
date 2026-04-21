@@ -62,6 +62,20 @@ func TestParseUserDate(T *testing.T) {
 			},
 		},
 		{
+			name:    "relative time 7d",
+			input:   "7d",
+			wantErr: false,
+			validateFn: func(t *testing.T, s string) bool {
+				t.Helper()
+				parsed, err := ParseTeamCityTime(s)
+				if err != nil {
+					return false
+				}
+				diff := now.Add(-7 * 24 * time.Hour).Sub(parsed)
+				return diff < time.Minute && diff > -time.Minute
+			},
+		},
+		{
 			name:    "absolute date only",
 			input:   "2026-01-21",
 			wantErr: false,
@@ -136,4 +150,24 @@ func TestFormatTeamCityTime(T *testing.T) {
 	want := "20260121T150405+0000"
 
 	assert.Equal(T, want, got)
+}
+
+func TestParseRelativeDuration(T *testing.T) {
+	T.Parallel()
+	cases := []struct {
+		in   string
+		want time.Duration
+	}{
+		{"1y", 365 * 24 * time.Hour},
+		{"2mo", 60 * 24 * time.Hour},
+		{"2w", 14 * 24 * time.Hour},
+		{"3d", 3 * 24 * time.Hour},
+		{"24h", 24 * time.Hour},
+		{"1w2d3h", (9*24 + 3) * time.Hour},
+	}
+	for _, c := range cases {
+		got, err := parseRelativeDuration(c.in)
+		require.NoError(T, err, c.in)
+		assert.Equal(T, c.want, got, c.in)
+	}
 }
