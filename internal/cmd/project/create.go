@@ -66,7 +66,7 @@ func runProjectCreate(f *cmdutil.Factory, name string, opts *projectCreateOption
 
 	if opts.web && project.WebURL != "" {
 		if err := browser.OpenURL(project.WebURL); err != nil {
-			return err
+			f.Printer.Warn("could not open browser: %v", err)
 		}
 	}
 
