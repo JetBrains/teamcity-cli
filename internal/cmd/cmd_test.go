@@ -80,6 +80,37 @@ func TestGlobalFlags(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, f, "--no-color", "project", "list", "--limit", "1")
 }
 
+func TestGlobalFlagMutex(T *testing.T) {
+	T.Parallel()
+
+	cases := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"verbose-debug coexist (aliases)", []string{"--verbose", "--debug", "completion", "bash"}, false},
+		{"quiet conflicts with verbose", []string{"--quiet", "--verbose", "completion", "bash"}, true},
+		{"quiet conflicts with debug", []string{"--quiet", "--debug", "completion", "bash"}, true},
+	}
+
+	for _, tc := range cases {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			rootCmd := cmd.NewRootCmd()
+			rootCmd.SetArgs(tc.args)
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			err := rootCmd.Execute()
+			if tc.wantErr {
+				assert.Error(t, err, "expected mutex error for %v", tc.args)
+			} else {
+				require.NoError(t, err, "aliases must coexist: %v", tc.args)
+			}
+		})
+	}
+}
+
 func TestUnknownSubcommand(T *testing.T) {
 	T.Parallel()
 
