@@ -13,7 +13,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -115,7 +114,7 @@ func printQueuedRun(p *output.Printer, build *api.Build, context string) {
 
 func afterQueue(f *cmdutil.Factory, build *api.Build, web bool, wf *watchFlags) error {
 	if web {
-		_ = browser.OpenURL(build.WebURL)
+		cmdutil.OpenURLOrWarn(f.Printer, build.WebURL)
 	}
 	if wf.watch {
 		_, _ = fmt.Fprintln(f.Printer.Out)
@@ -384,7 +383,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 
 	if reused {
 		if opts.web {
-			_ = browser.OpenURL(build.WebURL)
+			cmdutil.OpenURLOrWarn(f.Printer, build.WebURL)
 		}
 		return nil
 	}

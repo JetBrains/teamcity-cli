@@ -5,7 +5,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -64,10 +63,8 @@ func runProjectCreate(f *cmdutil.Factory, name string, opts *projectCreateOption
 		return fmt.Errorf("failed to create project: %w", err)
 	}
 
-	if opts.web && project.WebURL != "" {
-		if err := browser.OpenURL(project.WebURL); err != nil {
-			f.Printer.Warn("could not open browser: %v", err)
-		}
+	if opts.web {
+		cmdutil.OpenURLOrWarn(f.Printer, project.WebURL)
 	}
 
 	if opts.json {
