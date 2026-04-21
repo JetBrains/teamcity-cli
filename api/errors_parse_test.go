@@ -123,8 +123,8 @@ func TestErrorFromBody(T *testing.T) {
 	T.Run("401 → HTTPError with auth category", func(t *testing.T) {
 		t.Parallel()
 		err := errorFromBody(http.StatusUnauthorized, nil)
-		var he *HTTPError
-		require.True(t, errors.As(err, &he))
+		he, ok := errors.AsType[*HTTPError](err)
+		require.True(t, ok)
 		assert.Equal(t, CatAuth, he.Category())
 		assert.Contains(t, err.Error(), "authentication failed")
 	})
@@ -167,8 +167,8 @@ func TestErrorFromBody(T *testing.T) {
 		t.Parallel()
 		body := []byte(`{"errors":[{"message":"database down"}]}`)
 		err := errorFromBody(http.StatusInternalServerError, body)
-		var he *HTTPError
-		require.True(t, errors.As(err, &he))
+		he, ok := errors.AsType[*HTTPError](err)
+		require.True(t, ok)
 		assert.Equal(t, CatInternal, he.Category())
 		assert.Equal(t, "database down", err.Error())
 	})
@@ -183,7 +183,7 @@ func TestErrReadOnlySentinel(T *testing.T) {
 	wrapped := fmt.Errorf("%w: PUT /foo", ErrReadOnly)
 	assert.True(T, errors.Is(wrapped, ErrReadOnly))
 
-	var ue UserError
-	require.True(T, errors.As(wrapped, &ue))
+	ue, ok := errors.AsType[UserError](wrapped)
+	require.True(T, ok)
 	assert.Equal(T, CatReadOnly, ue.Category())
 }

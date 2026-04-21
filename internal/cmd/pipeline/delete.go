@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -46,7 +47,7 @@ func runPipelineDelete(f *cmdutil.Factory, id string, opts *deleteOptions) error
 
 	if !opts.yes {
 		if !f.IsInteractive() {
-			return fmt.Errorf("--yes is required in non-interactive mode")
+			return errors.New("--yes is required in non-interactive mode")
 		}
 		var confirm bool
 		prompt := &survey.Confirm{

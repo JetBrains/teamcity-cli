@@ -3,6 +3,7 @@ package project
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -355,7 +356,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 	}
 
 	if dslDir == "" {
-		return fmt.Errorf("no TeamCity DSL directory found\n\nLooking for .teamcity in current directory and parents.\nSpecify path explicitly: teamcity project settings validate ./path/to/settings")
+		return errors.New("no TeamCity DSL directory found\n\nLooking for .teamcity in current directory and parents.\nSpecify path explicitly: teamcity project settings validate ./path/to/settings")
 	}
 
 	pomPath := filepath.Join(dslDir, "pom.xml")
@@ -406,7 +407,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 			_, _ = fmt.Fprintln(p.Out)
 			p.Tip("Run with --verbose for full compiler output")
 		}
-		return fmt.Errorf("validation failed")
+		return errors.New("validation failed")
 	}
 
 	if opts.json {
@@ -428,7 +429,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 func findMaven() (string, error) {
 	mvn, err := exec.LookPath("mvn")
 	if err != nil {
-		return "", fmt.Errorf("maven not found\n\nInstall Maven to validate DSL locally.\nSee: https://maven.apache.org/install.html")
+		return "", errors.New("maven not found\n\nInstall Maven to validate DSL locally.\nSee: https://maven.apache.org/install.html")
 	}
 	return mvn, nil
 }

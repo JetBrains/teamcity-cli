@@ -39,7 +39,7 @@ var poolProjectActions = map[string]poolProjectAction{
 
 func newPoolProjectCmd(f *cmdutil.Factory, a poolProjectAction) *cobra.Command {
 	return &cobra.Command{
-		Use:     fmt.Sprintf("%s <pool-id> <project-id>", a.use),
+		Use:     a.use + " <pool-id> <project-id>",
 		Short:   a.short,
 		Long:    a.long,
 		Args:    cobra.ExactArgs(2),

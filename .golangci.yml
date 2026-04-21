@@ -13,6 +13,8 @@ linters:
     - nolintlint
     - intrange
     - errorlint
+    - perfsprint
+    - usestdlibvars
   settings:
     gocritic:
       enabled-tags:

@@ -191,7 +191,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 			if build.State == "queued" {
 				status = output.Faint("Queued")
 				if build.WaitReason != "" {
-					status = output.Faint(fmt.Sprintf("Queued · %s", build.WaitReason))
+					status = output.Faint("Queued · " + build.WaitReason)
 				}
 			}
 			progress := ""

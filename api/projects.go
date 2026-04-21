@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strings"
 )
@@ -46,7 +47,7 @@ func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
 
 // GetProject returns a single project by ID
 func (c *Client) GetProject(id string) (*Project, error) {
-	path := fmt.Sprintf("/app/rest/projects/id:%s", id)
+	path := "/app/rest/projects/id:" + id
 
 	var project Project
 	if err := c.get(context.Background(), path, &project); err != nil {
@@ -96,7 +97,7 @@ func (c *Client) CreateSecureToken(projectID, value string) (string, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", c.handleErrorResponse(resp)
 	}
 
@@ -119,7 +120,7 @@ func (c *Client) GetSecureValue(projectID, token string) (string, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", c.handleErrorResponse(resp)
 	}
 
@@ -167,7 +168,7 @@ func (c *Client) ExportProjectSettings(projectID, format string, useRelativeIds 
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, c.handleErrorResponse(resp)
 	}
 

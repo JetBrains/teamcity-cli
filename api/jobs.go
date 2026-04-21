@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -45,7 +47,7 @@ func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 
 // GetBuildType returns a single build configuration by ID
 func (c *Client) GetBuildType(id string) (*BuildType, error) {
-	path := fmt.Sprintf("/app/rest/buildTypes/id:%s", id)
+	path := "/app/rest/buildTypes/id:" + id
 
 	var buildType BuildType
 	if err := c.get(context.Background(), path, &buildType); err != nil {
@@ -59,13 +61,13 @@ func (c *Client) GetBuildType(id string) (*BuildType, error) {
 func (c *Client) SetBuildTypePaused(id string, paused bool) error {
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/paused", id)
 
-	resp, err := c.doRequestFull(context.Background(), "PUT", path, strings.NewReader(fmt.Sprintf("%t", paused)), "text/plain", "text/plain")
+	resp, err := c.doRequestFull(context.Background(), "PUT", path, strings.NewReader(strconv.FormatBool(paused)), "text/plain", "text/plain")
 	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return c.handleErrorResponse(resp)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -55,7 +56,7 @@ func (c *Client) GetPipeline(id string) (*Pipeline, error) {
 // getPipelineRaw fetches the full pipeline state from /app/pipeline/{id}.
 // This non-REST endpoint returns YAML, VCS root details, triggers, and other settings.
 func (c *Client) getPipelineRaw(id string) (map[string]any, error) {
-	path := fmt.Sprintf("/app/pipeline/%s", id)
+	path := "/app/pipeline/" + id
 	var raw map[string]any
 	if err := c.get(context.Background(), path, &raw); err != nil {
 		return nil, err
@@ -95,7 +96,7 @@ func (c *Client) CreatePipeline(parentProjectID, name, yaml, vcsRootID string) (
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	path := fmt.Sprintf("/app/pipeline?parentProjectExtId=%s", url.QueryEscape(parentProjectID))
+	path := "/app/pipeline?parentProjectExtId=" + url.QueryEscape(parentProjectID)
 	var result Pipeline
 	if err := c.post(context.Background(), path, bytes.NewReader(body), &result); err != nil {
 		return nil, err
@@ -131,7 +132,7 @@ func (c *Client) UpdatePipelineYAML(id string, yamlContent string) error {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	path := fmt.Sprintf("/app/pipeline/%s", id)
+	path := "/app/pipeline/" + id
 	var result json.RawMessage
 	return c.post(context.Background(), path, bytes.NewReader(body), &result)
 }
@@ -153,7 +154,7 @@ func (c *Client) GetBuildPipelineRun(buildID string) (*PipelineRun, error) {
 
 // DeletePipeline deletes a pipeline by removing its project.
 func (c *Client) DeletePipeline(id string) error {
-	return c.doNoContent(context.Background(), "DELETE", fmt.Sprintf("/app/rest/projects/id:%s", id), nil, "")
+	return c.doNoContent(context.Background(), "DELETE", "/app/rest/projects/id:"+id, nil, "")
 }
 
 // GetPipelineSchema fetches the pipeline JSON schema from the server.
@@ -170,7 +171,7 @@ func (c *Client) GetPipelineSchema() ([]byte, error) {
 
 	ct := resp.Header.Get("Content-Type")
 	if !strings.Contains(ct, "application/json") {
-		return nil, fmt.Errorf("schema endpoint not available on this server")
+		return nil, errors.New("schema endpoint not available on this server")
 	}
 
 	return io.ReadAll(resp.Body)

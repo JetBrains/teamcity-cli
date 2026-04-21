@@ -1,6 +1,7 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -92,7 +93,7 @@ func runRunTag(f *cmdutil.Factory, runID string, tags []string) error {
 		}
 	}
 	if len(filtered) == 0 {
-		return fmt.Errorf("at least one non-empty tag is required")
+		return errors.New("at least one non-empty tag is required")
 	}
 	tags = filtered
 
@@ -131,11 +132,11 @@ func runRunUntag(f *cmdutil.Factory, runID string, tags []string) error {
 		return err
 	}
 
-	var errors []string
+	var failures []string
 	removed := 0
 	for _, tag := range tags {
 		if err := client.RemoveBuildTag(runID, tag); err != nil {
-			errors = append(errors, fmt.Sprintf("%s: %v", tag, err))
+			failures = append(failures, fmt.Sprintf("%s: %v", tag, err))
 		} else {
 			removed++
 		}
@@ -145,12 +146,12 @@ func runRunUntag(f *cmdutil.Factory, runID string, tags []string) error {
 		f.Printer.Success("Removed %d tag(s) from #%s", removed, runID)
 	}
 
-	if len(errors) > 0 {
-		for _, e := range errors {
+	if len(failures) > 0 {
+		for _, e := range failures {
 			f.Printer.Warn("  Failed: %s", e)
 		}
 		if removed == 0 {
-			return fmt.Errorf("failed to remove any tags")
+			return errors.New("failed to remove any tags")
 		}
 	}
 
@@ -233,7 +234,7 @@ func runRunComment(f *cmdutil.Factory, runID string, comment string, opts *runCo
 
 	p := f.Printer
 	if existingComment == "" {
-		p.Empty(fmt.Sprintf("No comment set on #%s", runID), output.TipNoCommentFor(runID))
+		p.Empty("No comment set on #"+runID, output.TipNoCommentFor(runID))
 	} else {
 		_, _ = fmt.Fprintln(p.Out, existingComment)
 	}

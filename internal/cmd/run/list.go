@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -279,7 +280,7 @@ func resolveRunListBranch(opts *runListOptions) (string, error) {
 func resolveAutoBranch(required bool) (string, error) {
 	if !runListIsGitRepoFn() {
 		if required {
-			return "", fmt.Errorf("--branch @this requires a git repository")
+			return "", errors.New("--branch @this requires a git repository")
 		}
 		return "", nil
 	}
@@ -337,7 +338,7 @@ var runListResolveRevisionFn = resolveRevision
 func resolveRunListRevision(opts *runListOptions) (string, error) {
 	if strings.EqualFold(opts.revision, "@head") {
 		if !runListIsGitRepoFn() {
-			return "", fmt.Errorf("--revision @head requires a git repository")
+			return "", errors.New("--revision @head requires a git repository")
 		}
 		return runListHeadRevisionFn()
 	}

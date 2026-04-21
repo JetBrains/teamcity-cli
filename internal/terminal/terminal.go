@@ -67,7 +67,7 @@ func NewClient(baseURL, username, token string, debugf func(string, ...any)) *Cl
 func (c *Client) OpenSession(agentID int) (*Session, error) {
 	endpoint := fmt.Sprintf("%s/httpAuth/plugins/teamcity-agent-terminal/agentTerminal.html?id=%d", c.baseURL, agentID)
 
-	req, err := http.NewRequest("POST", endpoint, strings.NewReader(""))
+	req, err := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(""))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (c *Client) OpenSession(agentID int) (*Session, error) {
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, api.Validation(
-			fmt.Sprintf("Failed to open terminal session: %s", strings.TrimSpace(string(body))),
+			"Failed to open terminal session: "+strings.TrimSpace(string(body)),
 			"Check if the agent-terminal plugin is installed on the server",
 		)
 	}

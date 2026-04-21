@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -48,14 +49,14 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 
 // RemoveFromQueue removes a build from the queue
 func (c *Client) RemoveFromQueue(id string) error {
-	path := fmt.Sprintf("/app/rest/buildQueue/id:%s", id)
+	path := "/app/rest/buildQueue/id:" + id
 	return c.doNoContent(context.Background(), "DELETE", path, nil, "")
 }
 
 // SetQueuedBuildPosition moves a queued build to a specific position in the queue
 func (c *Client) SetQueuedBuildPosition(buildID string, position int) error {
-	path := fmt.Sprintf("/app/rest/buildQueue/order/%s", buildID)
-	return c.doNoContent(context.Background(), "PUT", path, strings.NewReader(fmt.Sprintf("%d", position)), "text/plain")
+	path := "/app/rest/buildQueue/order/" + buildID
+	return c.doNoContent(context.Background(), "PUT", path, strings.NewReader(strconv.Itoa(position)), "text/plain")
 }
 
 // MoveQueuedBuildToTop moves a queued build to the top of the queue

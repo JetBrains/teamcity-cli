@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strconv"
@@ -80,7 +81,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 		runID = strconv.Itoa(runs.Builds[0].ID)
 		p.Info("Listing artifacts for run %s  #%s", runID, runs.Builds[0].Number)
 	} else if runID == "" {
-		return fmt.Errorf("run ID required (or use --job to get latest run)")
+		return errors.New("run ID required (or use --job to get latest run)")
 	}
 
 	artifacts, err := client.GetArtifacts(context.Background(), runID, opts.path)

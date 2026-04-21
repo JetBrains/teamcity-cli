@@ -3,6 +3,7 @@ package cmdutil
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -90,7 +91,7 @@ func BuildResultError(ctx context.Context, p *output.Printer, client api.ClientI
 		}
 		return nil
 	case "FAILURE":
-		PrintFailureSummary(ctx, p, client, fmt.Sprintf("%d", build.ID), build.Number, build.WebURL, build.StatusText)
+		PrintFailureSummary(ctx, p, client, strconv.Itoa(build.ID), build.Number, build.WebURL, build.StatusText)
 		return &ExitError{Code: ExitFailure}
 	default:
 		_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s canceled\n", output.Yellow("○"), output.Cyan(jobName), build.ID, build.Number)

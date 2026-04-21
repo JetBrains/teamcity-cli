@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 )
 
 // ParameterList represents a list of parameters
@@ -75,42 +76,42 @@ func (c *Client) deleteParameter(basePath, name string) error {
 
 // GetProjectParameters returns parameters for a project
 func (c *Client) GetProjectParameters(projectID string) (*ParameterList, error) {
-	return c.getParameters(fmt.Sprintf("/app/rest/projects/id:%s", projectID))
+	return c.getParameters("/app/rest/projects/id:" + projectID)
 }
 
 // GetProjectParameter returns a specific parameter for a project
 func (c *Client) GetProjectParameter(projectID, name string) (*Parameter, error) {
-	return c.getParameter(fmt.Sprintf("/app/rest/projects/id:%s", projectID), name)
+	return c.getParameter("/app/rest/projects/id:"+projectID, name)
 }
 
 // SetProjectParameter sets a parameter for a project
 func (c *Client) SetProjectParameter(projectID, name, value string, secure bool) error {
-	return c.setParameter(fmt.Sprintf("/app/rest/projects/id:%s", projectID), name, value, secure)
+	return c.setParameter("/app/rest/projects/id:"+projectID, name, value, secure)
 }
 
 // DeleteProjectParameter deletes a parameter from a project
 func (c *Client) DeleteProjectParameter(projectID, name string) error {
-	return c.deleteParameter(fmt.Sprintf("/app/rest/projects/id:%s", projectID), name)
+	return c.deleteParameter("/app/rest/projects/id:"+projectID, name)
 }
 
 // GetBuildTypeParameters returns parameters for a build configuration
 func (c *Client) GetBuildTypeParameters(buildTypeID string) (*ParameterList, error) {
-	return c.getParameters(fmt.Sprintf("/app/rest/buildTypes/id:%s", buildTypeID))
+	return c.getParameters("/app/rest/buildTypes/id:" + buildTypeID)
 }
 
 // GetBuildTypeParameter returns a specific parameter for a build configuration
 func (c *Client) GetBuildTypeParameter(buildTypeID, name string) (*Parameter, error) {
-	return c.getParameter(fmt.Sprintf("/app/rest/buildTypes/id:%s", buildTypeID), name)
+	return c.getParameter("/app/rest/buildTypes/id:"+buildTypeID, name)
 }
 
 // SetBuildTypeParameter sets a parameter for a build configuration
 func (c *Client) SetBuildTypeParameter(buildTypeID, name, value string, secure bool) error {
-	return c.setParameter(fmt.Sprintf("/app/rest/buildTypes/id:%s", buildTypeID), name, value, secure)
+	return c.setParameter("/app/rest/buildTypes/id:"+buildTypeID, name, value, secure)
 }
 
 // DeleteBuildTypeParameter deletes a parameter from a build configuration
 func (c *Client) DeleteBuildTypeParameter(buildTypeID, name string) error {
-	return c.deleteParameter(fmt.Sprintf("/app/rest/buildTypes/id:%s", buildTypeID), name)
+	return c.deleteParameter("/app/rest/buildTypes/id:"+buildTypeID, name)
 }
 
 // GetParameterValue returns just the raw value of a parameter
@@ -121,7 +122,7 @@ func (c *Client) GetParameterValue(path string) (string, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", c.handleErrorResponse(resp)
 	}
 

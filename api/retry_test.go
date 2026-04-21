@@ -170,7 +170,7 @@ func TestWithRetry_HonorsRetryAfter(T *testing.T) {
 	resp.Body.Close()
 }
 
-// TestGetWithRetry_ContextCancelUnwraps pins that caller-cancelled ctx surfaces bare, not as NetworkError.
+// TestGetWithRetry_ContextCancelUnwraps pins that caller-canceled ctx surfaces bare, not as NetworkError.
 func TestGetWithRetry_ContextCancelUnwraps(T *testing.T) {
 	T.Parallel()
 
@@ -189,8 +189,8 @@ func TestGetWithRetry_ContextCancelUnwraps(T *testing.T) {
 
 	require.Error(T, err)
 	assert.True(T, errors.Is(err, context.Canceled), "expected context.Canceled, got %v", err)
-	var ne *NetworkError
-	assert.False(T, errors.As(err, &ne), "should not be wrapped as NetworkError")
+	_, ok := errors.AsType[*NetworkError](err)
+	assert.False(T, ok, "should not be wrapped as NetworkError")
 }
 
 // TestGetWithRetry_ExhaustionPreservesHTTPError pins that exhausted 429/5xx keeps the typed HTTP error.
@@ -207,8 +207,8 @@ func TestGetWithRetry_ExhaustionPreservesHTTPError(T *testing.T) {
 	err := client.getWithRetry(T.Context(), "/app/rest/server", &result, fastRetry)
 
 	require.Error(T, err)
-	var he *HTTPError
-	require.True(T, errors.As(err, &he), "expected *HTTPError, got %T: %v", err, err)
+	he, ok := errors.AsType[*HTTPError](err)
+	require.True(T, ok, "expected *HTTPError, got %T: %v", err, err)
 	assert.Equal(T, http.StatusServiceUnavailable, he.Status)
 	assert.Contains(T, err.Error(), "maintenance window")
 }

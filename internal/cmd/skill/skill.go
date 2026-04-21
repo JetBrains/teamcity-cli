@@ -1,6 +1,7 @@
 package skill
 
 import (
+	"errors"
 	"fmt"
 
 	teamcitycli "github.com/JetBrains/teamcity-cli"
@@ -256,7 +257,7 @@ func runSkillRemove(p *output.Printer, opts *skillOptions, args []string) error 
 
 func resolveSkillNames(all bool, args []string) ([]string, error) {
 	if all && len(args) > 0 {
-		return nil, fmt.Errorf("cannot specify both --all and skill names")
+		return nil, errors.New("cannot specify both --all and skill names")
 	}
 	if all {
 		skills := instill.ListSkills(teamcitycli.SkillsFS)

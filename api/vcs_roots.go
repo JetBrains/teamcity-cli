@@ -38,7 +38,7 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 
 // GetVcsRoot returns a VCS root by ID
 func (c *Client) GetVcsRoot(id string) (*VcsRoot, error) {
-	path := fmt.Sprintf("/app/rest/vcs-roots/id:%s", id)
+	path := "/app/rest/vcs-roots/id:" + id
 
 	var result VcsRoot
 	if err := c.get(context.Background(), path, &result); err != nil {
@@ -49,7 +49,7 @@ func (c *Client) GetVcsRoot(id string) (*VcsRoot, error) {
 
 // DeleteVcsRoot deletes a VCS root by ID
 func (c *Client) DeleteVcsRoot(id string) error {
-	path := fmt.Sprintf("/app/rest/vcs-roots/id:%s", id)
+	path := "/app/rest/vcs-roots/id:" + id
 	return c.doNoContent(context.Background(), "DELETE", path, nil, "")
 }
 
@@ -75,7 +75,7 @@ func (c *Client) TestVcsConnection(req TestConnectionRequest, projectID string) 
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	path := fmt.Sprintf("/app/pipeline/repository/testConnection?parentProjectExtId=%s", projectID)
+	path := "/app/pipeline/repository/testConnection?parentProjectExtId=" + projectID
 	resp, err := c.doRequest(context.Background(), "POST", path, bytes.NewReader(body))
 	if err != nil {
 		return nil, err

@@ -88,7 +88,7 @@ func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath s
 	streamClient := &http.Client{Transport: c.HTTPClient.Transport}
 
 	resp, err := withRetry(ReadRetry, func() (*http.Response, error) {
-		req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +120,7 @@ func (c *Client) GetBuildLog(ctx context.Context, buildID string) (string, error
 	if err != nil {
 		return "", err
 	}
-	path := fmt.Sprintf("/downloadBuildLog.html?buildId=%s", id)
+	path := "/downloadBuildLog.html?buildId=" + id
 
 	resp, err := c.doGetStream(ctx, path)
 	if err != nil {

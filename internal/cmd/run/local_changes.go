@@ -66,7 +66,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 		if err != nil {
 			if os.IsNotExist(err) {
 				return nil, api.Validation(
-					fmt.Sprintf("diff file not found: %s", source),
+					"diff file not found: "+source,
 					"Check the file path and try again",
 				)
 			}
@@ -74,7 +74,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 		}
 		if len(patch) == 0 {
 			return nil, api.Validation(
-				fmt.Sprintf("diff file is empty: %s", source),
+				"diff file is empty: "+source,
 				"Provide a non-empty diff file",
 			)
 		}

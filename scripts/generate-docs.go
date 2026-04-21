@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"sort"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/spf13/cobra"

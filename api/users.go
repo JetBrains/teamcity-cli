@@ -18,7 +18,7 @@ func (c *Client) GetCurrentUser() (*User, error) {
 
 // GetUser returns a user by username
 func (c *Client) GetUser(username string) (*User, error) {
-	path := fmt.Sprintf("/app/rest/users/username:%s", username)
+	path := "/app/rest/users/username:" + username
 
 	var user User
 	if err := c.get(context.Background(), path, &user); err != nil {
@@ -76,7 +76,7 @@ type Token struct {
 
 // CreateAPIToken creates an API token for the current user
 func (c *Client) CreateAPIToken(name string) (*Token, error) {
-	path := fmt.Sprintf("/app/rest/users/current/tokens/%s", name)
+	path := "/app/rest/users/current/tokens/" + name
 
 	var token Token
 	if err := c.post(context.Background(), path, nil, &token); err != nil {
@@ -88,7 +88,7 @@ func (c *Client) CreateAPIToken(name string) (*Token, error) {
 
 // DeleteAPIToken deletes an API token for the current user
 func (c *Client) DeleteAPIToken(name string) error {
-	path := fmt.Sprintf("/app/rest/users/current/tokens/%s", name)
+	path := "/app/rest/users/current/tokens/" + name
 	return c.doNoContent(context.Background(), "DELETE", path, nil, "")
 }
 

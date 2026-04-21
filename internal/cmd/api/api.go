@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -87,10 +88,10 @@ See: https://www.jetbrains.com/help/teamcity/rest/teamcity-rest-api-documentatio
 
 func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	if opts.paginate && opts.method != "GET" {
-		return fmt.Errorf("--paginate can only be used with GET requests")
+		return errors.New("--paginate can only be used with GET requests")
 	}
 	if opts.slurp && !opts.paginate {
-		return fmt.Errorf("--slurp requires --paginate")
+		return errors.New("--slurp requires --paginate")
 	}
 	if opts.method == "GET" && len(opts.fields) > 0 {
 		f.Printer.Warn("--field is ignored for GET requests. Use -X POST to send a request body.")
@@ -185,7 +186,7 @@ func runAPIPaginated(p *output.Printer, client api.ClientInterface, endpoint str
 			return fmt.Errorf("failed to detect array key: %w", err)
 		}
 		if arrayKey == "" {
-			return fmt.Errorf("--slurp requires response with array field (build, project, etc.)")
+			return errors.New("--slurp requires response with array field (build, project, etc.)")
 		}
 
 		merged, err := mergePages(pages, arrayKey)

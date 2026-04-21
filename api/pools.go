@@ -15,7 +15,7 @@ func (c *Client) GetAgentPools(requestedFields []string) (*PoolList, error) {
 		fields = PoolFields.Default
 	}
 	fieldsParam := fmt.Sprintf("count,nextHref,agentPool(%s)", ToAPIFields(fields))
-	path := fmt.Sprintf("/app/rest/agentPools?fields=%s", url.QueryEscape(fieldsParam))
+	path := "/app/rest/agentPools?fields=" + url.QueryEscape(fieldsParam)
 
 	pools, err := collectPages(c, path, 0, func(p string) ([]Pool, string, error) {
 		var page PoolList

@@ -108,7 +108,7 @@ func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList,
 }
 
 func (c *Client) GetCloudProfile(locator string) (*CloudProfile, error) {
-	path := fmt.Sprintf("/app/rest/cloud/profiles/%s", cloudLocator(locator, "id"))
+	path := "/app/rest/cloud/profiles/" + cloudLocator(locator, "id")
 
 	var result CloudProfile
 	if err := c.get(context.Background(), path, &result); err != nil {
@@ -146,7 +146,7 @@ func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error
 }
 
 func (c *Client) GetCloudImage(locator string) (*CloudImage, error) {
-	path := fmt.Sprintf("/app/rest/cloud/images/%s", cloudLocator(locator, "name"))
+	path := "/app/rest/cloud/images/" + cloudLocator(locator, "name")
 
 	var result CloudImage
 	if err := c.get(context.Background(), path, &result); err != nil {
@@ -184,7 +184,7 @@ func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceLi
 }
 
 func (c *Client) GetCloudInstance(locator string) (*CloudInstance, error) {
-	path := fmt.Sprintf("/app/rest/cloud/instances/%s", cloudLocator(locator, "id"))
+	path := "/app/rest/cloud/instances/" + cloudLocator(locator, "id")
 
 	var result CloudInstance
 	if err := c.get(context.Background(), path, &result); err != nil {

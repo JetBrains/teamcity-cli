@@ -1,7 +1,7 @@
 package job
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -62,7 +62,7 @@ func newJobTreeCmd(f *cmdutil.Factory) *cobra.Command {
 
 func runJobTree(f *cmdutil.Factory, jobID string, depth int, only string, jsonOut bool) error {
 	if only != "" && only != "dependents" && only != "dependencies" {
-		return fmt.Errorf("--only must be 'dependents' or 'dependencies'")
+		return errors.New("--only must be 'dependents' or 'dependencies'")
 	}
 
 	client, err := f.Client()

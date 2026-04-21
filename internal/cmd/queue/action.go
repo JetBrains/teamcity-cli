@@ -29,7 +29,7 @@ var queueActions = map[string]queueAction{
 
 func newQueueActionCmd(f *cmdutil.Factory, a queueAction) *cobra.Command {
 	return &cobra.Command{
-		Use:     fmt.Sprintf("%s <id>", a.use),
+		Use:     a.use + " <id>",
 		Short:   a.short,
 		Long:    a.long,
 		Args:    cobra.ExactArgs(1),

@@ -109,7 +109,7 @@ func FindAvailableListener() (net.Listener, error) {
 }
 
 func IsPkceEnabled(ctx context.Context, serverURL string) (bool, error) {
-	req, err := http.NewRequestWithContext(ctx, "POST", strings.TrimSuffix(serverURL, "/")+PkceIsEnabledPath, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(serverURL, "/")+PkceIsEnabledPath, nil)
 	if err != nil {
 		return false, err
 	}
@@ -176,7 +176,7 @@ func ExchangeCodeForToken(ctx context.Context, serverURL, code, verifier, redire
 	data.Set("code_verifier", verifier)
 	data.Set("redirect_uri", redirectURI)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", strings.TrimSuffix(serverURL, "/")+PkceTokenPath, strings.NewReader(data.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(serverURL, "/")+PkceTokenPath, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}

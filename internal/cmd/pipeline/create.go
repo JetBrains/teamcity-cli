@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -74,7 +75,7 @@ func runPipelineCreate(f *cmdutil.Factory, name string, opts *createOptions) err
 
 func selectVcsRoot(f *cmdutil.Factory, client api.ClientInterface, projectID string) (string, error) {
 	if !f.IsInteractive() {
-		return "", fmt.Errorf("--vcs-root is required (or use interactive mode)")
+		return "", errors.New("--vcs-root is required (or use interactive mode)")
 	}
 
 	roots, err := client.GetVcsRoots(api.VcsRootsOptions{Project: projectID, Limit: 100})

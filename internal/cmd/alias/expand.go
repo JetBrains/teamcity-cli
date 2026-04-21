@@ -1,6 +1,7 @@
 package alias
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"slices"
@@ -58,7 +59,7 @@ func newExpansionAliasCmd(p *output.Printer, name, expansion string) *cobra.Comm
 			}
 
 			if aliasDepth >= maxAliasDepth {
-				return fmt.Errorf("alias expansion depth limit exceeded (possible infinite loop)")
+				return errors.New("alias expansion depth limit exceeded (possible infinite loop)")
 			}
 			aliasDepth++
 			defer func() { aliasDepth-- }()
