@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
@@ -125,21 +124,15 @@ func WithPagerUsing(pagerCmd string, opts PagerOpts, out io.Writer, fn func(w io
 		return
 	}
 
-	// Copy the buffer into the pager's stdin. If the user quits the pager
-	// before we finish writing, the pipe closes and we get EPIPE — that's
-	// expected and we swallow it. Any other copy error means the pager
-	// didn't receive the content, so we fall back to a direct write; but
-	// only if the process hasn't started displaying it yet. Since we can't
-	// tell, we prefer not to re-dump to avoid showing content twice.
-	_, copyErr := io.Copy(stdin, bytes.NewReader(buf.Bytes()))
+	// Once Start succeeds the pager owns the terminal. Any copy error at
+	// this point (typically EPIPE because the user quit `less` with `q`)
+	// means the pager already displayed as much as it was going to — we
+	// must NOT re-dump to stdout or the user sees the content twice on
+	// top of the pager's lingering screen. Also ignore the pager's exit
+	// status: `less` may exit non-zero on signal, which isn't our bug.
+	_, _ = io.Copy(stdin, bytes.NewReader(buf.Bytes()))
 	_ = stdin.Close()
 	_ = cmd.Wait()
-
-	if copyErr != nil && !isEPIPE(copyErr) {
-		// An unusual pipe failure — the pager may not have shown anything.
-		// Re-dump content so the user still sees it.
-		_, _ = out.Write(buf.Bytes())
-	}
 }
 
 // isPagingDisabled returns true when the resolved pager should be treated
@@ -203,17 +196,5 @@ func hasLessChopFlag(args []string) bool {
 			return true
 		}
 	}
-	return false
-}
-
-// isEPIPE reports whether err is (or wraps) syscall.EPIPE. Needed because
-// io.Copy wraps the underlying errno in an *os.PathError on Unix and an
-// *exec.ExitError or similar on Windows.
-func isEPIPE(err error) bool {
-	if errors.Is(err, syscall.EPIPE) {
-		return true
-	}
-	// On some platforms the error surfaces as ERROR_BROKEN_PIPE (Windows);
-	// errors.Is handles the wrapped *PathError on Unix.
 	return false
 }
