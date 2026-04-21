@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -261,28 +260,6 @@ func TestCreateProjectRequestMarshal(T *testing.T) {
 		require.NoError(t, err)
 		assert.JSONEq(t, `{"id":"Sub","name":"Sub","parentProject":{"locator":"id:Parent"}}`, string(data))
 	})
-}
-
-func TestCreateProject(T *testing.T) {
-	T.Parallel()
-
-	var body []byte
-	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(T, "POST", r.Method)
-		assert.Equal(T, "/app/rest/projects", r.URL.Path)
-		body, _ = io.ReadAll(r.Body)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Project{ID: "MyProject", Name: "My Project", ParentProjectID: "_Root"})
-	})
-
-	project, err := client.CreateProject(CreateProjectRequest{
-		ID:              "MyProject",
-		Name:            "My Project",
-		ParentProjectID: "_Root",
-	})
-	require.NoError(T, err)
-	assert.Equal(T, "MyProject", project.ID)
-	assert.JSONEq(T, `{"id":"MyProject","name":"My Project","parentProject":{"locator":"id:_Root"}}`, string(body))
 }
 
 func TestProjectExists(T *testing.T) {

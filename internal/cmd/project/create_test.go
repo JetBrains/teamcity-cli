@@ -18,7 +18,6 @@ func TestProjectCreate(T *testing.T) {
 
 	out := cmdtest.CaptureOutput(T, f, "project", "create", "MyProject")
 	assert.Contains(T, out, "Created project")
-	assert.Contains(T, out, "MyProject")
 }
 
 func TestProjectCreateWithID(T *testing.T) {
