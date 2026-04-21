@@ -60,7 +60,7 @@ func parseRelativeDuration(input string) (time.Duration, error) {
 
 	for len(s) > 0 {
 		i := 0
-		for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+		for i < len(s) && ((s[i] >= '0' && s[i] <= '9') || s[i] == '.') {
 			i++
 		}
 		if i == 0 {
@@ -79,25 +79,27 @@ func parseRelativeDuration(input string) (time.Duration, error) {
 		unit := s[:j]
 		s = s[j:]
 
-		n, err := strconv.ParseInt(numStr, 10, 64)
-		if err != nil {
-			return 0, fmt.Errorf("invalid number %q: %w", numStr, err)
-		}
-
+		var hours float64
 		switch unit {
 		case "y":
-			extended += time.Duration(n) * 365 * 24 * time.Hour
+			hours = 365 * 24
 		case "mo":
-			extended += time.Duration(n) * 30 * 24 * time.Hour
+			hours = 30 * 24
 		case "w":
-			extended += time.Duration(n) * 7 * 24 * time.Hour
+			hours = 7 * 24
 		case "d":
-			extended += time.Duration(n) * 24 * time.Hour
+			hours = 24
 		default:
 			// Delegate Go-native units (ns/us/µs/ms/s/m/h) to time.ParseDuration.
 			passthrough.WriteString(numStr)
 			passthrough.WriteString(unit)
+			continue
 		}
+		n, err := strconv.ParseFloat(numStr, 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid number %q: %w", numStr, err)
+		}
+		extended += time.Duration(n * hours * float64(time.Hour))
 	}
 
 	if passthrough.Len() == 0 {
