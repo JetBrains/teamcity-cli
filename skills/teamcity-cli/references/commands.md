@@ -407,9 +407,11 @@ Pipelines are YAML-first build configurations. Each pipeline is a project that c
 | `teamcity config get <key>`           | Get a configuration value      |
 | `teamcity config set <key> <value>`   | Set a configuration value      |
 
-Valid keys: `default_server`, `guest`, `ro`, `token_expiry`.
+Valid keys: `default_server`, `pager`, `guest`, `ro`, `token_expiry`.
 
-Per-server keys (`guest`, `ro`, `token_expiry`) use `--server <url>` to target a specific server. Without `--server`, the default server is used.
+Global keys (`default_server`, `pager`) apply CLI-wide; don't pass `--server` with them. Per-server keys (`guest`, `ro`, `token_expiry`) use `--server <url>` to target a specific server; without `--server`, the default server is used.
+
+`pager` opts list commands (`run list`, `job list`, etc.) into paged output. Can also be set via `TEAMCITY_PAGER` (highest precedence) or inherited from `PAGER`. Set to `cat` or empty to disable.
 
 ### Flags for `teamcity config list`
 
