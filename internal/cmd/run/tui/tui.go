@@ -9,9 +9,9 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/acarl005/stripansi"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -241,8 +241,8 @@ func (m watchModel) renderLogs(height int) string {
 
 	var result strings.Builder
 	for _, line := range visible {
-		if runewidth.StringWidth(stripansi.Strip(line)) > maxWidth {
-			line = runewidth.Truncate(stripansi.Strip(line), maxWidth, "...")
+		if runewidth.StringWidth(ansi.Strip(line)) > maxWidth {
+			line = runewidth.Truncate(ansi.Strip(line), maxWidth, "...")
 		}
 		result.WriteString(line)
 		result.WriteString("\n")
