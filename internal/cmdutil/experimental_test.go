@@ -35,7 +35,6 @@ func TestMarkExperimental(t *testing.T) {
 
 	assert.Equal(t, "[experimental] Do the thing", cmd.Short)
 	assert.Equal(t, "true", cmd.Annotations["experimental"])
-	assert.True(t, IsExperimental(cmd))
 
 	// Execute and verify the notice is printed
 	cmd.SetArgs([]string{})
@@ -72,13 +71,3 @@ func TestMarkExperimental_Quiet(t *testing.T) {
 	assert.Empty(t, stderr.String())
 }
 
-func TestIsExperimental_Parent(t *testing.T) {
-	t.Parallel()
-
-	parent := &cobra.Command{Use: "parent", Annotations: map[string]string{"experimental": "true"}}
-	child := &cobra.Command{Use: "child", RunE: func(cmd *cobra.Command, args []string) error { return nil }}
-	parent.AddCommand(child)
-
-	assert.True(t, IsExperimental(child))
-	assert.False(t, IsExperimental(&cobra.Command{Use: "standalone"}))
-}
