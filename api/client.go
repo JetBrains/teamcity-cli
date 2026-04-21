@@ -346,7 +346,7 @@ func (c *Client) get(ctx context.Context, path string, result any) error {
 
 // doGetStream GETs with ReadRetry and returns the raw 2xx response; non-2xx → typed api error.
 func (c *Client) doGetStream(ctx context.Context, path string) (*http.Response, error) {
-	resp, err := withRetry(ReadRetry, func() (*http.Response, error) {
+	resp, err := withRetry(ctx, ReadRetry, func() (*http.Response, error) {
 		return c.doRequest(ctx, "GET", path, nil)
 	})
 	if err != nil {
@@ -367,7 +367,7 @@ func (c *Client) doGetStream(ctx context.Context, path string) (*http.Response, 
 }
 
 func (c *Client) getWithRetry(ctx context.Context, path string, result any, retry RetryConfig) error {
-	resp, err := withRetry(retry, func() (*http.Response, error) {
+	resp, err := withRetry(ctx, retry, func() (*http.Response, error) {
 		return c.doRequest(ctx, "GET", path, nil)
 	})
 	if err != nil {
@@ -412,7 +412,7 @@ func (c *Client) post(ctx context.Context, path string, body io.Reader, result a
 
 // postWithRetry performs a POST request with configurable retry.
 func (c *Client) postWithRetry(ctx context.Context, path string, body io.Reader, result any, retry RetryConfig) error {
-	resp, err := withRetry(retry, func() (*http.Response, error) {
+	resp, err := withRetry(ctx, retry, func() (*http.Response, error) {
 		return c.doRequest(ctx, "POST", path, body)
 	})
 	if err != nil {
