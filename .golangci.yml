@@ -11,6 +11,8 @@ linters:
     - revive
     - misspell
     - nolintlint
+    - intrange
+    - errorlint
   settings:
     gocritic:
       enabled-tags:
