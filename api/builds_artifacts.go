@@ -87,7 +87,7 @@ func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath s
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
 	streamClient := &http.Client{Transport: c.HTTPClient.Transport}
 
-	resp, err := withRetry(ReadRetry, func() (*http.Response, error) {
+	resp, err := withRetry(ctx, ReadRetry, func() (*http.Response, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 		if err != nil {
 			return nil, err

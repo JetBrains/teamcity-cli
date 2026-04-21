@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/cenkalti/backoff/v5"
 )
 
 // RetryConfig defines retry behavior for API operations.
 type RetryConfig struct {
-	MaxRetries uint64
+	MaxRetries uint
 	Interval   time.Duration
 }
 
@@ -32,33 +32,8 @@ var (
 	LongRetry = RetryConfig{MaxRetries: 3, Interval: 1 * time.Second}
 )
 
-// retryableError wraps an error to indicate it should be retried.
-type retryableError struct {
-	err error
-}
-
-func (e retryableError) Error() string { return e.err.Error() }
-func (e retryableError) Unwrap() error { return e.err }
-
-// retryAfterBackOff overrides the next delay with Retry-After when the server provides it.
-type retryAfterBackOff struct {
-	inner backoff.BackOff
-	resp  **http.Response
-}
-
-func (b *retryAfterBackOff) NextBackOff() time.Duration {
-	if b.resp != nil && *b.resp != nil {
-		if d := retryAfter(*b.resp); d > 0 {
-			return d
-		}
-	}
-	return b.inner.NextBackOff()
-}
-
-func (b *retryAfterBackOff) Reset() { b.inner.Reset() }
-
-// withRetry retries op on network errors, 429, and 5xx (except 501/505), honoring Retry-After.
-func withRetry(cfg RetryConfig, op func() (*http.Response, error)) (*http.Response, error) {
+// withRetry retries op on network errors, 429, and 5xx (except 501/505), honoring Retry-After and ctx cancellation.
+func withRetry(ctx context.Context, cfg RetryConfig, op func() (*http.Response, error)) (*http.Response, error) {
 	if cfg.MaxRetries == 0 {
 		return op()
 	}
@@ -66,39 +41,23 @@ func withRetry(cfg RetryConfig, op func() (*http.Response, error)) (*http.Respon
 	expo := backoff.NewExponentialBackOff()
 	expo.InitialInterval = cfg.Interval
 	expo.MaxInterval = 30 * time.Second
-	expo.MaxElapsedTime = 0 // cap controlled by MaxRetries
 
-	var lastResp *http.Response
-	bo := &retryAfterBackOff{inner: expo, resp: &lastResp}
-
-	_, err := backoff.RetryWithData(func() (struct{}, error) {
+	return backoff.Retry(ctx, func() (*http.Response, error) {
 		resp, err := op()
-		lastResp = resp
-
 		if err != nil {
 			if isRetryableNetworkError(err) {
-				return struct{}{}, retryableError{err}
+				return resp, err
 			}
-			return struct{}{}, backoff.Permanent(err)
+			return resp, backoff.Permanent(err)
 		}
-
-		if isRetryableStatusCode(resp.StatusCode) {
-			return struct{}{}, retryableError{
-				fmt.Errorf("server returned %d", resp.StatusCode),
-			}
+		if !isRetryableStatusCode(resp.StatusCode) {
+			return resp, nil
 		}
-
-		return struct{}{}, nil
-	}, backoff.WithMaxRetries(bo, cfg.MaxRetries))
-
-	if err != nil {
-		if re, ok := errors.AsType[retryableError](err); ok {
-			return lastResp, re.err
+		if d := retryAfter(resp); d > 0 {
+			return resp, &backoff.RetryAfterError{Duration: d}
 		}
-		return lastResp, err
-	}
-
-	return lastResp, nil
+		return resp, fmt.Errorf("server returned %d", resp.StatusCode)
+	}, backoff.WithBackOff(expo), backoff.WithMaxTries(cfg.MaxRetries+1))
 }
 
 // isRetryableNetworkError reports whether err is a transient network issue (not ctx cancellation).

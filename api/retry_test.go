@@ -54,24 +54,6 @@ func TestIsRetryableNetworkError_ContextCancellation(T *testing.T) {
 	assert.False(T, isRetryableNetworkError(&net.OpError{Op: "read", Err: context.DeadlineExceeded}))
 }
 
-func TestRetryableError(T *testing.T) {
-	T.Parallel()
-
-	inner := errors.New("connection refused")
-	re := retryableError{err: inner}
-
-	T.Run("Error delegates to wrapped error", func(t *testing.T) {
-		t.Parallel()
-		assert.Equal(t, "connection refused", re.Error())
-	})
-
-	T.Run("Unwrap returns inner error", func(t *testing.T) {
-		t.Parallel()
-		assert.Equal(t, inner, re.Unwrap())
-		assert.True(t, errors.Is(re, inner))
-	})
-}
-
 // Integration test: verify retry actually happens
 func TestWithRetry_RetriesOnServerError(T *testing.T) {
 	T.Parallel()
@@ -87,7 +69,7 @@ func TestWithRetry_RetriesOnServerError(T *testing.T) {
 	T.Cleanup(server.Close)
 	client := server.Client()
 
-	resp, err := withRetry(fastRetry, func() (*http.Response, error) {
+	resp, err := withRetry(T.Context(), fastRetry, func() (*http.Response, error) {
 		return client.Get(server.URL)
 	})
 
@@ -125,7 +107,7 @@ func TestWithRetry_RetriesOn429(T *testing.T) {
 	T.Cleanup(server.Close)
 	client := server.Client()
 
-	resp, err := withRetry(fastRetry, func() (*http.Response, error) {
+	resp, err := withRetry(T.Context(), fastRetry, func() (*http.Response, error) {
 		return client.Get(server.URL)
 	})
 
@@ -157,7 +139,7 @@ func TestWithRetry_HonorsRetryAfter(T *testing.T) {
 
 	// InitialInterval 10ms — far less than the server's 1s hint, so any sleep
 	// between 1.0s and 1.1s proves the Retry-After header won over exponential.
-	resp, err := withRetry(RetryConfig{MaxRetries: 2, Interval: 10 * time.Millisecond}, func() (*http.Response, error) {
+	resp, err := withRetry(T.Context(), RetryConfig{MaxRetries: 2, Interval: 10 * time.Millisecond}, func() (*http.Response, error) {
 		return client.Get(server.URL)
 	})
 
@@ -219,7 +201,8 @@ func TestWithRetry_RetriesOnNetworkError(T *testing.T) {
 	var attempts int32
 	cfg := RetryConfig{MaxRetries: 2, Interval: 10 * time.Millisecond}
 
-	withRetry(cfg, func() (*http.Response, error) {
+	//nolint:errcheck // exercising retry behavior, not the return
+	withRetry(T.Context(), cfg, func() (*http.Response, error) {
 		atomic.AddInt32(&attempts, 1)
 		return http.Get("http://127.0.0.1:1") // connection refused
 	})
