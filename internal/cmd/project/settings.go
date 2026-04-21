@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -81,8 +83,16 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 		return fmt.Errorf("failed to get project: %w", err)
 	}
 
-	cfg, configErr := client.GetVersionedSettingsConfig(projectID)
-	status, statusErr := client.GetVersionedSettingsStatus(projectID)
+	var (
+		cfg       *api.VersionedSettingsConfig
+		status    *api.VersionedSettingsStatus
+		configErr error
+		statusErr error
+	)
+	var wg sync.WaitGroup
+	wg.Go(func() { cfg, configErr = client.GetVersionedSettingsConfig(projectID) })
+	wg.Go(func() { status, statusErr = client.GetVersionedSettingsStatus(projectID) })
+	wg.Wait()
 
 	if opts.json {
 		result := map[string]any{

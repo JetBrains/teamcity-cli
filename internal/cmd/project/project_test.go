@@ -3,11 +3,14 @@ package project_test
 import (
 	"bytes"
 	"net/http"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -105,6 +108,49 @@ func TestProjectSettingsStatusSyncing(T *testing.T) {
 	})
 
 	cmdtest.RunCmdWithFactory(T, ts.Factory, "project", "settings", "status", "SyncingProject")
+}
+
+// TestProjectSettingsStatusParallelFanOut regresses F18/S3: config+status endpoints fetch concurrently, ~delay instead of ~2×delay.
+func TestProjectSettingsStatusParallelFanOut(T *testing.T) {
+	const delay = 300 * time.Millisecond
+	ts := cmdtest.SetupMockClient(T)
+
+	var configCalls, statusCalls atomic.Int32
+	ts.Handle("GET /app/rest/projects/id:ParallelProject", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Project{
+			ID:     "ParallelProject",
+			Name:   "Parallel Project",
+			WebURL: ts.URL + "/project.html?projectId=ParallelProject",
+		})
+	})
+	ts.Handle("GET /app/rest/projects/ParallelProject/versionedSettings/config", func(w http.ResponseWriter, r *http.Request) {
+		configCalls.Add(1)
+		time.Sleep(delay)
+		cmdtest.JSON(w, api.VersionedSettingsConfig{
+			SynchronizationMode: "enabled",
+			Format:              "kotlin",
+			BuildSettingsMode:   "useFromVCS",
+			VcsRootID:           "TestVcsRoot",
+		})
+	})
+	ts.Handle("GET /app/rest/projects/ParallelProject/versionedSettings/status", func(w http.ResponseWriter, r *http.Request) {
+		statusCalls.Add(1)
+		time.Sleep(delay)
+		cmdtest.JSON(w, api.VersionedSettingsStatus{
+			Type:      "info",
+			Message:   "Settings are up to date",
+			Timestamp: "Mon Jan 27 10:30:00 UTC 2025",
+		})
+	})
+
+	start := time.Now()
+	cmdtest.RunCmdWithFactory(T, ts.Factory, "project", "settings", "status", "ParallelProject")
+	elapsed := time.Since(start)
+
+	assert.Equal(T, int32(1), configCalls.Load(), "config endpoint should be called exactly once")
+	assert.Equal(T, int32(1), statusCalls.Load(), "status endpoint should be called exactly once")
+	assert.Less(T, elapsed, delay+delay/2,
+		"parallel fan-out: both calls should overlap, expected ~%s, sequential would be ~%s", delay, 2*delay)
 }
 
 func TestProjectSettingsStatusNotConfigured(T *testing.T) {
