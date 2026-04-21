@@ -129,7 +129,7 @@ func (c *Client) GetAgentCompatibleBuildTypes(id int) (*BuildTypeList, error) {
 
 // GetAgentIncompatibleBuildTypes returns build types incompatible with an agent and reasons
 func (c *Client) GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, error) {
-	fields := "count,compatibility(buildType(id,name,projectName),incompatibleReasons(reason))"
+	fields := "count,compatibility(buildType(id,name,projectName),incompatibleReasons(reason),unmetRequirements(description))"
 	path := fmt.Sprintf("/app/rest/agents/id:%d/incompatibleBuildTypes?fields=%s", id, url.QueryEscape(fields))
 
 	var result CompatibilityList
@@ -138,6 +138,55 @@ func (c *Client) GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, err
 	}
 
 	return &result, nil
+}
+
+const buildAgentsFields = "count,agent(id,name,pool(id,name),connected,enabled,authorized)"
+
+// GetBuildCompatibleAgents returns agents compatible with the given build, including disconnected ones.
+func (c *Client) GetBuildCompatibleAgents(buildID int) (*AgentList, error) {
+	locator := fmt.Sprintf("compatible:(build:(id:%d)),defaultFilter:false", buildID)
+	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(buildAgentsFields))
+
+	var result AgentList
+	if err := c.get(context.Background(), path, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetBuildIncompatibleAgents returns agents incompatible with the given build.
+func (c *Client) GetBuildIncompatibleAgents(buildID int) (*AgentList, error) {
+	locator := fmt.Sprintf("incompatible:(build:(id:%d)),defaultFilter:false", buildID)
+	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(buildAgentsFields))
+
+	var result AgentList
+	if err := c.get(context.Background(), path, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetAgentBuildTypeCompatibility finds the (agent, buildType) entry in incompatibleBuildTypes, scanning at most maxScan.
+func (c *Client) GetAgentBuildTypeCompatibility(agentID int, buildTypeID string, maxScan int) (*Compatibility, error) {
+	if maxScan <= 0 {
+		maxScan = 5000
+	}
+	fields := "count,compatibility(buildType(id),compatible,incompatibleReasons(reason),unmetRequirements(description))"
+	locator := fmt.Sprintf("id:%s,count:%d", buildTypeID, maxScan)
+	path := fmt.Sprintf("/app/rest/agents/id:%d/incompatibleBuildTypes?locator=%s&fields=%s",
+		agentID, url.QueryEscape(locator), url.QueryEscape(fields))
+
+	var result CompatibilityList
+	if err := c.get(context.Background(), path, &result); err != nil {
+		return nil, err
+	}
+	for i := range result.Compatibility {
+		bt := result.Compatibility[i].BuildType
+		if bt != nil && bt.ID == buildTypeID {
+			return &result.Compatibility[i], nil
+		}
+	}
+	return nil, nil
 }
 
 // RebootAgent requests a reboot of the specified agent.
