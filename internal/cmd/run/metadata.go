@@ -43,8 +43,12 @@ pinned run stays visible in the UI and can be unpinned with
 
 func newRunUnpinCmd(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:     "unpin <id>",
-		Short:   "Unpin a run",
+		Use:   "unpin <id>",
+		Short: "Unpin a run",
+		Long: `Remove the pin from a run, re-enabling cleanup by retention policies.
+
+The mirror of 'teamcity run pin'. A pinned run stays until it is
+unpinned; once unpinned, normal retention rules apply again.`,
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity run unpin 12345`,
 		RunE: func(cmd *cobra.Command, args []string) error {
