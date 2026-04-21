@@ -39,7 +39,6 @@ type ServerConfig struct {
 
 type Config struct {
 	DefaultServer string                  `mapstructure:"default_server"`
-	Pager         string                  `mapstructure:"pager,omitempty"`
 	Servers       map[string]ServerConfig `mapstructure:"servers"`
 	Aliases       map[string]string       `mapstructure:"aliases"`
 }
@@ -257,9 +256,6 @@ func writeConfig() error {
 	w.SetConfigType("yaml")
 
 	w.Set("default_server", cfg.DefaultServer)
-	if cfg.Pager != "" {
-		w.Set("pager", cfg.Pager)
-	}
 
 	servers := make(map[string]any, len(cfg.Servers))
 	for url, sc := range cfg.Servers {
@@ -344,15 +340,15 @@ func ConfigPath() string {
 	return configPath
 }
 
-// ResolvePager returns the pager command as the user would type it. Precedence:
-// TEAMCITY_PAGER, config `pager` key, PAGER env var, then empty (no pager).
-// Callers treat empty (or `cat`) as explicit disable.
+// ResolvePager returns the pager command as the user would type it.
+// Precedence: TEAMCITY_PAGER, then PAGER, then empty (no pager).
+// Callers treat empty (or `cat`) as explicit disable. We intentionally
+// do NOT persist a pager choice to config.yml — env vars cover the
+// per-shell and machine-wide use cases, matching the kubectl / docker
+// model.
 func ResolvePager() string {
 	if v := os.Getenv(EnvPager); v != "" {
 		return v
-	}
-	if cfg != nil && cfg.Pager != "" {
-		return cfg.Pager
 	}
 	if v := os.Getenv("PAGER"); v != "" {
 		return v

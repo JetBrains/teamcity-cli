@@ -150,33 +150,6 @@ func TestConfigSetTokenExpiry(t *testing.T) {
 	assert.Contains(t, got, "2026-01-01T00:00:00Z")
 }
 
-func TestConfigSetPager(t *testing.T) {
-	setupWithServer(t)
-	out := capture(t, "config", "set", "pager", "less -R")
-	assert.Contains(t, out, "Set pager")
-
-	got := capture(t, "config", "get", "pager")
-	assert.Contains(t, got, "less -R")
-}
-
-func TestConfigSetPagerClear(t *testing.T) {
-	setupWithServer(t)
-	capture(t, "config", "set", "pager", "less -R")
-	capture(t, "config", "set", "pager", "")
-
-	got := capture(t, "config", "get", "pager")
-	// An empty value renders as a blank line.
-	assert.NotContains(t, got, "less")
-}
-
-func TestConfigListShowsPager(t *testing.T) {
-	setupWithServer(t)
-	capture(t, "config", "set", "pager", "less -R")
-
-	out := capture(t, "config", "list")
-	assert.Contains(t, out, "pager=less -R")
-}
-
 func TestConfigListEnvOverridesIncludesPager(t *testing.T) {
 	setupWithServer(t)
 	t.Setenv("TEAMCITY_PAGER", "less -R")

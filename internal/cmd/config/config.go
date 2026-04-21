@@ -57,7 +57,6 @@ func newListCmd(f *cmdutil.Factory) *cobra.Command {
 
 type configJSON struct {
 	DefaultServer string                `json:"default_server"`
-	Pager         string                `json:"pager,omitempty"`
 	Servers       map[string]serverJSON `json:"servers"`
 	Aliases       map[string]string     `json:"aliases"`
 	Environment   map[string]string     `json:"environment,omitempty"`
@@ -84,7 +83,6 @@ func runList(f *cmdutil.Factory, jsonOutput bool) error {
 	} else {
 		_, _ = fmt.Fprintf(p.Out, "default_server=\n")
 	}
-	_, _ = fmt.Fprintf(p.Out, "pager=%s\n", c.Pager)
 
 	urls := sortedServerURLs(c)
 	for _, serverURL := range urls {
@@ -126,7 +124,6 @@ func printListJSON(p *output.Printer, c *cfg.Config) error {
 	env := collectEnvOverrides()
 	out := configJSON{
 		DefaultServer: c.DefaultServer,
-		Pager:         c.Pager,
 		Servers:       servers,
 		Aliases:       aliases,
 	}
