@@ -6,6 +6,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -139,16 +140,29 @@ func renderIncompatibilityReasons(w io.Writer, client api.ClientInterface, build
 	if buildTypeID == "" || len(agents) == 0 {
 		return
 	}
-	printedHeader := false
 	limit := min(reasonProbeAgents, len(agents))
+
+	type probeResult struct {
+		agent   api.Agent
+		reasons []string
+	}
+	results := make([]probeResult, limit)
+	var wg sync.WaitGroup
 	for i := range limit {
 		a := agents[i]
-		compat, err := client.GetAgentBuildTypeCompatibility(a.ID, buildTypeID, reasonProbeLimit)
-		if err != nil || compat == nil {
-			continue
-		}
-		reasons := compat.ReasonsList()
-		if len(reasons) == 0 {
+		wg.Go(func() {
+			compat, err := client.GetAgentBuildTypeCompatibility(a.ID, buildTypeID, reasonProbeLimit)
+			if err != nil || compat == nil {
+				return
+			}
+			results[i] = probeResult{agent: a, reasons: compat.ReasonsList()}
+		})
+	}
+	wg.Wait()
+
+	printedHeader := false
+	for _, r := range results {
+		if len(r.reasons) == 0 {
 			continue
 		}
 		if !printedHeader {
@@ -156,9 +170,9 @@ func renderIncompatibilityReasons(w io.Writer, client api.ClientInterface, build
 			_, _ = fmt.Fprintf(w, "%s\n", output.Faint("Sample incompatibility reasons:"))
 			printedHeader = true
 		}
-		_, _ = fmt.Fprintf(w, "  %s\n", a.Name)
-		for _, r := range reasons {
-			_, _ = fmt.Fprintf(w, "    %s %s\n", output.Red("•"), r)
+		_, _ = fmt.Fprintf(w, "  %s\n", r.agent.Name)
+		for _, reason := range r.reasons {
+			_, _ = fmt.Fprintf(w, "    %s %s\n", output.Red("•"), reason)
 		}
 	}
 }
