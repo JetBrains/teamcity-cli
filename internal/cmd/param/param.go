@@ -77,7 +77,6 @@ func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *co
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("list <%s-id>", resource),
 		Short: fmt.Sprintf("List %s parameters", resource),
-		Long:  fmt.Sprintf("List all parameters for a %s.", resource),
 		Args:  cobra.ExactArgs(1),
 		Example: fmt.Sprintf(`  teamcity %s param list MyID
   teamcity %s param list MyID --json
@@ -146,7 +145,6 @@ func newParamGetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *cob
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("get <%s-id> <name>", resource),
 		Short: fmt.Sprintf("Get a %s parameter value", resource),
-		Long:  fmt.Sprintf("Get the value of a specific %s parameter.", resource),
 		Args:  cobra.ExactArgs(2),
 		Example: fmt.Sprintf(`  teamcity %s param get MyID MY_PARAM
   teamcity %s param get MyID VERSION`, resource, resource),
@@ -193,8 +191,11 @@ func newParamSetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *cob
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("set <%s-id> <name> <value>", resource),
 		Short: fmt.Sprintf("Set a %s parameter value", resource),
-		Long:  fmt.Sprintf("Set or update a %s parameter value.", resource),
-		Args:  cobra.ExactArgs(3),
+		Long: fmt.Sprintf(`Set or update a %s parameter.
+
+Use --secure to mark the parameter as a password. Secure values are
+stored encrypted server-side and masked in logs and UI output.`, resource),
+		Args: cobra.ExactArgs(3),
 		Example: fmt.Sprintf(`  teamcity %s param set MyID MY_PARAM "my value"
   teamcity %s param set MyID SECRET_KEY "****" --secure`, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -225,7 +226,6 @@ func newParamDeleteCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI) *
 	cmd := &cobra.Command{
 		Use:     fmt.Sprintf("delete <%s-id> <name>", resource),
 		Short:   fmt.Sprintf("Delete a %s parameter", resource),
-		Long:    fmt.Sprintf("Delete a parameter from a %s.", resource),
 		Args:    cobra.ExactArgs(2),
 		Example: fmt.Sprintf(`  teamcity %s param delete MyID MY_PARAM`, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {

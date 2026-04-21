@@ -57,7 +57,6 @@ func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List projects",
-		Long:    `List all TeamCity projects.`,
 		Aliases: []string{"ls"},
 		Example: `  teamcity project list
   teamcity project list --parent Falcon
@@ -115,7 +114,6 @@ func newProjectViewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view <project-id>",
 		Short:   "View project details",
-		Long:    `View details of a TeamCity project.`,
 		Aliases: []string{"show"},
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity project view Falcon

@@ -23,8 +23,12 @@ func newAgentJobsCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "jobs <agent>",
 		Short: "Show jobs an agent can run",
-		Long:  `List build configurations (jobs) that are compatible or incompatible with an agent.`,
-		Args:  cobra.ExactArgs(1),
+		Long: `Show jobs that are compatible with an agent.
+
+Pass --incompatible to show jobs that would not run on this agent,
+with the requirement reasons (missing parameters, unmet tool
+versions, pool restrictions, etc.).`,
+		Args: cobra.ExactArgs(1),
 		Example: `  teamcity agent jobs 1
   teamcity agent jobs Agent-Linux-01
   teamcity agent jobs Agent-Linux-01 --incompatible

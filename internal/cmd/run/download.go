@@ -29,8 +29,12 @@ func newRunDownloadCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download <id>",
 		Short: "Download artifacts",
-		Long:  `Download artifacts from a completed run.`,
-		Args:  cobra.ExactArgs(1),
+		Long: `Download artifacts from a completed run.
+
+Filter by --artifact (glob) and --path (subdirectory within the run's
+artifact tree). Use --output to choose the local destination directory
+(defaults to the current directory).`,
+		Args: cobra.ExactArgs(1),
 		Example: `  teamcity run download 12345
   teamcity run download 12345 --path build/assets
   teamcity run download 12345 -o ./artifacts
