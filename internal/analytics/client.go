@@ -102,11 +102,13 @@ func (c *Client) boot() {
 		}
 
 		scheme := Scheme
-		if url := fusConfig.SchemeURL(ProductCode); url != "" {
+		if url := fusConfig.SchemeURL(ProductCode); url != "" && shouldTryCDN(dir) {
 			if remote, err := fus.LoadOrFetchScheme(url, dir); err == nil {
 				scheme = remote
+				clearCDNUnavailable(dir)
 				c.logf("analytics: using CDN metadata (version=%s groups=%d)", scheme.Version, len(scheme.Groups))
 			} else {
+				markCDNUnavailable(dir)
 				c.logf("analytics: CDN metadata unavailable, using embedded scheme: %v", err)
 			}
 		}
