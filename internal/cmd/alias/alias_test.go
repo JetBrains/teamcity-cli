@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/alias"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
@@ -24,14 +25,14 @@ func setupAliasTest(t *testing.T) {
 func TestAliasSetAndList(t *testing.T) {
 	setupAliasTest(t)
 
-	root := cmd.NewRootCmd()
+	root := cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "set", "fl", "run list --status=failure"})
 	require.NoError(t, root.Execute())
 
 	var out bytes.Buffer
 	f := cmdutil.NewFactory()
 	f.Printer = &output.Printer{Out: &out, ErrOut: &out}
-	root = cmd.NewRootCmdWithFactory(f)
+	root = cmd.NewCommand(f)
 	root.SetArgs([]string{"alias", "list", "--json"})
 	require.NoError(t, root.Execute())
 	assert.Contains(t, out.String(), "fl")
@@ -41,7 +42,7 @@ func TestAliasSetAndList(t *testing.T) {
 func TestAliasSetShellFlag(t *testing.T) {
 	setupAliasTest(t)
 
-	root := cmd.NewRootCmd()
+	root := cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "set", "--shell", "failing", "teamcity run list | jq ."})
 	require.NoError(t, root.Execute())
 
@@ -53,7 +54,7 @@ func TestAliasSetShellFlag(t *testing.T) {
 func TestAliasSetBangPrefix(t *testing.T) {
 	setupAliasTest(t)
 
-	root := cmd.NewRootCmd()
+	root := cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "set", "failing", "!tc run list | jq ."})
 	require.NoError(t, root.Execute())
 
@@ -63,7 +64,7 @@ func TestAliasSetBangPrefix(t *testing.T) {
 func TestAliasSetRejectsBuiltin(t *testing.T) {
 	setupAliasTest(t)
 
-	root := cmd.NewRootCmd()
+	root := cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "set", "run", "job list"})
 	var out bytes.Buffer
 	root.SetOut(&out)
@@ -76,11 +77,11 @@ func TestAliasSetRejectsBuiltin(t *testing.T) {
 func TestAliasSetOverwrite(t *testing.T) {
 	setupAliasTest(t)
 
-	root := cmd.NewRootCmd()
+	root := cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "set", "fl", "run list --status=failure"})
 	require.NoError(t, root.Execute())
 
-	root = cmd.NewRootCmd()
+	root = cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "set", "fl", "run list --status=success"})
 	require.NoError(t, root.Execute())
 
@@ -92,8 +93,8 @@ func TestAliasSetOverwriteRegistered(t *testing.T) {
 	setupAliasE2E(t)
 	require.NoError(t, config.AddAlias("rl", "run list"))
 
-	root := cmd.NewRootCmd()
-	cmd.RegisterAliases(root, cmdutil.NewFactory())
+	root := cmd.NewCommand(nil)
+	alias.RegisterAliases(root,cmdutil.NewFactory())
 
 	root.SetArgs([]string{"alias", "set", "rl", "run list --limit=10"})
 	var out bytes.Buffer
@@ -108,11 +109,11 @@ func TestAliasSetOverwriteRegistered(t *testing.T) {
 func TestAliasDeleteCmd(t *testing.T) {
 	setupAliasTest(t)
 
-	root := cmd.NewRootCmd()
+	root := cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "set", "fl", "run list"})
 	require.NoError(t, root.Execute())
 
-	root = cmd.NewRootCmd()
+	root = cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "delete", "fl"})
 	require.NoError(t, root.Execute())
 
@@ -123,7 +124,7 @@ func TestAliasDeleteCmd(t *testing.T) {
 func TestAliasDeleteNonexistentCmd(t *testing.T) {
 	setupAliasTest(t)
 
-	root := cmd.NewRootCmd()
+	root := cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "delete", "nope"})
 	var out bytes.Buffer
 	root.SetOut(&out)
@@ -139,7 +140,7 @@ func TestAliasListEmpty(t *testing.T) {
 	var out bytes.Buffer
 	f := cmdutil.NewFactory()
 	f.Printer = &output.Printer{Out: &out, ErrOut: &out}
-	root := cmd.NewRootCmdWithFactory(f)
+	root := cmd.NewCommand(f)
 	root.SetArgs([]string{"alias", "list"})
 	require.NoError(t, root.Execute())
 	assert.Contains(t, out.String(), "built-in")
@@ -148,14 +149,14 @@ func TestAliasListEmpty(t *testing.T) {
 func TestAliasListJSON(t *testing.T) {
 	setupAliasTest(t)
 
-	root := cmd.NewRootCmd()
+	root := cmd.NewCommand(nil)
 	root.SetArgs([]string{"alias", "set", "fl", "run list"})
 	require.NoError(t, root.Execute())
 
 	var out bytes.Buffer
 	f := cmdutil.NewFactory()
 	f.Printer = &output.Printer{Out: &out, ErrOut: &out}
-	root = cmd.NewRootCmdWithFactory(f)
+	root = cmd.NewCommand(f)
 	root.SetArgs([]string{"alias", "list", "--json"})
 	require.NoError(t, root.Execute())
 	assert.Contains(t, out.String(), `"name"`)
@@ -174,8 +175,8 @@ func TestAliasExpansionEndToEnd(t *testing.T) {
 	setupAliasE2E(t)
 	require.NoError(t, config.AddAlias("fl", "run list --status=failure"))
 
-	root := cmd.NewRootCmd()
-	cmd.RegisterAliases(root, cmdutil.NewFactory())
+	root := cmd.NewCommand(nil)
+	alias.RegisterAliases(root,cmdutil.NewFactory())
 
 	var out bytes.Buffer
 	root.SetArgs([]string{"fl"})
@@ -188,8 +189,8 @@ func TestAliasExpansionWithExtraArgs(t *testing.T) {
 	setupAliasE2E(t)
 	require.NoError(t, config.AddAlias("fl", "run list --status=failure"))
 
-	root := cmd.NewRootCmd()
-	cmd.RegisterAliases(root, cmdutil.NewFactory())
+	root := cmd.NewCommand(nil)
+	alias.RegisterAliases(root,cmdutil.NewFactory())
 
 	var out bytes.Buffer
 	root.SetArgs([]string{"fl", "--limit", "5"})
@@ -202,8 +203,8 @@ func TestAliasExpansionWithPositionalArgs(t *testing.T) {
 	setupAliasE2E(t)
 	require.NoError(t, config.AddAlias("mybuilds", "run list --user=$1 --status=success"))
 
-	root := cmd.NewRootCmd()
-	cmd.RegisterAliases(root, cmdutil.NewFactory())
+	root := cmd.NewCommand(nil)
+	alias.RegisterAliases(root,cmdutil.NewFactory())
 
 	var out bytes.Buffer
 	root.SetArgs([]string{"mybuilds", "admin"})
@@ -219,8 +220,8 @@ func TestAliasHelpFlag(t *testing.T) {
 	var out bytes.Buffer
 	f := cmdutil.NewFactory()
 	f.Printer = &output.Printer{Out: &out, ErrOut: &out}
-	root := cmd.NewRootCmd()
-	cmd.RegisterAliases(root, f)
+	root := cmd.NewCommand(nil)
+	alias.RegisterAliases(root,f)
 
 	root.SetArgs([]string{"fl", "--help"})
 	root.SetOut(&out)
@@ -233,8 +234,8 @@ func TestAliasDepthLimit(t *testing.T) {
 	setupAliasTest(t)
 	require.NoError(t, config.AddAlias("loop", "loop"))
 
-	root := cmd.NewRootCmd()
-	cmd.RegisterAliases(root, cmdutil.NewFactory())
+	root := cmd.NewCommand(nil)
+	alias.RegisterAliases(root,cmdutil.NewFactory())
 
 	root.SetArgs([]string{"loop"})
 	var out bytes.Buffer
@@ -262,8 +263,8 @@ func TestAwesomeAliasesEndToEnd(t *testing.T) {
 
 	for name := range aliases {
 		t.Run(name, func(t *testing.T) {
-			root := cmd.NewRootCmd()
-			cmd.RegisterAliases(root, cmdutil.NewFactory())
+			root := cmd.NewCommand(nil)
+			alias.RegisterAliases(root,cmdutil.NewFactory())
 
 			var out bytes.Buffer
 			root.SetArgs([]string{name})
@@ -278,8 +279,8 @@ func TestAliasSkipsBuiltinConflict(t *testing.T) {
 	setupAliasTest(t)
 	require.NoError(t, config.AddAlias("run", "job list"))
 
-	root := cmd.NewRootCmd()
-	cmd.RegisterAliases(root, cmdutil.NewFactory())
+	root := cmd.NewCommand(nil)
+	alias.RegisterAliases(root,cmdutil.NewFactory())
 
 	var out bytes.Buffer
 	root.SetArgs([]string{"run"})

@@ -47,7 +47,7 @@ func TestHelpCommands(T *testing.T) {
 	for _, args := range commands {
 		T.Run(args[0], func(t *testing.T) {
 			t.Parallel()
-			rootCmd := cmd.NewRootCmd()
+			rootCmd := cmd.NewCommand(nil)
 			rootCmd.SetArgs(args)
 			var out bytes.Buffer
 			rootCmd.SetOut(&out)
@@ -62,7 +62,7 @@ func TestHelpCommands(T *testing.T) {
 func TestUnknownCommand(T *testing.T) {
 	T.Parallel()
 
-	rootCmd := cmd.NewRootCmd()
+	rootCmd := cmd.NewCommand(nil)
 	rootCmd.SetArgs([]string{"nonexistent"})
 	var out bytes.Buffer
 	rootCmd.SetOut(&out)
@@ -96,7 +96,7 @@ func TestGlobalFlagMutex(T *testing.T) {
 	for _, tc := range cases {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			rootCmd := cmd.NewRootCmd()
+			rootCmd := cmd.NewCommand(nil)
 			rootCmd.SetArgs(tc.args)
 			var out bytes.Buffer
 			rootCmd.SetOut(&out)
@@ -142,7 +142,7 @@ func TestParentCommandWithoutSubcommand(T *testing.T) {
 		T.Run(c, func(t *testing.T) {
 			t.Parallel()
 
-			rootCmd := cmd.NewRootCmd()
+			rootCmd := cmd.NewCommand(nil)
 			rootCmd.SetArgs([]string{c})
 			var out bytes.Buffer
 			rootCmd.SetOut(&out)
@@ -169,7 +169,7 @@ func TestInvalidIDs(T *testing.T) {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			f := ts.CloneFactory()
-			rootCmd := cmd.NewRootCmdWithFactory(f)
+			rootCmd := cmd.NewCommand(f)
 			rootCmd.SetArgs(tc.args)
 			var out bytes.Buffer
 			rootCmd.SetOut(&out)

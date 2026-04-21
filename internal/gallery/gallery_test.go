@@ -139,7 +139,7 @@ func capture(t *testing.T, ts *cmdtest.TestServer, args ...string) string {
 	f := ts.CloneFactory()
 	var buf bytes.Buffer
 	f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
-	rootCmd := cmd.NewRootCmdWithFactory(f)
+	rootCmd := cmd.NewCommand(f)
 	rootCmd.SetArgs(args)
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)

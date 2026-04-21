@@ -32,7 +32,7 @@ func capture(t *testing.T, args ...string) string {
 	var buf bytes.Buffer
 	f := cmdutil.NewFactory()
 	f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
-	root := cmd.NewRootCmdWithFactory(f)
+	root := cmd.NewCommand(f)
 	root.SetArgs(args)
 	root.SetOut(&buf)
 	root.SetErr(&buf)
@@ -45,7 +45,7 @@ func captureErr(t *testing.T, args ...string) error {
 	var buf bytes.Buffer
 	f := cmdutil.NewFactory()
 	f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
-	root := cmd.NewRootCmdWithFactory(f)
+	root := cmd.NewCommand(f)
 	root.SetArgs(args)
 	root.SetOut(&buf)
 	root.SetErr(&buf)

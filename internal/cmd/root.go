@@ -81,10 +81,8 @@ Report issues:  https://jb.gg/tc/issues`,
 
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		f.InitOutput()
-		if jsonFlag := cmd.Flags().Lookup("json"); jsonFlag != nil && jsonFlag.Changed {
-			if jsonFlag.Value.Type() != "bool" || jsonFlag.Value.String() != "false" {
-				f.JSONOutput = true
-			}
+		if jsonOutputEnabled(cmd) {
+			f.JSONOutput = true
 		}
 		if cmd.Name() != "update" && f.UpdateNotice == nil {
 			f.UpdateNotice = update.CheckInBackground(f.Printer.ErrOut, f.Quiet)
@@ -112,19 +110,15 @@ func Execute() error {
 	f := cmdutil.NewFactory()
 	rootCmd := buildRootCmd(f)
 
-	RegisterAliases(rootCmd, f)
+	alias.RegisterAliases(rootCmd, f)
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
 	executedCmd, err := rootCmd.ExecuteC()
 	if f.UpdateNotice != nil {
 		f.UpdateNotice()
 	}
-	if !f.JSONOutput && executedCmd != nil {
-		if jsonFlag := executedCmd.Flags().Lookup("json"); jsonFlag != nil && jsonFlag.Changed {
-			if jsonFlag.Value.Type() != "bool" || jsonFlag.Value.String() != "false" {
-				f.JSONOutput = true
-			}
-		}
+	if !f.JSONOutput && executedCmd != nil && jsonOutputEnabled(executedCmd) {
+		f.JSONOutput = true
 	}
 	if err != nil && isCategory(err, api.CatAuth) && !f.JSONOutput {
 		tryAutoReauth(f)
@@ -170,32 +164,23 @@ func addGrouped(parent *cobra.Command, groupID string, cmds ...*cobra.Command) {
 	}
 }
 
-// RegisterAliases forwards to alias.RegisterAliases.
-func RegisterAliases(rootCmd *cobra.Command, f *cmdutil.Factory) {
-	alias.RegisterAliases(rootCmd, f)
+// jsonOutputEnabled reports whether --json was set to a JSON-emitting value.
+// Handles both the bool --json shape (most commands) and the string
+// --json=fields shape used by list commands (see cmdutil.AddJSONFieldsFlag).
+func jsonOutputEnabled(cmd *cobra.Command) bool {
+	f := cmd.Flags().Lookup("json")
+	return f != nil && f.Changed && f.Value.String() != "false"
 }
 
-// RootCommand is an alias for cobra.Command for external access
-type RootCommand = cobra.Command
-
-// GetRootCmd returns a root command for doc generation and external access.
-func GetRootCmd() *RootCommand {
-	f := cmdutil.NewFactory()
-	return buildRootCmd(f)
-}
-
-// NewRootCmd creates a fresh root command instance for testing.
-// Unlike the production root, it does not set PersistentPreRun to avoid
-// races on output globals when tests run in parallel.
-func NewRootCmd() *RootCommand {
-	f := cmdutil.NewFactory()
-	cmd := buildRootCmd(f)
-	cmd.PersistentPreRun = nil
-	return cmd
-}
-
-// NewRootCmdWithFactory creates a fresh root command with a specific factory (for tests).
-func NewRootCmdWithFactory(f *cmdutil.Factory) *RootCommand {
+// NewCommand builds a root command for tests and doc generation.
+// Pass nil for f to get a fresh production factory. PersistentPreRun is
+// stripped so tests and doc walks don't spawn the update-check goroutine
+// or race on output globals. Aliases are not registered — callers that
+// need them invoke alias.RegisterAliases themselves.
+func NewCommand(f *cmdutil.Factory) *cobra.Command {
+	if f == nil {
+		f = cmdutil.NewFactory()
+	}
 	cmd := buildRootCmd(f)
 	cmd.PersistentPreRun = nil
 	return cmd

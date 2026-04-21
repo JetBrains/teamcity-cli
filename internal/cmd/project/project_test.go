@@ -48,7 +48,7 @@ func TestProjectParam(T *testing.T) {
 func TestProjectToken(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
-	rootCmd := cmd.NewRootCmdWithFactory(ts.Factory)
+	rootCmd := cmd.NewCommand(ts.Factory)
 	rootCmd.SetArgs([]string{"project", "token", "put", testProject, "test-secret-value"})
 	var out bytes.Buffer
 	rootCmd.SetOut(&out)

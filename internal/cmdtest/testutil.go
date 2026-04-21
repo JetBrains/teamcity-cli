@@ -148,7 +148,7 @@ func ExtractID(path, prefix string) string {
 // RunCmd executes a CLI command using the default mock factory and asserts no error.
 func RunCmd(t *testing.T, args ...string) {
 	t.Helper()
-	rootCmd := cmd.NewRootCmd()
+	rootCmd := cmd.NewCommand(nil)
 	rootCmd.SetArgs(args)
 	var out bytes.Buffer
 	rootCmd.SetOut(&out)
@@ -163,7 +163,7 @@ func CaptureOutput(t *testing.T, f *cmdutil.Factory, args ...string) string {
 	var buf bytes.Buffer
 	f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
 
-	rootCmd := cmd.NewRootCmdWithFactory(f)
+	rootCmd := cmd.NewCommand(f)
 	rootCmd.SetArgs(args)
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
@@ -179,7 +179,7 @@ func CaptureErr(t *testing.T, f *cmdutil.Factory, args ...string) error {
 	var buf bytes.Buffer
 	f.Printer = &output.Printer{Out: &buf, ErrOut: &buf}
 
-	rootCmd := cmd.NewRootCmdWithFactory(f)
+	rootCmd := cmd.NewCommand(f)
 	rootCmd.SetArgs(args)
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
@@ -198,7 +198,7 @@ func RunCmdWithFactory(t *testing.T, f *cmdutil.Factory, args ...string) {
 // RunCmdExpectErr executes a CLI command and asserts an error containing want.
 func RunCmdExpectErr(t *testing.T, want string, args ...string) {
 	t.Helper()
-	rootCmd := cmd.NewRootCmd()
+	rootCmd := cmd.NewCommand(nil)
 	rootCmd.SetArgs(args)
 	var out bytes.Buffer
 	rootCmd.SetOut(&out)
