@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strconv"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -76,7 +77,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 				"Try --all, or verify the job ID with 'teamcity job list'",
 			)
 		}
-		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
+		runID = strconv.Itoa(runs.Builds[0].ID)
 		p.Info("Listing artifacts for run %s  #%s", runID, runs.Builds[0].Number)
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")

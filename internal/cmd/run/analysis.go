@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -183,7 +184,7 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 				"Try --all, or verify the job ID with 'teamcity job list'",
 			)
 		}
-		runID = fmt.Sprintf("%d", runs.Builds[0].ID)
+		runID = strconv.Itoa(runs.Builds[0].ID)
 	} else if runID == "" {
 		return fmt.Errorf("run ID required (or use --job to get latest run)")
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -136,7 +137,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		var status, runRef string
 		if opts.plain {
 			status = output.PlainStatusText(r.Status, r.State, r.StatusText)
-			runRef = fmt.Sprintf("%d", r.ID)
+			runRef = strconv.Itoa(r.ID)
 		} else {
 			status = fmt.Sprintf("%s %s", output.StatusIcon(r.Status, r.State, r.StatusText), output.StatusText(r.Status, r.State, r.StatusText))
 			runRef = fmt.Sprintf("%d  #%s", r.ID, r.Number)
@@ -402,15 +403,15 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	}
 
 	if opts.JSON {
-		reused, _ := client.GetBuildUsedByOtherBuilds(fmt.Sprintf("%d", build.ID))
+		reused, _ := client.GetBuildUsedByOtherBuilds(strconv.Itoa(build.ID))
 		build.UsedByOtherBuilds = reused
 		return p.PrintJSON(build)
 	}
 
-	reused, _ := client.GetBuildUsedByOtherBuilds(fmt.Sprintf("%d", build.ID))
+	reused, _ := client.GetBuildUsedByOtherBuilds(strconv.Itoa(build.ID))
 	build.UsedByOtherBuilds = reused
 
-	pipelineRun, _ := client.GetBuildPipelineRun(fmt.Sprintf("%d", build.ID))
+	pipelineRun, _ := client.GetBuildPipelineRun(strconv.Itoa(build.ID))
 
 	icon := output.StatusIcon(build.Status, build.State, build.StatusText)
 	jobName := build.BuildTypeID

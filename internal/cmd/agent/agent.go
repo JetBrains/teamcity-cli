@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -119,7 +120,7 @@ func (opts *agentListOptions) fetch(client api.ClientInterface, fields []string)
 		}
 
 		rows = append(rows, []string{
-			fmt.Sprintf("%d", a.ID),
+			strconv.Itoa(a.ID),
 			a.Name,
 			poolName,
 			status,
