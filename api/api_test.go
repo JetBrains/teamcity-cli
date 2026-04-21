@@ -89,10 +89,11 @@ func requireIdleAgent(t *testing.T) api.Agent {
 	return api.Agent{}
 }
 
-// cancelAndWait cancels a build, polls until it finishes, then waits for agents to release.
+// cancelAndWait cancels a build, polls until it finishes, then waits for its agent to release.
 func cancelAndWait(t *testing.T, buildID string) {
 	t.Helper()
 	_ = client.CancelBuild(buildID, "test cleanup")
+	var finished *api.Build
 	deadline := time.Now().Add(60 * time.Second)
 	for time.Until(deadline) > 0 {
 		b, err := client.GetBuild(t.Context(), buildID)
@@ -100,16 +101,35 @@ func cancelAndWait(t *testing.T, buildID string) {
 			break
 		}
 		if b.State == "finished" {
+			finished = b
 			break
 		}
 		_ = client.CancelBuild(buildID, "test cleanup")
 		time.Sleep(time.Second)
 	}
-	waitForAgentsReleased(t)
+	if finished != nil && finished.Agent != nil {
+		waitForAgentReleased(t, finished.Agent.ID)
+	} else if testEnvRef != nil && testEnvRef.ownsContainers {
+		waitForOwnedAgentsReleased(t)
+	}
 }
 
-// waitForAgentsReleased blocks until every authorized+connected agent reports .Build == nil.
-func waitForAgentsReleased(t *testing.T) {
+// waitForAgentReleased blocks until the given agent reports .Build == nil.
+func waitForAgentReleased(t *testing.T, agentID int) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Minute)
+	for time.Until(deadline) > 0 {
+		detail, err := client.GetAgent(agentID)
+		if err == nil && detail.Build == nil {
+			return
+		}
+		time.Sleep(2 * time.Second)
+	}
+	t.Logf("waitForAgentReleased: agent %d did not release within 3m", agentID)
+}
+
+// waitForOwnedAgentsReleased blocks until every agent reports .Build == nil; testcontainers-only.
+func waitForOwnedAgentsReleased(t *testing.T) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Minute)
 	for time.Until(deadline) > 0 {
@@ -133,7 +153,7 @@ func waitForAgentsReleased(t *testing.T) {
 		}
 		time.Sleep(2 * time.Second)
 	}
-	t.Logf("waitForAgentsReleased: agents did not release within 3m")
+	t.Logf("waitForOwnedAgentsReleased: agents did not release within 3m")
 }
 
 func TestMain(m *testing.M) {
