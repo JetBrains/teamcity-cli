@@ -239,7 +239,6 @@ changelog:
       - '^test[(:]'
       - '^ci[(:]'
       - '^chore[(:]'
-      - '^refactor[(:]'
       - '^lint[(:]'
       - '^fixup!'
       - '^Update '
@@ -249,14 +248,23 @@ changelog:
     use: anthropic
     model: claude-sonnet-4-6
     prompt: |
-      Write concise, professional release notes for teamcity CLI (a command-line interface for TeamCity CI/CD server).
+      You are writing release notes for teamcity (a command-line interface for the TeamCity CI/CD server).
 
-      Based on the following changelog, write a brief summary highlighting the most important changes for users.
-      Group changes into sections like "New Features", "Improvements", "Bug Fixes" as appropriate.
-      Keep it short and user-focused — skip internal refactors and minor cleanups.
-      Do not use emojis.
+      The output must have two sections, in this exact order:
 
+      1. An intro under a `## What's New` heading. Write 2–4 short sentences total, organized into `### New Features`, `### Improvements`, and `### Bug Fixes` subheadings as appropriate. Only mention changes that are visible to CLI users. Omit any subheading that would be empty. Do not mention dependency bumps, linter config, test-only changes, or internal refactors here.
+
+      2. The changelog under a `## Changelog` heading, reproduced word-for-word from the block delimited by `<commits>` tags below. Do not drop, reorder, rewrite, or summarize any line. Keep every SHA, commit message, PR number, and author handle intact. If the input already starts with a `## Changelog` heading, do not emit it a second time.
+
+      Response rules:
+      - Respond with ONLY the release-notes markdown. No preamble, no trailing commentary.
+      - Do not use emojis anywhere.
+      - The `## What's New` section comes first, the `## Changelog` section second.
+      - Every commit line inside `<commits>` must appear exactly once in the final output.
+
+      <commits>
       {{ .ReleaseNotes }}
+      </commits>
 
 release:
   github:
