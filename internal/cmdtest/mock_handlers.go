@@ -30,6 +30,11 @@ func SetupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	ts.Handle("GET /app/rest/server/version", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		_, _ = w.Write([]byte("2025.7 (build 197398)"))
+	})
+
 	ts.Handle("GET /app/rest/anything", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, map[string]string{"path": "anything"})
 	})
