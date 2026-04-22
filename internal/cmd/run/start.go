@@ -279,13 +279,13 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	}
 
 	if opts.localChanges != "" && opts.branch == "" {
-		if !isGitRepo() {
+		if !isGitRepoFn() {
 			return api.Validation(
 				"not a git repository",
 				"Run this command from within a git repository, or specify --branch explicitly",
 			)
 		}
-		branch, err := getCurrentBranch()
+		branch, err := currentBranchFn()
 		if err != nil {
 			return err
 		}
