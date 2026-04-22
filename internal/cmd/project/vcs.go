@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"slices"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/charmbracelet/huh"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
@@ -321,8 +320,7 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 		if !interactive {
 			return api.RequiredFlag("url")
 		}
-		prompt := &survey.Input{Message: "Repository URL:"}
-		if err := survey.AskOne(prompt, &repoURL, survey.WithValidator(survey.Required)); err != nil {
+		if err := cmdutil.PromptString(f.Printer, "Repository URL", "", &repoURL); err != nil {
 			return err
 		}
 	}
@@ -337,21 +335,13 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 		if !interactive {
 			authMethod = inferAuthFromURL(repoURL)
 		} else {
-			defaultIdx := 0
-			if isSSHURL(repoURL) {
-				defaultIdx = 1
+			authMethod = inferAuthFromURL(repoURL)
+			options := make([]huh.Option[string], len(authMethodValues))
+			for i, v := range authMethodValues {
+				options[i] = huh.NewOption(authMethodLabels[i], v)
 			}
-			prompt := &survey.Select{
-				Message: "Authentication method:",
-				Options: authMethodLabels,
-				Default: authMethodLabels[defaultIdx],
-			}
-			var selected string
-			if err := survey.AskOne(prompt, &selected); err != nil {
+			if err := cmdutil.Select(f.Printer, "Authentication method", options, &authMethod); err != nil {
 				return err
-			}
-			if i := slices.Index(authMethodLabels, selected); i >= 0 {
-				authMethod = authMethodValues[i]
 			}
 		}
 	}
@@ -406,13 +396,11 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 		password := opts.password
 
 		if interactive {
-			prompt := &survey.Input{Message: "Username:", Default: username}
-			if err := survey.AskOne(prompt, &username); err != nil {
+			if err := cmdutil.PromptString(f.Printer, "Username", "", &username); err != nil {
 				return nil, testReq, err
 			}
 			if password == "" && !opts.stdin {
-				prompt := &survey.Password{Message: "Password / Token:"}
-				if err := survey.AskOne(prompt, &password); err != nil {
+				if err := cmdutil.PromptSecret("Password / Token", &password); err != nil {
 					return nil, testReq, err
 				}
 			}
@@ -452,11 +440,11 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 			if len(names) == 0 {
 				return nil, testReq, fmt.Errorf("no SSH keys uploaded to project %s — upload one with: teamcity project ssh upload", projectID)
 			}
-			prompt := &survey.Select{
-				Message: "SSH key:",
-				Options: names,
+			options := make([]huh.Option[string], len(names))
+			for i, n := range names {
+				options[i] = huh.NewOption(n, n)
 			}
-			if err := survey.AskOne(prompt, &keyName); err != nil {
+			if err := cmdutil.Select(f.Printer, "SSH key", options, &keyName); err != nil {
 				return nil, testReq, err
 			}
 		}
@@ -481,8 +469,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 			if !interactive {
 				return nil, testReq, api.RequiredFlag("key-path")
 			}
-			prompt := &survey.Input{Message: "Path to SSH key on build agent:"}
-			if err := survey.AskOne(prompt, &keyPath, survey.WithValidator(survey.Required)); err != nil {
+			if err := cmdutil.PromptString(f.Printer, "Path to SSH key on build agent", "", &keyPath); err != nil {
 				return nil, testReq, err
 			}
 		}
@@ -509,16 +496,12 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 			if len(ids) == 0 {
 				return nil, testReq, fmt.Errorf("no connections found in project %s", projectID)
 			}
-			prompt := &survey.Select{
-				Message: "Connection:",
-				Options: labels,
+			options := make([]huh.Option[string], len(ids))
+			for i, id := range ids {
+				options[i] = huh.NewOption(labels[i], id)
 			}
-			var selected string
-			if err := survey.AskOne(prompt, &selected); err != nil {
+			if err := cmdutil.Select(f.Printer, "Connection", options, &connID); err != nil {
 				return nil, testReq, err
-			}
-			if i := slices.Index(labels, selected); i >= 0 {
-				connID = ids[i]
 			}
 		}
 		props = append(props,
@@ -705,11 +688,7 @@ func runVcsDelete(f *cmdutil.Factory, id string, opts *vcsDeleteOptions) error {
 
 	if !opts.yes && f.IsInteractive() {
 		var confirm bool
-		prompt := &survey.Confirm{
-			Message: fmt.Sprintf("Delete VCS root %q?", id),
-			Default: false,
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
+		if err := cmdutil.Confirm(fmt.Sprintf("Delete VCS root %q?", id), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

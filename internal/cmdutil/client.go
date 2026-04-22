@@ -11,7 +11,7 @@ import (
 
 func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 	serverURL := config.GetServerURL()
-	token, _, keyringErr := config.GetTokenWithSource()
+	token, source, keyringErr := config.GetTokenWithSource()
 
 	debugOpt := api.WithDebugFunc(f.Printer.Debug)
 	roOpt := api.WithReadOnly(config.IsReadOnly())
@@ -27,11 +27,13 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 			)
 		}
 		f.Printer.Debug("Using guest authentication")
+		opts = append(opts, api.WithAuthSource(api.AuthSourceGuest))
 		return api.NewGuestClient(serverURL, opts...).WithContext(f.Context()), nil
 	}
 
 	if serverURL != "" && token != "" {
 		f.WarnInsecureHTTP(serverURL, "authentication token")
+		opts = append(opts, api.WithAuthSource(resolveAuthSource(source)))
 		return api.NewClient(serverURL, token, opts...).WithContext(f.Context()), nil
 	}
 
@@ -41,10 +43,25 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 		}
 		f.Printer.Debug("Using build-level authentication")
 		f.WarnInsecureHTTP(serverURL, "credentials")
+		opts = append(opts, api.WithAuthSource(api.AuthSourceBuild))
 		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, opts...).WithContext(f.Context()), nil
 	}
 
 	return nil, NotAuthenticatedError(f.Context(), serverURL, keyringErr)
+}
+
+// resolveAuthSource maps a token-source string plus config state onto an api.AuthSource.
+func resolveAuthSource(tokenSource string) api.AuthSource {
+	if config.IsGuestAuth() {
+		return api.AuthSourceGuest
+	}
+	if tokenSource == "env" {
+		return api.AuthSourceEnv
+	}
+	if sc, ok := config.Get().Servers[config.GetServerURL()]; ok && sc.TokenExpiry != "" {
+		return api.AuthSourcePKCE
+	}
+	return api.AuthSourceManual
 }
 
 // ProbeGuestAccess checks whether the server at serverURL supports guest access; honors ctx for cancellation.

@@ -3,7 +3,6 @@ package queue
 import (
 	"fmt"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -44,11 +43,7 @@ func runQueueRemove(f *cmdutil.Factory, runID string, opts *queueRemoveOptions) 
 
 	if needsConfirmation {
 		var confirm bool
-		prompt := &survey.Confirm{
-			Message: fmt.Sprintf("Remove run %s from queue?", runID),
-			Default: false,
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
+		if err := cmdutil.Confirm(fmt.Sprintf("Remove run %s from queue?", runID), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

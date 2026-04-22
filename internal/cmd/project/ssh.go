@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
@@ -197,8 +196,7 @@ func runSSHGenerate(f *cmdutil.Factory, opts *sshGenerateOptions) error {
 		if !f.IsInteractive() {
 			return api.RequiredFlag("name")
 		}
-		prompt := &survey.Input{Message: "Key name:"}
-		if err := survey.AskOne(prompt, &name, survey.WithValidator(survey.Required)); err != nil {
+		if err := cmdutil.PromptString(f.Printer, "Key name", "", &name); err != nil {
 			return err
 		}
 	}
@@ -252,11 +250,7 @@ func runSSHDelete(f *cmdutil.Factory, name string, opts *sshDeleteOptions) error
 
 	if !opts.yes && f.IsInteractive() {
 		var confirm bool
-		prompt := &survey.Confirm{
-			Message: fmt.Sprintf("Delete SSH key %q from project %s?", name, projectID),
-			Default: false,
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
+		if err := cmdutil.Confirm(fmt.Sprintf("Delete SSH key %q from project %s?", name, projectID), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

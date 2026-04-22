@@ -43,6 +43,9 @@ type Client struct {
 	// Use WithReadOnly to configure.
 	ReadOnly bool
 
+	// AuthSource records how credentials were obtained; used for context-aware permission tips.
+	AuthSource AuthSource
+
 	// Basic auth credentials (used instead of Token if set)
 	basicUser string
 	basicPass string
@@ -421,9 +424,13 @@ func (c *Client) getWithRetry(ctx context.Context, path string, result any, retr
 	return nil
 }
 
-// handleErrorResponse is a method-receiver alias for ErrorFromResponse.
+// handleErrorResponse converts a non-2xx response into a typed error and stamps the AuthSource on PermissionError.
 func (c *Client) handleErrorResponse(resp *http.Response) error {
-	return ErrorFromResponse(resp)
+	err := ErrorFromResponse(resp)
+	if perm, ok := errors.AsType[*PermissionError](err); ok {
+		perm.AuthSource = c.AuthSource
+	}
+	return err
 }
 
 // ExtractErrorMessage returns the primary message from a TeamCity error body.

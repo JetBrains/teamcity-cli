@@ -1,13 +1,10 @@
 package auth
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
-	"slices"
 	"sync"
 	"time"
 
@@ -97,7 +94,7 @@ func collectAuthStatuses(f *cmdutil.Factory) []authStatus {
 	}
 
 	cfg := config.Get()
-	urls := sortedServerURLs(cfg)
+	urls := config.SortedServerURLs(cfg)
 	results := make([]authStatus, len(urls))
 	var wg sync.WaitGroup
 	for i, serverURL := range urls {
@@ -221,7 +218,7 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 
 	if len(results) > 1 {
 		_, _ = fmt.Fprintln(p.Out)
-		p.Tip("To switch the default server, run %s", output.Cyan("teamcity config set default_server <url>"))
+		p.Tip("%s", output.TipSwitchDefaultServer())
 	}
 
 	renderDSLTip(f.Context(), p, results)
@@ -344,20 +341,6 @@ func renderDSLTip(ctx context.Context, p *output.Printer, results []authStatus) 
 	} else {
 		_, _ = fmt.Fprintf(p.Out, "  Run %s to authenticate\n", loginCmd)
 	}
-}
-
-func sortedServerURLs(cfg *config.Config) []string {
-	urls := slices.Collect(maps.Keys(cfg.Servers))
-	slices.SortFunc(urls, func(a, b string) int {
-		if ad, bd := a == cfg.DefaultServer, b == cfg.DefaultServer; ad != bd {
-			if ad {
-				return -1
-			}
-			return 1
-		}
-		return cmp.Compare(a, b)
-	})
-	return urls
 }
 
 func tokenSourceLabel(source string) string {

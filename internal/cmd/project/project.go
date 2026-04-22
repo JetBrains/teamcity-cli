@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/param"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -246,10 +245,7 @@ func runProjectTokenPut(f *cmdutil.Factory, projectID, value string, opts *proje
 	}
 
 	if value == "" {
-		prompt := &survey.Password{
-			Message: "Enter secure value to scramble:",
-		}
-		if err := survey.AskOne(prompt, &value); err != nil {
+		if err := cmdutil.PromptSecret("Enter secure value to scramble", &value); err != nil {
 			return fmt.Errorf("failed to read value: %w", err)
 		}
 	}

@@ -1,6 +1,7 @@
 package output
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"strings"
@@ -44,13 +45,11 @@ func tipFor(err error) string {
 	case api.CatAuth:
 		return "Run 'teamcity auth login' to re-authenticate"
 	case api.CatPermission:
-		// Only confident default when we identified the specific permission;
-		// otherwise (e.g. TeamCity's ambiguous queue-remove 403) the server's
-		// own message is the clearer guidance.
-		if pe, ok := errors.AsType[*api.PermissionError](ue); ok && pe.Permission != "" {
-			return "Ask your TeamCity administrator to grant this permission"
+		pe, ok := errors.AsType[*api.PermissionError](ue)
+		if !ok || pe.Permission == "" {
+			return "Re-authenticate with broader permissions via 'teamcity auth login'"
 		}
-		return ""
+		return permissionTip(pe)
 	case api.CatReadOnly:
 		return "Unset the TEAMCITY_RO environment variable to allow write operations"
 	case api.CatNotFound:
@@ -65,6 +64,23 @@ func tipFor(err error) string {
 		return "Check your network connection and verify the server URL"
 	}
 	return ""
+}
+
+// permissionTip formats a context-aware tip based on how the user authenticated.
+// Prefers the enum name as the stable identifier so users can match it against the picker's "(ENUM)" suffix.
+func permissionTip(pe *api.PermissionError) string {
+	ident := cmp.Or(api.PermissionEnum(pe.Permission), fmt.Sprintf("%q", pe.Permission))
+	switch pe.AuthSource {
+	case api.AuthSourcePKCE:
+		return fmt.Sprintf("Run 'teamcity auth login' and ensure %s is checked in the permissions picker", ident)
+	case api.AuthSourceEnv:
+		return fmt.Sprintf("Reissue TEAMCITY_TOKEN with a token that has %s permission, or unset it and run 'teamcity auth login'", ident)
+	case api.AuthSourceBuild:
+		return "Build-level credentials can't be widened; ask your TeamCity admin to grant " + ident
+	case api.AuthSourceGuest:
+		return fmt.Sprintf("Guest access lacks %s; run 'teamcity auth login' with an account that has it", ident)
+	}
+	return fmt.Sprintf("Generate a new access token with %s permission in your TeamCity user profile, then run 'teamcity auth login'", ident)
 }
 
 // hasListCommand reports whether 'teamcity <resource> list' is a real command we can suggest

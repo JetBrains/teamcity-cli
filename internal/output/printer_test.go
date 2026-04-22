@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -123,13 +124,60 @@ func TestPrinterEmptyUsesFormatTip(t *testing.T) {
 	assert.Contains(t, out.String(), "Tip: do a thing")
 }
 
-// TestTipFor_PermissionOnlyWhenIdentified pins that CatPermission's default fires only for parsed permissions.
+// TestTipFor_PermissionOnlyWhenIdentified pins that CatPermission picks the identified-permission branch when parseable, and the generic re-auth tip otherwise.
 func TestTipFor_PermissionOnlyWhenIdentified(t *testing.T) {
 	parsed := newForbidden(`{"errors":[{"message":"You do not have \"Comment build\" permission in project with internal id: 'p1'"}]}`)
-	assert.Equal(t, "Ask your TeamCity administrator to grant this permission", tipFor(parsed))
+	assert.Contains(t, tipFor(parsed), "COMMENT_BUILD")
 
 	ambiguous := newForbidden(`{"errors":[{"message":"Build was not canceled. Probably not sufficient permissions."}]}`)
-	assert.Empty(t, tipFor(ambiguous))
+	assert.Equal(t, "Re-authenticate with broader permissions via 'teamcity auth login'", tipFor(ambiguous))
+}
+
+// TestTipFor_Permission_AuthSourceBranches covers each AuthSource branch in permissionTip.
+func TestTipFor_Permission_AuthSourceBranches(t *testing.T) {
+	t.Parallel()
+
+	const (
+		serverDesc = "Comment build"
+		wantEnum   = "COMMENT_BUILD"
+	)
+	body := `{"errors":[{"message":"You do not have \"` + serverDesc + `\" permission in project with internal id: 'p1'"}]}`
+
+	tests := []struct {
+		name   string
+		src    api.AuthSource
+		expect string
+	}{
+		{"pkce", api.AuthSourcePKCE, "permissions picker"},
+		{"env", api.AuthSourceEnv, "TEAMCITY_TOKEN"},
+		{"build", api.AuthSourceBuild, "Build-level credentials"},
+		{"guest", api.AuthSourceGuest, "Guest access lacks"},
+		{"manual", api.AuthSourceManual, "Generate a new access token"},
+		{"unknown", api.AuthSourceUnknown, "Generate a new access token"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := newForbidden(body)
+			pe, ok := errors.AsType[*api.PermissionError](err)
+			require.True(t, ok)
+			pe.AuthSource = tc.src
+			got := tipFor(pe)
+			assert.Contains(t, got, tc.expect)
+			assert.Contains(t, got, wantEnum)
+		})
+	}
+}
+
+// TestTipFor_Permission_UnknownDescriptionFallsBackToQuoted pins that unmapped server descriptions appear quoted verbatim in the tip.
+func TestTipFor_Permission_UnknownDescriptionFallsBackToQuoted(t *testing.T) {
+	t.Parallel()
+	err := newForbidden(`{"errors":[{"message":"You do not have \"Some unknown perm\" permission in project with internal id: 'p1'"}]}`)
+	pe, ok := errors.AsType[*api.PermissionError](err)
+	require.True(t, ok)
+	pe.AuthSource = api.AuthSourcePKCE
+	assert.Contains(t, tipFor(pe), `"Some unknown perm"`)
 }
 
 // TestPrinterConcurrentWrites regresses F17: without the mutex, -race fires and writes interleave.

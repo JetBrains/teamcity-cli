@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -50,11 +49,7 @@ func runPipelineDelete(f *cmdutil.Factory, id string, opts *deleteOptions) error
 			return errors.New("--yes is required in non-interactive mode")
 		}
 		var confirm bool
-		prompt := &survey.Confirm{
-			Message: fmt.Sprintf("Delete pipeline %q (%s)?", pipeline.Name, pipeline.ID),
-			Default: false,
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
+		if err := cmdutil.Confirm(fmt.Sprintf("Delete pipeline %q (%s)?", pipeline.Name, pipeline.ID), &confirm); err != nil {
 			return err
 		}
 		if !confirm {
