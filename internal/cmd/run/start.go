@@ -159,6 +159,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run start Falcon_Build
   teamcity run start Falcon_Build --branch feature/test
+  teamcity run start Falcon_Build --branch @this
   teamcity run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
   teamcity run start Falcon_Build --comment "Release build" --tag release --tag v1.0
   teamcity run start Falcon_Build --clean --rebuild-deps --top
@@ -172,7 +173,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Branch to build")
+	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Branch to build (or '@this' for current git branch)")
 	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin to a specific Git commit SHA")
 	cmd.Flags().StringToStringVarP(&opts.params, "param", "P", nil, "Parameters (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.systemProps, "system", "S", nil, "System properties (key=value)")
@@ -200,6 +201,11 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error {
 	p := f.Printer
 	opts.resolve()
+	branch, err := resolveBranchFlag(opts.branch)
+	if err != nil {
+		return err
+	}
+	opts.branch = branch
 	if opts.dryRun {
 		client, err := f.Client()
 		if err != nil {
