@@ -327,7 +327,7 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		if !opts.json {
 			_, _ = fmt.Fprintln(p.Out)
 			_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
-			p.Tip("Resume: teamcity run log -f %s", runID)
+			p.Tip("%s", output.TipResumeLogFor(runID))
 		}
 		resErr = nil
 	}()

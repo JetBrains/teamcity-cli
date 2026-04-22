@@ -97,7 +97,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 		if !opts.quiet && !opts.json {
 			_, _ = fmt.Fprintln(p.Out)
 			_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
-			p.Tip("Resume watching: teamcity run watch %s", runID)
+			p.Tip("%s", output.TipResumeWatchFor(runID))
 		}
 		resErr = nil
 	}()
