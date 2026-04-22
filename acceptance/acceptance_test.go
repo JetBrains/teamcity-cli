@@ -23,6 +23,7 @@
 package acceptance
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/hex"
@@ -32,9 +33,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -66,7 +69,9 @@ func teamcityMain() int {
 		fmt.Fprintf(os.Stderr, "Error initializing config: %v\n", err)
 		return 1
 	}
-	if err := cmd.Execute(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := cmd.Execute(ctx); err != nil {
 		if exitErr, ok := errors.AsType[*cmdutil.ExitError](err); ok {
 			return exitErr.Code
 		}
