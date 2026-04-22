@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fatih/color"
 	"github.com/stretchr/testify/require"
 	"github.com/tiulpin/termbook"
 
@@ -22,8 +21,8 @@ import (
 )
 
 func TestGenerateGallery(t *testing.T) {
-	color.NoColor = false
-	t.Cleanup(func() { color.NoColor = true })
+	output.NoColor = false
+	t.Cleanup(func() { output.NoColor = true })
 
 	ts := setupGalleryMocks(t)
 

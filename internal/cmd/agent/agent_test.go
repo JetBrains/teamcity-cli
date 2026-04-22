@@ -3,13 +3,13 @@ package agent_test
 import (
 	"testing"
 
-	"github.com/fatih/color"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
-func init() { color.NoColor = true }
+func init() { output.NoColor = true }
 
 func TestAgentList(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
