@@ -120,7 +120,7 @@ func Execute(ctx context.Context) error {
 	if f.UpdateNotice != nil {
 		f.UpdateNotice()
 	}
-	if err != nil && ctx.Err() != nil && errors.Is(err, context.Canceled) {
+	if err != nil && ctx.Err() != nil {
 		return nil
 	}
 	if !f.JSONOutput && executedCmd != nil && jsonOutputEnabled(executedCmd) {
