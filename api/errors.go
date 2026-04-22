@@ -58,8 +58,9 @@ func (e *HTTPError) Category() Category { return e.cat }
 // PermissionError is returned for HTTP 403 responses.
 type PermissionError struct {
 	HTTPError
-	Permission string // e.g. "Comment build"
-	Project    string // TeamCity internal project id
+	Permission string     // e.g. "Comment build"
+	Project    string     // TeamCity internal project id
+	AuthSource AuthSource // how the client authenticated; drives the tip wording
 }
 
 func (e *PermissionError) Error() string {

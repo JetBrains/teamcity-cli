@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -98,11 +97,7 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 	needsConfirmation := !opts.yes && f.IsInteractive()
 	if needsConfirmation {
 		var confirm bool
-		prompt := &survey.Confirm{
-			Message: fmt.Sprintf("Reboot agent %s?", agentName),
-			Default: false,
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
+		if err := cmdutil.Confirm(fmt.Sprintf("Reboot agent %s?", agentName), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

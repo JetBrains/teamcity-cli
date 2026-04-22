@@ -1,0 +1,39 @@
+package api
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+)
+
+const probeTimeout = 10 * time.Second
+
+// ProbeTeamCity checks whether serverURL points to a reachable TeamCity server without sending credentials.
+func ProbeTeamCity(ctx context.Context, serverURL string) error {
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+	u := strings.TrimSuffix(serverURL, "/") + "/app/rest/server/version"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return err
+	}
+	client := &http.Client{Transport: defaultTransport()}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	switch {
+	case resp.StatusCode >= 200 && resp.StatusCode < 300,
+		resp.StatusCode == http.StatusUnauthorized,
+		resp.StatusCode == http.StatusForbidden:
+		return nil
+	case resp.StatusCode == http.StatusNotFound:
+		return errors.New("not a TeamCity server (endpoint not found)")
+	default:
+		return fmt.Errorf("unexpected response HTTP %d", resp.StatusCode)
+	}
+}

@@ -32,23 +32,34 @@ const (
 	maxResponseBody     = 64 * 1024
 )
 
+// fallbackScopes is ordered from most-useful for a typical CLI user (read + build actions) down to admin-only
+// scopes, so the scope picker UI defaults to the most-commonly-needed permissions near the top.
 var fallbackScopes = []string{
+	// Read
 	"VIEW_PROJECT",
 	"VIEW_BUILD_CONFIGURATION_SETTINGS",
 	"VIEW_AGENT_DETAILS",
+
+	// Build actions (daily developer workflow)
 	"RUN_BUILD",
 	"CANCEL_BUILD",
 	"TAG_BUILD",
 	"COMMENT_BUILD",
 	"PIN_UNPIN_BUILD",
-	"REORDER_BUILD_QUEUE",
 	"PATCH_BUILD_SOURCES",
+	"REORDER_BUILD_QUEUE",
+
+	// Project administration
 	"PAUSE_ACTIVATE_BUILD_CONFIGURATION",
 	"EDIT_PROJECT",
+	"CREATE_SUB_PROJECT",
+	"CREATE_DELETE_VCS_ROOT",
+
+	// Agent administration
+	"CONNECT_TO_AGENT",
 	"ENABLE_DISABLE_AGENT",
 	"AUTHORIZE_AGENT",
 	"ADMINISTER_AGENT",
-	"CONNECT_TO_AGENT",
 	"MANAGE_AGENT_POOLS",
 }
 

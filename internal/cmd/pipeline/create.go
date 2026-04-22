@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
@@ -87,21 +87,15 @@ func selectVcsRoot(f *cmdutil.Factory, client api.ClientInterface, projectID str
 		return "", fmt.Errorf("no VCS roots found in project %s, create one first", projectID)
 	}
 
-	options := make([]string, len(roots.VcsRoot))
-	ids := make([]string, len(roots.VcsRoot))
+	options := make([]huh.Option[string], len(roots.VcsRoot))
 	for i, r := range roots.VcsRoot {
-		options[i] = fmt.Sprintf("%s (%s)", r.Name, r.ID)
-		ids[i] = r.ID
+		options[i] = huh.NewOption(fmt.Sprintf("%s (%s)", r.Name, r.ID), r.ID)
 	}
 
-	var selected int
-	prompt := &survey.Select{
-		Message: "Select VCS root:",
-		Options: options,
-	}
-	if err := survey.AskOne(prompt, &selected); err != nil {
+	var selected string
+	if err := cmdutil.Select(f.Printer, "Select VCS root", options, &selected); err != nil {
 		return "", err
 	}
 
-	return ids[selected], nil
+	return selected, nil
 }

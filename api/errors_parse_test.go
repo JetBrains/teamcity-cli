@@ -3,7 +3,9 @@ package api
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -172,6 +174,23 @@ func TestErrorFromBody(T *testing.T) {
 		assert.Equal(t, CatInternal, he.Category())
 		assert.Equal(t, "database down", err.Error())
 	})
+}
+
+// TestClient_HandleErrorResponse_StampsAuthSource verifies that PermissionError carries the client's AuthSource.
+func TestClient_HandleErrorResponse_StampsAuthSource(T *testing.T) {
+	T.Parallel()
+
+	body := `{"errors":[{"message":"You do not have \"Comment build\" permission in project with internal id: 'p1'"}]}`
+	resp := &http.Response{
+		StatusCode: http.StatusForbidden,
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+	c := &Client{AuthSource: AuthSourcePKCE}
+	err := c.handleErrorResponse(resp)
+	pe, ok := errors.AsType[*PermissionError](err)
+	require.True(T, ok)
+	assert.Equal(T, AuthSourcePKCE, pe.AuthSource)
+	assert.Equal(T, "Comment build", pe.Permission)
 }
 
 // TestErrReadOnlySentinel covers the sentinel contract: equality, %w wrap, Category().

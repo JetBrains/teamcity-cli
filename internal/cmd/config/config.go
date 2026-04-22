@@ -1,7 +1,6 @@
 package config
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
 	"maps"
@@ -9,10 +8,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	cfg "github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
@@ -85,7 +84,7 @@ func runList(f *cmdutil.Factory, jsonOutput bool) error {
 		_, _ = fmt.Fprintf(p.Out, "default_server=\n")
 	}
 
-	urls := sortedServerURLs(c)
+	urls := cfg.SortedServerURLs(c)
 	for _, serverURL := range urls {
 		sc := c.Servers[serverURL]
 		suffix := ""
@@ -156,20 +155,6 @@ func collectEnvOverrides() map[string]string {
 		}
 	}
 	return env
-}
-
-func sortedServerURLs(c *cfg.Config) []string {
-	urls := slices.Collect(maps.Keys(c.Servers))
-	slices.SortFunc(urls, func(a, b string) int {
-		if ad, bd := a == c.DefaultServer, b == c.DefaultServer; ad != bd {
-			if ad {
-				return -1
-			}
-			return 1
-		}
-		return cmp.Compare(a, b)
-	})
-	return urls
 }
 
 func newGetCmd(f *cmdutil.Factory) *cobra.Command {
@@ -259,29 +244,25 @@ func selectDefaultServer(f *cmdutil.Factory) (string, error) {
 		return "", errors.New("no servers configured; run 'teamcity auth login' first")
 	}
 
-	urls := sortedServerURLs(c)
+	urls := cfg.SortedServerURLs(c)
 
 	if len(urls) == 1 {
 		return urls[0], nil
 	}
 
-	options := make([]string, len(urls))
+	options := make([]huh.Option[string], len(urls))
 	for i, u := range urls {
+		label := u
 		if u == c.DefaultServer {
-			options[i] = u + " (current)"
-		} else {
-			options[i] = u
+			label = u + " (current)"
 		}
+		options[i] = huh.NewOption(label, u)
 	}
 
-	var selected int
-	prompt := &survey.Select{
-		Message: "Select default server:",
-		Options: options,
-	}
-	if err := survey.AskOne(prompt, &selected); err != nil {
+	var selected string
+	if err := cmdutil.Select(f.Printer, "Select default server", options, &selected); err != nil {
 		return "", err
 	}
 
-	return urls[selected], nil
+	return selected, nil
 }

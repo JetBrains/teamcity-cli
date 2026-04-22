@@ -2,7 +2,7 @@
 [!has_token] skip 'requires authentication token'
 
 exec teamcity auth login --server $TC_HOST --token $TEAMCITY_TOKEN --insecure-storage --no-input
-stdout 'Logged in as'
+stdout 'Logged in to'
 ! stderr 'Error'
 
 # Verify credentials persisted
