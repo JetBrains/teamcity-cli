@@ -139,6 +139,9 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 		p.Progress("Checking %s... ", output.Cyan(serverURL))
 		if err := api.ProbeTeamCity(ctx, serverURL); err != nil {
 			p.Info("%s", output.Red("✗"))
+			if errors.Is(err, context.Canceled) {
+				return "", err
+			}
 			friendly := friendlyError(err)
 			if !interactive {
 				return "", fmt.Errorf("cannot reach TeamCity at %s: %s", serverURL, friendly)
@@ -227,7 +230,9 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 				return "", nil, api.RequiredFlag("token")
 			}
 			if !instructionsShown {
-				printTokenInstructions(p, serverURL, pkceTried)
+				if err := printTokenInstructions(p, serverURL, pkceTried); err != nil {
+					return "", nil, err
+				}
 				instructionsShown = true
 			}
 			if err := cmdutil.PromptSecret("Paste your access token", &token); err != nil {
@@ -243,6 +248,9 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 		user, err := client.GetCurrentUser()
 		if err != nil {
 			p.Info("%s", output.Red("✗"))
+			if errors.Is(err, context.Canceled) {
+				return "", nil, err
+			}
 			if !interactive {
 				return "", nil, err
 			}
@@ -255,7 +263,7 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 	}
 }
 
-func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool) {
+func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool) error {
 	tokenURL := serverURL + "/profile.html?item=accessTokens"
 
 	_, _ = fmt.Fprintln(p.Out)
@@ -268,8 +276,11 @@ func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool)
 	_, _ = fmt.Fprintln(p.Out)
 
 	openBrowser := true
-	if err := cmdutil.Confirm("Open browser to generate token?", &openBrowser); err != nil || !openBrowser {
-		return
+	if err := cmdutil.Confirm("Open browser to generate token?", &openBrowser); err != nil {
+		return err
+	}
+	if !openBrowser {
+		return nil
 	}
 	if err := browser.OpenURL(tokenURL); err != nil {
 		_, _ = fmt.Fprintf(p.Out, "  Could not open browser. Please visit: %s\n", tokenURL)
@@ -277,11 +288,12 @@ func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool)
 		_, _ = fmt.Fprintln(p.Out, output.Green("  ✓"), "Opened browser")
 	}
 	_, _ = fmt.Fprintln(p.Out)
+	return nil
 }
 
 // friendlyError maps low-level probe and HTTP errors to short, actionable messages.
 func friendlyError(err error) string {
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, context.DeadlineExceeded) {
 		return "connection timed out"
 	}
 	s := err.Error()
