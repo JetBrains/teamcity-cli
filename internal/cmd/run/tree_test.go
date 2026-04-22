@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/fatih/color"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
-func init() { color.NoColor = true }
+func init() { output.NoColor = true }
 
 func TestBuildStatusSummary(t *testing.T) {
 	tests := []struct {

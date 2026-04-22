@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/fatih/color"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
-func init() { color.NoColor = true }
+func init() { output.NoColor = true }
 
 func TestCloudProfileList(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)

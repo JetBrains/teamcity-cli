@@ -7,7 +7,6 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/fatih/color"
 	"golang.org/x/term"
 )
 
@@ -78,7 +77,7 @@ func (f *Factory) InitOutput() {
 		os.Getenv("TEAMCITY_NO_COLOR") != "" ||
 		f.NoColor
 	forceColor := os.Getenv("FORCE_COLOR") != "" && !explicitDisable
-	color.NoColor = !forceColor &&
+	output.NoColor = !forceColor &&
 		(explicitDisable || os.Getenv("TERM") == "dumb" || !term.IsTerminal(int(os.Stdout.Fd())))
 
 	f.Printer.Quiet = f.Quiet
