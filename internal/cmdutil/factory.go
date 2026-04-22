@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"context"
 	"io"
 	"os"
 
@@ -46,6 +47,9 @@ type Factory struct {
 
 	// UpdateNotice is called after command execution to print update notices.
 	UpdateNotice func()
+
+	// ctx is the signal-aware root context set by cmd.Execute; read via Context(), unset falls back to Background.
+	ctx context.Context
 }
 
 // NewFactory creates a Factory with production defaults.
@@ -84,4 +88,17 @@ func (f *Factory) InitOutput() {
 // IsInteractive returns true if the CLI can prompt the user.
 func (f *Factory) IsInteractive() bool {
 	return !f.NoInput && output.IsStdinTerminal()
+}
+
+// Context returns the Factory's root context; use this everywhere in our code rather than cmd.Context().
+func (f *Factory) Context() context.Context {
+	if f.ctx == nil {
+		return context.Background()
+	}
+	return f.ctx
+}
+
+// SetContext installs the signal-cancel root context; cmd.Execute keeps rootCmd's Cobra context in sync as a safety net.
+func (f *Factory) SetContext(ctx context.Context) {
+	f.ctx = ctx
 }

@@ -53,12 +53,12 @@ type reuseDep struct {
 	err   error
 }
 
-func fetchReuseDeps(client api.ClientInterface, ids []int) []reuseDep {
+func fetchReuseDeps(ctx context.Context, client api.ClientInterface, ids []int) []reuseDep {
 	out := make([]reuseDep, len(ids))
 	var wg sync.WaitGroup
 	for i, id := range ids {
 		wg.Go(func() {
-			b, err := client.GetBuild(context.Background(), strconv.Itoa(id))
+			b, err := client.GetBuild(ctx, strconv.Itoa(id))
 			out[i] = reuseDep{id: id, build: b, err: err}
 		})
 	}
@@ -255,7 +255,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 			_, _ = fmt.Fprintln(p.Out, "  Rebuild dependencies: yes")
 		}
 		if len(opts.reuseDeps) > 0 {
-			printReuseDeps(p, fetchReuseDeps(client, opts.reuseDeps))
+			printReuseDeps(p, fetchReuseDeps(f.Context(), client, opts.reuseDeps))
 		}
 		if opts.queueAtTop {
 			_, _ = fmt.Fprintln(p.Out, "  Queue at top: yes")
@@ -365,7 +365,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		p.Info("  Tags: %s", strings.Join(opts.tags, ", "))
 	}
 	if len(opts.reuseDeps) > 0 {
-		printReuseDeps(p, fetchReuseDeps(client, opts.reuseDeps))
+		printReuseDeps(p, fetchReuseDeps(f.Context(), client, opts.reuseDeps))
 	}
 	p.Info("  URL: %s", build.WebURL)
 	if opts.agent > 0 {

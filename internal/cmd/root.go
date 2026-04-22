@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -85,7 +86,7 @@ Report issues:  https://jb.gg/tc/issues`,
 			f.JSONOutput = true
 		}
 		if cmd.Name() != "update" && f.UpdateNotice == nil {
-			f.UpdateNotice = update.CheckInBackground(f.Printer.ErrOut, f.Quiet)
+			f.UpdateNotice = update.CheckInBackground(f.Context(), f.Printer.ErrOut, f.Quiet)
 		}
 	}
 
@@ -106,9 +107,11 @@ Report issues:  https://jb.gg/tc/issues`,
 	return cmd
 }
 
-func Execute() error {
+func Execute(ctx context.Context) error {
 	f := cmdutil.NewFactory()
+	f.SetContext(ctx)
 	rootCmd := buildRootCmd(f)
+	rootCmd.SetContext(ctx)
 
 	alias.RegisterAliases(rootCmd, f)
 	rootCmd.SilenceErrors = true
@@ -116,6 +119,9 @@ func Execute() error {
 	executedCmd, err := rootCmd.ExecuteC()
 	if f.UpdateNotice != nil {
 		f.UpdateNotice()
+	}
+	if err != nil && ctx.Err() != nil && errors.Is(err, context.Canceled) {
+		return nil
 	}
 	if !f.JSONOutput && executedCmd != nil && jsonOutputEnabled(executedCmd) {
 		f.JSONOutput = true

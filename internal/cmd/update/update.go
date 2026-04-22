@@ -1,7 +1,6 @@
 package update
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -35,7 +34,7 @@ func runUpdate(f *cmdutil.Factory) error {
 
 	p.Info("Checking for updates...")
 
-	release, err := update.LatestRelease(context.Background())
+	release, err := update.LatestRelease(f.Context())
 	if err != nil {
 		return fmt.Errorf("failed to check for updates: %w", err)
 	}

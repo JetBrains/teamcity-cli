@@ -129,6 +129,15 @@ All output through `*output.Printer`. Never `fmt.Printf` in commands.
 
 Error strings: lowercase, no trailing punctuation. Wrap with `%w`, not bare `return err`.
 
+### Context
+
+Every HTTP request participates in the signal-cancel ctx wired up in `tc/main.go` so Ctrl+C aborts in-flight calls cleanly.
+
+- **`f.Context()`** everywhere in `internal/cmd/` and `internal/cmdutil/` — not `cmd.Context()`, not `context.Background()`.
+- `api/` methods without a `ctx` param use the Client's bound ctx (set by `f.Client()` via `.WithContext(f.Context())`) — nothing to thread at the call site.
+- New Client constructors in `api/` must chain `.WithContext(...)` before returning, or the caller loses cancellation.
+- `context.Background()` is reserved for `tc/main.go` (signal-handler parent) and lifecycle-bounded internals (HTTP server `Shutdown`, etc.). Tests use `t.Context()`.
+
 ### Comments
 
 One-line doc comments on funcs. No multi-line restate-the-code text. Inline comments only for non-obvious things (magic numbers, OS quirks, why-not-the-obvious-approach).

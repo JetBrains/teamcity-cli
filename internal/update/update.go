@@ -116,18 +116,15 @@ func Check(ctx context.Context) *ReleaseInfo {
 
 const noticeWait = 500 * time.Millisecond
 
-// CheckInBackground starts an update check in a goroutine and returns a
-// function that, when called, waits briefly for the result and prints a
-// one-line notice if a new version is available. The wait is bounded so
-// slow networks don't delay command exit.
-func CheckInBackground(w io.Writer, quiet bool) func() {
+// CheckInBackground starts an update check in a goroutine and returns a function that waits briefly for the result and prints a one-line notice if a new version is available.
+func CheckInBackground(ctx context.Context, w io.Writer, quiet bool) func() {
 	if IsDisabled() || quiet {
 		return func() {}
 	}
 
 	done := make(chan *ReleaseInfo, 1)
 	go func() {
-		done <- Check(context.Background())
+		done <- Check(ctx)
 	}()
 
 	return func() {
@@ -137,7 +134,7 @@ func CheckInBackground(w io.Writer, quiet bool) func() {
 				PrintNotice(w, version.Version, release)
 			}
 		case <-time.After(noticeWait):
-			// Don't delay exit — the check will be cached next time.
+		case <-ctx.Done():
 		}
 	}
 }

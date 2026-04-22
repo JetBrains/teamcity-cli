@@ -64,7 +64,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 	}
 
 	if opts.job != "" {
-		runs, err := client.GetBuilds(context.Background(), api.BuildsOptions{
+		runs, err := client.GetBuilds(f.Context(), api.BuildsOptions{
 			BuildTypeID: opts.job,
 			State:       "finished",
 			Limit:       1,
@@ -84,7 +84,7 @@ func runRunArtifacts(f *cmdutil.Factory, runID string, opts *runArtifactsOptions
 		return errors.New("run ID required (or use --job to get latest run)")
 	}
 
-	artifacts, err := client.GetArtifacts(context.Background(), runID, opts.path)
+	artifacts, err := client.GetArtifacts(f.Context(), runID, opts.path)
 	if err != nil {
 		return fmt.Errorf("failed to get artifacts: %w", err)
 	}

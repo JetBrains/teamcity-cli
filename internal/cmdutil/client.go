@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -26,12 +27,12 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 			)
 		}
 		f.Printer.Debug("Using guest authentication")
-		return api.NewGuestClient(serverURL, opts...), nil
+		return api.NewGuestClient(serverURL, opts...).WithContext(f.Context()), nil
 	}
 
 	if serverURL != "" && token != "" {
 		f.WarnInsecureHTTP(serverURL, "authentication token")
-		return api.NewClient(serverURL, token, opts...), nil
+		return api.NewClient(serverURL, token, opts...).WithContext(f.Context()), nil
 	}
 
 	if buildAuth, ok := config.GetBuildAuth(); ok {
@@ -40,32 +41,31 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 		}
 		f.Printer.Debug("Using build-level authentication")
 		f.WarnInsecureHTTP(serverURL, "credentials")
-		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, opts...), nil
+		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, opts...).WithContext(f.Context()), nil
 	}
 
-	return nil, NotAuthenticatedError(serverURL, keyringErr)
+	return nil, NotAuthenticatedError(f.Context(), serverURL, keyringErr)
 }
 
-// ProbeGuestAccess checks whether the server at serverURL supports guest access.
-func ProbeGuestAccess(serverURL string) bool {
+// ProbeGuestAccess checks whether the server at serverURL supports guest access; honors ctx for cancellation.
+func ProbeGuestAccess(ctx context.Context, serverURL string) bool {
 	if serverURL == "" {
 		return false
 	}
-	guest := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
+	guest := api.NewGuestClient(serverURL, api.WithVersion(version.String())).WithContext(ctx)
 	_, err := guest.GetServer()
 	return err == nil
 }
 
-// NotAuthenticatedError returns a not-authenticated error with a hint that covers
-// all authentication methods: environment variables, interactive login, and guest access.
-func NotAuthenticatedError(serverURL string, keyringErr error) *api.ValidationError {
+// NotAuthenticatedError returns a not-authenticated error with a hint that covers all authentication methods.
+func NotAuthenticatedError(ctx context.Context, serverURL string, keyringErr error) *api.ValidationError {
 	msg := "Not authenticated"
 	if keyringErr != nil {
 		msg = fmt.Sprintf("Not authenticated (could not access system keyring: %v)", keyringErr)
 	}
 
 	suggestion := "If you use environment overrides, set both TEAMCITY_URL and TEAMCITY_TOKEN; TEAMCITY_URL alone bypasses stored credentials. Otherwise unset TEAMCITY_URL to use stored auth, or run 'teamcity auth login --insecure-storage'"
-	if ProbeGuestAccess(serverURL) {
+	if ProbeGuestAccess(ctx, serverURL) {
 		suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
 	}
 

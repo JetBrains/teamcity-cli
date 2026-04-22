@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -96,7 +95,7 @@ func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList,
 
 	profiles, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudProfile, string, error) {
 		var page CloudProfileList
-		if err := c.get(context.Background(), p, &page); err != nil {
+		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Profiles, page.NextHref, nil
@@ -111,7 +110,7 @@ func (c *Client) GetCloudProfile(locator string) (*CloudProfile, error) {
 	path := "/app/rest/cloud/profiles/" + cloudLocator(locator, "id")
 
 	var result CloudProfile
-	if err := c.get(context.Background(), path, &result); err != nil {
+	if err := c.get(c.ctx(), path, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -134,7 +133,7 @@ func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error
 
 	images, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudImage, string, error) {
 		var page CloudImageList
-		if err := c.get(context.Background(), p, &page); err != nil {
+		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Images, page.NextHref, nil
@@ -149,7 +148,7 @@ func (c *Client) GetCloudImage(locator string) (*CloudImage, error) {
 	path := "/app/rest/cloud/images/" + cloudLocator(locator, "name")
 
 	var result CloudImage
-	if err := c.get(context.Background(), path, &result); err != nil {
+	if err := c.get(c.ctx(), path, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -172,7 +171,7 @@ func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceLi
 
 	instances, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudInstance, string, error) {
 		var page CloudInstanceList
-		if err := c.get(context.Background(), p, &page); err != nil {
+		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Instances, page.NextHref, nil
@@ -187,7 +186,7 @@ func (c *Client) GetCloudInstance(locator string) (*CloudInstance, error) {
 	path := "/app/rest/cloud/instances/" + cloudLocator(locator, "id")
 
 	var result CloudInstance
-	if err := c.get(context.Background(), path, &result); err != nil {
+	if err := c.get(c.ctx(), path, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -202,7 +201,7 @@ func (c *Client) StartCloudInstance(imageID string) (*CloudInstance, error) {
 	}
 
 	var result CloudInstance
-	if err := c.post(context.Background(), "/app/rest/cloud/instances", bytes.NewReader(body), &result); err != nil {
+	if err := c.post(c.ctx(), "/app/rest/cloud/instances", bytes.NewReader(body), &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -214,5 +213,5 @@ func (c *Client) StopCloudInstance(locator string, force bool) error {
 		action = "forceStop"
 	}
 	path := fmt.Sprintf("/app/rest/cloud/instances/%s/actions/%s", cloudLocator(locator, "id"), action)
-	return c.doNoContent(context.Background(), "POST", path, nil, "")
+	return c.doNoContent(c.ctx(), "POST", path, nil, "")
 }

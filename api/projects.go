@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -33,7 +32,7 @@ func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
 
 	projects, err := collectPages(c, path, opts.Limit, func(p string) ([]Project, string, error) {
 		var page ProjectList
-		if err := c.get(context.Background(), p, &page); err != nil {
+		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Projects, page.NextHref, nil
@@ -50,7 +49,7 @@ func (c *Client) GetProject(id string) (*Project, error) {
 	path := "/app/rest/projects/id:" + id
 
 	var project Project
-	if err := c.get(context.Background(), path, &project); err != nil {
+	if err := c.get(c.ctx(), path, &project); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +71,7 @@ func (c *Client) CreateProject(req CreateProjectRequest) (*Project, error) {
 	}
 
 	var project Project
-	if err := c.post(context.Background(), "/app/rest/projects", bytes.NewReader(body), &project); err != nil {
+	if err := c.post(c.ctx(), "/app/rest/projects", bytes.NewReader(body), &project); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +90,7 @@ func (c *Client) ProjectExists(id string) bool {
 func (c *Client) CreateSecureToken(projectID, value string) (string, error) {
 	path := fmt.Sprintf("/app/rest/projects/%s/secure/tokens", projectID)
 
-	resp, err := c.doRequestFull(context.Background(), "POST", path, strings.NewReader(value), "text/plain", "text/plain")
+	resp, err := c.doRequestFull(c.ctx(), "POST", path, strings.NewReader(value), "text/plain", "text/plain")
 	if err != nil {
 		return "", err
 	}
@@ -114,7 +113,7 @@ func (c *Client) CreateSecureToken(projectID, value string) (string, error) {
 func (c *Client) GetSecureValue(projectID, token string) (string, error) {
 	path := fmt.Sprintf("/app/rest/projects/%s/secure/values/%s", projectID, token)
 
-	resp, err := c.doRequestWithAccept(context.Background(), "GET", path, nil, "text/plain")
+	resp, err := c.doRequestWithAccept(c.ctx(), "GET", path, nil, "text/plain")
 	if err != nil {
 		return "", err
 	}
@@ -137,7 +136,7 @@ func (c *Client) GetVersionedSettingsStatus(projectID string) (*VersionedSetting
 	path := fmt.Sprintf("/app/rest/projects/%s/versionedSettings/status", projectID)
 
 	var status VersionedSettingsStatus
-	if err := c.get(context.Background(), path, &status); err != nil {
+	if err := c.get(c.ctx(), path, &status); err != nil {
 		return nil, err
 	}
 
@@ -149,7 +148,7 @@ func (c *Client) GetVersionedSettingsConfig(projectID string) (*VersionedSetting
 	path := fmt.Sprintf("/app/rest/projects/%s/versionedSettings/config", projectID)
 
 	var config VersionedSettingsConfig
-	if err := c.get(context.Background(), path, &config); err != nil {
+	if err := c.get(c.ctx(), path, &config); err != nil {
 		return nil, err
 	}
 
@@ -162,7 +161,7 @@ func (c *Client) ExportProjectSettings(projectID, format string, useRelativeIds 
 	path := fmt.Sprintf("/admin/versionedSettingsActions.html?projectId=%s&action=generate&format=%s&version=latest&useRelativeIds=%t",
 		url.QueryEscape(projectID), url.QueryEscape(format), useRelativeIds)
 
-	resp, err := c.doRequestWithAccept(context.Background(), "GET", path, nil, "application/zip")
+	resp, err := c.doRequestWithAccept(c.ctx(), "GET", path, nil, "application/zip")
 	if err != nil {
 		return nil, err
 	}
