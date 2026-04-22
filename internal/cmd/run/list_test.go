@@ -61,10 +61,10 @@ func TestResolveRunListRequestAtMeFallsBackToAPIUser(T *testing.T) {
 }
 
 func TestResolveRunListRequestBranchThisRequiresGitRepo(T *testing.T) {
-	oldIsGitRepo := runListIsGitRepoFn
-	T.Cleanup(func() { runListIsGitRepoFn = oldIsGitRepo })
+	oldIsGitRepo := isGitRepoFn
+	T.Cleanup(func() { isGitRepoFn = oldIsGitRepo })
 
-	runListIsGitRepoFn = func() bool { return false }
+	isGitRepoFn = func() bool { return false }
 
 	_, err := resolveRunListRequest(nil, &runListOptions{
 		branch: "@this",
@@ -75,15 +75,15 @@ func TestResolveRunListRequestBranchThisRequiresGitRepo(T *testing.T) {
 }
 
 func TestResolveRunListRequestRevisionAtHead(T *testing.T) {
-	oldIsGitRepo := runListIsGitRepoFn
-	oldHeadRevision := runListHeadRevisionFn
+	oldIsGitRepo := isGitRepoFn
+	oldHeadRevision := headRevisionFn
 	T.Cleanup(func() {
-		runListIsGitRepoFn = oldIsGitRepo
-		runListHeadRevisionFn = oldHeadRevision
+		isGitRepoFn = oldIsGitRepo
+		headRevisionFn = oldHeadRevision
 	})
 
-	runListIsGitRepoFn = func() bool { return true }
-	runListHeadRevisionFn = func() (string, error) { return "deadbeef12345678", nil }
+	isGitRepoFn = func() bool { return true }
+	headRevisionFn = func() (string, error) { return "deadbeef12345678", nil }
 
 	req, err := resolveRunListRequest(nil, &runListOptions{
 		revision: "@head",
@@ -94,10 +94,10 @@ func TestResolveRunListRequestRevisionAtHead(T *testing.T) {
 }
 
 func TestResolveRunListRequestRevisionAtHeadRequiresGitRepo(T *testing.T) {
-	oldIsGitRepo := runListIsGitRepoFn
-	T.Cleanup(func() { runListIsGitRepoFn = oldIsGitRepo })
+	oldIsGitRepo := isGitRepoFn
+	T.Cleanup(func() { isGitRepoFn = oldIsGitRepo })
 
-	runListIsGitRepoFn = func() bool { return false }
+	isGitRepoFn = func() bool { return false }
 
 	_, err := resolveRunListRequest(nil, &runListOptions{
 		revision: "@head",

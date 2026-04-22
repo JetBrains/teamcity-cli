@@ -1,11 +1,45 @@
 package run
 
 import (
+	"errors"
 	"os/exec"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
 )
+
+var (
+	isGitRepoFn       = isGitRepo
+	currentBranchFn   = getCurrentBranch
+	headRevisionFn    = getHeadRevision
+	resolveRevisionFn = resolveRevision
+)
+
+// resolveBranchFlag turns "@this" into the current git branch. Other values pass through.
+func resolveBranchFlag(branch string) (string, error) {
+	if !strings.EqualFold(branch, "@this") {
+		return branch, nil
+	}
+	if !isGitRepoFn() {
+		return "", errors.New("--branch @this requires a git repository")
+	}
+	return currentBranchFn()
+}
+
+// resolveRevisionFlag turns "@head" into the current HEAD SHA and expands short SHAs to full ones.
+// Values of 40+ chars pass through unchanged, as do empty strings or values when not in a git repo.
+func resolveRevisionFlag(revision string) (string, error) {
+	if strings.EqualFold(revision, "@head") {
+		if !isGitRepoFn() {
+			return "", errors.New("--revision @head requires a git repository")
+		}
+		return headRevisionFn()
+	}
+	if revision != "" && len(revision) < 40 && isGitRepoFn() {
+		return resolveRevisionFn(revision)
+	}
+	return revision, nil
+}
 
 func isGitRepo() bool {
 	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
