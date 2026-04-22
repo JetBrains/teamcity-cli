@@ -5,5 +5,5 @@ import "strings"
 
 // FormatBuildStatus returns a lowercase, human-readable status token.
 func FormatBuildStatus(raw string) string {
-	return strings.ToLower(strings.TrimSpace(raw))
+	return strings.ToUpper(strings.TrimSpace(raw))
 }
