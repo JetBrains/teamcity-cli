@@ -11,6 +11,9 @@ import (
 
 const probeTimeout = 10 * time.Second
 
+// ErrLoginGatewayDetected indicates the API endpoint was served by an SSO / login gateway rather than TeamCity itself.
+var ErrLoginGatewayDetected = errors.New("login gateway detected — VPN may be required")
+
 // ProbeTeamCity checks whether serverURL points to a reachable TeamCity server without sending credentials.
 func ProbeTeamCity(ctx context.Context, serverURL string) error {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
@@ -26,6 +29,10 @@ func ProbeTeamCity(ctx context.Context, serverURL string) error {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	// An HTML body on the API endpoint means a login gateway is intercepting the request.
+	if ct := strings.ToLower(resp.Header.Get("Content-Type")); strings.Contains(ct, "text/html") {
+		return ErrLoginGatewayDetected
+	}
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300,
 		resp.StatusCode == http.StatusUnauthorized,

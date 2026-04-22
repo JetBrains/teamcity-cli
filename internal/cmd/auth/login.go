@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -142,7 +141,7 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 			if errors.Is(err, context.Canceled) {
 				return "", err
 			}
-			friendly := friendlyError(err)
+			friendly := friendlyError(err, serverURL)
 			if !interactive {
 				return "", fmt.Errorf("cannot reach TeamCity at %s: %s", serverURL, friendly)
 			}
@@ -254,7 +253,7 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 			if !interactive {
 				return "", nil, err
 			}
-			p.Warn("%s", friendlyError(err))
+			p.Warn("%s", friendlyError(err, serverURL))
 			token = ""
 			continue
 		}
@@ -289,25 +288,4 @@ func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool)
 	}
 	_, _ = fmt.Fprintln(p.Out)
 	return nil
-}
-
-// friendlyError maps low-level probe and HTTP errors to short, actionable messages.
-func friendlyError(err error) string {
-	if errors.Is(err, context.DeadlineExceeded) {
-		return "connection timed out"
-	}
-	s := err.Error()
-	switch {
-	case strings.Contains(s, "no such host"):
-		return "DNS lookup failed — check the hostname"
-	case strings.Contains(s, "connection refused"):
-		return "connection refused — is the server running?"
-	case strings.Contains(s, "i/o timeout"):
-		return "connection timed out"
-	case strings.Contains(s, "x509"), strings.Contains(s, "certificate"):
-		return "TLS certificate error — check the URL scheme and hostname"
-	case strings.Contains(s, "401"), strings.Contains(strings.ToLower(s), "unauthorized"):
-		return "token rejected — the token is invalid, expired, or lacks required permissions"
-	}
-	return s
 }

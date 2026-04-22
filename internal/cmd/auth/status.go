@@ -129,6 +129,11 @@ func collectServerStatus(f *cmdutil.Factory, serverURL string, sc config.ServerC
 
 func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "guest", IsDefault: isDefault}
+	if err := api.ProbeTeamCity(f.Context(), serverURL); err != nil {
+		s.Status = "error"
+		s.Error = friendlyError(err, serverURL)
+		return s
+	}
 	client := api.NewGuestClient(serverURL, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 	server, err := client.GetServer()
 	if err != nil {
@@ -146,6 +151,11 @@ func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) au
 
 func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "token", TokenSource: tokenSource, IsDefault: isDefault}
+	if err := api.ProbeTeamCity(f.Context(), serverURL); err != nil {
+		s.Status = "error"
+		s.Error = friendlyError(err, serverURL)
+		return s
+	}
 	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 	user, err := client.GetCurrentUser()
 	if err != nil {
@@ -182,6 +192,11 @@ func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string
 
 func collectBuildStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth) authStatus {
 	s := authStatus{Server: buildAuth.ServerURL, AuthMethod: "build"}
+	if err := api.ProbeTeamCity(f.Context(), buildAuth.ServerURL); err != nil {
+		s.Status = "error"
+		s.Error = friendlyError(err, buildAuth.ServerURL)
+		return s
+	}
 	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 	server, err := client.GetServer()
 	if err != nil {
