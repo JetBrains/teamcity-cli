@@ -1,9 +1,11 @@
 package config
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"maps"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -107,16 +109,37 @@ func Get() *Config {
 	return cfg
 }
 
-// NormalizeURL trims trailing slashes and ensures an http(s) scheme prefix.
+// SortedServerURLs returns configured server URLs with the default server first, then the rest alphabetically.
+func SortedServerURLs(c *Config) []string {
+	urls := slices.Collect(maps.Keys(c.Servers))
+	slices.SortFunc(urls, func(a, b string) int {
+		if ad, bd := a == c.DefaultServer, b == c.DefaultServer; ad != bd {
+			if ad {
+				return -1
+			}
+			return 1
+		}
+		return cmp.Compare(a, b)
+	})
+	return urls
+}
+
+// NormalizeURL reduces a user-supplied URL to its origin (scheme + host + port), adding https:// if no scheme.
 //
 //goland:noinspection HttpUrlsUsage
 func NormalizeURL(u string) string {
 	u = strings.TrimSpace(u)
-	u = strings.TrimSuffix(u, "/")
+	if u == "" {
+		return ""
+	}
 	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
 		u = "https://" + u
 	}
-	return u
+	parsed, err := url.Parse(u)
+	if err != nil || parsed.Host == "" {
+		return strings.TrimSuffix(u, "/")
+	}
+	return parsed.Scheme + "://" + parsed.Host
 }
 
 func keyringService(serverURL string) string {
