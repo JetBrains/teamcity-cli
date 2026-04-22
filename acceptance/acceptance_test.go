@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -218,11 +219,12 @@ func runScripts(t *testing.T, dir, host, token, scriptFilter string) {
 // customCommands returns the custom testscript commands available in test scripts.
 func customCommands() map[string]func(ts *testscript.TestScript, neg bool, args []string) {
 	return map[string]func(ts *testscript.TestScript, neg bool, args []string){
-		"stdout2env":     cmdStdout2Env,
-		"env2upper":      cmdEnv2Upper,
-		"sleep":          cmdSleep,
-		"extract":        cmdExtract,
-		"wait_for_agent": cmdWaitForAgent,
+		"stdout2env":       cmdStdout2Env,
+		"env2upper":        cmdEnv2Upper,
+		"sleep":            cmdSleep,
+		"extract":          cmdExtract,
+		"wait_for_agent":   cmdWaitForAgent,
+		"start_hangserver": cmdStartHangServer,
 	}
 }
 
@@ -274,6 +276,22 @@ func cmdEnv2Upper(ts *testscript.TestScript, neg bool, args []string) {
 		ts.Fatalf("usage: env2upper <VAR_NAME>")
 	}
 	ts.Setenv(args[0], strings.ToUpper(ts.Getenv(args[0])))
+}
+
+// cmdStartHangServer starts an in-process HTTP server that never responds and exposes its URL as $HANG_URL; used to exercise client-side cancellation.
+// Usage: start_hangserver
+func cmdStartHangServer(ts *testscript.TestScript, neg bool, args []string) {
+	if neg {
+		ts.Fatalf("start_hangserver does not support negation")
+	}
+	if len(args) != 0 {
+		ts.Fatalf("usage: start_hangserver")
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	ts.Defer(srv.Close)
+	ts.Setenv("HANG_URL", srv.URL)
 }
 
 // cmdSleep pauses execution for the given duration.

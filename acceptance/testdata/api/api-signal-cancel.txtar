@@ -1,0 +1,20 @@
+# Ctrl+C aborts in-flight HTTP requests and exits cleanly (no surfaced error).
+[windows] skip 'signal semantics differ on Windows'
+
+start_hangserver
+
+env TEAMCITY_URL=$HANG_URL
+env TEAMCITY_TOKEN=testtoken
+env TEAMCITY_GUEST=
+
+# Run a command that makes a single HTTP call; the hang server will block it.
+exec teamcity api /app/rest/server --no-input &cli&
+sleep 1s
+
+# Signal the CLI. Root-level context.Canceled suppression should produce exit 0.
+kill -INT cli
+wait cli
+
+# No error message should be surfaced to the user.
+! stderr 'Error:'
+! stdout 'context canceled'
