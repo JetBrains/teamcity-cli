@@ -325,6 +325,9 @@ teamcity run start MyProject_Build --branch @this
 
 # Pin to a specific Git commit
 teamcity run start MyProject_Build --branch main --revision abc123def
+
+# Pin to the current HEAD
+teamcity run start MyProject_Build --branch @this --revision @head
 ```
 
 ### Build parameters
@@ -447,7 +450,7 @@ Branch to build. Use `@this` to resolve the current git branch.
 </td>
 <td>
 
-Pin build to a specific Git commit SHA
+Pin build to a specific Git commit SHA. Use `@head` to resolve the current HEAD; short SHAs are expanded from the local repo.
 
 </td>
 </tr>

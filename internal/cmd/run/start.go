@@ -167,6 +167,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run start Falcon_Build --local-changes # personal build with uncommitted Git changes
   teamcity run start Falcon_Build --local-changes changes.patch  # from file
   teamcity run start Falcon_Build --revision abc123def --branch main
+  teamcity run start Falcon_Build --revision @head --branch @this
   teamcity run start Falcon_Build --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunStart(f, args[0], opts)
@@ -174,7 +175,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Branch to build (or '@this' for current git branch)")
-	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin to a specific Git commit SHA")
+	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin to a specific Git commit SHA (or '@head' for current HEAD)")
 	cmd.Flags().StringToStringVarP(&opts.params, "param", "P", nil, "Parameters (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.systemProps, "system", "S", nil, "System properties (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.envVars, "env", "E", nil, "Environment variables (key=value)")
@@ -206,6 +207,11 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		return err
 	}
 	opts.branch = branch
+	revision, err := resolveRevisionFlag(opts.revision)
+	if err != nil {
+		return err
+	}
+	opts.revision = revision
 	if opts.dryRun {
 		client, err := f.Client()
 		if err != nil {
