@@ -53,10 +53,18 @@ type Client struct {
 	version     string // CLI version for request headers
 	commandName string // CLI command name for X-TeamCity-Client header
 
-	// Cached server info
-	serverInfo     *Server
-	serverInfoOnce sync.Once
-	serverInfoErr  error
+	// baseCtx is the default context for methods that don't take one; set via WithContext, nil falls back to Background.
+	baseCtx context.Context
+
+	// serverInfo is a pointer so WithContext copies share the cache instead of copying sync.Once.
+	serverInfo *serverInfoCache
+}
+
+// serverInfoCache memoizes the result of GetServer across copies of a Client.
+type serverInfoCache struct {
+	once sync.Once
+	info *Server
+	err  error
 }
 
 func (c *Client) debugLog(format string, args ...any) {
@@ -156,6 +164,7 @@ func NewClient(baseURL, token string, opts ...ClientOption) *Client {
 			Timeout:   30 * time.Second,
 			Transport: defaultTransport(),
 		},
+		serverInfo: &serverInfoCache{},
 	}
 
 	for _, opt := range opts {
@@ -177,6 +186,7 @@ func NewClientWithBasicAuth(baseURL, username, password string, opts ...ClientOp
 			Timeout:   30 * time.Second,
 			Transport: defaultTransport(),
 		},
+		serverInfo: &serverInfoCache{},
 	}
 
 	for _, opt := range opts {
@@ -197,6 +207,7 @@ func NewGuestClient(baseURL string, opts ...ClientOption) *Client {
 			Timeout:   30 * time.Second,
 			Transport: defaultTransport(),
 		},
+		serverInfo: &serverInfoCache{},
 	}
 
 	for _, opt := range opts {
@@ -241,6 +252,21 @@ func (c *Client) SetCommandName(name string) {
 	c.commandName = name
 }
 
+// WithContext returns a shallow copy of the client whose default context is ctx; mirrors http.Request.WithContext.
+func (c *Client) WithContext(ctx context.Context) *Client {
+	c2 := *c
+	c2.baseCtx = ctx
+	return &c2
+}
+
+// ctx returns the client's default context, falling back to context.Background() if unset.
+func (c *Client) ctx() context.Context {
+	if c.baseCtx == nil {
+		return context.Background()
+	}
+	return c.baseCtx
+}
+
 func (c *Client) setAuth(req *http.Request) {
 	if c.guestAuth {
 		return
@@ -254,10 +280,10 @@ func (c *Client) setAuth(req *http.Request) {
 
 // ServerVersion returns cached server version info
 func (c *Client) ServerVersion() (*Server, error) {
-	c.serverInfoOnce.Do(func() {
-		c.serverInfo, c.serverInfoErr = c.GetServer()
+	c.serverInfo.once.Do(func() {
+		c.serverInfo.info, c.serverInfo.err = c.GetServer()
 	})
-	return c.serverInfo, c.serverInfoErr
+	return c.serverInfo.info, c.serverInfo.err
 }
 
 // CheckVersion verifies the server meets minimum version requirements

@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/signal"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd/run/tui"
@@ -60,7 +58,7 @@ For a simpler, pipe-friendly log stream, use "teamcity run log --follow" instead
 	return cmd
 }
 
-func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
+func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr error) {
 	p := f.Printer
 	if f.Quiet {
 		opts.quiet = true
@@ -74,9 +72,8 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+	topCtx := f.Context()
+	ctx := topCtx
 	if opts.timeout > 0 {
 		var timeoutCancel context.CancelFunc
 		ctx, timeoutCancel = context.WithTimeout(ctx, opts.timeout)
@@ -90,24 +87,19 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) error {
 		p.Warn("--logs requires a TTY; falling back to standard watch mode")
 	}
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
-	defer signal.Stop(sigCh)
-	go func() {
-		select {
-		case <-sigCh:
-			if !opts.json {
-				_, _ = fmt.Fprintln(p.Out)
-			}
-			if !opts.quiet && !opts.json {
-				_, _ = fmt.Fprintln(p.Out)
-				_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
-				p.Tip("Resume watching: teamcity run watch %s", runID)
-			}
-			cancel()
-		case <-ctx.Done():
+	defer func() {
+		if topCtx.Err() == nil {
 			return
 		}
+		if !opts.json {
+			_, _ = fmt.Fprintln(p.Out)
+		}
+		if !opts.quiet && !opts.json {
+			_, _ = fmt.Fprintln(p.Out)
+			_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
+			p.Tip("Resume watching: teamcity run watch %s", runID)
+		}
+		resErr = nil
 	}()
 
 	build, err := client.GetBuild(ctx, runID)

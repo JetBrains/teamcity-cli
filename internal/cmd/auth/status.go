@@ -2,6 +2,7 @@ package auth
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -131,7 +132,7 @@ func collectServerStatus(f *cmdutil.Factory, serverURL string, sc config.ServerC
 
 func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "guest", IsDefault: isDefault}
-	client := api.NewGuestClient(serverURL, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()))
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 	server, err := client.GetServer()
 	if err != nil {
 		s.Status = "error"
@@ -148,7 +149,7 @@ func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) au
 
 func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "token", TokenSource: tokenSource, IsDefault: isDefault}
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()))
+	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 	user, err := client.GetCurrentUser()
 	if err != nil {
 		s.Status = "error"
@@ -184,7 +185,7 @@ func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string
 
 func collectBuildStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth) authStatus {
 	s := authStatus{Server: buildAuth.ServerURL, AuthMethod: "build"}
-	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()))
+	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 	server, err := client.GetServer()
 	if err != nil {
 		s.Status = "error"
@@ -207,7 +208,7 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 		if config.IsBuildEnvironment() {
 			_, _ = fmt.Fprintln(p.Out, "\n"+output.Yellow("!")+" Build environment detected but credentials not found in properties file")
 		}
-		renderDSLTip(p, results)
+		renderDSLTip(f.Context(), p, results)
 		return nil
 	}
 
@@ -223,7 +224,7 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 		p.Tip("To switch the default server, run %s", output.Cyan("teamcity config set default_server <url>"))
 	}
 
-	renderDSLTip(p, results)
+	renderDSLTip(f.Context(), p, results)
 	return nil
 }
 
@@ -260,7 +261,7 @@ func renderOneStatus(f *cmdutil.Factory, p *output.Printer, s authStatus) {
 
 	case s.Status == "error" && s.AuthMethod == "":
 		_, _ = fmt.Fprintf(p.Out, "%s %s%s\n", output.Red("✗"), s.Server, suffix)
-		renderCredentialsDiagnostic(p, s)
+		renderCredentialsDiagnostic(f.Context(), p, s)
 
 	case s.Status == "error":
 		_, _ = fmt.Fprintf(p.Out, "%s Server: %s%s\n", output.Red("✗"), s.Server, suffix)
@@ -303,7 +304,7 @@ func renderTokenExpiry(p *output.Printer, expiry string) {
 	}
 }
 
-func renderCredentialsDiagnostic(p *output.Printer, s authStatus) {
+func renderCredentialsDiagnostic(ctx context.Context, p *output.Printer, s authStatus) {
 	if s.configUser != "" {
 		if s.keyringErr != nil {
 			_, _ = fmt.Fprintf(p.Out, "  Token is in the system keyring but could not be retrieved: %v\n", s.keyringErr)
@@ -319,12 +320,12 @@ func renderCredentialsDiagnostic(p *output.Printer, s authStatus) {
 		output.Cyan("TEAMCITY_URL"), output.Cyan("TEAMCITY_TOKEN"))
 	_, _ = fmt.Fprintf(p.Out, "    • Or run %s\n",
 		output.Cyan("teamcity auth login --server "+s.Server+" --insecure-storage"))
-	if cmdutil.ProbeGuestAccess(s.Server) {
+	if cmdutil.ProbeGuestAccess(ctx, s.Server) {
 		_, _ = fmt.Fprintf(p.Out, "    • Or set %s for read-only guest access\n", output.Cyan("TEAMCITY_GUEST=1"))
 	}
 }
 
-func renderDSLTip(p *output.Printer, results []authStatus) {
+func renderDSLTip(ctx context.Context, p *output.Printer, results []authStatus) {
 	dslURL := config.DetectServerFromDSL()
 	if dslURL == "" {
 		return
@@ -338,7 +339,7 @@ func renderDSLTip(p *output.Printer, results []authStatus) {
 	_, _ = fmt.Fprintf(p.Out, "%s Commands in this directory target %s (from DSL settings)\n",
 		output.Yellow("!"), output.Cyan(dslURL))
 	loginCmd := output.Cyan("teamcity auth login --server " + dslURL)
-	if cmdutil.ProbeGuestAccess(dslURL) {
+	if cmdutil.ProbeGuestAccess(ctx, dslURL) {
 		_, _ = fmt.Fprintf(p.Out, "  Run %s, or set %s for guest access\n", loginCmd, output.Cyan("TEAMCITY_GUEST=1"))
 	} else {
 		_, _ = fmt.Fprintf(p.Out, "  Run %s to authenticate\n", loginCmd)

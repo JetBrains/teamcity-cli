@@ -149,7 +149,7 @@ func (c *Client) GetBuildUsedByOtherBuilds(id string) (bool, error) {
 	var result struct {
 		UsedByOtherBuilds bool `json:"usedByOtherBuilds"`
 	}
-	if err := c.get(context.Background(), path, &result); err != nil {
+	if err := c.get(c.ctx(), path, &result); err != nil {
 		return false, err
 	}
 	return result.UsedByOtherBuilds, nil
@@ -357,7 +357,7 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 	}
 
 	var build Build
-	if err := c.post(context.Background(), "/app/rest/buildQueue", bytes.NewReader(body), &build); err != nil {
+	if err := c.post(c.ctx(), "/app/rest/buildQueue", bytes.NewReader(body), &build); err != nil {
 		return nil, err
 	}
 
@@ -366,12 +366,12 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 
 // CancelBuild cancels a running or queued build (accepts ID or #number)
 func (c *Client) CancelBuild(buildID string, comment string) error {
-	id, err := c.ResolveBuildID(context.Background(), buildID)
+	id, err := c.ResolveBuildID(c.ctx(), buildID)
 	if err != nil {
 		return err
 	}
 
-	build, err := c.GetBuild(context.Background(), id)
+	build, err := c.GetBuild(c.ctx(), id)
 	if err != nil {
 		return err
 	}
@@ -399,7 +399,7 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	return c.doNoContent(context.Background(), "POST", path, bytes.NewReader(bodyBytes), "")
+	return c.doNoContent(c.ctx(), "POST", path, bytes.NewReader(bodyBytes), "")
 }
 
 // GetBuildSnapshotDependencies returns all immediate dependency builds in a snapshot dependency chain.
@@ -410,7 +410,7 @@ func (c *Client) GetBuildSnapshotDependencies(buildID string) (*BuildList, error
 
 	builds, err := collectPages(c, path, 0, func(p string) ([]Build, string, error) {
 		var page BuildList
-		if err := c.get(context.Background(), p, &page); err != nil {
+		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Builds, page.NextHref, nil

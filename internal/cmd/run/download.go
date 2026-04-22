@@ -70,7 +70,7 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), opts.timeout)
+	ctx, cancel := context.WithTimeout(f.Context(), opts.timeout)
 	defer cancel()
 
 	flatList, totalSize, err := fetchAllArtifacts(ctx, client, runID, opts.path)

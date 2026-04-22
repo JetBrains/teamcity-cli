@@ -1,7 +1,6 @@
 package run
 
 import (
-	"context"
 	"fmt"
 	"maps"
 	"strconv"
@@ -66,7 +65,7 @@ func runRunTree(f *cmdutil.Factory, runID string, depth int, jsonOut bool) error
 		return err
 	}
 
-	build, err := client.GetBuild(context.Background(), runID)
+	build, err := client.GetBuild(f.Context(), runID)
 	if err != nil {
 		return err
 	}

@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"os/signal"
 	"strconv"
 	"strings"
 	"time"
@@ -201,7 +199,7 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 		if opts.follow {
 			state = "any"
 		}
-		runs, err := client.GetBuilds(context.Background(), api.BuildsOptions{
+		runs, err := client.GetBuilds(f.Context(), api.BuildsOptions{
 			BuildTypeID: opts.job,
 			State:       state,
 			Limit:       1,
@@ -224,7 +222,7 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 	}
 
 	if opts.web {
-		build, err := client.GetBuild(context.Background(), runID)
+		build, err := client.GetBuild(f.Context(), runID)
 		if err != nil {
 			return err
 		}
@@ -250,7 +248,7 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 }
 
 func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, opts *runLogOptions) error {
-	log, err := client.GetBuildLog(context.Background(), runID)
+	log, err := client.GetBuildLog(f.Context(), runID)
 	if err != nil {
 		return fmt.Errorf("failed to get run log: %w", err)
 	}
@@ -283,7 +281,7 @@ func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, op
 }
 
 func runLogTail(f *cmdutil.Factory, client api.ClientInterface, runID string, opts *runLogOptions) error {
-	resp, err := client.GetBuildMessages(context.Background(), runID, api.BuildMessagesOptions{
+	resp, err := client.GetBuildMessages(f.Context(), runID, api.BuildMessagesOptions{
 		Count:     -opts.tail,
 		Tail:      true,
 		ExpandAll: true,
@@ -318,27 +316,20 @@ func printMessages(f *cmdutil.Factory, runID string, messages []api.BuildMessage
 	return nil
 }
 
-func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, opts *runLogOptions) error {
+func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, opts *runLogOptions) (resErr error) {
 	p := f.Printer
+	ctx := f.Context()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
-	defer signal.Stop(sigCh)
-	go func() {
-		select {
-		case <-sigCh:
-			_, _ = fmt.Fprintln(p.Out)
-			if !opts.json {
-				_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
-				p.Tip("Resume: teamcity run log -f %s", runID)
-			}
-			cancel()
-		case <-ctx.Done():
+	defer func() {
+		if ctx.Err() == nil {
 			return
 		}
+		if !opts.json {
+			_, _ = fmt.Fprintln(p.Out)
+			_, _ = fmt.Fprintln(p.Out, output.Faint("Interrupted. Run continues in background."))
+			p.Tip("Resume: teamcity run log -f %s", runID)
+		}
+		resErr = nil
 	}()
 
 	initialTail := defaultFollowTail
@@ -350,7 +341,7 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		return err
 	}
 
-	resp, err := client.GetBuildMessages(context.Background(), runID, api.BuildMessagesOptions{
+	resp, err := client.GetBuildMessages(ctx, runID, api.BuildMessagesOptions{
 		Count:     -initialTail,
 		Tail:      true,
 		ExpandAll: true,
@@ -369,12 +360,12 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		printFollowMessage(p.Out, msg, showVerbose, opts.raw, opts.json)
 	}
 
-	build, err := client.GetBuild(context.Background(), runID)
+	build, err := client.GetBuild(ctx, runID)
 	if err != nil {
 		return err
 	}
 	if build.State == "finished" {
-		return buildFinishedResult(p, client, build, opts.json)
+		return buildFinishedResult(ctx, p, client, build, opts.json)
 	}
 
 	for {
@@ -384,14 +375,14 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		case <-time.After(followPollInterval):
 		}
 
-		resp, err := client.GetBuildMessages(context.Background(), runID, api.BuildMessagesOptions{
+		resp, err := client.GetBuildMessages(ctx, runID, api.BuildMessagesOptions{
 			Count:     -followFetchWindow,
 			Tail:      true,
 			ExpandAll: true,
 		})
 		if err != nil {
-			if build, err := client.GetBuild(context.Background(), runID); err == nil && build.State == "finished" {
-				return buildFinishedResult(p, client, build, opts.json)
+			if build, err := client.GetBuild(ctx, runID); err == nil && build.State == "finished" {
+				return buildFinishedResult(ctx, p, client, build, opts.json)
 			}
 			continue
 		}
@@ -417,12 +408,12 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 			printFollowMessage(p.Out, msg, showVerbose, opts.raw, opts.json)
 		}
 
-		build, err := client.GetBuild(context.Background(), runID)
+		build, err := client.GetBuild(ctx, runID)
 		if err != nil {
 			continue
 		}
 		if build.State == "finished" {
-			finalResp, err := client.GetBuildMessages(context.Background(), runID, api.BuildMessagesOptions{
+			finalResp, err := client.GetBuildMessages(ctx, runID, api.BuildMessagesOptions{
 				Count:     -followFetchWindow,
 				Tail:      true,
 				ExpandAll: true,
@@ -435,13 +426,13 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 					printFollowMessage(p.Out, msg, showVerbose, opts.raw, opts.json)
 				}
 			}
-			return buildFinishedResult(p, client, build, opts.json)
+			return buildFinishedResult(ctx, p, client, build, opts.json)
 		}
 	}
 }
 
 func waitForBuildStart(ctx context.Context, p *output.Printer, client api.ClientInterface, runID string, jsonOut bool) error {
-	build, err := client.GetBuild(context.Background(), runID)
+	build, err := client.GetBuild(ctx, runID)
 	if err != nil {
 		return err
 	}
@@ -460,7 +451,7 @@ func waitForBuildStart(ctx context.Context, p *output.Printer, client api.Client
 		case <-time.After(followPollInterval):
 		}
 
-		build, err = client.GetBuild(context.Background(), runID)
+		build, err = client.GetBuild(ctx, runID)
 		if err != nil {
 			return err
 		}
@@ -491,7 +482,7 @@ func printFollowMessage(w io.Writer, msg api.BuildMessage, showVerbose, raw, jso
 	}
 }
 
-func buildFinishedResult(p *output.Printer, client api.ClientInterface, build *api.Build, jsonOut bool) error {
+func buildFinishedResult(ctx context.Context, p *output.Printer, client api.ClientInterface, build *api.Build, jsonOut bool) error {
 	if jsonOut {
 		switch build.Status {
 		case "SUCCESS":
@@ -503,7 +494,7 @@ func buildFinishedResult(p *output.Printer, client api.ClientInterface, build *a
 		}
 	}
 	_, _ = fmt.Fprintln(p.Out)
-	return cmdutil.BuildResultError(context.Background(), p, client, build, true)
+	return cmdutil.BuildResultError(ctx, p, client, build, true)
 }
 
 func messageToJSON(msg api.BuildMessage) string {
@@ -515,7 +506,7 @@ func messageToJSON(msg api.BuildMessage) string {
 }
 
 func runLogFailed(f *cmdutil.Factory, client api.ClientInterface, runID string, jsonOut bool) error {
-	build, err := client.GetBuild(context.Background(), runID)
+	build, err := client.GetBuild(f.Context(), runID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
@@ -533,7 +524,7 @@ func runLogFailed(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 			summary.Problems = problems.ProblemOccurrence
 		}
 		if build.Status != "SUCCESS" {
-			if tests, err := client.GetBuildTests(context.Background(), runID, true, 0); err == nil {
+			if tests, err := client.GetBuildTests(f.Context(), runID, true, 0); err == nil {
 				summary.Tests = tests
 			}
 		}
@@ -544,6 +535,6 @@ func runLogFailed(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		f.Printer.Success("Build %d  #%s succeeded", build.ID, build.Number)
 		return nil
 	}
-	cmdutil.PrintFailureSummary(context.Background(), f.Printer, client, runID, build.Number, build.WebURL, build.StatusText)
+	cmdutil.PrintFailureSummary(f.Context(), f.Printer, client, runID, build.Number, build.WebURL, build.StatusText)
 	return nil
 }

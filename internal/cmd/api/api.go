@@ -159,10 +159,10 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	}
 
 	if opts.paginate {
-		return runAPIPaginated(f.Printer, client, endpoint, headers, opts)
+		return runAPIPaginated(f.Context(), f.Printer, client, endpoint, headers, opts)
 	}
 
-	resp, err := client.RawRequest(context.Background(), opts.method, endpoint, body, headers)
+	resp, err := client.RawRequest(f.Context(), opts.method, endpoint, body, headers)
 	if err != nil {
 		return err
 	}
@@ -170,8 +170,8 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	return outputAPIResponse(f.Printer, resp.Body, resp.StatusCode, resp.Headers, opts)
 }
 
-func runAPIPaginated(p *output.Printer, client api.ClientInterface, endpoint string, headers map[string]string, opts *apiOptions) error {
-	pages, err := fetchAllPages(client, endpoint, headers)
+func runAPIPaginated(ctx context.Context, p *output.Printer, client api.ClientInterface, endpoint string, headers map[string]string, opts *apiOptions) error {
+	pages, err := fetchAllPages(ctx, client, endpoint, headers)
 	if err != nil {
 		return err
 	}
@@ -255,12 +255,12 @@ func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeade
 	return nil
 }
 
-func fetchAllPages(client api.ClientInterface, endpoint string, headers map[string]string) ([][]byte, error) {
+func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint string, headers map[string]string) ([][]byte, error) {
 	var pages [][]byte
 	currentEndpoint := endpoint
 
 	for range maxPaginationPages {
-		resp, err := client.RawRequest(context.Background(), "GET", currentEndpoint, nil, headers)
+		resp, err := client.RawRequest(ctx, "GET", currentEndpoint, nil, headers)
 		if err != nil {
 			return nil, err
 		}

@@ -70,7 +70,7 @@ Note: Local agents (running on the same machine as the server) cannot be reboote
   teamcity agent reboot Agent-Linux-01 --graceful
   teamcity agent reboot Agent-Linux-01 --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAgentReboot(f, cmd.Context(), args[0], opts)
+			return runAgentReboot(f, f.Context(), args[0], opts)
 		},
 	}
 

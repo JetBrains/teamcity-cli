@@ -29,11 +29,11 @@ or the connection drops.`,
 		Example: `  teamcity agent term 1
   teamcity agent term Agent-Linux-01`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			conn, err := connectToAgent(f, cmd.Context(), args[0], true)
+			conn, err := connectToAgent(f, f.Context(), args[0], true)
 			if err != nil {
 				return err
 			}
-			return conn.RunInteractive(cmd.Context())
+			return conn.RunInteractive(f.Context())
 		},
 	}
 }
@@ -54,11 +54,11 @@ agent-side commands from teamcity flags.`,
   teamcity agent exec Agent-Linux-01 "cat /etc/os-release"
   teamcity agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			conn, err := connectToAgent(f, cmd.Context(), args[0], false)
+			conn, err := connectToAgent(f, f.Context(), args[0], false)
 			if err != nil {
 				return err
 			}
-			ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
+			ctx, cancel := context.WithTimeout(f.Context(), timeout)
 			defer cancel()
 
 			return conn.Exec(ctx, strings.Join(args[1:], " "))
@@ -73,7 +73,7 @@ func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, sh
 	serverURL := config.GetServerURL()
 	token, _, keyringErr := config.GetTokenWithSource()
 	if serverURL == "" || token == "" {
-		return nil, cmdutil.NotAuthenticatedError(serverURL, keyringErr)
+		return nil, cmdutil.NotAuthenticatedError(ctx, serverURL, keyringErr)
 	}
 
 	client, err := f.Client()

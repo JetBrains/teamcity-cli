@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime/debug"
+	"syscall"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -29,7 +32,10 @@ func run() (exitCode int) {
 		return 1
 	}
 
-	if err := cmd.Execute(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := cmd.Execute(ctx); err != nil {
 		if exitErr, ok := errors.AsType[*cmdutil.ExitError](err); ok {
 			return exitErr.Code
 		}

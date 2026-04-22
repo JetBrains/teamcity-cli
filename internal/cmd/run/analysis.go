@@ -1,7 +1,6 @@
 package run
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -47,7 +46,7 @@ func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) er
 		return err
 	}
 
-	changes, err := client.GetBuildChanges(context.Background(), runID)
+	changes, err := client.GetBuildChanges(f.Context(), runID)
 	if err != nil {
 		return fmt.Errorf("failed to get changes: %w", err)
 	}
@@ -172,7 +171,7 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	}
 
 	if opts.job != "" {
-		runs, err := client.GetBuilds(context.Background(), api.BuildsOptions{
+		runs, err := client.GetBuilds(f.Context(), api.BuildsOptions{
 			BuildTypeID: opts.job,
 			Limit:       1,
 		})
@@ -190,12 +189,12 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		return errors.New("run ID required (or use --job to get latest run)")
 	}
 
-	build, err := client.GetBuild(context.Background(), runID)
+	build, err := client.GetBuild(f.Context(), runID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
 
-	tests, err := client.GetBuildTests(context.Background(), runID, opts.failed, opts.limit)
+	tests, err := client.GetBuildTests(f.Context(), runID, opts.failed, opts.limit)
 	if err != nil {
 		return fmt.Errorf("failed to get tests: %w", err)
 	}

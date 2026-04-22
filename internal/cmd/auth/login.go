@@ -111,12 +111,12 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 	pkceChecked := false
 	if token == "" && !noBrowser && isInteractive {
 		pkceChecked = true
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(f.Context(), 10*time.Second)
 		enabled, _ := api.IsPkceEnabled(ctx, serverURL)
 		cancel()
 		if enabled {
 			p.Info("Secure browser login available on this server")
-			if tokenResp, err := runPkceLogin(p, serverURL); err != nil {
+			if tokenResp, err := runPkceLogin(f.Context(), p, serverURL); err != nil {
 				p.Warn("Browser auth failed: %v", err)
 				p.Info("Falling back to manual token entry...")
 			} else {
@@ -171,7 +171,7 @@ func runAuthLogin(f *cmdutil.Factory, serverURL, token string, insecureStorage b
 	f.WarnInsecureHTTP(serverURL, "authentication token")
 	p.Progress("Validating... ")
 
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(p.Debug), api.WithVersion(version.String()))
+	client := api.NewClient(serverURL, token, api.WithDebugFunc(p.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 	user, err := client.GetCurrentUser()
 	if err != nil {
 		p.Info("%s", output.Red("✗"))
@@ -230,7 +230,7 @@ func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 	f.WarnInsecureHTTP(serverURL, "guest access")
 	p.Progress("Validating guest access... ")
 
-	client := api.NewGuestClient(serverURL, api.WithDebugFunc(p.Debug), api.WithVersion(version.String()))
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(p.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 	server, err := client.GetServer()
 	if err != nil {
 		p.Info("%s", output.Red("✗"))
@@ -252,7 +252,7 @@ func runAuthLoginGuest(f *cmdutil.Factory, serverURL, token string) error {
 	return nil
 }
 
-func runPkceLogin(p *output.Printer, serverURL string) (*api.TokenResponse, error) {
+func runPkceLogin(parent context.Context, p *output.Printer, serverURL string) (*api.TokenResponse, error) {
 	verifier, err := api.GenerateCodeVerifier()
 	if err != nil {
 		return nil, fmt.Errorf("generate code verifier: %w", err)
@@ -292,11 +292,14 @@ func runPkceLogin(p *output.Printer, serverURL string) (*api.TokenResponse, erro
 		}
 		_, _ = fmt.Fprintln(p.Out)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 		defer cancel()
 		return api.ExchangeCodeForToken(ctx, serverURL, result.Code, verifier, redirectURI)
 
 	case <-time.After(authCodeLifetime):
 		return nil, fmt.Errorf("timeout waiting for callback (exceeded %v)", authCodeLifetime)
+
+	case <-parent.Done():
+		return nil, parent.Err()
 	}
 }

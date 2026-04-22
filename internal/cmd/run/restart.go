@@ -1,7 +1,6 @@
 package run
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -48,7 +47,7 @@ func runRunRestart(f *cmdutil.Factory, runID string, opts *runRestartOptions) er
 		return err
 	}
 
-	originalBuild, err := client.GetBuild(context.Background(), runID)
+	originalBuild, err := client.GetBuild(f.Context(), runID)
 	if err != nil {
 		return fmt.Errorf("failed to get run: %w", err)
 	}

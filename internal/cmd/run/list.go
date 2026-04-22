@@ -1,7 +1,6 @@
 package run
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -112,7 +111,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		return browser.OpenURL(url)
 	}
 
-	runs, err := client.GetBuilds(context.Background(), request.builds)
+	runs, err := client.GetBuilds(f.Context(), request.builds)
 	if err != nil {
 		return err
 	}
@@ -394,7 +393,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 		return err
 	}
 
-	build, err := client.GetBuild(context.Background(), runID)
+	build, err := client.GetBuild(f.Context(), runID)
 	if err != nil {
 		return err
 	}

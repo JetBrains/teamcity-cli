@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -19,7 +18,7 @@ func (c *Client) GetAgentPools(requestedFields []string) (*PoolList, error) {
 
 	pools, err := collectPages(c, path, 0, func(p string) ([]Pool, string, error) {
 		var page PoolList
-		if err := c.get(context.Background(), p, &page); err != nil {
+		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
 		}
 		return page.Pools, page.NextHref, nil
@@ -37,7 +36,7 @@ func (c *Client) GetAgentPool(id int) (*Pool, error) {
 	path := fmt.Sprintf("/app/rest/agentPools/id:%d?fields=%s", id, url.QueryEscape(fields))
 
 	var result Pool
-	if err := c.get(context.Background(), path, &result); err != nil {
+	if err := c.get(c.ctx(), path, &result); err != nil {
 		return nil, err
 	}
 
@@ -51,13 +50,13 @@ func (c *Client) AddProjectToPool(poolID int, projectID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
-	return c.doNoContent(context.Background(), "POST", path, bytes.NewReader(body), "")
+	return c.doNoContent(c.ctx(), "POST", path, bytes.NewReader(body), "")
 }
 
 // RemoveProjectFromPool removes a project from an agent pool
 func (c *Client) RemoveProjectFromPool(poolID int, projectID string) error {
 	path := fmt.Sprintf("/app/rest/agentPools/id:%d/projects/id:%s", poolID, projectID)
-	return c.doNoContent(context.Background(), "DELETE", path, nil, "")
+	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
 }
 
 // SetAgentPool moves an agent to a different pool
@@ -67,5 +66,5 @@ func (c *Client) SetAgentPool(agentID int, poolID int) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
-	return c.doNoContent(context.Background(), "PUT", path, bytes.NewReader(body), "")
+	return c.doNoContent(c.ctx(), "PUT", path, bytes.NewReader(body), "")
 }

@@ -640,7 +640,7 @@ func TestFetchAllPages(T *testing.T) {
 
 	client := api.NewClient(server.URL, "test-token")
 
-	pages, err := fetchAllPages(client, "/app/rest/builds", nil)
+	pages, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
 	require.NoError(T, err)
 	assert.Len(T, pages, 3, "fetchAllPages() page count")
 
@@ -673,7 +673,7 @@ func TestFetchAllPagesSinglePage(T *testing.T) {
 
 	client := api.NewClient(server.URL, "test-token")
 
-	pages, err := fetchAllPages(client, "/app/rest/builds", nil)
+	pages, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
 	require.NoError(T, err)
 	assert.Len(T, pages, 1, "fetchAllPages() page count")
 }

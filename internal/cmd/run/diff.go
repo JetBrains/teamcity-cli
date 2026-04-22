@@ -87,14 +87,14 @@ func runRunDiff(f *cmdutil.Factory, args []string, opts *runDiffOptions) error {
 		return err
 	}
 
-	id1, id2, err := resolveDiffBuildIDs(client, args)
+	id1, id2, err := resolveDiffBuildIDs(f.Context(), client, args)
 	if err != nil {
 		return err
 	}
 
 	if opts.web {
-		b1, err1 := client.GetBuild(context.Background(), id1)
-		b2, err2 := client.GetBuild(context.Background(), id2)
+		b1, err1 := client.GetBuild(f.Context(), id1)
+		b2, err2 := client.GetBuild(f.Context(), id2)
 		if err1 != nil {
 			return fmt.Errorf("resolving #%s: %w", id1, err1)
 		}
@@ -110,7 +110,7 @@ func runRunDiff(f *cmdutil.Factory, args []string, opts *runDiffOptions) error {
 		return runLogDiff(f, client, id1, id2, opts.context)
 	}
 
-	d1, d2, err := fetchBothBuilds(client, id1, id2, p)
+	d1, d2, err := fetchBothBuilds(f.Context(), client, id1, id2, p)
 	if err != nil {
 		return err
 	}
@@ -123,17 +123,17 @@ func runRunDiff(f *cmdutil.Factory, args []string, opts *runDiffOptions) error {
 	return nil
 }
 
-func resolveDiffBuildIDs(client api.ClientInterface, args []string) (string, string, error) {
+func resolveDiffBuildIDs(ctx context.Context, client api.ClientInterface, args []string) (string, string, error) {
 	if len(args) == 2 {
 		return args[0], args[1], nil
 	}
 
-	build, err := client.GetBuild(context.Background(), args[0])
+	build, err := client.GetBuild(ctx, args[0])
 	if err != nil {
 		return "", "", fmt.Errorf("could not resolve: %w", err)
 	}
 
-	builds, err := client.GetBuilds(context.Background(), api.BuildsOptions{
+	builds, err := client.GetBuilds(ctx, api.BuildsOptions{
 		BuildTypeID: build.BuildTypeID,
 		Limit:       1,
 		State:       "finished",
@@ -155,19 +155,19 @@ func resolveDiffBuildIDs(client api.ClientInterface, args []string) (string, str
 	)
 }
 
-func fetchBuildData(client api.ClientInterface, id string, p *output.Printer) (buildData, error) {
-	b, err := client.GetBuild(context.Background(), id)
+func fetchBuildData(ctx context.Context, client api.ClientInterface, id string, p *output.Printer) (buildData, error) {
+	b, err := client.GetBuild(ctx, id)
 	if err != nil {
 		return buildData{}, fmt.Errorf("#%s: %w", id, err)
 	}
 	d := buildData{build: b}
-	if d.tests, err = client.GetBuildTests(context.Background(), id, true, 0); err != nil {
+	if d.tests, err = client.GetBuildTests(ctx, id, true, 0); err != nil {
 		p.Warn("Could not fetch tests for #%s: %v", id, err)
 	}
 	if d.testSummary, err = client.GetBuildTestSummary(id); err != nil {
 		p.Warn("Could not fetch test summary for #%s: %v", id, err)
 	}
-	if d.changes, err = client.GetBuildChanges(context.Background(), id); err != nil {
+	if d.changes, err = client.GetBuildChanges(ctx, id); err != nil {
 		p.Warn("Could not fetch changes for #%s: %v", id, err)
 	}
 	if d.problems, err = client.GetBuildProblems(id); err != nil {
@@ -179,12 +179,12 @@ func fetchBuildData(client api.ClientInterface, id string, p *output.Printer) (b
 	return d, nil
 }
 
-func fetchBothBuilds(client api.ClientInterface, id1, id2 string, p *output.Printer) (buildData, buildData, error) {
+func fetchBothBuilds(ctx context.Context, client api.ClientInterface, id1, id2 string, p *output.Printer) (buildData, buildData, error) {
 	var d1, d2 buildData
 	var err1, err2 error
 	var wg sync.WaitGroup
-	wg.Go(func() { d1, err1 = fetchBuildData(client, id1, p) })
-	wg.Go(func() { d2, err2 = fetchBuildData(client, id2, p) })
+	wg.Go(func() { d1, err1 = fetchBuildData(ctx, client, id1, p) })
+	wg.Go(func() { d2, err2 = fetchBuildData(ctx, client, id2, p) })
 	wg.Wait()
 	if err1 != nil {
 		return d1, d2, err1
@@ -194,21 +194,22 @@ func fetchBothBuilds(client api.ClientInterface, id1, id2 string, p *output.Prin
 
 func runLogDiff(f *cmdutil.Factory, client api.ClientInterface, id1, id2 string, contextLines int) error {
 	p := f.Printer
+	ctx := f.Context()
 
-	b1, err := client.GetBuild(context.Background(), id1)
+	b1, err := client.GetBuild(ctx, id1)
 	if err != nil {
 		return err
 	}
-	b2, err := client.GetBuild(context.Background(), id2)
+	b2, err := client.GetBuild(ctx, id2)
 	if err != nil {
 		return err
 	}
 
-	log1, err := client.GetBuildLog(context.Background(), id1)
+	log1, err := client.GetBuildLog(ctx, id1)
 	if err != nil {
 		return fmt.Errorf("log for #%s: %w", id1, err)
 	}
-	log2, err := client.GetBuildLog(context.Background(), id2)
+	log2, err := client.GetBuildLog(ctx, id2)
 	if err != nil {
 		return fmt.Errorf("log for #%s: %w", id2, err)
 	}
