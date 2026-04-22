@@ -1,7 +1,6 @@
 package run
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -17,10 +16,7 @@ import (
 )
 
 var runListConfigCurrentUserFn = config.GetCurrentUser
-var runListAPICurrentUserFn = func(client api.ClientInterface) (*api.User, error) { return client.GetCurrentUser() }
-var runListIsGitRepoFn = isGitRepo
-var runListCurrentBranchFn = getCurrentBranch
-var runListHeadRevisionFn = getHeadRevision // used in tests
+var runListAPICurrentUserFn = func(client api.ClientInterface) (*api.User, error) { return client.GetCurrentUser() } // used in tests
 
 type runListOptions struct {
 	job        string
@@ -207,7 +203,7 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 		return nil, err
 	}
 
-	branch, err := resolveRunListBranch(opts)
+	branch, err := resolveBranchFlag(opts.branch)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +218,7 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 		return nil, err
 	}
 
-	revision, err := resolveRunListRevision(opts)
+	revision, err := resolveRevisionFlag(opts.revision)
 	if err != nil {
 		return nil, err
 	}
@@ -269,23 +265,6 @@ func resolveCurrentAuthenticatedUser(client api.ClientInterface, source string) 
 	return u.Username, nil
 }
 
-func resolveRunListBranch(opts *runListOptions) (string, error) {
-	if strings.EqualFold(opts.branch, "@this") {
-		return resolveAutoBranch(true)
-	}
-	return opts.branch, nil
-}
-
-func resolveAutoBranch(required bool) (string, error) {
-	if !runListIsGitRepoFn() {
-		if required {
-			return "", errors.New("--branch @this requires a git repository")
-		}
-		return "", nil
-	}
-	return runListCurrentBranchFn()
-}
-
 func resolveRunListStatus(status string) (statusFilter, stateFilter string, err error) {
 	if status == "" {
 		return "", "", nil
@@ -330,21 +309,6 @@ func resolveRunListDateRange(opts *runListOptions) (sinceDate, untilDate string,
 	}
 
 	return sinceDate, untilDate, nil
-}
-
-var runListResolveRevisionFn = resolveRevision
-
-func resolveRunListRevision(opts *runListOptions) (string, error) {
-	if strings.EqualFold(opts.revision, "@head") {
-		if !runListIsGitRepoFn() {
-			return "", errors.New("--revision @head requires a git repository")
-		}
-		return runListHeadRevisionFn()
-	}
-	if opts.revision != "" && len(opts.revision) < 40 && runListIsGitRepoFn() {
-		return runListResolveRevisionFn(opts.revision)
-	}
-	return opts.revision, nil
 }
 
 func resolveRunListWebPath(opts *runListOptions) string {

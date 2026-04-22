@@ -159,6 +159,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity run start Falcon_Build
   teamcity run start Falcon_Build --branch feature/test
+  teamcity run start Falcon_Build --branch @this
   teamcity run start Falcon_Build -P version=1.0 -S build.number=123 -E CI=true
   teamcity run start Falcon_Build --comment "Release build" --tag release --tag v1.0
   teamcity run start Falcon_Build --clean --rebuild-deps --top
@@ -166,14 +167,15 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run start Falcon_Build --local-changes # personal build with uncommitted Git changes
   teamcity run start Falcon_Build --local-changes changes.patch  # from file
   teamcity run start Falcon_Build --revision abc123def --branch main
+  teamcity run start Falcon_Build --revision @head --branch @this
   teamcity run start Falcon_Build --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunStart(f, args[0], opts)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Branch to build")
-	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin to a specific Git commit SHA")
+	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Branch to build (or '@this' for current git branch)")
+	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin to a specific Git commit SHA (or '@head' for current HEAD)")
 	cmd.Flags().StringToStringVarP(&opts.params, "param", "P", nil, "Parameters (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.systemProps, "system", "S", nil, "System properties (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.envVars, "env", "E", nil, "Environment variables (key=value)")
@@ -200,6 +202,16 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error {
 	p := f.Printer
 	opts.resolve()
+	branch, err := resolveBranchFlag(opts.branch)
+	if err != nil {
+		return err
+	}
+	opts.branch = branch
+	revision, err := resolveRevisionFlag(opts.revision)
+	if err != nil {
+		return err
+	}
+	opts.revision = revision
 	if opts.dryRun {
 		client, err := f.Client()
 		if err != nil {
@@ -267,13 +279,13 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	}
 
 	if opts.localChanges != "" && opts.branch == "" {
-		if !isGitRepo() {
+		if !isGitRepoFn() {
 			return api.Validation(
 				"not a git repository",
 				"Run this command from within a git repository, or specify --branch explicitly",
 			)
 		}
-		branch, err := getCurrentBranch()
+		branch, err := currentBranchFn()
 		if err != nil {
 			return err
 		}

@@ -32,7 +32,7 @@ func (v *localChangesValue) Type() string {
 func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 	switch source {
 	case "git":
-		if !isGitRepo() {
+		if !isGitRepoFn() {
 			return nil, api.Validation(
 				"not a git repository",
 				"Run this command from within a git repository, or use --local-changes <path> to specify a diff file",
