@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	udiff "github.com/aymanbagabas/go-udiff"
+	"github.com/aymanbagabas/go-udiff"
 )
 
 // UnifiedDiff writes a colored unified diff between two line slices, returns true if they differ.
