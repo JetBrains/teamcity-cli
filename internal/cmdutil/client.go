@@ -88,7 +88,16 @@ func ProbeGuestAccess(ctx context.Context, serverURL string) bool {
 
 // ExtraHeaderOpts resolves extra headers from CLI flags or config and returns them as a
 // ClientOption slice ready to append to any api constructor or probe call.
+// When headers come from config, it uses the current default server URL.
+// Prefer ExtraHeaderOptsForServer when the target server URL is known.
 func (f *Factory) ExtraHeaderOpts() ([]api.ClientOption, error) {
+	return f.ExtraHeaderOptsForServer(config.GetServerURL())
+}
+
+// ExtraHeaderOptsForServer resolves extra headers for a specific server URL.
+// CLI --header flags override config and apply regardless of serverURL.
+// When CLI flags are absent, only headers configured for serverURL are returned.
+func (f *Factory) ExtraHeaderOptsForServer(serverURL string) ([]api.ClientOption, error) {
 	var headers map[string]string
 	var err error
 	if len(f.ExtraHeaders) > 0 {
@@ -97,7 +106,7 @@ func (f *Factory) ExtraHeaderOpts() ([]api.ClientOption, error) {
 			return nil, err
 		}
 	} else {
-		headers = config.GetExtraHeaders()
+		headers = config.GetExtraHeadersForServer(serverURL)
 	}
 	if len(headers) == 0 {
 		return nil, nil

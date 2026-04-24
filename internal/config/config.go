@@ -253,7 +253,14 @@ func GetTokenExpiry() string {
 // Use $$ to produce a literal $ in the value.
 // Returns nil if no headers are configured.
 func GetExtraHeaders() map[string]string {
-	serverURL := GetServerURL()
+	return GetExtraHeadersForServer(GetServerURL())
+}
+
+// GetExtraHeadersForServer returns the configured extra headers for the given server URL,
+// expanding any $VAR or ${VAR} references in values from the environment.
+// Use $$ to produce a literal $ in the value.
+// Returns nil if no headers are configured for that server.
+func GetExtraHeadersForServer(serverURL string) map[string]string {
 	if serverURL == "" || cfg == nil {
 		return nil
 	}

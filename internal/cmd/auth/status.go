@@ -68,11 +68,7 @@ func newAuthStatusCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runAuthStatus(f *cmdutil.Factory, opts *authStatusOptions) error {
-	headerOpts, err := f.ExtraHeaderOpts()
-	if err != nil {
-		return err
-	}
-	results := collectAuthStatuses(f, headerOpts)
+	results := collectAuthStatuses(f)
 	if opts.json {
 		if len(results) == 0 {
 			results = []authStatus{{Status: "error", Error: "not logged in to any TeamCity server"}}
@@ -82,19 +78,19 @@ func runAuthStatus(f *cmdutil.Factory, opts *authStatusOptions) error {
 	return renderAuthStatusHuman(f, results)
 }
 
-func collectAuthStatuses(f *cmdutil.Factory, headerOpts []api.ClientOption) []authStatus {
+func collectAuthStatuses(f *cmdutil.Factory) []authStatus {
 	if envURL := os.Getenv(config.EnvServerURL); envURL != "" {
 		envURL = config.NormalizeURL(envURL)
 		if config.IsGuestAuth() {
-			return []authStatus{collectGuestStatus(f, envURL, false, headerOpts)}
+			return []authStatus{collectGuestStatus(f, envURL, false)}
 		}
 		if envToken := os.Getenv(config.EnvToken); envToken != "" {
-			return []authStatus{collectTokenStatus(f, envURL, envToken, "env", false, headerOpts)}
+			return []authStatus{collectTokenStatus(f, envURL, envToken, "env", false)}
 		}
 	}
 
 	if buildAuth, ok := config.GetBuildAuth(); ok {
-		return []authStatus{collectBuildStatus(f, buildAuth, headerOpts)}
+		return []authStatus{collectBuildStatus(f, buildAuth)}
 	}
 
 	cfg := config.Get()
@@ -105,7 +101,7 @@ func collectAuthStatuses(f *cmdutil.Factory, headerOpts []api.ClientOption) []au
 		sc := cfg.Servers[serverURL]
 		isDefault := len(urls) > 1 && serverURL == cfg.DefaultServer
 		wg.Go(func() {
-			results[i] = collectServerStatus(f, serverURL, sc, isDefault, headerOpts)
+			results[i] = collectServerStatus(f, serverURL, sc, isDefault)
 		})
 	}
 	wg.Wait()
@@ -113,13 +109,13 @@ func collectAuthStatuses(f *cmdutil.Factory, headerOpts []api.ClientOption) []au
 }
 
 // collectServerStatus fetches the status for a single configured server (guest, token, or missing).
-func collectServerStatus(f *cmdutil.Factory, serverURL string, sc config.ServerConfig, isDefault bool, headerOpts []api.ClientOption) authStatus {
+func collectServerStatus(f *cmdutil.Factory, serverURL string, sc config.ServerConfig, isDefault bool) authStatus {
 	if sc.Guest {
-		return collectGuestStatus(f, serverURL, isDefault, headerOpts)
+		return collectGuestStatus(f, serverURL, isDefault)
 	}
 	token, src, krErr := config.GetTokenForServer(serverURL)
 	if token != "" {
-		return collectTokenStatus(f, serverURL, token, src, isDefault, headerOpts)
+		return collectTokenStatus(f, serverURL, token, src, isDefault)
 	}
 	return authStatus{
 		Server:     serverURL,
@@ -131,8 +127,14 @@ func collectServerStatus(f *cmdutil.Factory, serverURL string, sc config.ServerC
 	}
 }
 
-func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool, headerOpts []api.ClientOption) authStatus {
+func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "guest", IsDefault: isDefault}
+	headerOpts, err := f.ExtraHeaderOptsForServer(serverURL)
+	if err != nil {
+		s.Status = "error"
+		s.Error = err.Error()
+		return s
+	}
 	if err := api.ProbeTeamCity(f.Context(), serverURL, headerOpts...); err != nil {
 		s.Status = "error"
 		s.Error = friendlyError(err, serverURL)
@@ -155,8 +157,14 @@ func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool, he
 	return s
 }
 
-func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string, isDefault bool, headerOpts []api.ClientOption) authStatus {
+func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "token", TokenSource: tokenSource, IsDefault: isDefault}
+	headerOpts, err := f.ExtraHeaderOptsForServer(serverURL)
+	if err != nil {
+		s.Status = "error"
+		s.Error = err.Error()
+		return s
+	}
 	if err := api.ProbeTeamCity(f.Context(), serverURL, headerOpts...); err != nil {
 		s.Status = "error"
 		s.Error = friendlyError(err, serverURL)
@@ -198,8 +206,14 @@ func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string
 	return s
 }
 
-func collectBuildStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth, headerOpts []api.ClientOption) authStatus {
+func collectBuildStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth) authStatus {
 	s := authStatus{Server: buildAuth.ServerURL, AuthMethod: "build"}
+	headerOpts, err := f.ExtraHeaderOptsForServer(buildAuth.ServerURL)
+	if err != nil {
+		s.Status = "error"
+		s.Error = err.Error()
+		return s
+	}
 	if err := api.ProbeTeamCity(f.Context(), buildAuth.ServerURL, headerOpts...); err != nil {
 		s.Status = "error"
 		s.Error = friendlyError(err, buildAuth.ServerURL)

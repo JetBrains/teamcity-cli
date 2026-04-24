@@ -68,11 +68,6 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) error {
 		)
 	}
 
-	headerOpts, err := f.ExtraHeaderOpts()
-	if err != nil {
-		return err
-	}
-
 	p := f.Printer
 	ctx := f.Context()
 	interactive := f.IsInteractive()
@@ -82,7 +77,13 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) error {
 		_, _ = fmt.Fprintln(p.Out)
 	}
 
-	serverURL, err := resolveServerURL(ctx, p, opts.serverURL, interactive, headerOpts)
+	serverURL, err := resolveServerURL(ctx, p, f, opts.serverURL, interactive)
+	if err != nil {
+		return err
+	}
+
+	// Compute headers for the confirmed server URL so per-server config headers are used.
+	headerOpts, err := f.ExtraHeaderOptsForServer(serverURL)
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,8 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) error {
 }
 
 // resolveServerURL prompts and probes in a loop until a reachable TeamCity server is found or the user cancels.
-func resolveServerURL(ctx context.Context, p *output.Printer, initial string, interactive bool, headerOpts []api.ClientOption) (string, error) {
+// It uses f.ExtraHeaderOptsForServer per iteration so that per-server config headers are applied to each probe.
+func resolveServerURL(ctx context.Context, p *output.Printer, f *cmdutil.Factory, initial string, interactive bool) (string, error) {
 	serverURL := initial
 	detected := ""
 	savedDefault := ""
@@ -139,6 +141,11 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 		}
 
 		serverURL = config.NormalizeURL(serverURL)
+
+		headerOpts, err := f.ExtraHeaderOptsForServer(serverURL)
+		if err != nil {
+			return "", err
+		}
 
 		p.Progress("Checking %s... ", output.Cyan(serverURL))
 		if err := api.ProbeTeamCity(ctx, serverURL, headerOpts...); err != nil {
