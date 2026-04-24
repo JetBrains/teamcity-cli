@@ -464,7 +464,7 @@ func TestGetServerURLPriority(T *testing.T) {
     </repositories>
 </project>`
 
-	T.Run("env > DSL > config", func(t *testing.T) {
+	T.Run("env > config, DSL never influences routing", func(t *testing.T) {
 		ResetDSLCache()
 		tmpDir := t.TempDir()
 		dslDir := filepath.Join(tmpDir, DefaultDSLDirTeamCity)
@@ -474,19 +474,20 @@ func TestGetServerURLPriority(T *testing.T) {
 		withWorkingDir(t, tmpDir)
 		cfg = &Config{DefaultServer: "https://config.example.com"}
 
-		// Env var takes priority
 		t.Setenv(EnvDSLDir, "")
 		t.Setenv(EnvServerURL, "https://env.example.com")
 		assert.Equal(t, "https://env.example.com", GetServerURL())
 
-		// DSL takes priority over config
+		// Security: a DSL pom.xml in the working tree must NOT hijack the target
+		// server. Without TEAMCITY_URL set, the configured default wins — not the
+		// value scraped from .teamcity/pom.xml.
 		t.Setenv(EnvServerURL, "")
-		ResetDSLCache() // reset cache to re-detect
-		assert.Equal(t, "https://dsl-server.example.com", GetServerURL())
+		ResetDSLCache()
+		assert.Equal(t, "https://config.example.com", GetServerURL(),
+			"DSL pom.xml must not override the configured default server")
 
-		// Falls back to config
 		require.NoError(t, os.RemoveAll(dslDir))
-		ResetDSLCache() // reset cache to re-detect
+		ResetDSLCache()
 		assert.Equal(t, "https://config.example.com", GetServerURL())
 	})
 }

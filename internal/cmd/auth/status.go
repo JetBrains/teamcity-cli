@@ -220,7 +220,6 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 		if config.IsBuildEnvironment() {
 			_, _ = fmt.Fprintln(p.Out, "\n"+output.Yellow("!")+" Build environment detected but credentials not found in properties file")
 		}
-		renderDSLTip(f.Context(), p, results)
 		return nil
 	}
 
@@ -236,7 +235,6 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 		p.Tip("%s", output.TipSwitchDefaultServer())
 	}
 
-	renderDSLTip(f.Context(), p, results)
 	return nil
 }
 
@@ -334,27 +332,6 @@ func renderCredentialsDiagnostic(ctx context.Context, p *output.Printer, s authS
 		output.Cyan("teamcity auth login --server "+s.Server+" --insecure-storage"))
 	if cmdutil.ProbeGuestAccess(ctx, s.Server) {
 		_, _ = fmt.Fprintf(p.Out, "    • Or set %s for read-only guest access\n", output.Cyan("TEAMCITY_GUEST=1"))
-	}
-}
-
-func renderDSLTip(ctx context.Context, p *output.Printer, results []authStatus) {
-	dslURL := config.DetectServerFromDSL()
-	if dslURL == "" {
-		return
-	}
-	for _, s := range results {
-		if s.Server == dslURL {
-			return
-		}
-	}
-	_, _ = fmt.Fprintln(p.Out)
-	_, _ = fmt.Fprintf(p.Out, "%s Commands in this directory target %s (from DSL settings)\n",
-		output.Yellow("!"), output.Cyan(dslURL))
-	loginCmd := output.Cyan("teamcity auth login --server " + dslURL)
-	if cmdutil.ProbeGuestAccess(ctx, dslURL) {
-		_, _ = fmt.Fprintf(p.Out, "  Run %s, or set %s for guest access\n", loginCmd, output.Cyan("TEAMCITY_GUEST=1"))
-	} else {
-		_, _ = fmt.Fprintf(p.Out, "  Run %s to authenticate\n", loginCmd)
 	}
 }
 

@@ -146,15 +146,11 @@ func keyringService(serverURL string) string {
 	return "tc:" + serverURL
 }
 
+// GetServerURL resolves the target server from TEAMCITY_URL, then the configured default; never from DSL (avoids routing a stored token to an untrusted repo's .teamcity/pom.xml — opt in via `auth login`).
 func GetServerURL() string {
 	if url := os.Getenv(EnvServerURL); url != "" {
 		return NormalizeURL(url)
 	}
-
-	if url := DetectServerFromDSL(); url != "" {
-		return url
-	}
-
 	return cfg.DefaultServer
 }
 
