@@ -144,6 +144,10 @@ servers:
   https://teamcity-prod.example.com:
     user: alice
     ro: true
+  https://teamcity-internal.example.com:
+    user: alice
+    extra_headers:
+      cf-access-token: $CF_ACCESS_TOKEN
 aliases:
   rl: 'run list'
   rw: 'run view $1 --web'
@@ -185,7 +189,7 @@ The server URL used when no `TEAMCITY_URL` environment variable is set. Updated 
 </td>
 <td>
 
-A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access, `ro: true` for read-only mode. Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
+A map of server URLs to their settings. Each entry stores the `user` field (username on that server) and optionally `guest: true` for guest access, `ro: true` for read-only mode, and `extra_headers` (a map of header names to values) for headers that must be added to every request — useful when the server sits behind an authenticating proxy. Header values support `$VAR` and `${VAR}` environment variable expansion; use `$$` to include a literal `$`. Tokens are stored in the system keyring, not in this file, unless `--insecure-storage` was used during login.
 
 </td>
 </tr>
@@ -436,6 +440,18 @@ Show detailed output, including debug information. Mutually exclusive with `--qu
 <td>
 
 Disable interactive prompts. The CLI uses sensible defaults when a prompt would otherwise appear.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--header`
+
+</td>
+<td>
+
+Add an extra HTTP header to every request (format: `Name: Value`). May be repeated for multiple headers. When supplied, overrides any `extra_headers` configured in the config file.
 
 </td>
 </tr>

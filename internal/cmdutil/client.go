@@ -3,6 +3,7 @@ package cmdutil
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/config"
@@ -18,6 +19,17 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 	verOpt := api.WithVersion(version.String())
 
 	opts := []api.ClientOption{debugOpt, roOpt, verOpt}
+
+	// CLI --header flags take exclusive precedence over config-file extra_headers.
+	if len(f.ExtraHeaders) > 0 {
+		headers, err := parseExtraHeaders(f.ExtraHeaders)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, api.WithExtraHeaders(headers))
+	} else if headers := config.GetExtraHeaders(); len(headers) > 0 {
+		opts = append(opts, api.WithExtraHeaders(headers))
+	}
 
 	if config.IsGuestAuth() {
 		if serverURL == "" {
@@ -72,6 +84,44 @@ func ProbeGuestAccess(ctx context.Context, serverURL string) bool {
 	guest := api.NewGuestClient(serverURL, api.WithVersion(version.String())).WithContext(ctx)
 	_, err := guest.GetServer()
 	return err == nil
+}
+
+// ExtraHeaderOpts resolves extra headers from CLI flags or config and returns them as a
+// ClientOption slice ready to append to any api constructor or probe call.
+func (f *Factory) ExtraHeaderOpts() ([]api.ClientOption, error) {
+	var headers map[string]string
+	var err error
+	if len(f.ExtraHeaders) > 0 {
+		headers, err = parseExtraHeaders(f.ExtraHeaders)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		headers = config.GetExtraHeaders()
+	}
+	if len(headers) == 0 {
+		return nil, nil
+	}
+	return []api.ClientOption{api.WithExtraHeaders(headers)}, nil
+}
+
+// parseExtraHeaders parses a slice of "Name: Value" strings (curl-style) into a map.
+// The colon is the separator; whitespace around the name and value is trimmed.
+func parseExtraHeaders(raw []string) (map[string]string, error) {
+	headers := make(map[string]string, len(raw))
+	for _, h := range raw {
+		before, after, ok := strings.Cut(h, ":")
+		if !ok {
+			return nil, fmt.Errorf("invalid header %q: expected 'Name: Value' format", h)
+		}
+		name := strings.TrimSpace(before)
+		value := strings.TrimSpace(after)
+		if name == "" {
+			return nil, fmt.Errorf("invalid header %q: name cannot be empty", h)
+		}
+		headers[name] = value
+	}
+	return headers, nil
 }
 
 // NotAuthenticatedError returns a not-authenticated error with a hint that covers all authentication methods.

@@ -31,11 +31,12 @@ const (
 )
 
 type ServerConfig struct {
-	Token       string `mapstructure:"token"`
-	User        string `mapstructure:"user"`
-	Guest       bool   `mapstructure:"guest,omitempty"`
-	RO          bool   `mapstructure:"ro,omitempty"`
-	TokenExpiry string `mapstructure:"token_expiry,omitempty"`
+	Token        string            `mapstructure:"token"`
+	User         string            `mapstructure:"user"`
+	Guest        bool              `mapstructure:"guest,omitempty"`
+	RO           bool              `mapstructure:"ro,omitempty"`
+	TokenExpiry  string            `mapstructure:"token_expiry,omitempty"`
+	ExtraHeaders map[string]string `mapstructure:"extra_headers,omitempty"`
 }
 
 type Config struct {
@@ -247,6 +248,37 @@ func GetTokenExpiry() string {
 	return ""
 }
 
+// GetExtraHeaders returns the configured extra headers for the current server,
+// expanding any $VAR or ${VAR} references in values from the environment.
+// Use $$ to produce a literal $ in the value.
+// Returns nil if no headers are configured.
+func GetExtraHeaders() map[string]string {
+	serverURL := GetServerURL()
+	if serverURL == "" || cfg == nil {
+		return nil
+	}
+	server, ok := cfg.Servers[serverURL]
+	if !ok || len(server.ExtraHeaders) == 0 {
+		return nil
+	}
+	resolved := make(map[string]string, len(server.ExtraHeaders))
+	for k, v := range server.ExtraHeaders {
+		resolved[k] = expandHeaderValue(v)
+	}
+	return resolved
+}
+
+// expandHeaderValue expands $VAR/${VAR} from the environment. $$ produces a
+// literal $; each additional $$ pair adds another $.
+func expandHeaderValue(s string) string {
+	return os.Expand(s, func(key string) string {
+		if key == "$" {
+			return "$"
+		}
+		return os.Getenv(key)
+	})
+}
+
 func serverConfigToMap(sc ServerConfig) map[string]any {
 	m := map[string]any{}
 	if sc.Token != "" {
@@ -263,6 +295,9 @@ func serverConfigToMap(sc ServerConfig) map[string]any {
 	}
 	if sc.TokenExpiry != "" {
 		m["token_expiry"] = sc.TokenExpiry
+	}
+	if len(sc.ExtraHeaders) > 0 {
+		m["extra_headers"] = sc.ExtraHeaders
 	}
 	return m
 }

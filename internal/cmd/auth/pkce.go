@@ -18,9 +18,9 @@ import (
 const authCodeLifetime = 5 * time.Minute
 
 // attemptPkceLogin probes for PKCE support, lets the user pick which scopes to grant, then runs the browser flow.
-func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) (token, validUntil string) {
+func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string, headerOpts []api.ClientOption) (token, validUntil string) {
 	pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	enabled, _ := api.IsPkceEnabled(pctx, serverURL)
+	enabled, _ := api.IsPkceEnabled(pctx, serverURL, headerOpts...)
 	cancel()
 	if !enabled {
 		return "", ""
@@ -30,7 +30,7 @@ func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) 
 		p.Info("Skipping browser login, entering token manually...")
 		return "", ""
 	}
-	resp, err := runPkceLogin(ctx, p, serverURL, scopes)
+	resp, err := runPkceLogin(ctx, p, serverURL, scopes, headerOpts)
 	if err != nil {
 		p.Warn("Browser auth failed: %v", err)
 		p.Info("Falling back to manual token entry...")
@@ -75,7 +75,7 @@ func selectPkceScopes() []string {
 }
 
 // runPkceLogin orchestrates the browser-based PKCE auth flow with the given scopes and returns the minted access token.
-func runPkceLogin(parent context.Context, p *output.Printer, serverURL string, scopes []string) (*api.TokenResponse, error) {
+func runPkceLogin(parent context.Context, p *output.Printer, serverURL string, scopes []string, headerOpts []api.ClientOption) (*api.TokenResponse, error) {
 	verifier, err := api.GenerateCodeVerifier()
 	if err != nil {
 		return nil, fmt.Errorf("generate code verifier: %w", err)
@@ -121,7 +121,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, serverURL string, s
 
 		ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 		defer cancel()
-		return api.ExchangeCodeForToken(ctx, serverURL, result.Code, verifier, redirectURI)
+		return api.ExchangeCodeForToken(ctx, serverURL, result.Code, verifier, redirectURI, headerOpts...)
 
 	case <-time.After(authCodeLifetime):
 		return nil, fmt.Errorf("timeout waiting for callback (exceeded %v)", authCodeLifetime)

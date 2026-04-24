@@ -56,6 +56,9 @@ type Client struct {
 	version     string // CLI version for request headers
 	commandName string // CLI command name for X-TeamCity-Client header
 
+	// extraHeaders are added to every request; set via WithExtraHeaders.
+	extraHeaders map[string]string
+
 	// baseCtx is the default context for methods that don't take one; set via WithContext, nil falls back to Background.
 	baseCtx context.Context
 
@@ -101,7 +104,8 @@ func (c *Client) debugLogHeaders(prefix string, headers http.Header) {
 
 	for _, name := range names {
 		values := headers[name]
-		if sensitiveHeaders[name] {
+		_, isExtra := c.extraHeaders[name]
+		if sensitiveHeaders[name] || isExtra {
 			c.debugLog("%s %s: [REDACTED]", prefix, name)
 		} else {
 			for _, value := range values {
@@ -153,6 +157,22 @@ func WithVersion(v string) ClientOption {
 func WithCommandName(name string) ClientOption {
 	return func(c *Client) {
 		c.commandName = name
+	}
+}
+
+// WithExtraHeaders adds headers to every request made by the client.
+// CLI flag values take precedence over config file values — callers should
+// pass only one source.
+func WithExtraHeaders(headers map[string]string) ClientOption {
+	return func(c *Client) {
+		if len(headers) == 0 {
+			return
+		}
+		canonical := make(map[string]string, len(headers))
+		for k, v := range headers {
+			canonical[http.CanonicalHeaderKey(k)] = v
+		}
+		c.extraHeaders = canonical
 	}
 }
 
@@ -270,6 +290,18 @@ func (c *Client) ctx() context.Context {
 	return c.baseCtx
 }
 
+// applyExtraHeaders extracts extra headers from opts and sets them on req.
+// Used by standalone probes that build raw http.Requests rather than going through Client.
+func applyExtraHeaders(req *http.Request, opts []ClientOption) {
+	tmp := &Client{}
+	for _, opt := range opts {
+		opt(tmp)
+	}
+	for k, v := range tmp.extraHeaders {
+		req.Header.Set(k, v)
+	}
+}
+
 func (c *Client) setAuth(req *http.Request) {
 	if c.guestAuth {
 		return
@@ -355,6 +387,9 @@ func (c *Client) doRequestFull(ctx context.Context, method, path string, body io
 	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())
 	if body != nil {
 		req.Header.Set("Content-Type", contentType)
+	}
+	for k, v := range c.extraHeaders {
+		req.Header.Set(k, v)
 	}
 
 	c.debugLogRequest(req)
@@ -540,6 +575,9 @@ func (c *Client) doRawRequest(ctx context.Context, method, path string, body io.
 	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	for k, v := range c.extraHeaders {
+		req.Header.Set(k, v)
 	}
 
 	for k, v := range headers {

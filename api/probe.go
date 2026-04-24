@@ -15,7 +15,8 @@ const probeTimeout = 10 * time.Second
 var ErrLoginGatewayDetected = errors.New("login gateway detected — VPN may be required")
 
 // ProbeTeamCity checks whether serverURL points to a reachable TeamCity server without sending credentials.
-func ProbeTeamCity(ctx context.Context, serverURL string) error {
+// Pass ClientOption values (e.g. WithExtraHeaders) to include additional headers in the probe request.
+func ProbeTeamCity(ctx context.Context, serverURL string, opts ...ClientOption) error {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
 	u := strings.TrimSuffix(serverURL, "/") + "/app/rest/server/version"
@@ -23,6 +24,7 @@ func ProbeTeamCity(ctx context.Context, serverURL string) error {
 	if err != nil {
 		return err
 	}
+	applyExtraHeaders(req, opts)
 	client := &http.Client{Transport: defaultTransport()}
 	resp, err := client.Do(req)
 	if err != nil {
