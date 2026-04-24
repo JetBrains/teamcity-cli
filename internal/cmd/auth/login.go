@@ -77,7 +77,13 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) error {
 		_, _ = fmt.Fprintln(p.Out)
 	}
 
-	serverURL, err := resolveServerURL(ctx, p, opts.serverURL, interactive)
+	serverURL, err := resolveServerURL(ctx, p, f, opts.serverURL, interactive)
+	if err != nil {
+		return err
+	}
+
+	// Compute headers for the confirmed server URL so per-server config headers are used.
+	headerOpts, err := f.ExtraHeaderOptsForServer(serverURL)
 	if err != nil {
 		return err
 	}
@@ -89,13 +95,14 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) error {
 	f.WarnInsecureHTTP(serverURL, reason)
 
 	if opts.guest {
-		return finishGuestLogin(ctx, f, serverURL)
+		return finishGuestLogin(ctx, f, serverURL, headerOpts)
 	}
-	return finishTokenLogin(ctx, f, serverURL, opts, interactive)
+	return finishTokenLogin(ctx, f, serverURL, opts, interactive, headerOpts)
 }
 
 // resolveServerURL prompts and probes in a loop until a reachable TeamCity server is found or the user cancels.
-func resolveServerURL(ctx context.Context, p *output.Printer, initial string, interactive bool) (string, error) {
+// It uses f.ExtraHeaderOptsForServer per iteration so that per-server config headers are applied to each probe.
+func resolveServerURL(ctx context.Context, p *output.Printer, f *cmdutil.Factory, initial string, interactive bool) (string, error) {
 	serverURL := initial
 	detected := ""
 	savedDefault := ""
@@ -135,8 +142,13 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 
 		serverURL = config.NormalizeURL(serverURL)
 
+		headerOpts, err := f.ExtraHeaderOptsForServer(serverURL)
+		if err != nil {
+			return "", err
+		}
+
 		p.Progress("Checking %s... ", output.Cyan(serverURL))
-		if err := api.ProbeTeamCity(ctx, serverURL); err != nil {
+		if err := api.ProbeTeamCity(ctx, serverURL, headerOpts...); err != nil {
 			p.Info("%s", output.Red("✗"))
 			if errors.Is(err, context.Canceled) {
 				return "", err
@@ -154,13 +166,15 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 	}
 }
 
-func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string) error {
+func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string, headerOpts []api.ClientOption) error {
 	p := f.Printer
 	p.Progress("Validating guest access... ")
 
 	client := api.NewGuestClient(serverURL,
-		api.WithDebugFunc(p.Debug),
-		api.WithVersion(version.String()),
+		append([]api.ClientOption{
+			api.WithDebugFunc(p.Debug),
+			api.WithVersion(version.String()),
+		}, headerOpts...)...,
 	).WithContext(ctx)
 	server, err := client.GetServer()
 	if err != nil {
@@ -182,16 +196,16 @@ func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string)
 	return nil
 }
 
-func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string, opts *loginOpts, interactive bool) error {
+func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string, opts *loginOpts, interactive bool, headerOpts []api.ClientOption) error {
 	p := f.Printer
 	token := opts.token
 	var tokenValidUntil string
 	pkceTried := token == "" && !opts.noBrowser && interactive
 	if pkceTried {
-		token, tokenValidUntil = attemptPkceLogin(ctx, p, serverURL)
+		token, tokenValidUntil = attemptPkceLogin(ctx, p, serverURL, headerOpts)
 	}
 
-	token, user, err := resolveToken(ctx, p, serverURL, token, pkceTried, interactive)
+	token, user, err := resolveToken(ctx, p, serverURL, token, pkceTried, interactive, headerOpts)
 	if err != nil {
 		return err
 	}
@@ -220,7 +234,7 @@ func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 }
 
 // resolveToken prompts for a token and validates it, looping on invalid tokens when interactive.
-func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial string, pkceTried, interactive bool) (string, *api.User, error) {
+func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial string, pkceTried, interactive bool, headerOpts []api.ClientOption) (string, *api.User, error) {
 	token := initial
 	instructionsShown := false
 	for {
@@ -241,8 +255,10 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 
 		p.Progress("Validating... ")
 		client := api.NewClient(serverURL, token,
-			api.WithDebugFunc(p.Debug),
-			api.WithVersion(version.String()),
+			append([]api.ClientOption{
+				api.WithDebugFunc(p.Debug),
+				api.WithVersion(version.String()),
+			}, headerOpts...)...,
 		).WithContext(ctx)
 		user, err := client.GetCurrentUser()
 		if err != nil {

@@ -988,3 +988,103 @@ func TestReadOnlyMode(T *testing.T) {
 		assert.True(t, client.ReadOnly)
 	})
 }
+
+func TestExtraHeaders(T *testing.T) {
+	T.Parallel()
+
+	T.Run("WithExtraHeaders sends headers on every typed request", func(t *testing.T) {
+		t.Parallel()
+
+		var got http.Header
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			got = r.Header.Clone()
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(Server{VersionMajor: 2024, VersionMinor: 12})
+		})
+		client = NewClient(client.BaseURL, "token", WithExtraHeaders(map[string]string{
+			"CF-Access-Client-Id":     "team.access",
+			"CF-Access-Client-Secret": "secret123",
+		}))
+
+		_, err := client.GetServer()
+		require.NoError(t, err)
+		assert.Equal(t, "team.access", got.Get("CF-Access-Client-Id"))
+		assert.Equal(t, "secret123", got.Get("CF-Access-Client-Secret"))
+	})
+
+	T.Run("WithExtraHeaders sends headers on RawRequest", func(t *testing.T) {
+		t.Parallel()
+
+		var got http.Header
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			got = r.Header.Clone()
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(server.Close)
+
+		client := NewClient(server.URL, "token", WithExtraHeaders(map[string]string{
+			"X-Custom-Header": "custom-value",
+		}))
+
+		_, err := client.RawRequest(T.Context(), "GET", "/app/rest/server", nil, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "custom-value", got.Get("X-Custom-Header"))
+	})
+
+	T.Run("per-request headers in RawRequest override extra headers", func(t *testing.T) {
+		t.Parallel()
+
+		var got http.Header
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			got = r.Header.Clone()
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(server.Close)
+
+		client := NewClient(server.URL, "token", WithExtraHeaders(map[string]string{
+			"X-Custom-Header": "from-extra",
+		}))
+
+		_, err := client.RawRequest(T.Context(), "GET", "/app/rest/server", nil, map[string]string{
+			"X-Custom-Header": "from-per-request",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "from-per-request", got.Get("X-Custom-Header"))
+	})
+
+	T.Run("nil extra headers cause no error", func(t *testing.T) {
+		t.Parallel()
+
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(Server{VersionMajor: 2024, VersionMinor: 12})
+		})
+		client = NewClient(client.BaseURL, "token", WithExtraHeaders(nil))
+
+		_, err := client.GetServer()
+		assert.NoError(t, err)
+	})
+
+	T.Run("extra header values are redacted in debug output", func(t *testing.T) {
+		t.Parallel()
+
+		var buf bytes.Buffer
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(server.Close)
+
+		client := NewClient(server.URL, "token",
+			WithExtraHeaders(map[string]string{"Cf-Access-Token": "secret-proxy-token"}),
+			WithDebugFunc(func(format string, args ...any) {
+				fmt.Fprintf(&buf, format+"\n", args...)
+			}),
+		)
+
+		_, _ = client.RawRequest(T.Context(), "GET", "/app/rest/server", nil, nil)
+
+		captured := buf.String()
+		assert.Contains(t, captured, "> Cf-Access-Token: [REDACTED]")
+		assert.NotContains(t, captured, "secret-proxy-token")
+	})
+}

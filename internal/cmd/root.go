@@ -76,6 +76,7 @@ Report issues:  https://jb.gg/tc/issues`,
 	cmd.PersistentFlags().BoolVarP(&f.Verbose, "verbose", "V", false, "Show detailed output including debug info")
 	cmd.PersistentFlags().BoolVar(&f.Verbose, "debug", false, "Alias for --verbose")
 	cmd.PersistentFlags().BoolVar(&f.NoInput, "no-input", false, "Disable interactive prompts")
+	cmd.PersistentFlags().StringArrayVar(&f.ExtraHeaders, "header", nil, "Extra HTTP header for all requests (format: 'Name: Value'); may be repeated. Overrides config-file headers.")
 
 	cmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
 	cmd.MarkFlagsMutuallyExclusive("quiet", "debug")

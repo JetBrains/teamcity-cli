@@ -1,0 +1,9 @@
+# Test --header flag and extra_headers config behaviour.
+
+# Invalid header format (missing colon) is rejected before any network request.
+! exec teamcity --header 'CF-Access-Client-Id' run list --no-input
+stderr 'invalid header'
+
+# Valid --header flag is accepted and the command succeeds (server ignores unknown headers).
+exec teamcity --header 'X-Test-Header: test-value' run list --limit 1 --no-input
+! stderr 'invalid header'

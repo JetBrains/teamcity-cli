@@ -18,6 +18,7 @@ stdout '--no-color'
 stdout '--quiet'
 stdout '--verbose'
 stdout '--no-input'
+stdout '--header'
 stdout '--version'
 ! stderr .
 

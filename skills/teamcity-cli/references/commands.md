@@ -481,6 +481,7 @@ Available on all commands:
 - `-q, --quiet` - Suppress non-essential output
 - `--verbose` - Show detailed output including debug info
 - `--no-input` - Disable interactive prompts
+- `--header <Name: Value>` - Add extra HTTP header to all requests (repeatable); overrides config-file `extra_headers`
 - `-w, --web` - Open in browser (on view commands)
 
 ## List Output Flags

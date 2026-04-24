@@ -957,3 +957,177 @@ func TestIsReadOnly(T *testing.T) {
 		assert.False(t, IsReadOnly())
 	})
 }
+
+func TestGetExtraHeaders(T *testing.T) {
+	saveCfgState(T)
+
+	const serverURL = "https://tc.example.com"
+
+	T.Run("returns nil when no server configured", func(t *testing.T) {
+		t.Setenv(EnvServerURL, "")
+		cfg = &Config{Servers: make(map[string]ServerConfig)}
+
+		assert.Nil(t, GetExtraHeaders())
+	})
+
+	T.Run("returns nil when server has no extra headers", func(t *testing.T) {
+		t.Setenv(EnvServerURL, serverURL)
+		cfg = &Config{
+			DefaultServer: serverURL,
+			Servers: map[string]ServerConfig{
+				serverURL: {Token: "token", User: "user"},
+			},
+		}
+
+		assert.Nil(t, GetExtraHeaders())
+	})
+
+	T.Run("returns configured headers", func(t *testing.T) {
+		t.Setenv(EnvServerURL, serverURL)
+		cfg = &Config{
+			DefaultServer: serverURL,
+			Servers: map[string]ServerConfig{
+				serverURL: {
+					Token: "token",
+					User:  "user",
+					ExtraHeaders: map[string]string{
+						"CF-Access-Client-Id":     "team.access",
+						"CF-Access-Client-Secret": "literal-secret",
+					},
+				},
+			},
+		}
+
+		got := GetExtraHeaders()
+		require.NotNil(t, got)
+		assert.Equal(t, "team.access", got["CF-Access-Client-Id"])
+		assert.Equal(t, "literal-secret", got["CF-Access-Client-Secret"])
+	})
+
+	T.Run("expands env var references in values", func(t *testing.T) {
+		t.Setenv(EnvServerURL, serverURL)
+		t.Setenv("CF_SECRET", "env-secret-value")
+		cfg = &Config{
+			DefaultServer: serverURL,
+			Servers: map[string]ServerConfig{
+				serverURL: {
+					Token: "token",
+					User:  "user",
+					ExtraHeaders: map[string]string{
+						"CF-Access-Client-Secret": "$CF_SECRET",
+					},
+				},
+			},
+		}
+
+		got := GetExtraHeaders()
+		require.NotNil(t, got)
+		assert.Equal(t, "env-secret-value", got["CF-Access-Client-Secret"])
+	})
+
+	T.Run("expands braced env var references in values", func(t *testing.T) {
+		t.Setenv(EnvServerURL, serverURL)
+		t.Setenv("CF_SECRET", "braced-secret-value")
+		cfg = &Config{
+			DefaultServer: serverURL,
+			Servers: map[string]ServerConfig{
+				serverURL: {
+					Token: "token",
+					User:  "user",
+					ExtraHeaders: map[string]string{
+						"CF-Access-Client-Secret": "${CF_SECRET}",
+					},
+				},
+			},
+		}
+
+		got := GetExtraHeaders()
+		require.NotNil(t, got)
+		assert.Equal(t, "braced-secret-value", got["CF-Access-Client-Secret"])
+	})
+
+	T.Run("unset env var expands to empty string", func(t *testing.T) {
+		t.Setenv(EnvServerURL, serverURL)
+		t.Setenv("UNSET_HEADER_VAR", "")
+		cfg = &Config{
+			DefaultServer: serverURL,
+			Servers: map[string]ServerConfig{
+				serverURL: {
+					Token: "token",
+					User:  "user",
+					ExtraHeaders: map[string]string{
+						"X-Header": "$UNSET_HEADER_VAR",
+					},
+				},
+			},
+		}
+
+		got := GetExtraHeaders()
+		require.NotNil(t, got)
+		assert.Equal(t, "", got["X-Header"])
+	})
+}
+
+func TestExpandHeaderValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		env   map[string]string
+		want  string
+	}{
+		{
+			name:  "plain value unchanged",
+			input: "literal-value",
+			want:  "literal-value",
+		},
+		{
+			name:  "$VAR expands from env",
+			input: "$MY_VAR",
+			env:   map[string]string{"MY_VAR": "hello"},
+			want:  "hello",
+		},
+		{
+			name:  "${VAR} expands from env",
+			input: "${MY_VAR}",
+			env:   map[string]string{"MY_VAR": "hello"},
+			want:  "hello",
+		},
+		{
+			name:  "$$ produces literal $",
+			input: "$$",
+			want:  "$",
+		},
+		{
+			name:  "$$$$ produces literal $$",
+			input: "$$$$",
+			want:  "$$",
+		},
+		{
+			name:  "$$VAR produces literal $ followed by literal VAR (no expansion)",
+			input: "$$MY_VAR",
+			env:   map[string]string{"MY_VAR": "should-not-appear"},
+			want:  "$MY_VAR",
+		},
+		{
+			name:  "$$$VAR produces literal $ then expanded VAR",
+			input: "$$$MY_VAR",
+			env:   map[string]string{"MY_VAR": "world"},
+			want:  "$world",
+		},
+		{
+			name:  "backslash is not special",
+			input: `\$MY_VAR`,
+			env:   map[string]string{"MY_VAR": "hello"},
+			want:  `\hello`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			assert.Equal(t, tc.want, expandHeaderValue(tc.input))
+		})
+	}
+}

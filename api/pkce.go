@@ -119,11 +119,12 @@ func FindAvailableListener() (net.Listener, error) {
 	return l, nil
 }
 
-func IsPkceEnabled(ctx context.Context, serverURL string) (bool, error) {
+func IsPkceEnabled(ctx context.Context, serverURL string, opts ...ClientOption) (bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(serverURL, "/")+PkceIsEnabledPath, nil)
 	if err != nil {
 		return false, err
 	}
+	applyExtraHeaders(req, opts)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return false, fmt.Errorf("check PKCE status: %w", err)
@@ -179,7 +180,7 @@ func DefaultScopes() []string {
 	return slices.Clone(fallbackScopes)
 }
 
-func ExchangeCodeForToken(ctx context.Context, serverURL, code, verifier, redirectURI string) (*TokenResponse, error) {
+func ExchangeCodeForToken(ctx context.Context, serverURL, code, verifier, redirectURI string, opts ...ClientOption) (*TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("client_id", PkceClientID)
@@ -192,6 +193,7 @@ func ExchangeCodeForToken(ctx context.Context, serverURL, code, verifier, redire
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	applyExtraHeaders(req, opts)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
