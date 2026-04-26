@@ -34,14 +34,15 @@ type ProjectList struct {
 
 // BuildType represents a build configuration
 type BuildType struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name,omitempty"`
-	ProjectName string   `json:"projectName,omitempty"`
-	ProjectID   string   `json:"projectId,omitempty"`
-	Href        string   `json:"href,omitempty"`
-	WebURL      string   `json:"webUrl,omitempty"`
-	Paused      bool     `json:"paused,omitempty"`
-	Project     *Project `json:"project,omitempty"`
+	ID             string          `json:"id"`
+	Name           string          `json:"name,omitempty"`
+	ProjectName    string          `json:"projectName,omitempty"`
+	ProjectID      string          `json:"projectId,omitempty"`
+	Href           string          `json:"href,omitempty"`
+	WebURL         string          `json:"webUrl,omitempty"`
+	Paused         bool            `json:"paused,omitempty"`
+	Project        *Project        `json:"project,omitempty"`
+	VcsRootEntries *VcsRootEntries `json:"vcs-root-entries,omitempty"`
 }
 
 // BuildTypeList represents a list of build configurations
@@ -234,13 +235,8 @@ type VcsRootEntries struct {
 }
 
 type VcsRootEntry struct {
-	ID      string      `json:"id,omitempty"`
-	VcsRoot *VcsRootRef `json:"vcs-root,omitempty"`
-}
-
-type VcsRootRef struct {
-	ID   string `json:"id"`
-	Name string `json:"name,omitempty"`
+	ID      string   `json:"id,omitempty"`
+	VcsRoot *VcsRoot `json:"vcs-root,omitempty"`
 }
 
 // LastChanges represents the changes to include in a build
@@ -486,6 +482,7 @@ type VcsRootList struct {
 // VcsRootsOptions represents options for listing VCS roots
 type VcsRootsOptions struct {
 	Project string // affectedProject locator
+	URL     string // url property "contains" fragment (e.g., "acme/backend"); server-side filter
 	Limit   int
 	Fields  []string
 }

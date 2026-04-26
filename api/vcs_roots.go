@@ -15,6 +15,13 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 		Add("affectedProject", opts.Project).
 		AddIntDefault("count", opts.Limit, 100)
 
+	if opts.URL != "" {
+		locator.AddLocator("property", NewLocator().
+			Add("name", "url").
+			Add("value", opts.URL).
+			Add("matchType", "contains"))
+	}
+
 	fields := opts.Fields
 	if len(fields) == 0 {
 		fields = VcsRootFields.Default

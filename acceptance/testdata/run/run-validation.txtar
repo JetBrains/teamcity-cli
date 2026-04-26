@@ -1,8 +1,8 @@
 # Test run subcommand input validation and error handling.
 
-# start without args
+# start without args (no link configured)
 ! exec teamcity run start --no-input
-stderr 'accepts 1 arg'
+stderr 'job id is required'
 
 # cancel without args
 ! exec teamcity run cancel --no-input

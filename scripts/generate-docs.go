@@ -26,6 +26,7 @@ var displayNames = map[string]string{
 	"alias": "Aliases",
 	"api":   "API",
 	"auth":  "Authentication",
+	"link":  "Link",
 	"pool":  "Agent Pools",
 }
 

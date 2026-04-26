@@ -49,6 +49,9 @@ type Factory struct {
 
 	// ctx is the signal-aware root context set by cmd.Execute; read via Context(), unset falls back to Background.
 	ctx context.Context
+
+	// link caches teamcity.toml lookup; see link.go.
+	link *linkResolver
 }
 
 // NewFactory creates a Factory with production defaults.

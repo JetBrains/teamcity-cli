@@ -19,12 +19,20 @@ func RequireNonEmpty(s string) error {
 	return nil
 }
 
-// Prompt runs a single huh field with the CLI theme; does not echo — use PromptString / Select / Confirm for that.
+// Prompt runs a single huh field with the CLI theme and help hidden (single-group navigation hints would be misleading); does not echo — use PromptString / Select / Confirm.
 func Prompt(field huh.Field) error {
 	if in, ok := field.(*huh.Input); ok {
 		in.Prompt("")
 	}
 	return huh.NewForm(huh.NewGroup(field)).
+		WithTheme(promptTheme()).
+		WithShowHelp(false).
+		Run()
+}
+
+// RunForm runs a multi-group form with the CLI theme and help shown — use when the flow has >1 group so shift+tab navigation is real.
+func RunForm(groups ...*huh.Group) error {
+	return huh.NewForm(groups...).
 		WithTheme(promptTheme()).
 		WithShowHelp(true).
 		Run()
@@ -55,15 +63,12 @@ func PromptSecret(title string, value *string) error {
 		Value(value))
 }
 
-// Select presents a typed picker (filtering auto-enabled for 5+ options) and echoes the picked label back.
+// Select presents a typed picker and echoes the picked label back; filter is opt-in via "/" at runtime so the title isn't replaced by the filter input.
 func Select[T comparable](p *output.Printer, title string, options []huh.Option[T], value *T) error {
 	s := huh.NewSelect[T]().
 		Title(title).
 		Options(options...).
 		Value(value)
-	if len(options) >= 5 {
-		s.Filtering(true)
-	}
 	if err := Prompt(s); err != nil {
 		return err
 	}

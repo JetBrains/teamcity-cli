@@ -440,6 +440,57 @@ teamcity config set ro true --server tc.example.com
 teamcity config get default_server
 ```
 
+## Repository link (`teamcity link`)
+
+Binds the current repository to one or more TeamCity servers via a committed
+`teamcity.toml` at the repo root. Project- and job-aware commands (`run list`,
+`run start`, `job list`, `project view`) then resolve their target by matching
+the active TC server URL against an entry in the file — no need to repeat
+`--project` / `--job` on every invocation.
+
+| Command           | Description                                          |
+|-------------------|------------------------------------------------------|
+| `teamcity link`   | Upsert a `[[server]]` entry (or per-path scope) in `teamcity.toml` |
+
+### Flags for `teamcity link`
+
+- `--server <url>` - TeamCity server URL (default: active server from `teamcity auth login`)
+- `-p, --project <id>` - TeamCity project ID for this scope
+- `-j, --job <id>` - Default job/pipeline ID for this scope
+- `--jobs <id,...>` - Additional job/pipeline IDs (comma-separated or repeated)
+- `--scope <path>` - Path scope inside the server entry (default: cwd relative to `teamcity.toml`'s dir; pass `--scope=` for top-level)
+
+### Resolution cascade
+
+```
+explicit --flag   →   TEAMCITY_PROJECT / TEAMCITY_JOB env   →   matching [[server]] entry → deepest path scope
+```
+
+Environment variables always beat `teamcity.toml`; explicit flags/arguments
+beat both. Use this when suggesting project or job IDs: if the user already
+ran `teamcity link`, zero-arg forms like `teamcity run start` or
+`teamcity project view` work without additional flags.
+
+### File format
+
+```toml
+[[server]]
+url     = "https://primary.example"
+project = "Acme_Mono"
+job     = "Acme_Mono_Build"
+
+[server.paths."services/api"]
+project = "Acme_API"
+job     = "Acme_API_Build"
+
+[[server]]
+url  = "https://nightly.example"
+jobs = ["Acme_Nightly_Release", "Acme_Nightly_Eval"]
+```
+
+Inspect with `cat teamcity.toml`, remove with `rm teamcity.toml` — there is no
+`link --show` / `link --clear` subcommand.
+
 ## Direct API (`teamcity api`)
 
 For features not covered by specific commands. Endpoints always start with `/app/rest/`.

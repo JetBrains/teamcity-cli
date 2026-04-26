@@ -1178,6 +1178,35 @@ Set a configuration value
 </tr>
 </table>
 
+## Link
+
+<table>
+<tr>
+<td>
+
+Command
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity link`
+
+</td>
+<td>
+
+Bind this repository to a TeamCity project
+
+</td>
+</tr>
+</table>
+
 ## Pipelines
 
 <table>
