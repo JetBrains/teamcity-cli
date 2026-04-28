@@ -23,6 +23,14 @@ const (
 	EventSynced    = "synced"
 
 	EventManaged = "managed"
+
+	EventLinked = "linked"
+)
+
+const (
+	WorkspaceSourceFlag        = "flag"
+	WorkspaceSourceAuto        = "auto"
+	WorkspaceSourceInteractive = "interactive"
 )
 
 const (
