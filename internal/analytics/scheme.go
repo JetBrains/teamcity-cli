@@ -13,14 +13,15 @@ const (
 )
 
 const (
-	GroupSession  = "teamcity.cli.session"
-	GroupCommand  = "teamcity.cli.command"
-	GroupAPI      = "teamcity.cli.api"
-	GroupAuth     = "teamcity.cli.auth"
-	GroupBuild    = "teamcity.cli.build"
-	GroupAgent    = "teamcity.cli.agent"
-	GroupPipeline = "teamcity.cli.pipeline"
-	GroupSkill    = "teamcity.cli.skill"
+	GroupSession   = "teamcity.cli.session"
+	GroupCommand   = "teamcity.cli.command"
+	GroupAPI       = "teamcity.cli.api"
+	GroupAuth      = "teamcity.cli.auth"
+	GroupBuild     = "teamcity.cli.build"
+	GroupAgent     = "teamcity.cli.agent"
+	GroupPipeline  = "teamcity.cli.pipeline"
+	GroupSkill     = "teamcity.cli.skill"
+	GroupWorkspace = "teamcity.cli.workspace"
 )
 
 const groupVersion = 1
@@ -82,6 +83,7 @@ var Scheme = &fus.Scheme{
 		agentGroup(),
 		pipelineGroup(),
 		skillGroup(),
+		workspaceGroup(),
 	},
 }
 
@@ -249,6 +251,21 @@ func skillGroup() fus.GroupSchema {
 				"scope":            {fus.EnumExpr("global", "project")},
 				"is_auto_detected": {fus.EnumRefExpr(enumBoolean)},
 				"is_success":       {fus.EnumRefExpr(enumBoolean)},
+			},
+		},
+	}
+}
+
+func workspaceGroup() fus.GroupSchema {
+	return fus.GroupSchema{
+		ID:   GroupWorkspace,
+		Type: fus.GroupTypeCounter,
+		Rules: &fus.SchemeRules{
+			EventID: []string{fus.EnumExpr(EventLinked)},
+			EventData: map[string][]string{
+				"source":       {fus.EnumExpr(WorkspaceSourceFlag, WorkspaceSourceAuto, WorkspaceSourceInteractive)},
+				"is_ambiguous": {fus.EnumRefExpr(enumBoolean)},
+				"is_subdir":    {fus.EnumRefExpr(enumBoolean)},
 			},
 		},
 	}
