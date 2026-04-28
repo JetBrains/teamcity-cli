@@ -136,7 +136,10 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 		serverURL = config.NormalizeURL(serverURL)
 
 		p.Progress("Checking %s... ", output.Cyan(serverURL))
-		probeClient := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
+		probeClient := api.NewGuestClient(serverURL,
+			api.WithVersion(version.String()),
+			api.WithExtraHeaders(api.EnvHeaders()),
+		)
 		if err := probeClient.Probe(ctx); err != nil {
 			p.Info("%s", output.Red("✗"))
 			if errors.Is(err, context.Canceled) {
@@ -162,6 +165,7 @@ func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string)
 	client := api.NewGuestClient(serverURL,
 		api.WithDebugFunc(p.Debug),
 		api.WithVersion(version.String()),
+		api.WithExtraHeaders(api.EnvHeaders()),
 	).WithContext(ctx)
 	server, err := client.GetServer()
 	if err != nil {
@@ -244,6 +248,7 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 		client := api.NewClient(serverURL, token,
 			api.WithDebugFunc(p.Debug),
 			api.WithVersion(version.String()),
+			api.WithExtraHeaders(api.EnvHeaders()),
 		).WithContext(ctx)
 		user, err := client.GetCurrentUser()
 		if err != nil {
