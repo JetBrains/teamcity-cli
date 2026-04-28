@@ -16,6 +16,7 @@ Login options:
 Environment override note:
 - `TEAMCITY_URL` + `TEAMCITY_TOKEN` should be set together when overriding auth in scripts
 - `TEAMCITY_URL` alone bypasses stored `teamcity auth login` credentials
+- `TEAMCITY_HEADER_*` adds an HTTP header to every request: `TEAMCITY_HEADER_FOO_BAR=baz` sends `Foo-Bar: baz`. Use this for proxies that gate access (Cloudflare Access, Google IAP). Values are redacted in `--verbose` output.
 
 ## Builds/Runs (`teamcity run`)
 

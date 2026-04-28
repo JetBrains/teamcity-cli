@@ -316,6 +316,18 @@ Set to `1`, `true`, or `yes` to disable automatic update checks. Update checks a
 
 </td>
 </tr>
+<tr>
+<td>
+
+`TEAMCITY_HEADER_*`
+
+</td>
+<td>
+
+Add an HTTP header to every outgoing request. The suffix becomes the header name with underscores converted to hyphens, canonical-cased: `TEAMCITY_HEADER_FOO_BAR=baz` sends `Foo-Bar: baz`. Empty values are ignored; values containing CR/LF/NUL are dropped to prevent header injection. Header values are redacted in `--verbose` output.
+
+</td>
+</tr>
 </table>
 
 Examples:
@@ -349,6 +361,40 @@ set TEAMCITY_TOKEN=your-access-token
 </tabs>
 
 Setting `TERM=dumb` also disables colored output. Color is automatically disabled when output is not a terminal (for example, when piping to another command).
+
+### Extra HTTP headers (corporate proxies)
+
+If your TeamCity server sits behind an authenticating proxy such as **Cloudflare Access** or **Google IAP**, the proxy needs its own credentials on every request. `TEAMCITY_HEADER_*` lets you supply them via env vars without editing the config file. The CLI applies them to every API call, the auth login probe, the PKCE exchange, and the agent terminal WebSocket — anywhere a request might pass through the proxy.
+
+Header names follow these rules:
+
+- Suffix is uppercased after the prefix; underscores become hyphens; the result is canonical-cased.
+- `TEAMCITY_HEADER_CF_ACCESS_CLIENT_ID=value` → `Cf-Access-Client-Id: value`.
+- Empty values are skipped. Values containing CR/LF/NUL are dropped.
+- Values are redacted in `--verbose` output, regardless of header name.
+
+#### Cloudflare Access service token
+
+```Shell
+export TEAMCITY_HEADER_CF_ACCESS_CLIENT_ID="abc123.access"
+export TEAMCITY_HEADER_CF_ACCESS_CLIENT_SECRET="$(cat ~/.cf-access-secret)"
+teamcity run list
+```
+
+#### Google IAP
+
+IAP requires a fresh ID token signed by your service account. A small wrapper keeps the token current:
+
+```Shell
+teamcity-iap() {
+  export TEAMCITY_HEADER_PROXY_AUTHORIZATION="Bearer $(gcloud auth print-identity-token --audiences=$IAP_AUDIENCE)"
+  teamcity "$@"
+}
+
+teamcity-iap run list
+```
+
+For repository-scoped configuration, set these in [direnv](https://direnv.net/) `.envrc` so they're only present when you `cd` into the project directory.
 
 ## Global flags
 
