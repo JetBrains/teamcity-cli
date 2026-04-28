@@ -136,7 +136,8 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 		serverURL = config.NormalizeURL(serverURL)
 
 		p.Progress("Checking %s... ", output.Cyan(serverURL))
-		if err := api.ProbeTeamCity(ctx, serverURL); err != nil {
+		probeClient := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
+		if err := probeClient.Probe(ctx); err != nil {
 			p.Info("%s", output.Red("✗"))
 			if errors.Is(err, context.Canceled) {
 				return "", err

@@ -14,17 +14,18 @@ const probeTimeout = 10 * time.Second
 // ErrLoginGatewayDetected indicates the API endpoint was served by an SSO / login gateway rather than TeamCity itself.
 var ErrLoginGatewayDetected = errors.New("login gateway detected — VPN may be required")
 
-// ProbeTeamCity checks whether serverURL points to a reachable TeamCity server without sending credentials.
-func ProbeTeamCity(ctx context.Context, serverURL string) error {
+// Probe checks whether c.BaseURL points to a reachable TeamCity server without sending credentials.
+func (c *Client) Probe(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
-	u := strings.TrimSuffix(serverURL, "/") + "/app/rest/server/version"
+	u := strings.TrimSuffix(c.BaseURL, "/") + "/app/rest/server/version"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return err
 	}
-	client := &http.Client{Transport: defaultTransport()}
-	resp, err := client.Do(req)
+	// Probe deliberately does not call setAuth — reaching the server is what we care about,
+	// not whether credentials work.
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
