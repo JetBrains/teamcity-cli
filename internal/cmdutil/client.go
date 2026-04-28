@@ -17,10 +17,7 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 	roOpt := api.WithReadOnly(config.IsReadOnly())
 	verOpt := api.WithVersion(version.String())
 
-	opts := []api.ClientOption{debugOpt, roOpt, verOpt}
-	if h := api.EnvHeaders(); len(h) > 0 {
-		opts = append(opts, api.WithExtraHeaders(h))
-	}
+	opts := []api.ClientOption{debugOpt, roOpt, verOpt, api.WithExtraHeaders(api.EnvHeaders())}
 
 	if config.IsGuestAuth() {
 		if serverURL == "" {

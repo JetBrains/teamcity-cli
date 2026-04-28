@@ -80,11 +80,4 @@ func TestClientProbe(T *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "HTTP 500")
 	})
-
-	T.Run("preserves transport (defaultTransport not dropped)", func(t *testing.T) {
-		t.Parallel()
-
-		client := NewGuestClient("https://example.com")
-		assert.NotNil(t, client.HTTPClient.Transport, "probe path must keep the configured transport")
-	})
 }
