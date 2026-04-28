@@ -255,6 +255,14 @@ func (c *Client) SetCommandName(name string) {
 	c.commandName = name
 }
 
+// applyStandardHeaders sets the per-request headers that every outgoing TeamCity request
+// must carry. Caller-configurable extra headers (set via WithExtraHeaders) plug in here in
+// a follow-up commit so probe, PKCE, raw, and typed requests all pass through one chokepoint.
+func (c *Client) applyStandardHeaders(req *http.Request) {
+	req.Header.Set("User-Agent", c.userAgent())
+	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())
+}
+
 // WithContext returns a shallow copy of the client whose default context is ctx; mirrors http.Request.WithContext.
 func (c *Client) WithContext(ctx context.Context) *Client {
 	c2 := *c
@@ -350,9 +358,8 @@ func (c *Client) doRequestFull(ctx context.Context, method, path string, body io
 	}
 
 	c.setAuth(req)
+	c.applyStandardHeaders(req)
 	req.Header.Set("Accept", accept)
-	req.Header.Set("User-Agent", c.userAgent())
-	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())
 	if body != nil {
 		req.Header.Set("Content-Type", contentType)
 	}
@@ -535,13 +542,13 @@ func (c *Client) doRawRequest(ctx context.Context, method, path string, body io.
 	}
 
 	c.setAuth(req)
+	c.applyStandardHeaders(req)
 	req.Header.Set("Accept", accept)
-	req.Header.Set("User-Agent", c.userAgent())
-	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
+	// Per-request headers run last so callers can override Accept / Content-Type / extras.
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}

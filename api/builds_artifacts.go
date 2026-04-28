@@ -93,6 +93,7 @@ func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath s
 			return nil, err
 		}
 		c.setAuth(req)
+		c.applyStandardHeaders(req)
 		return streamClient.Do(req)
 	})
 	if err != nil {
