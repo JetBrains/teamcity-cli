@@ -125,6 +125,7 @@ func (c *Client) IsPkceEnabled(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	c.applyStandardHeaders(req)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return false, fmt.Errorf("check PKCE status: %w", err)
@@ -194,6 +195,7 @@ func (c *Client) ExchangeCodeForToken(ctx context.Context, code, verifier, redir
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	c.applyStandardHeaders(req)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {

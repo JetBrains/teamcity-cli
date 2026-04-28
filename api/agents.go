@@ -211,6 +211,7 @@ func (c *Client) RebootAgent(ctx context.Context, id int, afterBuild bool) error
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	c.setAuth(req)
+	c.applyStandardHeaders(req)
 
 	c.debugLogRequest(req)
 

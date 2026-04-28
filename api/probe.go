@@ -25,6 +25,7 @@ func (c *Client) Probe(ctx context.Context) error {
 	}
 	// Probe deliberately does not call setAuth — reaching the server is what we care about,
 	// not whether credentials work.
+	c.applyStandardHeaders(req)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return err
