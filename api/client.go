@@ -61,6 +61,10 @@ type Client struct {
 
 	// serverInfo is a pointer so WithContext copies share the cache instead of copying sync.Once.
 	serverInfo *serverInfoCache
+
+	// extraHeaders is set on every outgoing request via WithExtraHeaders.
+	// Names are canonical-cased; values are scrubbed of CR/LF/NUL at construction.
+	extraHeaders map[string]string
 }
 
 // serverInfoCache memoizes the result of GetServer across copies of a Client.
@@ -101,7 +105,8 @@ func (c *Client) debugLogHeaders(prefix string, headers http.Header) {
 
 	for _, name := range names {
 		values := headers[name]
-		if sensitiveHeaders[name] {
+		_, isExtra := c.extraHeaders[name]
+		if sensitiveHeaders[name] || isExtra {
 			c.debugLog("%s %s: [REDACTED]", prefix, name)
 		} else {
 			for _, value := range values {
@@ -153,6 +158,29 @@ func WithVersion(v string) ClientOption {
 func WithCommandName(name string) ClientOption {
 	return func(c *Client) {
 		c.commandName = name
+	}
+}
+
+// WithExtraHeaders adds the given headers to every request the client makes.
+// Names are canonicalized (CanonicalHeaderKey); values containing CR/LF/NUL are dropped
+// to prevent header-injection. Empty names are dropped. Pass an empty/nil map to no-op.
+func WithExtraHeaders(h map[string]string) ClientOption {
+	return func(c *Client) {
+		if len(h) == 0 {
+			return
+		}
+		clean := make(map[string]string, len(h))
+		for k, v := range h {
+			if strings.ContainsAny(v, "\r\n\x00") {
+				continue
+			}
+			name := http.CanonicalHeaderKey(strings.TrimSpace(k))
+			if name == "" {
+				continue
+			}
+			clean[name] = v
+		}
+		c.extraHeaders = clean
 	}
 }
 
@@ -256,11 +284,14 @@ func (c *Client) SetCommandName(name string) {
 }
 
 // applyStandardHeaders sets the per-request headers that every outgoing TeamCity request
-// must carry. Caller-configurable extra headers (set via WithExtraHeaders) plug in here in
-// a follow-up commit so probe, PKCE, raw, and typed requests all pass through one chokepoint.
+// must carry: User-Agent, X-TeamCity-Client, and any caller-configured extra headers
+// (WithExtraHeaders). Probe, PKCE, raw, and typed requests all pass through this chokepoint.
 func (c *Client) applyStandardHeaders(req *http.Request) {
 	req.Header.Set("User-Agent", c.userAgent())
 	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())
+	for k, v := range c.extraHeaders {
+		req.Header.Set(k, v)
+	}
 }
 
 // WithContext returns a shallow copy of the client whose default context is ctx; mirrors http.Request.WithContext.
