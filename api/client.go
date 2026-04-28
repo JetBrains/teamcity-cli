@@ -161,9 +161,7 @@ func WithCommandName(name string) ClientOption {
 	}
 }
 
-// WithExtraHeaders adds the given headers to every request the client makes.
-// Names are canonicalized (CanonicalHeaderKey); values containing CR/LF/NUL are dropped
-// to prevent header-injection. Empty names are dropped. Pass an empty/nil map to no-op.
+// WithExtraHeaders sets headers applied to every request; CR/LF/NUL values and empty names are dropped.
 func WithExtraHeaders(h map[string]string) ClientOption {
 	return func(c *Client) {
 		if len(h) == 0 {
@@ -184,67 +182,47 @@ func WithExtraHeaders(h map[string]string) ClientOption {
 	}
 }
 
-// NewClient creates a new TeamCity API client with Bearer token authentication
+// newClientBase returns a Client populated with shared defaults: trimmed BaseURL, default HTTPClient, env extras.
+func newClientBase(baseURL string) *Client {
+	return &Client{
+		BaseURL: strings.TrimSuffix(baseURL, "/"),
+		HTTPClient: &http.Client{
+			Timeout:   30 * time.Second,
+			Transport: defaultTransport(),
+		},
+		serverInfo:   &serverInfoCache{},
+		extraHeaders: EnvHeaders(),
+	}
+}
+
+// NewClient creates a TeamCity API client authenticated with a Bearer token; TEAMCITY_HEADER_* env vars are honored.
 func NewClient(baseURL, token string, opts ...ClientOption) *Client {
-	baseURL = strings.TrimSuffix(baseURL, "/")
-
-	c := &Client{
-		BaseURL: baseURL,
-		Token:   token,
-		HTTPClient: &http.Client{
-			Timeout:   30 * time.Second,
-			Transport: defaultTransport(),
-		},
-		serverInfo: &serverInfoCache{},
-	}
-
+	c := newClientBase(baseURL)
+	c.Token = token
 	for _, opt := range opts {
 		opt(c)
 	}
-
 	return c
 }
 
-// NewClientWithBasicAuth creates a TeamCity API client with Basic authentication.
+// NewClientWithBasicAuth creates a TeamCity API client authenticated with HTTP Basic; TEAMCITY_HEADER_* env vars are honored.
 func NewClientWithBasicAuth(baseURL, username, password string, opts ...ClientOption) *Client {
-	baseURL = strings.TrimSuffix(baseURL, "/")
-
-	c := &Client{
-		BaseURL:   baseURL,
-		basicUser: username,
-		basicPass: password,
-		HTTPClient: &http.Client{
-			Timeout:   30 * time.Second,
-			Transport: defaultTransport(),
-		},
-		serverInfo: &serverInfoCache{},
-	}
-
+	c := newClientBase(baseURL)
+	c.basicUser = username
+	c.basicPass = password
 	for _, opt := range opts {
 		opt(c)
 	}
-
 	return c
 }
 
-// NewGuestClient creates a TeamCity API client with guest authentication (no credentials).
+// NewGuestClient creates a TeamCity API client using /guestAuth/ paths; TEAMCITY_HEADER_* env vars are honored.
 func NewGuestClient(baseURL string, opts ...ClientOption) *Client {
-	baseURL = strings.TrimSuffix(baseURL, "/")
-
-	c := &Client{
-		BaseURL:   baseURL,
-		guestAuth: true,
-		HTTPClient: &http.Client{
-			Timeout:   30 * time.Second,
-			Transport: defaultTransport(),
-		},
-		serverInfo: &serverInfoCache{},
-	}
-
+	c := newClientBase(baseURL)
+	c.guestAuth = true
 	for _, opt := range opts {
 		opt(c)
 	}
-
 	return c
 }
 
@@ -283,9 +261,7 @@ func (c *Client) SetCommandName(name string) {
 	c.commandName = name
 }
 
-// applyStandardHeaders sets the per-request headers that every outgoing TeamCity request
-// must carry: User-Agent, X-TeamCity-Client, and any caller-configured extra headers
-// (WithExtraHeaders). Probe, PKCE, raw, and typed requests all pass through this chokepoint.
+// applyStandardHeaders sets User-Agent, X-TeamCity-Client, and any WithExtraHeaders extras on req.
 func (c *Client) applyStandardHeaders(req *http.Request) {
 	req.Header.Set("User-Agent", c.userAgent())
 	req.Header.Set("X-TeamCity-Client", c.teamCityClientHeader())

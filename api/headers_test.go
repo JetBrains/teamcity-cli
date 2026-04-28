@@ -11,9 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestApplyStandardHeadersOnEveryEntryPoint asserts that for every code path that builds an HTTP
-// request — typed, raw, reboot, download, probe, and PKCE — the client sends User-Agent,
-// X-TeamCity-Client, and any caller-configured extra headers. This is the single chokepoint test.
+// TestApplyStandardHeadersOnEveryEntryPoint asserts every HTTP entry point sends UA, X-TeamCity-Client, and extras.
 func TestApplyStandardHeadersOnEveryEntryPoint(T *testing.T) {
 	T.Parallel()
 
