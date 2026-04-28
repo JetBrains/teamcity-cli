@@ -1,0 +1,11 @@
+# Verify TEAMCITY_HEADER_* env vars don't break ordinary operation against
+# a vanilla TeamCity server. (When a real corporate proxy like Cloudflare
+# Access is in front, these headers gate the request — but the server
+# itself simply ignores unknown headers.)
+
+env TEAMCITY_HEADER_X_TC_CLI_TEST=test-value
+env TEAMCITY_HEADER_CF_ACCESS_CLIENT_ID=fake.id
+
+exec teamcity run list --limit 1 --no-input
+! stderr 'invalid'
+! stderr 'header'

@@ -20,7 +20,10 @@ const authCodeLifetime = 5 * time.Minute
 
 // attemptPkceLogin probes for PKCE support, lets the user pick which scopes to grant, then runs the browser flow.
 func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) (token, validUntil string) {
-	client := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
+	client := api.NewGuestClient(serverURL,
+		api.WithVersion(version.String()),
+		api.WithExtraHeaders(api.EnvHeaders()),
+	)
 	pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	enabled, _ := client.IsPkceEnabled(pctx)
 	cancel()

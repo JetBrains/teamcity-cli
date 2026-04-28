@@ -129,7 +129,11 @@ func collectServerStatus(f *cmdutil.Factory, serverURL string, sc config.ServerC
 
 func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "guest", IsDefault: isDefault}
-	client := api.NewGuestClient(serverURL, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := api.NewGuestClient(serverURL,
+		api.WithDebugFunc(f.Printer.Debug),
+		api.WithVersion(version.String()),
+		api.WithExtraHeaders(api.EnvHeaders()),
+	).WithContext(f.Context())
 	if err := client.Probe(f.Context()); err != nil {
 		s.Status = "error"
 		s.Error = friendlyError(err, serverURL)
@@ -151,7 +155,11 @@ func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) au
 
 func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "token", TokenSource: tokenSource, IsDefault: isDefault}
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := api.NewClient(serverURL, token,
+		api.WithDebugFunc(f.Printer.Debug),
+		api.WithVersion(version.String()),
+		api.WithExtraHeaders(api.EnvHeaders()),
+	).WithContext(f.Context())
 	if err := client.Probe(f.Context()); err != nil {
 		s.Status = "error"
 		s.Error = friendlyError(err, serverURL)
@@ -192,7 +200,11 @@ func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string
 
 func collectBuildStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth) authStatus {
 	s := authStatus{Server: buildAuth.ServerURL, AuthMethod: "build"}
-	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password,
+		api.WithDebugFunc(f.Printer.Debug),
+		api.WithVersion(version.String()),
+		api.WithExtraHeaders(api.EnvHeaders()),
+	).WithContext(f.Context())
 	if err := client.Probe(f.Context()); err != nil {
 		s.Status = "error"
 		s.Error = friendlyError(err, buildAuth.ServerURL)

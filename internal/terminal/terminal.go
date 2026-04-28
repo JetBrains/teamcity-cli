@@ -44,20 +44,22 @@ type Session struct {
 }
 
 type Client struct {
-	baseURL    string
-	username   string
-	token      string
-	httpClient *http.Client
-	debugf     func(string, ...any)
+	baseURL      string
+	username     string
+	token        string
+	httpClient   *http.Client
+	debugf       func(string, ...any)
+	extraHeaders map[string]string
 }
 
 func NewClient(baseURL, username, token string, debugf func(string, ...any)) *Client {
 	jar, _ := cookiejar.New(nil)
 	return &Client{
-		baseURL:  strings.TrimSuffix(baseURL, "/"),
-		username: username,
-		token:    token,
-		debugf:   debugf,
+		baseURL:      strings.TrimSuffix(baseURL, "/"),
+		username:     username,
+		token:        token,
+		debugf:       debugf,
+		extraHeaders: api.EnvHeaders(),
 		httpClient: &http.Client{
 			Jar:     jar,
 			Timeout: 30 * time.Second,
@@ -75,6 +77,9 @@ func (c *Client) OpenSession(agentID int) (*Session, error) {
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
+	for k, v := range c.extraHeaders {
+		req.Header.Set(k, v)
+	}
 
 	req.SetBasicAuth(cmp.Or(c.username, "token"), c.token)
 
@@ -127,6 +132,9 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 
 	header := http.Header{}
 	header.Set("Origin", c.baseURL)
+	for k, v := range c.extraHeaders {
+		header.Set(k, v)
+	}
 
 	var cookies []string
 	for _, cookie := range c.httpClient.Jar.Cookies(u) {
