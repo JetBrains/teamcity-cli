@@ -233,7 +233,7 @@ func TestIsPkceEnabled(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		enabled, err := IsPkceEnabled(T.Context(), server.URL)
+		enabled, err := NewGuestClient(server.URL).IsPkceEnabled(T.Context())
 		assert.NoError(t, err)
 		assert.True(t, enabled)
 	})
@@ -246,7 +246,7 @@ func TestIsPkceEnabled(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		enabled, err := IsPkceEnabled(T.Context(), server.URL)
+		enabled, err := NewGuestClient(server.URL).IsPkceEnabled(T.Context())
 		assert.NoError(t, err)
 		assert.False(t, enabled)
 	})
@@ -256,7 +256,7 @@ func TestIsPkceEnabled(T *testing.T) {
 
 		ctx, cancel := context.WithTimeout(T.Context(), 100*time.Millisecond)
 		defer cancel()
-		enabled, err := IsPkceEnabled(ctx, "http://localhost:1")
+		enabled, err := NewGuestClient("http://localhost:1").IsPkceEnabled(ctx)
 		assert.Error(t, err)
 		assert.False(t, enabled)
 	})
@@ -335,7 +335,7 @@ func TestExchangeCodeForToken(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		token, err := ExchangeCodeForToken(T.Context(), server.URL, "testcode", "testverifier", "http://localhost:19000/callback")
+		token, err := NewGuestClient(server.URL).ExchangeCodeForToken(T.Context(), "testcode", "testverifier", "http://localhost:19000/callback")
 		require.NoError(t, err)
 		assert.Equal(t, "token123", token.AccessToken)
 		assert.Equal(t, "Bearer", token.TokenType)
@@ -351,7 +351,7 @@ func TestExchangeCodeForToken(T *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		_, err := ExchangeCodeForToken(T.Context(), server.URL, "invalidcode", "verifier", "http://localhost:19000/callback")
+		_, err := NewGuestClient(server.URL).ExchangeCodeForToken(T.Context(), "invalidcode", "verifier", "http://localhost:19000/callback")
 		assert.Error(t, err)
 	})
 }
