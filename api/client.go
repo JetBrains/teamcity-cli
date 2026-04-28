@@ -161,13 +161,10 @@ func WithCommandName(name string) ClientOption {
 	}
 }
 
-// WithExtraHeaders sets headers applied to every request; CR/LF/NUL values and empty names are dropped.
+// WithExtraHeaders replaces the headers applied to every request; nil/empty clears env-loaded extras.
 func WithExtraHeaders(h map[string]string) ClientOption {
 	return func(c *Client) {
-		if len(h) == 0 {
-			return
-		}
-		clean := make(map[string]string, len(h))
+		var clean map[string]string
 		for k, v := range h {
 			if strings.ContainsAny(v, "\r\n\x00") {
 				continue
@@ -175,6 +172,9 @@ func WithExtraHeaders(h map[string]string) ClientOption {
 			name := http.CanonicalHeaderKey(strings.TrimSpace(k))
 			if name == "" {
 				continue
+			}
+			if clean == nil {
+				clean = make(map[string]string, len(h))
 			}
 			clean[name] = v
 		}
