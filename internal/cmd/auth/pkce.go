@@ -11,6 +11,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/browser"
 )
@@ -19,8 +20,9 @@ const authCodeLifetime = 5 * time.Minute
 
 // attemptPkceLogin probes for PKCE support, lets the user pick which scopes to grant, then runs the browser flow.
 func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) (token, validUntil string) {
+	client := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
 	pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	enabled, _ := api.IsPkceEnabled(pctx, serverURL)
+	enabled, _ := client.IsPkceEnabled(pctx)
 	cancel()
 	if !enabled {
 		return "", ""
@@ -30,7 +32,7 @@ func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) 
 		p.Info("Skipping browser login, entering token manually...")
 		return "", ""
 	}
-	resp, err := runPkceLogin(ctx, p, serverURL, scopes)
+	resp, err := runPkceLogin(ctx, p, client, scopes)
 	if err != nil {
 		p.Warn("Browser auth failed: %v", err)
 		p.Info("Falling back to manual token entry...")
@@ -75,7 +77,7 @@ func selectPkceScopes() []string {
 }
 
 // runPkceLogin orchestrates the browser-based PKCE auth flow with the given scopes and returns the minted access token.
-func runPkceLogin(parent context.Context, p *output.Printer, serverURL string, scopes []string) (*api.TokenResponse, error) {
+func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client, scopes []string) (*api.TokenResponse, error) {
 	verifier, err := api.GenerateCodeVerifier()
 	if err != nil {
 		return nil, fmt.Errorf("generate code verifier: %w", err)
@@ -95,7 +97,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, serverURL string, s
 	defer callbackServer.Shutdown()
 
 	redirectURI := fmt.Sprintf("http://localhost:%d%s", callbackServer.Port, api.DefaultCallbackPath)
-	authURL := api.BuildAuthorizeURL(serverURL, redirectURI, api.GenerateCodeChallenge(verifier), state, scopes)
+	authURL := api.BuildAuthorizeURL(client.BaseURL, redirectURI, api.GenerateCodeChallenge(verifier), state, scopes)
 
 	opening := fmt.Sprintf("Opening browser to authenticate with %d permissions...", len(scopes))
 	if total := len(api.DefaultScopes()); len(scopes) < total {
@@ -121,7 +123,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, serverURL string, s
 
 		ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 		defer cancel()
-		return api.ExchangeCodeForToken(ctx, serverURL, result.Code, verifier, redirectURI)
+		return client.ExchangeCodeForToken(ctx, result.Code, verifier, redirectURI)
 
 	case <-time.After(authCodeLifetime):
 		return nil, fmt.Errorf("timeout waiting for callback (exceeded %v)", authCodeLifetime)

@@ -119,12 +119,13 @@ func FindAvailableListener() (net.Listener, error) {
 	return l, nil
 }
 
-func IsPkceEnabled(ctx context.Context, serverURL string) (bool, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(serverURL, "/")+PkceIsEnabledPath, nil)
+// IsPkceEnabled reports whether the server at c.BaseURL advertises PKCE support.
+func (c *Client) IsPkceEnabled(ctx context.Context) (bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(c.BaseURL, "/")+PkceIsEnabledPath, nil)
 	if err != nil {
 		return false, err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return false, fmt.Errorf("check PKCE status: %w", err)
 	}
@@ -179,7 +180,8 @@ func DefaultScopes() []string {
 	return slices.Clone(fallbackScopes)
 }
 
-func ExchangeCodeForToken(ctx context.Context, serverURL, code, verifier, redirectURI string) (*TokenResponse, error) {
+// ExchangeCodeForToken trades a PKCE authorization code for an access token at c.BaseURL.
+func (c *Client) ExchangeCodeForToken(ctx context.Context, code, verifier, redirectURI string) (*TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("client_id", PkceClientID)
@@ -187,13 +189,13 @@ func ExchangeCodeForToken(ctx context.Context, serverURL, code, verifier, redire
 	data.Set("code_verifier", verifier)
 	data.Set("redirect_uri", redirectURI)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(serverURL, "/")+PkceTokenPath, strings.NewReader(data.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(c.BaseURL, "/")+PkceTokenPath, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("token request: %w", err)
 	}
