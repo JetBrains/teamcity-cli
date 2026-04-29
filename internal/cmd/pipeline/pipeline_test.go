@@ -92,3 +92,15 @@ func TestPipelineSchemaEmbeddedFallback(t *testing.T) {
 	err := cmdtest.CaptureErr(t, ts.Factory, "pipeline", "schema", "--refresh")
 	assert.Contains(t, err.Error(), "schema endpoint not available")
 }
+
+func TestPipelineSchemaServerErrorPropagates(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("POST /app/pipeline/schema/generate", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	})
+
+	err := cmdtest.CaptureErr(t, ts.Factory, "pipeline", "schema")
+	assert.Contains(t, err.Error(), "failed to fetch pipeline schema")
+	assert.NotContains(t, err.Error(), "predate TeamCity 2026.1")
+}
