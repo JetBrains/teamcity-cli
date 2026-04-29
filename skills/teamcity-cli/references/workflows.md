@@ -1,5 +1,33 @@
 # Common Workflows
 
+## Contents
+
+- Inspecting a build from a TeamCity URL
+- Investigating a build failure
+- Starting and monitoring builds
+- Personal builds (local changes)
+- Finding jobs and projects
+- Working with build artifacts
+- Build metadata (pin/unpin, tag, comment)
+- Managing the build queue
+- Managing job and project parameters
+- Validating Kotlin DSL locally
+- Project connections (GitHub App, Docker)
+- VCS roots
+- Project settings (export & status)
+- Secure tokens
+- Managing agents
+- Remote agent access (term, exec)
+- Managing agent pools
+- Failure classification
+- Build chain debugging
+- Fixing a build failure
+- Monitoring builds until green
+- Test reliability analysis
+- Working with pipelines
+- Tips
+- Troubleshooting
+
 ## Inspecting a Build from a TeamCity URL
 
 When a user provides a TeamCity URL, parse it and map to `teamcity` commands.

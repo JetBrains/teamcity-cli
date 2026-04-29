@@ -1,5 +1,20 @@
 # Command Reference
 
+## Contents
+
+- Authentication (`teamcity auth`)
+- Builds/Runs (`teamcity run`)
+- Jobs (`teamcity job`)
+- Projects (`teamcity project`)
+- Queue (`teamcity queue`)
+- Agents (`teamcity agent`)
+- Agent Pools (`teamcity pool`)
+- Pipelines (`teamcity pipeline`)
+- Configuration (`teamcity config`)
+- Direct API (`teamcity api`)
+- Global Flags
+- List Output Flags
+
 ## Authentication (`teamcity auth`)
 
 | Command                        | Description                       |
