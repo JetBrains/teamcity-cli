@@ -40,24 +40,12 @@ func TestBuildTestRequestFromRoot(t *testing.T) {
 			wantPrivate: true,
 		},
 		{
-			name: "legacy pipelines.connectionId",
-			root: &api.VcsRoot{
-				VcsName: "jetbrains.git",
-				Properties: &api.PropertyList{Property: []api.Property{
-					{Name: "url", Value: "https://github.com/owner/repo.git"},
-					{Name: "pipelines.connectionId", Value: "PROJECT_EXT_10"},
-				}},
-			},
-			wantConnection: "PROJECT_EXT_10",
-		},
-		{
-			name: "top-level connectionId wins over pipelines.connectionId",
+			name: "top-level connectionId is carried through",
 			root: &api.VcsRoot{
 				VcsName:      "jetbrains.git",
 				ConnectionID: "PROJECT_EXT_77",
 				Properties: &api.PropertyList{Property: []api.Property{
 					{Name: "url", Value: "https://github.com/owner/repo.git"},
-					{Name: "pipelines.connectionId", Value: "PROJECT_EXT_10"},
 				}},
 			},
 			wantConnection: "PROJECT_EXT_77",

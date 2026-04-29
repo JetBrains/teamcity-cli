@@ -647,10 +647,8 @@ func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.T
 }
 
 // buildTestRequestFromRoot builds a TestConnectionRequest from a fetched VCS root.
-// missingConn is true when the root authenticates via ACCESS_TOKEN but no
-// connection id is recoverable from the response (the server doesn't return
-// connectionId on GET, so a server-resolved root has no way back to its
-// connection without an explicit hint).
+// missingConn is true when the root authenticates via ACCESS_TOKEN but the
+// server didn't return connectionId on GET, so the caller must supply it.
 func buildTestRequestFromRoot(root *api.VcsRoot) (req api.TestConnectionRequest, missingConn bool) {
 	req = api.TestConnectionRequest{
 		VcsName:      root.VcsName,
@@ -672,10 +670,6 @@ func buildTestRequestFromRoot(root *api.VcsRoot) (req api.TestConnectionRequest,
 			req.Username = p.Value
 		case "teamcitySshKey":
 			req.SSHKey = &api.SSHKeyRef{Name: p.Value}
-		case "pipelines.connectionId":
-			if req.ConnectionID == "" {
-				req.ConnectionID = p.Value
-			}
 		}
 	}
 
