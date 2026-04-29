@@ -27,6 +27,7 @@ See: https://www.jetbrains.com/help/teamcity/create-and-edit-pipelines.html`,
 	cmd.AddCommand(newPipelineDeleteCmd(f))
 	cmd.AddCommand(newPipelinePullCmd(f))
 	cmd.AddCommand(newPipelinePushCmd(f))
+	cmd.AddCommand(newPipelineSchemaCmd(f))
 
 	return cmd
 }

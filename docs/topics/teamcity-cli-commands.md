@@ -1285,6 +1285,18 @@ Upload pipeline YAML
 <tr>
 <td>
 
+`teamcity pipeline schema`
+
+</td>
+<td>
+
+Print the pipeline JSON schema for the current server
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity pipeline validate`
 
 </td>
