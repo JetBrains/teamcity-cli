@@ -381,7 +381,7 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 		Name:         name,
 		VcsName:      "jetbrains.git",
 		Project:      &api.Project{ID: projectID},
-		ConnectionID: testReq.ConnectionID, // POST-only; server auto-fills auth from a connection
+		ConnectionID: testReq.ConnectionID,
 		Properties: &api.PropertyList{
 			Property: props,
 		},
@@ -503,7 +503,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 				return nil, testReq, fmt.Errorf("failed to list connections: %w", err)
 			}
 			if len(ids) == 0 {
-				return nil, testReq, fmt.Errorf("no connections found in project %s", projectID)
+				return nil, testReq, fmt.Errorf("no VCS-capable connections found in project %s", projectID)
 			}
 			options := make([]huh.Option[string], len(ids))
 			for i, id := range ids {
@@ -512,8 +512,18 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 			if err := cmdutil.Select(f.Printer, "Connection", options, &opts.connectionID); err != nil {
 				return nil, testReq, err
 			}
+		} else {
+			ptype, err := lookupConnectionProviderType(client, projectID, opts.connectionID)
+			if err != nil {
+				return nil, testReq, err
+			}
+			if !vcsCapableProviders[ptype] {
+				return nil, testReq, api.Validation(
+					fmt.Sprintf("connection %s (%s) cannot back a VCS root", opts.connectionID, ptype),
+					"Use a GitHub/GitLab/Bitbucket/Azure DevOps/Space connection",
+				)
+			}
 		}
-		// Server fills authMethod/username/tokenId from the top-level connectionId.
 		testReq.ConnectionID = opts.connectionID
 
 	case authAnonymous:
@@ -618,7 +628,8 @@ func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.T
 
 func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
 	req := api.TestConnectionRequest{
-		VcsName: root.VcsName,
+		VcsName:      root.VcsName,
+		ConnectionID: root.ConnectionID,
 	}
 
 	if root.Properties == nil {
@@ -637,7 +648,9 @@ func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
 		case "teamcitySshKey":
 			req.SSHKey = &api.SSHKeyRef{Name: p.Value}
 		case "pipelines.connectionId":
-			req.ConnectionID = p.Value
+			if req.ConnectionID == "" {
+				req.ConnectionID = p.Value
+			}
 		}
 	}
 

@@ -133,7 +133,18 @@ func connectionDisplayInfo(feat api.ProjectFeature) (name, providerType string) 
 	return name, providerType
 }
 
-// connectionOptions fetches connections for the vcs create wizard select prompt
+var vcsCapableProviders = map[string]bool{
+	"GitHubApp":       true,
+	"GitHub":          true,
+	"GHE":             true,
+	"GitLabCom":       true,
+	"GitLabCEorEE":    true,
+	"BitBucketCloud":  true,
+	"AzureDevOps":     true,
+	"JetBrains Space": true,
+}
+
+// connectionOptions fetches VCS-capable connections for the vcs create wizard select prompt.
 func connectionOptions(client api.ClientInterface, projectID string) (ids, labels []string, err error) {
 	features, err := client.GetProjectConnections(projectID)
 	if err != nil {
@@ -141,6 +152,9 @@ func connectionOptions(client api.ClientInterface, projectID string) (ids, label
 	}
 	for _, feat := range features.ProjectFeature {
 		name, ptype := connectionDisplayInfo(feat)
+		if !vcsCapableProviders[ptype] {
+			continue
+		}
 		ids = append(ids, feat.ID)
 		labels = append(labels, feat.ID+" — "+name+" ("+ptype+")")
 	}
