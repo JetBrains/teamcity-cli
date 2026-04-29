@@ -472,6 +472,12 @@ func (c *Client) postWithRetry(ctx context.Context, path string, body io.Reader,
 			defer func() { _ = resp.Body.Close() }()
 			return c.handleErrorResponse(resp)
 		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
+		if errors.Is(err, ErrReadOnly) {
+			return err
+		}
 		return &NetworkError{URL: c.BaseURL, Cause: err}
 	}
 	defer func() { _ = resp.Body.Close() }()

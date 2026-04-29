@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -961,10 +962,16 @@ func TestReadOnlyMode(T *testing.T) {
 		// POST via typed method
 		_, err := client.RunBuild("SomeJob", RunBuildOptions{})
 		require.ErrorIs(t, err, ErrReadOnly)
+		var netErr *NetworkError
+		require.False(t, errors.As(err, &netErr), "ErrReadOnly must not be wrapped in NetworkError; got: %v", err)
+		var ue UserError
+		require.True(t, errors.As(err, &ue))
+		require.Equal(t, CatReadOnly, ue.Category())
 
 		// PUT via RawRequest
 		_, err = client.RawRequest(T.Context(), "PUT", "/app/rest/something", nil, nil)
 		require.ErrorIs(t, err, ErrReadOnly)
+		require.False(t, errors.As(err, &netErr), "ErrReadOnly must not be wrapped in NetworkError; got: %v", err)
 	})
 
 	T.Run("allows GET requests", func(t *testing.T) {
