@@ -111,7 +111,8 @@ func loadSchema(f *cmdutil.Factory, opts *validateOptions) ([]byte, error) {
 		return nil, errors.New("schema caching requires a real API client")
 	}
 
-	return fetchOrCacheSchema(c, opts.refreshSchema)
+	data, _, err := fetchOrCacheSchema(c, opts.refreshSchema)
+	return data, err
 }
 
 type validationError struct {
