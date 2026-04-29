@@ -142,12 +142,12 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 			ownerURL = "https://github.com/" + opts.owner
 		case interactive:
 			var ownerLogin string
-			if err := cmdutil.PromptString(f.Printer, "GitHub user/org login", "The account that owns the App, e.g. my-org", &ownerLogin); err != nil {
+			if err := cmdutil.PromptOptionalString(f.Printer, "GitHub user/org login (optional)", "The account that owns the App, e.g. my-org", &ownerLogin); err != nil {
 				return err
 			}
-			ownerURL = "https://github.com/" + ownerLogin
-		default:
-			return api.RequiredFlag("owner")
+			if ownerLogin != "" {
+				ownerURL = "https://github.com/" + ownerLogin
+			}
 		}
 	}
 
@@ -157,12 +157,14 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 		{Name: "providerType", Value: "GitHubApp"},
 		{Name: "connectionSubtype", Value: "gitHubApp"},
 		{Name: "displayName", Value: name},
-		{Name: "gitHubApp.ownerUrl", Value: ownerURL},
 		{Name: "gitHubApp.appId", Value: appID},
 		{Name: "gitHubApp.clientId", Value: clientID},
 		{Name: "secure:gitHubApp.clientSecret", Value: clientSecret},
 		{Name: "secure:gitHubApp.privateKey", Value: privateKey},
 		{Name: "useUniqueRedirect", Value: "false"},
+	}
+	if ownerURL != "" {
+		props = append(props, api.Property{Name: "gitHubApp.ownerUrl", Value: ownerURL})
 	}
 	if webhookSecret != "" {
 		props = append(props, api.Property{Name: "secure:gitHubApp.webhookSecret", Value: webhookSecret})

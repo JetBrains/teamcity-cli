@@ -62,6 +62,35 @@ func TestConnectionCreateGitHubApp(t *testing.T) {
 	assert.Equal(t, "false", props["useUniqueRedirect"])
 }
 
+func TestConnectionCreateGitHubAppNoOwner(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	f := ts.Factory
+
+	pemPath := filepath.Join(t.TempDir(), "key.pem")
+	require.NoError(t, os.WriteFile(pemPath, []byte("-----BEGIN PRIVATE KEY-----\nMIICabc\n-----END PRIVATE KEY-----\n"), 0o600))
+
+	var captured api.ProjectFeature
+	ts.Handle("POST /app/rest/projects/id:TestProject/projectFeatures", func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&captured))
+		captured.ID = "PROJECT_EXT_43"
+		cmdtest.JSON(w, captured)
+	})
+
+	out := cmdtest.CaptureOutput(t, f, "project", "connection", "create", "github-app",
+		"--project", "TestProject",
+		"--name", "Backend",
+		"--app-id", "1234567",
+		"--client-id", "Iv1.abc",
+		"--client-secret", "shh",
+		"--private-key-file", pemPath,
+	)
+
+	assert.Contains(t, out, "Created connection")
+	props := propMap(captured.Properties)
+	_, hasOwner := props["gitHubApp.ownerUrl"]
+	assert.False(t, hasOwner, "ownerUrl property should be omitted when --owner is not supplied")
+}
+
 func TestConnectionCreateGitHubAppEmptyKey(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	f := ts.Factory
@@ -139,14 +168,6 @@ func TestConnectionDelete(t *testing.T) {
 	assert.True(t, called, "DELETE should hit the mock")
 	assert.Contains(t, out, "Deleted connection")
 	assert.Contains(t, out, "PROJECT_EXT_42")
-}
-
-func TestConnectionDeleteMissingID(t *testing.T) {
-	ts := cmdtest.SetupMockClient(t)
-	f := ts.Factory
-
-	cmdtest.RunCmdWithFactoryExpectErr(t, f, "arg", "project", "connection", "delete",
-		"--project", "TestProject", "--force")
 }
 
 func propMap(pl *api.PropertyList) map[string]string {

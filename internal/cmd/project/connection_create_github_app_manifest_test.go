@@ -45,8 +45,6 @@ func TestBuildManifestStripsTrailingSlashAndEscapesProject(t *testing.T) {
 }
 
 func TestManifestSubmitURL(t *testing.T) {
-	t.Parallel()
-
 	prev := githubURLHost
 	t.Cleanup(func() { githubURLHost = prev })
 	githubURLHost = "https://example.invalid"
@@ -56,8 +54,6 @@ func TestManifestSubmitURL(t *testing.T) {
 }
 
 func TestBuildStartHandler(t *testing.T) {
-	t.Parallel()
-
 	prev := githubURLHost
 	t.Cleanup(func() { githubURLHost = prev })
 	githubURLHost = "https://example.invalid"
@@ -78,8 +74,6 @@ func TestBuildStartHandler(t *testing.T) {
 }
 
 func TestExchangeManifestCode(t *testing.T) {
-	t.Parallel()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Equal(t, "/app-manifests/abc123/conversions", r.URL.Path)
@@ -108,8 +102,6 @@ func TestExchangeManifestCode(t *testing.T) {
 }
 
 func TestExchangeManifestCodeMissingFields(t *testing.T) {
-	t.Parallel()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"id":12345,"slug":"x"}`))
 	}))
@@ -125,8 +117,6 @@ func TestExchangeManifestCodeMissingFields(t *testing.T) {
 }
 
 func TestExchangeManifestCodeServerError(t *testing.T) {
-	t.Parallel()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(`{"message":"Code expired"}`))
