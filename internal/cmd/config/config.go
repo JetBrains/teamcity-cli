@@ -21,10 +21,11 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "Manage CLI configuration",
 		Long: `Get, set, and list CLI configuration values.
 
-Configuration is stored in ~/.teamcity/config.toml and covers the
-default server, per-server flags (guest, read-only), and aliases.
-Environment variables (TEAMCITY_URL, TEAMCITY_TOKEN, ...) override
-the persisted values at runtime.`,
+Configuration is stored in $XDG_CONFIG_HOME/tc/config.yml (defaults
+to ~/.config/tc/config.yml) and covers the default server, per-server
+flags (guest, read-only), and aliases. Environment variables
+(TEAMCITY_URL, TEAMCITY_TOKEN, ...) override the persisted values
+at runtime.`,
 		Args: cobra.NoArgs,
 		RunE: cmdutil.SubcommandRequired,
 	}
