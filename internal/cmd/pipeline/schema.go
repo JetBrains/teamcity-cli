@@ -85,7 +85,7 @@ func fetchOrCacheSchema(client *api.Client, refresh bool) ([]byte, bool, error) 
 		return schema, false, nil
 	}
 
-	if !refresh {
+	if !refresh && errors.Is(err, api.ErrPipelineSchemaUnsupported) {
 		return embeddedSchema, true, nil
 	}
 	return nil, false, fmt.Errorf("failed to fetch pipeline schema from server: %w", err)

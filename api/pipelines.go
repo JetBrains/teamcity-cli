@@ -156,6 +156,9 @@ func (c *Client) DeletePipeline(id string) error {
 	return c.doNoContent(c.ctx(), "DELETE", "/app/rest/projects/id:"+id, nil, "")
 }
 
+// ErrPipelineSchemaUnsupported is returned when the server's schema endpoint exists but does not produce JSON, indicating a TeamCity version older than 2026.1.
+var ErrPipelineSchemaUnsupported = errors.New("schema endpoint not available on this server")
+
 // GetPipelineSchema fetches the pipeline JSON schema from the server.
 func (c *Client) GetPipelineSchema() ([]byte, error) {
 	resp, err := c.doRequest(c.ctx(), "POST", "/app/pipeline/schema/generate", nil)
@@ -170,7 +173,7 @@ func (c *Client) GetPipelineSchema() ([]byte, error) {
 
 	ct := resp.Header.Get("Content-Type")
 	if !strings.Contains(ct, "application/json") {
-		return nil, errors.New("schema endpoint not available on this server")
+		return nil, ErrPipelineSchemaUnsupported
 	}
 
 	return io.ReadAll(resp.Body)
