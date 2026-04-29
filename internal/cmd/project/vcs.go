@@ -141,24 +141,23 @@ func vcsTypeName(vcsName string) string {
 }
 
 var vcsPropertyLabels = map[string]string{
-	"url":                    "URL",
-	"branch":                 "Branch",
-	"teamcity:branchSpec":    "Branch Spec",
-	"authMethod":             "Auth Method",
-	"username":               "Username",
-	"secure:password":        "Password",
-	"secure:passphrase":      "Passphrase",
-	"submoduleCheckout":      "Submodule Checkout",
-	"agentCleanPolicy":       "Agent Clean Policy",
-	"agentCleanFilesPolicy":  "Agent Clean Files Policy",
-	"ignoreKnownHosts":       "Ignore Known Hosts",
-	"useAlternates":          "Use Alternates",
-	"usernameStyle":          "Username Style",
-	"reportTagRevisions":     "Report Tag Revisions",
-	"pipelines.connectionId": "Connection ID",
-	"tokenId":                "Token ID",
-	"teamcitySshKey":         "SSH Key",
-	"privateKeyPath":         "Private Key Path",
+	"url":                   "URL",
+	"branch":                "Branch",
+	"teamcity:branchSpec":   "Branch Spec",
+	"authMethod":            "Auth Method",
+	"username":              "Username",
+	"secure:password":       "Password",
+	"secure:passphrase":     "Passphrase",
+	"submoduleCheckout":     "Submodule Checkout",
+	"agentCleanPolicy":      "Agent Clean Policy",
+	"agentCleanFilesPolicy": "Agent Clean Files Policy",
+	"ignoreKnownHosts":      "Ignore Known Hosts",
+	"useAlternates":         "Use Alternates",
+	"usernameStyle":         "Username Style",
+	"reportTagRevisions":    "Report Tag Revisions",
+	"tokenId":               "Token ID",
+	"teamcitySshKey":        "SSH Key",
+	"privateKeyPath":        "Private Key Path",
 }
 
 func runVcsView(f *cmdutil.Factory, id string, opts *cmdutil.ViewOptions) error {
@@ -331,6 +330,9 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	}
 
 	authMethod := opts.auth
+	if authMethod == "" && opts.connectionID != "" {
+		authMethod = authToken
+	}
 	if authMethod == "" {
 		if !interactive {
 			authMethod = inferAuthFromURL(repoURL)
@@ -344,6 +346,12 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 				return err
 			}
 		}
+	}
+	if opts.connectionID != "" && authMethod != authToken {
+		return api.Validation(
+			"--connection-id requires --auth token",
+			fmt.Sprintf("Drop --connection-id, or use --auth token (got --auth %s)", authMethod),
+		)
 	}
 
 	props, testReq, err := resolveAuth(f, client, projectID, authMethod, opts, interactive)
@@ -369,9 +377,10 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	}
 
 	root := api.VcsRoot{
-		Name:    name,
-		VcsName: "jetbrains.git",
-		Project: &api.Project{ID: projectID},
+		Name:         name,
+		VcsName:      "jetbrains.git",
+		Project:      &api.Project{ID: projectID},
+		ConnectionID: testReq.ConnectionID,
 		Properties: &api.PropertyList{
 			Property: props,
 		},
@@ -484,8 +493,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 		testReq.IsPrivate = true
 
 	case authToken:
-		connID := opts.connectionID
-		if connID == "" {
+		if opts.connectionID == "" {
 			if !interactive {
 				return nil, testReq, api.RequiredFlag("connection-id")
 			}
@@ -494,21 +502,28 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 				return nil, testReq, fmt.Errorf("failed to list connections: %w", err)
 			}
 			if len(ids) == 0 {
-				return nil, testReq, fmt.Errorf("no connections found in project %s", projectID)
+				return nil, testReq, fmt.Errorf("no VCS-capable connections found in project %s", projectID)
 			}
 			options := make([]huh.Option[string], len(ids))
 			for i, id := range ids {
 				options[i] = huh.NewOption(labels[i], id)
 			}
-			if err := cmdutil.Select(f.Printer, "Connection", options, &connID); err != nil {
+			if err := cmdutil.Select(f.Printer, "Connection", options, &opts.connectionID); err != nil {
 				return nil, testReq, err
 			}
+		} else {
+			ptype, err := lookupConnectionProviderType(client, projectID, opts.connectionID)
+			if err != nil {
+				return nil, testReq, err
+			}
+			if !vcsCapableProviders[ptype] {
+				return nil, testReq, api.Validation(
+					fmt.Sprintf("connection %s (%s) cannot back a VCS root", opts.connectionID, ptype),
+					"Use a GitHub/GitLab/Bitbucket/Azure DevOps/Space connection",
+				)
+			}
 		}
-		props = append(props,
-			api.Property{Name: "authMethod", Value: "PASSWORD"},
-			api.Property{Name: "pipelines.connectionId", Value: connID},
-		)
-		testReq.ConnectionID = connID
+		testReq.ConnectionID = opts.connectionID
 
 	case authAnonymous:
 		props = append(props,
@@ -545,6 +560,7 @@ func inferAuthFromURL(repoURL string) string {
 }
 
 func newVcsTestCmd(f *cmdutil.Factory) *cobra.Command {
+	var connectionID string
 	cmd := &cobra.Command{
 		Use:     "test <vcs-root-id>",
 		Short:   "Test a VCS root connection",
@@ -552,14 +568,15 @@ func newVcsTestCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity project vcs test MyProject_GitHubRepo`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runVcsTest(f, args[0])
+			return runVcsTest(f, args[0], connectionID)
 		},
 	}
+	cmd.Flags().StringVar(&connectionID, "connection-id", "", "Connection ID to test against (required for token-backed roots whose connection isn't returned by GET)")
 
 	return cmd
 }
 
-func runVcsTest(f *cmdutil.Factory, id string) error {
+func runVcsTest(f *cmdutil.Factory, id, overrideConnID string) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -579,7 +596,25 @@ func runVcsTest(f *cmdutil.Factory, id string) error {
 		projectID = root.Project.ID
 	}
 
-	req := buildTestRequestFromRoot(root)
+	req, missingConn := buildTestRequestFromRoot(root)
+	if overrideConnID != "" {
+		ptype, err := lookupConnectionProviderType(client, projectID, overrideConnID)
+		if err != nil {
+			return err
+		}
+		if !vcsCapableProviders[ptype] {
+			return api.Validation(
+				fmt.Sprintf("connection %s (%s) cannot back a VCS root", overrideConnID, ptype),
+				"Use a GitHub/GitLab/Bitbucket/Azure DevOps/Space connection",
+			)
+		}
+		req.ConnectionID = overrideConnID
+	} else if missingConn {
+		return api.Validation(
+			fmt.Sprintf("VCS root %s authenticates via a connection that the server doesn't return on GET", id),
+			"Pass --connection-id <id> to test, or test from the TeamCity UI",
+		)
+	}
 	if err := runConnectionTest(f, client, req, projectID); err != nil {
 		return err
 	}
@@ -600,19 +635,27 @@ func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.T
 		if len(result.Errors) > 0 {
 			msg = result.Errors[0].Message
 		}
+		if req.ConnectionID != "" && strings.Contains(msg, "Malformed request") {
+			f.Printer.Tip("First-time use of this connection requires authorization. Run: %s",
+				output.Cyan(fmt.Sprintf("teamcity project connection authorize %s -p %s", req.ConnectionID, projectID)))
+		}
 		return fmt.Errorf("%s", msg)
 	}
 	_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Green("✓"))
 	return nil
 }
 
-func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
-	req := api.TestConnectionRequest{
-		VcsName: root.VcsName,
+// buildTestRequestFromRoot builds a TestConnectionRequest from a fetched VCS root.
+// missingConn is true when the root authenticates via ACCESS_TOKEN but the
+// server didn't return connectionId on GET, so the caller must supply it.
+func buildTestRequestFromRoot(root *api.VcsRoot) (req api.TestConnectionRequest, missingConn bool) {
+	req = api.TestConnectionRequest{
+		VcsName:      root.VcsName,
+		ConnectionID: root.ConnectionID,
 	}
 
 	if root.Properties == nil {
-		return req
+		return req, false
 	}
 
 	var authMethod string
@@ -626,8 +669,6 @@ func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
 			req.Username = p.Value
 		case "teamcitySshKey":
 			req.SSHKey = &api.SSHKeyRef{Name: p.Value}
-		case "pipelines.connectionId":
-			req.ConnectionID = p.Value
 		}
 	}
 
@@ -636,7 +677,8 @@ func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
 		req.IsPrivate = true
 	}
 
-	return req
+	missingConn = authMethod == "ACCESS_TOKEN" && req.ConnectionID == ""
+	return req, missingConn
 }
 
 type vcsDeleteOptions struct {

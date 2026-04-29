@@ -46,6 +46,21 @@ func PromptString(p *output.Printer, title, description string, value *string) e
 	return nil
 }
 
+// PromptOptionalString asks for free-form text without rejecting empty input, useful when blank means "skip".
+func PromptOptionalString(p *output.Printer, title, description string, value *string) error {
+	input := huh.NewInput().
+		Title(title).
+		Value(value)
+	if description != "" {
+		input.Description(description)
+	}
+	if err := Prompt(input); err != nil {
+		return err
+	}
+	echo(p, title, *value)
+	return nil
+}
+
 // PromptSecret asks for a hidden value and never echoes it back.
 func PromptSecret(title string, value *string) error {
 	return Prompt(huh.NewInput().

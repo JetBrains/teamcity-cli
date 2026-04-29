@@ -25,6 +25,9 @@ See: https://www.jetbrains.com/help/teamcity/configuring-connections.html`,
 	}
 
 	cmd.AddCommand(newConnectionListCmd(f))
+	cmd.AddCommand(newConnectionCreateCmd(f))
+	cmd.AddCommand(newConnectionAuthorizeCmd(f))
+	cmd.AddCommand(newConnectionDeleteCmd(f))
 
 	return cmd
 }
@@ -95,7 +98,7 @@ func connectionToMap(feat api.ProjectFeature) map[string]any {
 }
 
 func filterJSONList[T any](items []T, fields []string, toMap func(T) map[string]any) any {
-	var result []map[string]any
+	result := make([]map[string]any, 0, len(items))
 	for _, item := range items {
 		full := toMap(item)
 		filtered := make(map[string]any, len(fields))
@@ -130,7 +133,18 @@ func connectionDisplayInfo(feat api.ProjectFeature) (name, providerType string) 
 	return name, providerType
 }
 
-// connectionOptions fetches connections for the vcs create wizard select prompt
+var vcsCapableProviders = map[string]bool{
+	"GitHubApp":       true,
+	"GitHub":          true,
+	"GHE":             true,
+	"GitLabCom":       true,
+	"GitLabCEorEE":    true,
+	"BitBucketCloud":  true,
+	"AzureDevOps":     true,
+	"JetBrains Space": true,
+}
+
+// connectionOptions fetches VCS-capable connections for the vcs create wizard select prompt.
 func connectionOptions(client api.ClientInterface, projectID string) (ids, labels []string, err error) {
 	features, err := client.GetProjectConnections(projectID)
 	if err != nil {
@@ -138,6 +152,9 @@ func connectionOptions(client api.ClientInterface, projectID string) (ids, label
 	}
 	for _, feat := range features.ProjectFeature {
 		name, ptype := connectionDisplayInfo(feat)
+		if !vcsCapableProviders[ptype] {
+			continue
+		}
 		ids = append(ids, feat.ID)
 		labels = append(labels, feat.ID+" — "+name+" ("+ptype+")")
 	}

@@ -82,13 +82,13 @@
     <div class="card">
 {{if .Error}}
         <div class="icon icon-err">&#10007;</div>
-        <h1>Authentication failed</h1>
+        <h1>{{.ErrorTitle}}</h1>
         <p>Please return to the terminal.</p>
         <div class="error-detail">{{.Error}}</div>
 {{else}}
         <div class="icon icon-ok">&#10003;</div>
-        <h1>Authentication successful</h1>
-        <p>You can close this window and return to the terminal.</p>
+        <h1>{{.SuccessTitle}}</h1>
+        <p>{{.SuccessBody}}</p>
         <script>setTimeout(function(){window.close()},3000)</script>
 {{end}}
         <div class="brand">TeamCity CLI</div>

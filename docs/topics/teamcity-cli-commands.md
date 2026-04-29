@@ -479,6 +479,42 @@ Manage cloud profiles
 <tr>
 <td>
 
+`teamcity project connection authorize`
+
+</td>
+<td>
+
+Open a browser to authorize the current TeamCity user against a connection
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project connection create`
+
+</td>
+<td>
+
+Create a project connection
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity project connection delete`
+
+</td>
+<td>
+
+Delete a project connection
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project connection list`
 
 </td>

@@ -150,12 +150,15 @@ type ClientInterface interface {
 
 	// Project Connections
 	GetProjectConnections(projectID string) (*ProjectFeatureList, error)
+	CreateProjectFeature(projectID string, feat ProjectFeature) (*ProjectFeature, error)
+	DeleteProjectFeature(projectID, featureID string) error
 
 	// Raw API access
 	RawRequest(ctx context.Context, method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)
 
 	// Client metadata
 	SetCommandName(name string)
+	ServerURL() string
 }
 
 // Verify *Client implements ClientInterface at compile time

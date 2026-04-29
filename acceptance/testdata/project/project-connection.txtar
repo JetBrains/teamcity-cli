@@ -1,0 +1,54 @@
+# Test project connection create + delete round-trip for github-app and docker.
+[!has_token] skip 'requires authentication token'
+
+# --- Docker connection ---
+
+# Create
+exec teamcity project connection create docker \
+    --project Sandbox \
+    --name 'cli-acc-docker-$RANDOM_STRING' \
+    --url https://example.invalid \
+    --username probe \
+    --password probe-secret \
+    --no-input
+stdout 'Created connection'
+extract '\(([A-Za-z0-9_-]+)\) in project' DOCKER_ID
+! stderr 'Error'
+
+# Delete
+exec teamcity project connection delete $DOCKER_ID --project Sandbox --force --no-input
+stdout 'Deleted connection'
+! stderr 'Error'
+
+# Verify gone
+! exec teamcity api '/app/rest/projects/id:Sandbox/projectFeatures/id:$DOCKER_ID' --raw --no-input
+stderr '.'
+
+# --- GitHub App connection ---
+
+# Create using an embedded fake private key file (server stores opaquely).
+exec teamcity project connection create github-app \
+    --project Sandbox \
+    --name 'cli-acc-ghapp-$RANDOM_STRING' \
+    --app-id 999999 \
+    --client-id Iv1.acceptance \
+    --client-secret probe-secret \
+    --private-key-file fakekey.pem \
+    --no-input
+stdout 'Created connection'
+extract '\(([A-Za-z0-9_-]+)\) in project' GHAPP_ID
+! stderr 'Error'
+
+exec teamcity project connection delete $GHAPP_ID --project Sandbox --force --no-input
+stdout 'Deleted connection'
+! stderr 'Error'
+
+# Missing-flag error in non-interactive mode
+! exec teamcity project connection create github-app --project Sandbox --no-input
+stderr '.'
+
+-- fakekey.pem --
+-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQ
+acceptance-test-stub-not-a-real-key
+-----END PRIVATE KEY-----

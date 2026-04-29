@@ -2,18 +2,21 @@ package auth
 
 import (
 	"context"
-	"crypto/subtle"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
 	"slices"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/browserflow"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/charmbracelet/huh"
-	"github.com/pkg/browser"
 )
 
 const authCodeLifetime = 5 * time.Minute
@@ -78,57 +81,60 @@ func selectPkceScopes() []string {
 
 // runPkceLogin orchestrates the browser-based PKCE auth flow with the given scopes and returns the minted access token.
 func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client, scopes []string) (*api.TokenResponse, error) {
-	verifier, err := api.GenerateCodeVerifier()
+	verifier, err := generatePkceVerifier()
 	if err != nil {
 		return nil, fmt.Errorf("generate code verifier: %w", err)
 	}
-	state, err := api.GenerateState()
+	state, err := browserflow.GenerateState()
 	if err != nil {
 		return nil, fmt.Errorf("generate state: %w", err)
 	}
 
-	listener, err := api.FindAvailableListener()
+	listener, err := browserflow.FindAvailableListener()
 	if err != nil {
 		return nil, fmt.Errorf("find available port: %w", err)
 	}
 
-	callbackServer := api.NewCallbackServer(listener)
-	callbackServer.Start()
-	defer callbackServer.Shutdown()
-
-	redirectURI := fmt.Sprintf("http://localhost:%d%s", callbackServer.Port, api.DefaultCallbackPath)
-	authURL := api.BuildAuthorizeURL(client.BaseURL, redirectURI, api.GenerateCodeChallenge(verifier), state, scopes)
+	port := listener.Addr().(*net.TCPAddr).Port
+	redirectURI := fmt.Sprintf("http://localhost:%d%s", port, browserflow.DefaultCallbackPath)
+	authURL := api.BuildAuthorizeURL(client.BaseURL, redirectURI, pkceCodeChallenge(verifier), state, scopes)
 
 	opening := fmt.Sprintf("Opening browser to authenticate with %d permissions...", len(scopes))
 	if total := len(api.DefaultScopes()); len(scopes) < total {
 		opening = fmt.Sprintf("Opening browser to authenticate with %d of %d permissions...", len(scopes), total)
 	}
-	if err := browser.OpenURL(authURL); err != nil {
-		p.Warn("Could not open browser automatically: %v", err)
-		_, _ = fmt.Fprintf(p.Out, "\nOpen this URL in your browser to authenticate:\n  %s\n\n", authURL)
-	} else {
-		p.Info("%s", opening)
-	}
+	p.Info("%s", opening)
 	_, _ = fmt.Fprintf(p.Out, "  %s Approve access in TeamCity\n", output.Yellow("→"))
 
-	select {
-	case result := <-callbackServer.ResultChan:
-		if result.Error != "" {
-			return nil, fmt.Errorf("authorization denied: %s", result.Error)
-		}
-		if subtle.ConstantTimeCompare([]byte(result.State), []byte(state)) != 1 {
-			return nil, errors.New("state mismatch: possible CSRF attack")
-		}
-		_, _ = fmt.Fprintln(p.Out)
-
-		ctx, cancel := context.WithTimeout(parent, 30*time.Second)
-		defer cancel()
-		return client.ExchangeCodeForToken(ctx, result.Code, verifier, redirectURI)
-
-	case <-time.After(authCodeLifetime):
-		return nil, fmt.Errorf("timeout waiting for callback (exceeded %v)", authCodeLifetime)
-
-	case <-parent.Done():
-		return nil, parent.Err()
+	result, err := browserflow.Run(parent, browserflow.Options{
+		Listener:     listener,
+		State:        state,
+		OpenURL:      authURL,
+		CallbackPath: browserflow.DefaultCallbackPath,
+		Timeout:      authCodeLifetime,
+		Logger:       p,
+	})
+	if err != nil {
+		return nil, err
 	}
+
+	_, _ = fmt.Fprintln(p.Out)
+	exchangeCtx, cancel := context.WithTimeout(parent, 30*time.Second)
+	defer cancel()
+	return client.ExchangeCodeForToken(exchangeCtx, result.Code, verifier, redirectURI)
+}
+
+// generatePkceVerifier returns 32 random bytes encoded as base64url, satisfying RFC 7636 §4.1.
+func generatePkceVerifier() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate random bytes: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+// pkceCodeChallenge returns the SHA256 base64url challenge for a PKCE verifier per RFC 7636 §4.2.
+func pkceCodeChallenge(verifier string) string {
+	h := sha256.Sum256([]byte(verifier))
+	return base64.RawURLEncoding.EncodeToString(h[:])
 }
