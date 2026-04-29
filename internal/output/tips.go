@@ -74,3 +74,6 @@ func TipRegisterGitHubApp(owner string) string {
 	}
 	return "Register a GitHub App at " + Cyan(fmt.Sprintf("https://github.com/organizations/%s/settings/apps/new", owner))
 }
+
+// TipDockerServiceAccount nudges users away from personal Docker passwords.
+const TipDockerServiceAccount = "Use a service account / robot user, not a personal password"

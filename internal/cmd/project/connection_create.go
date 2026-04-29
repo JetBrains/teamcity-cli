@@ -26,6 +26,7 @@ See: https://www.jetbrains.com/help/teamcity/configuring-connections.html`,
 	}
 
 	cmd.AddCommand(newConnectionCreateGitHubAppCmd(f))
+	cmd.AddCommand(newConnectionCreateDockerCmd(f))
 
 	return cmd
 }
@@ -120,7 +121,7 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 		}
 	}
 
-	clientSecret, err := resolveSecret(f, opts.clientSecret, opts.stdin, interactive, "Client secret")
+	clientSecret, err := resolveSecret(f, opts.clientSecret, opts.stdin, interactive, "Client secret", "client-secret")
 	if err != nil {
 		return err
 	}
@@ -153,7 +154,105 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	return nil
 }
 
-func resolveSecret(f *cmdutil.Factory, value string, stdin, interactive bool, label string) (string, error) {
+type dockerOptions struct {
+	project  string
+	name     string
+	url      string
+	username string
+	password string
+	stdin    bool
+}
+
+func newConnectionCreateDockerCmd(f *cmdutil.Factory) *cobra.Command {
+	opts := &dockerOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "docker",
+		Short: "Create a Docker registry connection",
+		Long: `Register Docker registry credentials in a TeamCity project.
+
+Stores a long-lived password — prefer a service account / robot user
+over a personal account.`,
+		Example: `  # Interactive
+  teamcity project connection create docker -p Backend
+
+  # Non-interactive (read password from stdin)
+  echo "$DOCKER_TOKEN" | teamcity project connection create docker -p Backend \
+      --name GHCR --url https://ghcr.io --username my-org --stdin`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConnectionCreateDocker(f, opts)
+		},
+	}
+
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVar(&opts.name, "name", "", "Display name")
+	cmd.Flags().StringVar(&opts.url, "url", "", "Registry URL (e.g. https://ghcr.io)")
+	cmd.Flags().StringVar(&opts.username, "username", "", "Registry username")
+	cmd.Flags().StringVar(&opts.password, "password", "", "Registry password (prefer --stdin)")
+	cmd.Flags().BoolVar(&opts.stdin, "stdin", false, "Read password from stdin")
+
+	return cmd
+}
+
+func runConnectionCreateDocker(f *cmdutil.Factory, opts *dockerOptions) error {
+	client, err := f.Client()
+	if err != nil {
+		return err
+	}
+
+	projectID := cmp.Or(opts.project, "_Root")
+	interactive := f.IsInteractive()
+
+	if err := promptIfEmpty(f, &opts.name, "Connection name", "", interactive, "name"); err != nil {
+		return err
+	}
+	if err := promptIfEmpty(f, &opts.url, "Registry URL", "e.g. https://ghcr.io", interactive, "url"); err != nil {
+		return err
+	}
+	if err := promptIfEmpty(f, &opts.username, "Username", "", interactive, "username"); err != nil {
+		return err
+	}
+
+	password, err := resolveSecret(f, opts.password, opts.stdin, interactive, "Password", "password")
+	if err != nil {
+		return err
+	}
+
+	feat := api.ProjectFeature{
+		Type: "OAuthProvider",
+		Properties: &api.PropertyList{
+			Property: []api.Property{
+				{Name: "providerType", Value: "Docker"},
+				{Name: "displayName", Value: opts.name},
+				{Name: "repositoryUrl", Value: opts.url},
+				{Name: "userName", Value: opts.username},
+				{Name: "secure:userPass", Value: password},
+			},
+		},
+	}
+
+	created, err := client.CreateProjectFeature(projectID, feat)
+	if err != nil {
+		return fmt.Errorf("failed to create connection: %w", err)
+	}
+
+	f.Printer.Success("Created connection %q (%s) in project %s", opts.name, created.ID, projectID)
+	f.Printer.Tip("%s", output.TipDockerServiceAccount)
+	return nil
+}
+
+func promptIfEmpty(f *cmdutil.Factory, value *string, title, description string, interactive bool, flagName string) error {
+	if *value != "" {
+		return nil
+	}
+	if !interactive {
+		return api.RequiredFlag(flagName)
+	}
+	return cmdutil.PromptString(f.Printer, title, description, value)
+}
+
+func resolveSecret(f *cmdutil.Factory, value string, stdin, interactive bool, label, flagName string) (string, error) {
 	if value != "" {
 		return value, nil
 	}
@@ -163,7 +262,7 @@ func resolveSecret(f *cmdutil.Factory, value string, stdin, interactive bool, la
 	if !interactive {
 		return "", api.Validation(
 			label+" is required",
-			"Provide --client-secret, --stdin, or run interactively",
+			"Provide --"+flagName+", --stdin, or run interactively",
 		)
 	}
 	if err := cmdutil.PromptSecret(label, &value); err != nil {

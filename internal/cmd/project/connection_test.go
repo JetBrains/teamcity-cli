@@ -88,6 +88,49 @@ func TestConnectionCreateGitHubAppEmptyKey(t *testing.T) {
 	)
 }
 
+func TestConnectionCreateDocker(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	f := ts.Factory
+
+	var captured api.ProjectFeature
+	ts.Handle("POST /app/rest/projects/id:TestProject/projectFeatures", func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&captured))
+		captured.ID = "PROJECT_EXT_55"
+		cmdtest.JSON(w, captured)
+	})
+
+	out := cmdtest.CaptureOutput(t, f, "project", "connection", "create", "docker",
+		"--project", "TestProject",
+		"--name", "GHCR",
+		"--url", "https://ghcr.io",
+		"--username", "my-org",
+		"--password", "ghp_xxx",
+	)
+
+	assert.Contains(t, out, "Created connection")
+	assert.Contains(t, out, "PROJECT_EXT_55")
+	assert.Contains(t, out, "service account")
+
+	props := propMap(captured.Properties)
+	assert.Equal(t, "Docker", props["providerType"])
+	assert.Equal(t, "GHCR", props["displayName"])
+	assert.Equal(t, "https://ghcr.io", props["repositoryUrl"])
+	assert.Equal(t, "my-org", props["userName"])
+	assert.Equal(t, "ghp_xxx", props["secure:userPass"])
+}
+
+func TestConnectionCreateDockerMissingURL(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	f := ts.Factory
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, f, "url", "project", "connection", "create", "docker",
+		"--project", "TestProject",
+		"--name", "GHCR",
+		"--username", "my-org",
+		"--password", "ghp_xxx",
+	)
+}
+
 func TestConnectionDelete(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	f := ts.Factory
