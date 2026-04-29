@@ -203,8 +203,13 @@ Shows all branches and all build states (including canceled, personal, composite
 | `teamcity project tree [id]`                   | Show project hierarchy tree  |
 | `teamcity project vcs list --project <id>`     | List VCS roots               |
 | `teamcity project vcs view <id>`              | View VCS root details        |
-| `teamcity project vcs create --project <id>`  | Open browser to add VCS root |
+| `teamcity project vcs create --project <id>`  | Create VCS root (interactive or flag-driven) |
 | `teamcity project vcs delete <id>`            | Delete a VCS root            |
+| `teamcity project connection list -p <id>`    | List project connections     |
+| `teamcity project connection create github-app -p <id>` | Register GitHub App (manifest flow) |
+| `teamcity project connection create docker -p <id>`    | Register Docker registry credentials |
+| `teamcity project connection authorize <conn-id> -p <id>` | Per-user OAuth dance for an OAuth connection |
+| `teamcity project connection delete <conn-id> -p <id>` | Delete a connection         |
 | `teamcity project param list <id>`             | List parameters              |
 | `teamcity project param get <id> <name>`       | Get parameter                |
 | `teamcity project param set <id> <name> <val>` | Set parameter                |

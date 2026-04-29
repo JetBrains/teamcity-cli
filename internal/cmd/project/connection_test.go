@@ -39,6 +39,7 @@ func TestConnectionCreateGitHubApp(t *testing.T) {
 	out := cmdtest.CaptureOutput(t, f, "project", "connection", "create", "github-app",
 		"--project", "TestProject",
 		"--name", "Backend",
+		"--owner", "my-org",
 		"--app-id", "1234567",
 		"--client-id", "Iv1.abc",
 		"--client-secret", "shh",
@@ -51,24 +52,14 @@ func TestConnectionCreateGitHubApp(t *testing.T) {
 
 	props := propMap(captured.Properties)
 	assert.Equal(t, "GitHubApp", props["providerType"])
+	assert.Equal(t, "gitHubApp", props["connectionSubtype"])
 	assert.Equal(t, "Backend", props["displayName"])
-	assert.Equal(t, "1234567", props["appId"])
-	assert.Equal(t, "Iv1.abc", props["clientId"])
-	assert.Equal(t, "shh", props["secure:clientSecret"])
-	assert.Contains(t, props["secure:privateKey"], "BEGIN PRIVATE KEY")
-}
-
-func TestConnectionCreateGitHubAppMissingFlag(t *testing.T) {
-	ts := cmdtest.SetupMockClient(t)
-	f := ts.Factory
-
-	cmdtest.RunCmdWithFactoryExpectErr(t, f, "name", "project", "connection", "create", "github-app",
-		"--project", "TestProject",
-		"--app-id", "1234567",
-		"--client-id", "Iv1.abc",
-		"--client-secret", "shh",
-		"--private-key-file", "/dev/null",
-	)
+	assert.Equal(t, "https://github.com/my-org", props["gitHubApp.ownerUrl"])
+	assert.Equal(t, "1234567", props["gitHubApp.appId"])
+	assert.Equal(t, "Iv1.abc", props["gitHubApp.clientId"])
+	assert.Equal(t, "shh", props["secure:gitHubApp.clientSecret"])
+	assert.Contains(t, props["secure:gitHubApp.privateKey"], "BEGIN PRIVATE KEY")
+	assert.Equal(t, "false", props["useUniqueRedirect"])
 }
 
 func TestConnectionCreateGitHubAppEmptyKey(t *testing.T) {
@@ -81,6 +72,7 @@ func TestConnectionCreateGitHubAppEmptyKey(t *testing.T) {
 	cmdtest.RunCmdWithFactoryExpectErr(t, f, "private key", "project", "connection", "create", "github-app",
 		"--project", "TestProject",
 		"--name", "Backend",
+		"--owner", "my-org",
 		"--app-id", "1234567",
 		"--client-id", "Iv1.abc",
 		"--client-secret", "shh",

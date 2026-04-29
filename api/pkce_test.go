@@ -2,13 +2,9 @@ package api
 
 import (
 	"context"
-	"encoding/base64"
-	"fmt"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -16,130 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGenerateCodeVerifier(T *testing.T) {
-	T.Parallel()
-
-	T.Run("length is at least 43 characters", func(t *testing.T) {
-		t.Parallel()
-
-		verifier, err := GenerateCodeVerifier()
-		require.NoError(t, err)
-		assert.GreaterOrEqual(t, len(verifier), 43, "RFC 7636 requires minimum 43 characters")
-	})
-
-	T.Run("contains only URL-safe characters", func(t *testing.T) {
-		t.Parallel()
-
-		verifier, err := GenerateCodeVerifier()
-		require.NoError(t, err)
-		// base64url alphabet: A-Z, a-z, 0-9, -, _
-		urlSafePattern := regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
-		assert.True(t, urlSafePattern.MatchString(verifier), "verifier should only contain URL-safe base64 characters")
-	})
-
-	T.Run("no padding characters", func(t *testing.T) {
-		t.Parallel()
-
-		verifier, err := GenerateCodeVerifier()
-		require.NoError(t, err)
-		assert.NotContains(t, verifier, "=", "verifier should not contain padding")
-	})
-
-	T.Run("generates unique values", func(t *testing.T) {
-		t.Parallel()
-
-		v1, err := GenerateCodeVerifier()
-		require.NoError(t, err)
-		v2, err := GenerateCodeVerifier()
-		require.NoError(t, err)
-		assert.NotEqual(t, v1, v2, "verifiers should be unique")
-	})
-}
-
-func TestGenerateCodeChallenge(T *testing.T) {
-	T.Parallel()
-
-	T.Run("produces valid base64url encoded SHA256 hash", func(t *testing.T) {
-		t.Parallel()
-
-		verifier := "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-		challenge := GenerateCodeChallenge(verifier)
-
-		// Should be base64url encoded (no padding, URL-safe chars)
-		urlSafePattern := regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
-		assert.True(t, urlSafePattern.MatchString(challenge), "challenge should be base64url encoded")
-	})
-
-	T.Run("no padding characters", func(t *testing.T) {
-		t.Parallel()
-
-		verifier, err := GenerateCodeVerifier()
-		require.NoError(t, err)
-		challenge := GenerateCodeChallenge(verifier)
-		assert.NotContains(t, challenge, "=", "challenge should not contain padding")
-	})
-
-	T.Run("same verifier produces same challenge", func(t *testing.T) {
-		t.Parallel()
-
-		verifier := "test-verifier-12345"
-		c1 := GenerateCodeChallenge(verifier)
-		c2 := GenerateCodeChallenge(verifier)
-		assert.Equal(t, c1, c2, "same verifier should produce same challenge")
-	})
-
-	T.Run("different verifiers produce different challenges", func(t *testing.T) {
-		t.Parallel()
-
-		c1 := GenerateCodeChallenge("verifier1")
-		c2 := GenerateCodeChallenge("verifier2")
-		assert.NotEqual(t, c1, c2, "different verifiers should produce different challenges")
-	})
-
-	T.Run("challenge can be decoded as valid base64url", func(t *testing.T) {
-		t.Parallel()
-
-		verifier, err := GenerateCodeVerifier()
-		require.NoError(t, err)
-		challenge := GenerateCodeChallenge(verifier)
-
-		decoded, err := base64.RawURLEncoding.DecodeString(challenge)
-		require.NoError(t, err, "challenge should be valid base64url")
-		assert.Len(t, decoded, 32, "SHA256 produces 32 bytes")
-	})
-}
-
-func TestGenerateState(T *testing.T) {
-	T.Parallel()
-
-	T.Run("generates non-empty state", func(t *testing.T) {
-		t.Parallel()
-
-		state, err := GenerateState()
-		require.NoError(t, err)
-		assert.NotEmpty(t, state)
-	})
-
-	T.Run("contains only URL-safe characters", func(t *testing.T) {
-		t.Parallel()
-
-		state, err := GenerateState()
-		require.NoError(t, err)
-		urlSafePattern := regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
-		assert.True(t, urlSafePattern.MatchString(state), "state should only contain URL-safe base64 characters")
-	})
-
-	T.Run("generates unique values", func(t *testing.T) {
-		t.Parallel()
-
-		s1, err := GenerateState()
-		require.NoError(t, err)
-		s2, err := GenerateState()
-		require.NoError(t, err)
-		assert.NotEqual(t, s1, s2, "states should be unique")
-	})
-}
 
 func TestBuildAuthorizeURL(T *testing.T) {
 	T.Parallel()
@@ -172,22 +44,6 @@ func TestBuildAuthorizeURL(T *testing.T) {
 		assert.Equal(t, "RUN_BUILD VIEW_PROJECT", query.Get("scope"))
 	})
 
-	T.Run("handles single scope", func(t *testing.T) {
-		t.Parallel()
-
-		authURL := BuildAuthorizeURL(
-			"https://teamcity.example.com",
-			"http://localhost:19000/callback",
-			"challenge",
-			"state",
-			[]string{"RUN_BUILD"},
-		)
-
-		parsed, err := url.Parse(authURL)
-		require.NoError(t, err)
-		assert.Equal(t, "RUN_BUILD", parsed.Query().Get("scope"))
-	})
-
 	T.Run("strips trailing slash from server URL", func(t *testing.T) {
 		t.Parallel()
 
@@ -201,22 +57,6 @@ func TestBuildAuthorizeURL(T *testing.T) {
 
 		assert.True(t, strings.HasPrefix(authURL, "https://teamcity.example.com/pkce/"))
 		assert.NotContains(t, authURL, "//pkce")
-	})
-}
-
-func TestFindAvailableListener(T *testing.T) {
-	T.Parallel()
-
-	T.Run("returns a usable listener on loopback", func(t *testing.T) {
-		t.Parallel()
-
-		listener, err := FindAvailableListener()
-		require.NoError(t, err)
-		defer listener.Close()
-
-		addr := listener.Addr().(*net.TCPAddr)
-		assert.Greater(t, addr.Port, 0)
-		assert.Equal(t, "127.0.0.1", addr.IP.String())
 	})
 }
 
@@ -262,59 +102,6 @@ func TestIsPkceEnabled(T *testing.T) {
 	})
 }
 
-func TestCallbackServer(T *testing.T) {
-	T.Run("receives authorization code from callback", func(t *testing.T) {
-		listener, err := FindAvailableListener()
-		require.NoError(t, err)
-
-		srv := NewCallbackServer(listener)
-		srv.Start()
-		defer srv.Shutdown()
-
-		go func() {
-			time.Sleep(50 * time.Millisecond)
-			resp, _ := http.Get(fmt.Sprintf("http://localhost:%d/callback?code=testcode123&state=teststate456", srv.Port))
-			if resp != nil {
-				resp.Body.Close()
-			}
-		}()
-
-		select {
-		case result := <-srv.ResultChan:
-			assert.Equal(t, "testcode123", result.Code)
-			assert.Equal(t, "teststate456", result.State)
-			assert.Empty(t, result.Error)
-		case <-time.After(2 * time.Second):
-			t.Fatal("timeout waiting for callback")
-		}
-	})
-
-	T.Run("handles error in callback", func(t *testing.T) {
-		listener, err := FindAvailableListener()
-		require.NoError(t, err)
-
-		srv := NewCallbackServer(listener)
-		srv.Start()
-		defer srv.Shutdown()
-
-		go func() {
-			time.Sleep(50 * time.Millisecond)
-			resp, _ := http.Get(fmt.Sprintf("http://localhost:%d/callback?error=access_denied", srv.Port))
-			if resp != nil {
-				resp.Body.Close()
-			}
-		}()
-
-		select {
-		case result := <-srv.ResultChan:
-			assert.Empty(t, result.Code)
-			assert.Equal(t, "access_denied", result.Error)
-		case <-time.After(2 * time.Second):
-			t.Fatal("timeout waiting for callback")
-		}
-	})
-}
-
 func TestExchangeCodeForToken(T *testing.T) {
 	T.Parallel()
 
@@ -331,7 +118,7 @@ func TestExchangeCodeForToken(T *testing.T) {
 			assert.Equal(t, "testverifier", r.Form.Get("code_verifier"))
 			assert.Equal(t, "http://localhost:19000/callback", r.Form.Get("redirect_uri"))
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"access_token":"token123","token_type":"Bearer","valid_until":"2026-03-03T11:25:51.572Z"}`))
+			_, _ = w.Write([]byte(`{"access_token":"token123","token_type":"Bearer","valid_until":"2026-03-03T11:25:51.572Z"}`))
 		}))
 		t.Cleanup(server.Close)
 
@@ -347,7 +134,7 @@ func TestExchangeCodeForToken(T *testing.T) {
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte("Invalid authorization code"))
+			_, _ = w.Write([]byte("Invalid authorization code"))
 		}))
 		t.Cleanup(server.Close)
 

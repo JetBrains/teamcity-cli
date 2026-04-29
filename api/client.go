@@ -256,6 +256,11 @@ func (c *Client) teamCityClientHeader() string {
 	return h
 }
 
+// ServerURL returns the trimmed TeamCity server URL.
+func (c *Client) ServerURL() string {
+	return c.BaseURL
+}
+
 // SetCommandName sets the command name for X-TeamCity-Client header.
 func (c *Client) SetCommandName(name string) {
 	c.commandName = name

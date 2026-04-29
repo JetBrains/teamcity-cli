@@ -17,7 +17,7 @@ const (
 	TipNoPipelines    = "Enable pipelines on the server, or check 'teamcity project list'"
 	TipNoQueue        = "Nothing is queued; 'teamcity run list' shows recent runs"
 	TipNoPools        = "Contact your administrator to create an agent pool"
-	TipNoConnections  = "Add one in the TeamCity UI under project → Connections"
+	TipNoConnections  = "Create one with 'teamcity project connection create github-app' or 'docker'"
 	TipCancelAnytime  = "Press Ctrl+C at any time to cancel"
 )
 

@@ -474,6 +474,8 @@ type VcsRoot struct {
 	Href       string        `json:"href,omitempty"`
 	Project    *Project      `json:"project,omitempty"`
 	Properties *PropertyList `json:"properties,omitempty"`
+	// ConnectionID is POST-only: server resolves authMethod/username/tokenId from the named connection.
+	ConnectionID string `json:"connectionId,omitempty"`
 }
 
 // VcsRootList represents a list of VCS roots

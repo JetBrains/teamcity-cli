@@ -158,6 +158,7 @@ type ClientInterface interface {
 
 	// Client metadata
 	SetCommandName(name string)
+	ServerURL() string
 }
 
 // Verify *Client implements ClientInterface at compile time

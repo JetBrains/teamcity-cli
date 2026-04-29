@@ -369,9 +369,10 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	}
 
 	root := api.VcsRoot{
-		Name:    name,
-		VcsName: "jetbrains.git",
-		Project: &api.Project{ID: projectID},
+		Name:         name,
+		VcsName:      "jetbrains.git",
+		Project:      &api.Project{ID: projectID},
+		ConnectionID: opts.connectionID, // POST-only; server auto-fills auth from a connection
 		Properties: &api.PropertyList{
 			Property: props,
 		},
@@ -484,8 +485,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 		testReq.IsPrivate = true
 
 	case authToken:
-		connID := opts.connectionID
-		if connID == "" {
+		if opts.connectionID == "" {
 			if !interactive {
 				return nil, testReq, api.RequiredFlag("connection-id")
 			}
@@ -500,15 +500,12 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 			for i, id := range ids {
 				options[i] = huh.NewOption(labels[i], id)
 			}
-			if err := cmdutil.Select(f.Printer, "Connection", options, &connID); err != nil {
+			if err := cmdutil.Select(f.Printer, "Connection", options, &opts.connectionID); err != nil {
 				return nil, testReq, err
 			}
 		}
-		props = append(props,
-			api.Property{Name: "authMethod", Value: "PASSWORD"},
-			api.Property{Name: "pipelines.connectionId", Value: connID},
-		)
-		testReq.ConnectionID = connID
+		// Server fills authMethod/username/tokenId from the top-level connectionId.
+		testReq.ConnectionID = opts.connectionID
 
 	case authAnonymous:
 		props = append(props,
@@ -599,6 +596,10 @@ func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.T
 		msg := "connection test failed"
 		if len(result.Errors) > 0 {
 			msg = result.Errors[0].Message
+		}
+		if req.ConnectionID != "" && strings.Contains(msg, "Malformed request") {
+			f.Printer.Tip("First-time use of this connection requires authorization. Run: %s",
+				output.Cyan(fmt.Sprintf("teamcity project connection authorize %s -p %s", req.ConnectionID, projectID)))
 		}
 		return fmt.Errorf("%s", msg)
 	}
