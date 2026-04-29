@@ -6,6 +6,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -14,6 +15,12 @@ func newPipelinePushCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:   "push <pipeline-id> [file]",
 		Short: "Upload pipeline YAML",
 		Args:  cobra.RangeArgs(1, 2),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) == 0 {
+				return completion.LinkedJobs()(cmd, args, toComplete)
+			}
+			return []string{"yml", "yaml"}, cobra.ShellCompDirectiveFilterFileExt
+		},
 		Example: `  teamcity pipeline push CLI_CiCd
   teamcity pipeline push CLI_CiCd .teamcity.yml
   teamcity pipeline push CLI_CiCd pipeline.yml`,

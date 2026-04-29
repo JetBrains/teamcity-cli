@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -13,10 +14,11 @@ func newPipelineViewCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &cmdutil.ViewOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "view <pipeline-id>",
-		Short:   "View pipeline details",
-		Aliases: []string{"show"},
-		Args:    cobra.ExactArgs(1),
+		Use:               "view <pipeline-id>",
+		Short:             "View pipeline details",
+		Aliases:           []string{"show"},
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completion.LinkedJobs(),
 		Example: `  teamcity pipeline view CLI_CiCd
   teamcity pipeline view CLI_CiCd --web
   teamcity pipeline view CLI_CiCd --json`,

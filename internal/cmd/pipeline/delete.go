@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -16,9 +17,10 @@ func newPipelineDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &deleteOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "delete <pipeline-id>",
-		Short: "Delete a pipeline",
-		Args:  cobra.ExactArgs(1),
+		Use:               "delete <pipeline-id>",
+		Short:             "Delete a pipeline",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completion.LinkedJobs(),
 		Example: `  teamcity pipeline delete CLI_MyPipeline
   teamcity pipeline delete CLI_MyPipeline --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -87,7 +87,7 @@ func SkillAgents() CompFunc {
 	}
 }
 
-// LinkedJobs completes job IDs from teamcity.toml in the cwd's ancestry.
+// LinkedJobs completes job/pipeline IDs from teamcity.toml in the cwd's ancestry.
 func LinkedJobs() CompFunc {
 	return func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		cfg := loadLinkConfig()

@@ -6,6 +6,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -17,9 +18,10 @@ func newPipelinePullCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &pullOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "pull <pipeline-id>",
-		Short: "Download pipeline YAML",
-		Args:  cobra.ExactArgs(1),
+		Use:               "pull <pipeline-id>",
+		Short:             "Download pipeline YAML",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completion.LinkedJobs(),
 		Example: `  teamcity pipeline pull CLI_CiCd
   teamcity pipeline pull CLI_CiCd -o .teamcity.yml
   teamcity pipeline pull CLI_CiCd > pipeline.yml`,
