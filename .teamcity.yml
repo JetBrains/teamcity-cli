@@ -168,6 +168,7 @@ jobs:
     parameters:
       env.GOROOT: /usr/lib/go-1.26
       env.PATH: /usr/lib/go-1.26/bin:%env.GOBIN%:%env.PATH%
+      env.TC_PTY_TOKEN: credentialsJSON:1f433bfb-aff8-41db-a4a8-54058e549c59
     steps:
       - type: script
         name: Terminal PTY tests
@@ -178,7 +179,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y golang-1.26-go jq
 
-          go install ./tc
+          go build -o "${GOBIN:-$(go env GOPATH)/bin}/teamcity" ./tc
           export TEAMCITY_URL="${TC_PTY_HOST:-https://cli.teamcity.com}"
           export TEAMCITY_TOKEN="${TC_PTY_TOKEN:-${TC_ACCEPTANCE_TOKEN:-${TEAMCITY_TOKEN:-}}}"
           if [ -z "$TEAMCITY_TOKEN" ]; then

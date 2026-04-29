@@ -111,6 +111,9 @@ func ptySpawn(t *testing.T, args ...string) *ptyProc {
 	cmd.Stderr = c.Tty()
 	require.NoError(t, cmd.Start())
 
+	// Master sees EOF only after every slave fd is closed; child has its own dup.
+	require.NoError(t, c.Tty().Close())
+
 	p := &ptyProc{Console: c, cmd: cmd, done: make(chan struct{})}
 	go func() {
 		p.waitErr = cmd.Wait()
@@ -182,11 +185,11 @@ func TestTerminalPtyWindows(t *testing.T) {
 		p := ptySpawn(t, "agent", "term", agentID)
 		_, err := p.Expect(expect.String("PS "))
 		require.NoError(t, err, "no PowerShell prompt seen")
-		_, err = p.SendLine("Write-Host pty-ps-ok")
+		_, err = p.Send("Write-Host pty-ps-ok\r")
 		require.NoError(t, err)
 		_, err = p.Expect(expect.String("pty-ps-ok"))
 		require.NoError(t, err, "Write-Host output not seen — Enter keystroke not submitting on PS")
-		_, err = p.SendLine("exit")
+		_, err = p.Send("exit\r")
 		require.NoError(t, err)
 		_, err = p.ExpectEOF()
 		require.NoError(t, err, "process did not exit cleanly after PS exit")
