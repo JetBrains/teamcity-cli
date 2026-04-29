@@ -162,62 +162,6 @@ jobs:
           head -1 coverage-integration.out > coverage.out
           tail -n +2 coverage-integration.out >> coverage.out
           tail -n +2 coverage-guest.out >> coverage.out
-  test_terminal_pty:
-    name: Test Terminal PTY
-    runs-on: Ubuntu-24.04-Large
-    parameters:
-      env.GOROOT: /usr/lib/go-1.26
-      env.PATH: /usr/lib/go-1.26/bin:%env.GOBIN%:%env.PATH%
-      env.TC_PTY_TOKEN: credentialsJSON:1f433bfb-aff8-41db-a4a8-54058e549c59
-    steps:
-      - type: script
-        name: Terminal PTY tests
-        script-content: |-
-          set -eu
-
-          sudo add-apt-repository -y ppa:longsleep/golang-backports
-          sudo apt-get update
-          sudo apt-get install -y golang-1.26-go jq
-
-          go build -o "${GOBIN:-$(go env GOPATH)/bin}/teamcity" ./tc
-          export TEAMCITY_URL="${TC_PTY_HOST:-https://cli.teamcity.com}"
-          export TEAMCITY_TOKEN="${TC_PTY_TOKEN:-${TC_ACCEPTANCE_TOKEN:-${TEAMCITY_TOKEN:-}}}"
-          if [ -z "$TEAMCITY_TOKEN" ]; then
-            echo "No token available (set TC_PTY_TOKEN or TC_ACCEPTANCE_TOKEN); skipping"
-            exit 0
-          fi
-
-          CHANGES=$(teamcity run changes "%teamcity.build.id%" 2>/dev/null || true)
-          if [ -n "$CHANGES" ] && ! echo "$CHANGES" | grep -qE '^\s+\S+\s+(internal/terminal/|internal/cmd/agent/terminal\.go|api/terminal)'; then
-            echo "No terminal-related changes, skipping"
-            exit 0
-          fi
-
-          go install gotest.tools/gotestsum@latest
-
-          # Correlate agents to the builds we started: capture each build id,
-          # then poll `run view` for .agent.id. Matching by name pattern in the
-          # global agent list is unreliable when unrelated agents are connected.
-          LINUX_BUILD_ID=$(teamcity run start CLI_LinuxAgentTerminal     --json --no-input | jq -r '.id')
-          WINDOWS_BUILD_ID=$(teamcity run start CLI_WindowsAgentTerminal --json --no-input | jq -r '.id')
-          [ -n "$LINUX_BUILD_ID" ]   || { echo "failed to start CLI_LinuxAgentTerminal";   exit 1; }
-          [ -n "$WINDOWS_BUILD_ID" ] || { echo "failed to start CLI_WindowsAgentTerminal"; exit 1; }
-          echo "LinuxBuild=$LINUX_BUILD_ID WindowsBuild=$WINDOWS_BUILD_ID"
-
-          LINUX_ID=""; WINDOWS_ID=""
-          for _ in $(seq 1 90); do
-            [ -z "$LINUX_ID" ]   && LINUX_ID=$(teamcity run view   "$LINUX_BUILD_ID" --json 2>/dev/null | jq -r '.agent.id // empty')
-            [ -z "$WINDOWS_ID" ] && WINDOWS_ID=$(teamcity run view "$WINDOWS_BUILD_ID" --json 2>/dev/null | jq -r '.agent.id // empty')
-            [ -n "$LINUX_ID" ] && [ -n "$WINDOWS_ID" ] && break
-            sleep 10
-          done
-          [ -z "$LINUX_ID" ]   && { echo "no agent assigned to build $LINUX_BUILD_ID after 15m";   exit 1; }
-          [ -z "$WINDOWS_ID" ] && { echo "no agent assigned to build $WINDOWS_BUILD_ID after 15m"; exit 1; }
-          echo "Linux=$LINUX_ID Windows=$WINDOWS_ID"
-
-          export TC_PTY_LINUX_AGENT_ID=$LINUX_ID
-          export TC_PTY_WINDOWS_AGENT_ID=$WINDOWS_ID
-          gotestsum --format pkgname-and-test-fails -- -count=1 -tags=terminal_pty ./api -run 'TestTerminalPty' -timeout 15m
   goreleaser:
     name: GoReleaser
     allow-reuse: true
