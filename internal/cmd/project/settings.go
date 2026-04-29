@@ -339,6 +339,9 @@ This command does not accept TeamCity project IDs and has no --dir flag.`,
   teamcity project settings validate --verbose`,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
+		ValidArgsFunction: func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveFilterDirs
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				opts.path = args[0]

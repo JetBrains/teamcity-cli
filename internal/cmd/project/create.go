@@ -5,6 +5,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -40,6 +41,8 @@ If --parent is omitted, the project is created under the Root project.`,
 	cmd.Flags().StringVarP(&opts.parent, "parent", "p", "", "Parent project ID (default: _Root)")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser after creation")
+
+	_ = cmd.RegisterFlagCompletionFunc("parent", completion.LinkedProjects())
 
 	return cmd
 }
