@@ -71,9 +71,7 @@ func saveSchemaCache(serverURL string, schema []byte) error {
 	return os.WriteFile(path, schema, 0600)
 }
 
-// fetchOrCacheSchema returns the pipeline JSON schema. The bool is true when
-// the embedded fallback was returned because the server doesn't support the
-// endpoint (e.g. TeamCity < 2026.1). The bool is meaningless when err != nil.
+// fetchOrCacheSchema returns the pipeline JSON schema; the bool reports whether the embedded fallback was used.
 func fetchOrCacheSchema(client *api.Client, refresh bool) ([]byte, bool, error) {
 	if !refresh {
 		if cached, err := loadCachedSchema(client.BaseURL); err == nil {
