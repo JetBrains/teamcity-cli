@@ -767,6 +767,34 @@ func SetupMockClient(t *testing.T) *TestServer {
 		JSON(w, api.ProjectFeatureList{Count: 0, ProjectFeature: []api.ProjectFeature{}})
 	})
 
+	ts.Handle("POST /app/rest/projects/id:TestProject/projectFeatures", func(w http.ResponseWriter, r *http.Request) {
+		var feat api.ProjectFeature
+		if err := json.NewDecoder(r.Body).Decode(&feat); err != nil {
+			Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		feat.ID = "PROJECT_EXT_42"
+		JSON(w, feat)
+	})
+
+	ts.Handle("POST /app/rest/projects/id:_Root/projectFeatures", func(w http.ResponseWriter, r *http.Request) {
+		var feat api.ProjectFeature
+		if err := json.NewDecoder(r.Body).Decode(&feat); err != nil {
+			Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		feat.ID = "PROJECT_EXT_42"
+		JSON(w, feat)
+	})
+
+	ts.Handle("DELETE /app/rest/projects/id:TestProject/projectFeatures/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	ts.Handle("DELETE /app/rest/projects/id:_Root/projectFeatures/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	// Pipelines
 	ts.Handle("GET /app/rest/pipelines", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, api.PipelineList{

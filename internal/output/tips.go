@@ -66,3 +66,11 @@ func TipResumeLogFor(runID string) string {
 func TipResumeWatchFor(runID string) string {
 	return "Resume watching: teamcity run watch " + runID
 }
+
+// TipRegisterGitHubApp points the user at GitHub's App registration page (manual mode).
+func TipRegisterGitHubApp(owner string) string {
+	if owner == "" {
+		return "Register a GitHub App at " + Cyan("https://github.com/settings/apps/new")
+	}
+	return "Register a GitHub App at " + Cyan(fmt.Sprintf("https://github.com/organizations/%s/settings/apps/new", owner))
+}

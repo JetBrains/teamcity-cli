@@ -25,6 +25,8 @@ See: https://www.jetbrains.com/help/teamcity/configuring-connections.html`,
 	}
 
 	cmd.AddCommand(newConnectionListCmd(f))
+	cmd.AddCommand(newConnectionCreateCmd(f))
+	cmd.AddCommand(newConnectionDeleteCmd(f))
 
 	return cmd
 }
