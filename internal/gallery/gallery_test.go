@@ -24,6 +24,11 @@ func TestGenerateGallery(t *testing.T) {
 	output.NoColor = false
 	t.Cleanup(func() { output.NoColor = true })
 
+	// Isolate XDG_CONFIG_HOME so the pipeline schema cache (and any other
+	// XDG-respecting writes triggered by captures) doesn't pollute the user's
+	// real ~/.config.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
 	ts := setupGalleryMocks(t)
 
 	yamlFile, err := os.CreateTemp(t.TempDir(), "*.teamcity.yml")
@@ -36,11 +41,11 @@ func TestGenerateGallery(t *testing.T) {
 		termbook.WithCSS(jetBrainsCSS),
 		termbook.WithDecor(termbook.Decor{
 			BrandName:    "teamcity cli",
-			BrandVersion: "v0.9.0",
+			BrandVersion: "v0.10.0",
 			Crumbs:       []string{"jetbrains", "teamcity-cli", "gallery"},
 			Facts: []termbook.Fact{
-				{Value: "134", Label: "screens"},
-				{Value: "16", Label: "command groups"},
+				{Value: "147", Label: "screens"},
+				{Value: "17", Label: "command groups"},
 			},
 			Notes: termbook.Notes{
 				Title: "Reading this gallery",
@@ -89,6 +94,9 @@ func TestGenerateGallery(t *testing.T) {
 	book.CategoryWithBlurb("Pipelines", "pipelines",
 		"YAML pipeline lifecycle: validate, push, pull.",
 		pipelineScreens(t, ts, yamlFile.Name())...)
+	book.CategoryWithBlurb("Link", "link",
+		"Bind this repository to a TeamCity project via teamcity.toml.",
+		linkScreens()...)
 	book.CategoryWithBlurb("Auth", "auth",
 		"Login, logout, multi-server status.",
 		authScreens(t, ts)...)

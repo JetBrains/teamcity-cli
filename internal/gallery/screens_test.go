@@ -10,6 +10,7 @@ import (
 
 	"github.com/tiulpin/termbook"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
@@ -100,6 +101,8 @@ func helpScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 		h("help-project-token", "project token", "Secure token subcommands", "project token", "project", "token", "--help"),
 		h("help-project-param", "project param", "Project parameter subcommands", "project param", "project", "param", "--help"),
 		h("help-job-param", "job param", "Job parameter subcommands", "job param", "job", "param", "--help"),
+		h("help-link", "link", "Bind this repository to a TeamCity project", "link", "link", "--help"),
+		h("help-project-connection-create", "project connection create", "Create-connection subcommands (GitHub App, Docker)", "project connection create", "project", "connection", "create", "--help"),
 	}
 }
 func runScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
@@ -265,6 +268,8 @@ func projectScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity project view MyApp", capture(t, ts, "project", "view", "MyApp")),
 		termbook.Scr("project-tree", "project tree", "Full hierarchy with jobs and pipelines",
 			"teamcity project tree", capture(t, ts, "project", "tree")),
+		termbook.Scr("project-create", "project create", "Create a new project",
+			"teamcity project create MyApp --parent _Root", capture(t, ts, "project", "create", "MyApp", "--parent", "_Root")),
 		termbook.Scr("project-settings", "project settings status", "Versioned settings sync status",
 			"teamcity project settings status MyApp", capture(t, ts, "project", "settings", "status", "MyApp")),
 		termbook.Manual("project-settings-validate", "project settings validate", "Validate local DSL settings", "teamcity project settings validate .teamcity", func(w io.Writer) {
@@ -298,6 +303,26 @@ func projectScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity project ssh delete deploy-key --project MyApp", capture(t, ts, "project", "ssh", "delete", "deploy-key", "--project", "MyApp")),
 		termbook.Scr("project-connection-list", "project connection list", "List project connections",
 			"teamcity project connection list --project MyApp", capture(t, ts, "project", "connection", "list", "--project", "MyApp")),
+		termbook.Manual("project-connection-create-github-app", "project connection create github-app", "Manifest flow: huh prompts echo, browser registers the App, post-create authorize prompt", "teamcity project connection create github-app -p Backend --owner my-org", func(w io.Writer) {
+			p := &output.Printer{Out: w, ErrOut: w}
+			fmt.Fprintf(w, "Connection name: %s\n", output.Cyan("GitHub App"))
+			p.Info("Opening browser to register a GitHub App for %s...", "my-org")
+			fmt.Fprintf(w, "  %s Click %q on GitHub\n", output.Yellow("→"), "Create GitHub App for my-org")
+			fmt.Fprintln(w)
+			p.Success("Created connection %q (%s) in project %s", "GitHub App", "PROJECT_EXT_42", "Backend")
+			p.Info("Opening browser to authorize connection %s as your TeamCity user...", "PROJECT_EXT_42")
+			p.Tip("Complete the flow in your browser. The tab closes on success; you can return here then.")
+			fmt.Fprintln(w)
+			fmt.Fprintln(w, "Next steps:")
+			fmt.Fprintf(w, "  1. Install on a repo: %s\n", output.Cyan("https://github.com/apps/tc-backend/installations/new"))
+			fmt.Fprintf(w, "  2. Create a VCS root: %s\n", output.Cyan("teamcity project vcs create -p Backend --auth token --connection-id PROJECT_EXT_42 --url ..."))
+		}),
+		termbook.Scr("project-connection-create-docker", "project connection create docker", "Register Docker registry credentials",
+			"echo $DOCKER_TOKEN | teamcity project connection create docker -p Backend --name GHCR --url https://ghcr.io --username my-org --password t0p-secret",
+			capture(t, ts, "project", "connection", "create", "docker", "-p", "Backend", "--name", "GHCR", "--url", "https://ghcr.io", "--username", "my-org", "--password", "t0p-secret")),
+		termbook.Scr("project-connection-delete", "project connection delete", "Delete a project connection",
+			"teamcity project connection delete --force PROJECT_EXT_42 -p Backend",
+			capture(t, ts, "project", "connection", "delete", "--force", "PROJECT_EXT_42", "-p", "Backend")),
 		termbook.Scr("project-cloud-profile", "project cloud profile list", "List cloud profiles",
 			"teamcity project cloud profile list", capture(t, ts, "project", "cloud", "profile", "list")),
 		termbook.Scr("project-cloud-profile-view", "project cloud profile view", "View cloud profile details",
@@ -340,6 +365,15 @@ func pipelineScreens(t *testing.T, ts *cmdtest.TestServer, yamlPath string) []te
 		termbook.Scr("pipeline-validate", "pipeline validate", "Validate pipeline YAML",
 			"teamcity pipeline validate .teamcity.yml",
 			strings.ReplaceAll(capture(t, ts, "pipeline", "validate", yamlPath), yamlPath, ".teamcity.yml")),
+		termbook.Manual("pipeline-schema", "pipeline schema", "Print the per-instance pipeline JSON schema (24h cache, --refresh to bypass) — typically piped to jq or saved", "teamcity pipeline schema | jq '.properties | keys'", func(w io.Writer) {
+			fmt.Fprintln(w, `[`)
+			fmt.Fprintln(w, `  "version",`)
+			fmt.Fprintln(w, `  "jobs",`)
+			fmt.Fprintln(w, `  "parameters",`)
+			fmt.Fprintln(w, `  "secrets",`)
+			fmt.Fprintln(w, `  "triggers"`)
+			fmt.Fprintln(w, `]`)
+		}),
 		termbook.Scr("pipeline-delete", "pipeline delete", "Delete a pipeline",
 			"teamcity pipeline delete --yes MyApp_CI", capture(t, ts, "pipeline", "delete", "--yes", "MyApp_CI")),
 		termbook.Manual("pipeline-push", "pipeline push", "Upload YAML to a pipeline", "teamcity pipeline push MyApp_CI .teamcity.yml", func(w io.Writer) {
@@ -372,14 +406,37 @@ func authScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			fmt.Fprintf(w, "  %s\n", output.Faint("Server: TeamCity 2024.3 (build 185432)"))
 			fmt.Fprintf(w, "  %s CLI requires TeamCity 2024.7 or later\n", output.Yellow("!"))
 		}),
-		termbook.Manual("auth-login", "auth login", "Interactive authentication flow (browser-based PKCE)", "teamcity auth login", func(w io.Writer) {
-			fmt.Fprintln(w, "Secure browser login available on this server")
-			fmt.Fprintln(w, "Opening browser for authentication...")
+		termbook.Manual("auth-login", "auth login", "Browser-based PKCE login (terminal scrollback after the huh forms self-clear)", "teamcity auth login", func(w io.Writer) {
+			p := &output.Printer{Out: w, ErrOut: w}
+			p.Tip("%s", output.TipCancelAnytime)
+			fmt.Fprintln(w)
+			fmt.Fprintf(w, "Checking %s... %s\n", output.Cyan("https://tc.example.com"), output.Green("✓"))
+			p.Info("Opening browser to authenticate with %d permissions...", len(api.DefaultScopes()))
 			fmt.Fprintf(w, "  %s Approve access in TeamCity\n\n", output.Yellow("→"))
+			p.Progress("Validating... ")
 			fmt.Fprintln(w, output.Green("✓"))
-			fmt.Fprintf(w, "%s Logged in as %s\n", output.Green("✓"), output.Cyan("Viktor Tiulpin"))
-			fmt.Fprintf(w, "%s Token stored in system keyring\n", output.Green("✓"))
+			p.Success("Logged in to %s as %s", output.Cyan("https://tc.example.com"), output.Cyan("Viktor Tiulpin"))
+			p.Success("Token stored in system keyring")
 			fmt.Fprintf(w, "Token expires: %s\n", output.Yellow("Dec 31, 2026"))
+			fmt.Fprintln(w)
+			p.Tip("%s", output.TipEnableReadOnly())
+		}),
+		termbook.Manual("auth-login-scopes", "auth login (PKCE scope picker)", "huh.MultiSelect frame shown briefly during login — pre-checked defaults can be trimmed", "teamcity auth login", func(w io.Writer) {
+			all := api.DefaultScopes()
+			fmt.Fprintln(w, output.Bold("Select permissions to request"))
+			fmt.Fprintf(w, "%s\n", output.Faint(fmt.Sprintf("%d total · your server role limits the final permission set", len(all))))
+			focusedIdx := 0
+			for i, scope := range all[:7] {
+				cursor := "  "
+				if i == focusedIdx {
+					cursor = output.Yellow("→") + " "
+				}
+				desc := api.KnownPermissions[scope]
+				if desc == "" {
+					desc = scope
+				}
+				fmt.Fprintf(w, "%s%s %s %s\n", cursor, output.Green("✓"), desc, output.Faint("("+scope+")"))
+			}
 		}),
 		termbook.Scr("auth-logout", "auth logout", "Log out from a server",
 			"teamcity auth logout", capture(t, ts, "auth", "logout")),
@@ -393,6 +450,41 @@ func configScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity config get default_server", capture(t, ts, "config", "get", "default_server")),
 		termbook.Manual("config-set", "config set", "Set a config value", "teamcity config set default_server https://tc.example.com", func(w io.Writer) {
 			fmt.Fprintf(w, "%s Set default_server to %q\n", output.Green("✓"), "https://tc.example.com")
+		}),
+		termbook.Manual("config-set-picker", "config set (interactive picker)", "huh.Select frame for default_server, then echo + Success after submit", "teamcity config set default_server", func(w io.Writer) {
+			p := &output.Printer{Out: w, ErrOut: w}
+			fmt.Fprintln(w, output.Bold("Select default server"))
+			fmt.Fprintf(w, "%s https://tc.example.com (current)\n", output.Yellow("→"))
+			fmt.Fprintln(w, "  https://staging.tc.example.com")
+			fmt.Fprintln(w, "  https://nightly.tc.example.com")
+			fmt.Fprintln(w)
+			fmt.Fprintf(w, "Select default server: %s\n", output.Cyan("https://tc.example.com (current)"))
+			p.Success("Set default_server to %q", "https://tc.example.com")
+		}),
+	}
+}
+func linkScreens() []termbook.Screen {
+	return []termbook.Screen{
+		termbook.Manual("link", "teamcity link", "Bind a repo to a TeamCity project (writes teamcity.toml)", "teamcity link --project Acme_Backend --job Acme_Backend_Build", func(w io.Writer) {
+			p := &output.Printer{Out: w, ErrOut: w}
+			p.Success("Linked %s — %s", output.Cyan("https://tc.example.com"), "(top-level)")
+			p.Info("  Project: Acme_Backend")
+			p.Info("  Default job: Acme_Backend_Build")
+			p.Info("  Wrote: ./teamcity.toml")
+		}),
+		termbook.Manual("link-monorepo", "teamcity link (path scope)", "Path-scoped binding for sub-projects in a monorepo", "cd services/api && teamcity link --project Acme_API --job Acme_API_Build", func(w io.Writer) {
+			p := &output.Printer{Out: w, ErrOut: w}
+			p.Success("Linked %s — %s", output.Cyan("https://tc.example.com"), "services/api")
+			p.Info("  Project: Acme_API")
+			p.Info("  Default job: Acme_API_Build")
+			p.Info("  Wrote: ./teamcity.toml")
+		}),
+		termbook.Manual("link-multi-server", "teamcity link (second server)", "Add a second [[server]] entry to the same teamcity.toml", "teamcity link --server https://nightly.example --project Acme_Nightly --jobs Acme_Nightly_Release,Acme_Nightly_Eval", func(w io.Writer) {
+			p := &output.Printer{Out: w, ErrOut: w}
+			p.Success("Linked %s — %s", output.Cyan("https://nightly.example"), "(top-level)")
+			p.Info("  Project: Acme_Nightly")
+			p.Info("  Jobs: Acme_Nightly_Release, Acme_Nightly_Eval")
+			p.Info("  Wrote: ./teamcity.toml")
 		}),
 	}
 }

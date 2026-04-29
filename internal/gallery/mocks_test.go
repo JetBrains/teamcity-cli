@@ -475,12 +475,25 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 	ts.Handle("GET /app/rest/projects/id:", projectDetailHandler)
 	ts.Handle("GET /app/rest/projects/", projectDetailHandler)
 
-	ts.Handle("POST /app/rest/projects/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/secure/tokens") {
+	postProjects := func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/secure/tokens"):
 			cmdtest.Text(w, "credentialsJSON:abc123")
-			return
+		case strings.Contains(r.URL.Path, "/projectFeatures"):
+			cmdtest.JSON(w, api.ProjectFeature{
+				ID: "PROJECT_EXT_42", Type: "OAuthProvider",
+				Properties: &api.PropertyList{Property: []api.Property{
+					{Name: "displayName", Value: "GHCR"},
+				}},
+			})
+		default:
+			w.WriteHeader(http.StatusOK)
 		}
-		w.WriteHeader(http.StatusOK)
+	}
+	ts.Handle("POST /app/rest/projects/", postProjects)
+	ts.Handle("POST /app/rest/projects/id:", postProjects) // override cmdtest base so any project ID works for /projectFeatures captures
+	ts.Handle("DELETE /app/rest/projects/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	ts.Handle("GET /app/rest/vcs-roots", func(w http.ResponseWriter, r *http.Request) {

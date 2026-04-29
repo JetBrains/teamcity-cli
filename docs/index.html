@@ -562,14 +562,14 @@ body {
     <div class="brand">
       
       <div class="brand-name">teamcity cli</div>
-      <div class="brand-ver">v0.9.0</div>
+      <div class="brand-ver">v0.10.0</div>
       <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Toggle navigation">
         <span class="nav-toggle-icon" aria-hidden="true">☰</span>
         <span class="nav-toggle-label">menu</span>
       </button>
     </div>
 
-    <div class="sidebar-meta">134 screens · 2026-04-21 10:43</div>
+    <div class="sidebar-meta">146 screens · 2026-04-29 18:23</div>
 
     <div class="search">
       <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
@@ -758,7 +758,7 @@ body {
         
       </li>
       <li class="grp" data-grp="projects">
-        <div class="grp-title"><span>Projects</span><span class="count">30</span></div>
+        <div class="grp-title"><span>Projects</span><span class="count">34</span></div>
         <a href="#project-list" data-cmd="project-list" data-search="project-list project list list projects teamcity project list">
           <span class="dot">·</span><span>project list</span>
         </a>
@@ -767,6 +767,9 @@ body {
         </a>
         <a href="#project-tree" data-cmd="project-tree" data-search="project-tree project tree full hierarchy with jobs and pipelines teamcity project tree">
           <span class="dot">·</span><span>project tree</span>
+        </a>
+        <a href="#project-create" data-cmd="project-create" data-search="project-create project create create a new project teamcity project create myapp --parent _root">
+          <span class="dot">·</span><span>project create</span>
         </a>
         <a href="#project-settings" data-cmd="project-settings" data-search="project-settings project settings status versioned settings sync status teamcity project settings status myapp">
           <span class="dot">·</span><span>project settings status</span>
@@ -806,6 +809,15 @@ body {
         </a>
         <a href="#project-connection-list" data-cmd="project-connection-list" data-search="project-connection-list project connection list list project connections teamcity project connection list --project myapp">
           <span class="dot">·</span><span>project connection list</span>
+        </a>
+        <a href="#project-connection-create-github-app" data-cmd="project-connection-create-github-app" data-search="project-connection-create-github-app project connection create github-app manifest flow: huh prompts echo, browser registers the app, post-create authorize prompt teamcity project connection create github-app -p backend --owner my-org">
+          <span class="dot">·</span><span>project connection create github-app</span>
+        </a>
+        <a href="#project-connection-create-docker" data-cmd="project-connection-create-docker" data-search="project-connection-create-docker project connection create docker register docker registry credentials echo $docker_token | teamcity project connection create docker -p backend --name ghcr --url https://ghcr.io --username my-org --password t0p-secret">
+          <span class="dot">·</span><span>project connection create docker</span>
+        </a>
+        <a href="#project-connection-delete" data-cmd="project-connection-delete" data-search="project-connection-delete project connection delete delete a project connection teamcity project connection delete --force project_ext_42 -p backend">
+          <span class="dot">·</span><span>project connection delete</span>
         </a>
         <a href="#project-cloud-profile" data-cmd="project-cloud-profile" data-search="project-cloud-profile project cloud profile list list cloud profiles teamcity project cloud profile list">
           <span class="dot">·</span><span>project cloud profile list</span>
@@ -852,7 +864,7 @@ body {
         
       </li>
       <li class="grp" data-grp="pipelines">
-        <div class="grp-title"><span>Pipelines</span><span class="count">7</span></div>
+        <div class="grp-title"><span>Pipelines</span><span class="count">8</span></div>
         <a href="#pipeline-list" data-cmd="pipeline-list" data-search="pipeline-list pipeline list list yaml pipelines teamcity pipeline list">
           <span class="dot">·</span><span>pipeline list</span>
         </a>
@@ -865,6 +877,9 @@ body {
         <a href="#pipeline-validate" data-cmd="pipeline-validate" data-search="pipeline-validate pipeline validate validate pipeline yaml teamcity pipeline validate .teamcity.yml">
           <span class="dot">·</span><span>pipeline validate</span>
         </a>
+        <a href="#pipeline-schema" data-cmd="pipeline-schema" data-search="pipeline-schema pipeline schema print the per-instance pipeline json schema (24h cache, --refresh to bypass) — typically piped to jq or saved teamcity pipeline schema | jq &#39;.properties | keys&#39;">
+          <span class="dot">·</span><span>pipeline schema</span>
+        </a>
         <a href="#pipeline-delete" data-cmd="pipeline-delete" data-search="pipeline-delete pipeline delete delete a pipeline teamcity pipeline delete --yes myapp_ci">
           <span class="dot">·</span><span>pipeline delete</span>
         </a>
@@ -876,16 +891,32 @@ body {
         </a>
         
       </li>
+      <li class="grp" data-grp="link">
+        <div class="grp-title"><span>Link</span><span class="count">3</span></div>
+        <a href="#link" data-cmd="link" data-search="link teamcity link bind a repo to a teamcity project (writes teamcity.toml) teamcity link --project acme_backend --job acme_backend_build">
+          <span class="dot">·</span><span>teamcity link</span>
+        </a>
+        <a href="#link-monorepo" data-cmd="link-monorepo" data-search="link-monorepo teamcity link (path scope) path-scoped binding for sub-projects in a monorepo cd services/api &amp;&amp; teamcity link --project acme_api --job acme_api_build">
+          <span class="dot">·</span><span>teamcity link (path scope)</span>
+        </a>
+        <a href="#link-multi-server" data-cmd="link-multi-server" data-search="link-multi-server teamcity link (second server) add a second [[server]] entry to the same teamcity.toml teamcity link --server https://nightly.example --project acme_nightly --jobs acme_nightly_release,acme_nightly_eval">
+          <span class="dot">·</span><span>teamcity link (second server)</span>
+        </a>
+        
+      </li>
       <li class="grp" data-grp="auth">
-        <div class="grp-title"><span>Auth</span><span class="count">4</span></div>
+        <div class="grp-title"><span>Auth</span><span class="count">5</span></div>
         <a href="#auth-status" data-cmd="auth-status" data-search="auth-status auth status authentication status teamcity auth status">
           <span class="dot">·</span><span>auth status</span>
         </a>
         <a href="#auth-status-multi" data-cmd="auth-status-multi" data-search="auth-status-multi auth status (multi-server) multi-server authentication status teamcity auth status">
           <span class="dot">·</span><span>auth status (multi-server)</span>
         </a>
-        <a href="#auth-login" data-cmd="auth-login" data-search="auth-login auth login interactive authentication flow (browser-based pkce) teamcity auth login">
+        <a href="#auth-login" data-cmd="auth-login" data-search="auth-login auth login browser-based pkce login (terminal scrollback after the huh forms self-clear) teamcity auth login">
           <span class="dot">·</span><span>auth login</span>
+        </a>
+        <a href="#auth-login-scopes" data-cmd="auth-login-scopes" data-search="auth-login-scopes auth login (pkce scope picker) huh.multiselect frame shown briefly during login — pre-checked defaults can be trimmed teamcity auth login">
+          <span class="dot">·</span><span>auth login (PKCE scope picker)</span>
         </a>
         <a href="#auth-logout" data-cmd="auth-logout" data-search="auth-logout auth logout log out from a server teamcity auth logout">
           <span class="dot">·</span><span>auth logout</span>
@@ -893,7 +924,7 @@ body {
         
       </li>
       <li class="grp" data-grp="config">
-        <div class="grp-title"><span>Config</span><span class="count">3</span></div>
+        <div class="grp-title"><span>Config</span><span class="count">4</span></div>
         <a href="#config-list" data-cmd="config-list" data-search="config-list config list show full cli configuration teamcity config list">
           <span class="dot">·</span><span>config list</span>
         </a>
@@ -902,6 +933,9 @@ body {
         </a>
         <a href="#config-set" data-cmd="config-set" data-search="config-set config set set a config value teamcity config set default_server https://tc.example.com">
           <span class="dot">·</span><span>config set</span>
+        </a>
+        <a href="#config-set-picker" data-cmd="config-set-picker" data-search="config-set-picker config set (interactive picker) huh.select frame for default_server, then echo &#43; success after submit teamcity config set default_server">
+          <span class="dot">·</span><span>config set (interactive picker)</span>
         </a>
         
       </li>
@@ -971,7 +1005,7 @@ body {
         
       </li>
       <li class="grp" data-grp="help">
-        <div class="grp-title"><span>Help Screens</span><span class="count">23</span></div>
+        <div class="grp-title"><span>Help Screens</span><span class="count">25</span></div>
         <a href="#help-root" data-cmd="help-root" data-search="help-root teamcity root command — shows logo and common commands teamcity  --help">
           <span class="dot">·</span><span>teamcity</span>
         </a>
@@ -1041,6 +1075,12 @@ body {
         <a href="#help-job-param" data-cmd="help-job-param" data-search="help-job-param job param job parameter subcommands teamcity job param --help">
           <span class="dot">·</span><span>job param</span>
         </a>
+        <a href="#help-link" data-cmd="help-link" data-search="help-link link bind this repository to a teamcity project teamcity link --help">
+          <span class="dot">·</span><span>link</span>
+        </a>
+        <a href="#help-project-connection-create" data-cmd="help-project-connection-create" data-search="help-project-connection-create project connection create create-connection subcommands (github app, docker) teamcity project connection create --help">
+          <span class="dot">·</span><span>project connection create</span>
+        </a>
         
       </li>
       
@@ -1048,8 +1088,8 @@ body {
 
     <div class="side-foot">
       <a href="https://github.com/jetbrains/teamcity-cli/" target="_blank" rel="noopener">↗ github</a><br>
-      134 screens · 16 groups<br>
-      generated 2026-04-21 10:43
+      146 screens · 17 groups<br>
+      generated 2026-04-29 18:23
     </div>
   </aside>
 
@@ -1071,7 +1111,7 @@ body {
         
       </div>
       <div class="fact">
-        <b>134</b> screens<br><b>16</b> command groups<br>
+        <b>147</b> screens<br><b>17</b> command groups<br>
       </div>
     </section>
 
@@ -2471,6 +2511,26 @@ Description: Main product monorepo
               </div>
             </div>
           </article>
+          <article class="entry" id="project-create" data-cmd="project-create" data-search="project-create project create create a new project teamcity project create myapp --parent _root">
+            <div class="entry-meta">
+              <div class="id">project-create</div>
+              <h4>project create</h4>
+              <p>Create a new project</p>
+              <div class="tags"><span>projects</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity project create MyApp --parent _Root</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project create MyApp --parent _Root</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Created project &quot;MyApp&quot; (id: MyApp)
+  https:&#47;&#47;tc.example.com&#47;project.html?projectId=MyApp</pre>
+              </div>
+            </div>
+          </article>
           <article class="entry" id="project-settings" data-cmd="project-settings" data-search="project-settings project settings status versioned settings sync status teamcity project settings status myapp">
             <div class="entry-meta">
               <div class="id">project-settings</div>
@@ -2754,6 +2814,74 @@ PROJECT_EXT_2  Docker Registry  DockerRegistry
 PROJECT_EXT_3  AWS Connection   AWSConnection
 PROJECT_EXT_4  Slack Notifier   SlackConnection
 PROJECT_EXT_5  Jira Cloud       JiraCloud</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="project-connection-create-github-app" data-cmd="project-connection-create-github-app" data-search="project-connection-create-github-app project connection create github-app manifest flow: huh prompts echo, browser registers the app, post-create authorize prompt teamcity project connection create github-app -p backend --owner my-org">
+            <div class="entry-meta">
+              <div class="id">project-connection-create-github-app</div>
+              <h4>project connection create github-app</h4>
+              <p>Manifest flow: huh prompts echo, browser registers the App, post-create authorize prompt</p>
+              <div class="tags"><span>projects</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity project connection create github-app -p Backend --owner my-org</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project connection create github-app -p Backend --owner my-org</span></div>
+                <pre class="term-body">Connection name: <span class="term-fg36">GitHub App</span>
+Opening browser to register a GitHub App for my-org...
+  <span class="term-fg33">→</span> Click &quot;Create GitHub App for my-org&quot; on GitHub
+&nbsp;
+<span class="term-fg32">✓</span> Created connection &quot;GitHub App&quot; (PROJECT_EXT_42) in project Backend
+Opening browser to authorize connection PROJECT_EXT_42 as your TeamCity user...
+<span class="term-fg33">Tip:</span> Complete the flow in your browser. The tab closes on success; you can return here then.
+&nbsp;
+Next steps:
+  1. Install on a repo: <span class="term-fg36">https:&#47;&#47;github.com&#47;apps&#47;tc-backend&#47;installations&#47;new</span>
+  2. Create a VCS root: <span class="term-fg36">teamcity project vcs create -p Backend --auth token --connection-id PROJECT_EXT_42 --url ...</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="project-connection-create-docker" data-cmd="project-connection-create-docker" data-search="project-connection-create-docker project connection create docker register docker registry credentials echo $docker_token | teamcity project connection create docker -p backend --name ghcr --url https://ghcr.io --username my-org --password t0p-secret">
+            <div class="entry-meta">
+              <div class="id">project-connection-create-docker</div>
+              <h4>project connection create docker</h4>
+              <p>Register Docker registry credentials</p>
+              <div class="tags"><span>projects</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">echo $DOCKER_TOKEN | teamcity project connection create docker -p Backend --name GHCR --url https://ghcr.io --username my-org --password t0p-secret</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">echo $DOCKER_TOKEN | teamcity project connection create docker -p Backend --name GHCR --url https://ghcr.io --username my-org --password t0p-secret</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Created connection &quot;GHCR&quot; (PROJECT_EXT_42) in project Backend
+<span class="term-fg33">Tip:</span> Use a service account &#47; robot user, not a personal password</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="project-connection-delete" data-cmd="project-connection-delete" data-search="project-connection-delete project connection delete delete a project connection teamcity project connection delete --force project_ext_42 -p backend">
+            <div class="entry-meta">
+              <div class="id">project-connection-delete</div>
+              <h4>project connection delete</h4>
+              <p>Delete a project connection</p>
+              <div class="tags"><span>projects</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity project connection delete --force PROJECT_EXT_42 -p Backend</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project connection delete --force PROJECT_EXT_42 -p Backend</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Deleted connection PROJECT_EXT_42 from project Backend</pre>
               </div>
             </div>
           </article>
@@ -3155,6 +3283,31 @@ Head Job: MyApp_CI
               </div>
             </div>
           </article>
+          <article class="entry" id="pipeline-schema" data-cmd="pipeline-schema" data-search="pipeline-schema pipeline schema print the per-instance pipeline json schema (24h cache, --refresh to bypass) — typically piped to jq or saved teamcity pipeline schema | jq &#39;.properties | keys&#39;">
+            <div class="entry-meta">
+              <div class="id">pipeline-schema</div>
+              <h4>pipeline schema</h4>
+              <p>Print the per-instance pipeline JSON schema (24h cache, --refresh to bypass) — typically piped to jq or saved</p>
+              <div class="tags"><span>pipelines</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity pipeline schema | jq &#39;.properties | keys&#39;</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity pipeline schema | jq &#39;.properties | keys&#39;</span></div>
+                <pre class="term-body">[
+  &quot;version&quot;,
+  &quot;jobs&quot;,
+  &quot;parameters&quot;,
+  &quot;secrets&quot;,
+  &quot;triggers&quot;
+]</pre>
+              </div>
+            </div>
+          </article>
           <article class="entry" id="pipeline-delete" data-cmd="pipeline-delete" data-search="pipeline-delete pipeline delete delete a pipeline teamcity pipeline delete --yes myapp_ci">
             <div class="entry-meta">
               <div class="id">pipeline-delete</div>
@@ -3215,9 +3368,85 @@ Head Job: MyApp_CI
           
         </div>
       </section>
-      <section class="section" id="section-auth" data-grp="auth">
+      <section class="section" id="section-link" data-grp="link">
         <div class="section-head">
           <div class="section-num">§ 09</div>
+          <div class="section-name">Link</div>
+          <div class="section-blurb">Bind this repository to a TeamCity project via teamcity.toml.</div>
+        </div>
+        <div class="entries">
+          <article class="entry" id="link" data-cmd="link" data-search="link teamcity link bind a repo to a teamcity project (writes teamcity.toml) teamcity link --project acme_backend --job acme_backend_build">
+            <div class="entry-meta">
+              <div class="id">link</div>
+              <h4>teamcity link</h4>
+              <p>Bind a repo to a TeamCity project (writes teamcity.toml)</p>
+              <div class="tags"><span>link</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity link --project Acme_Backend --job Acme_Backend_Build</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity link --project Acme_Backend --job Acme_Backend_Build</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Linked <span class="term-fg36">https:&#47;&#47;tc.example.com</span> — (top-level)
+  Project: Acme_Backend
+  Default job: Acme_Backend_Build
+  Wrote: .&#47;teamcity.toml</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="link-monorepo" data-cmd="link-monorepo" data-search="link-monorepo teamcity link (path scope) path-scoped binding for sub-projects in a monorepo cd services/api &amp;&amp; teamcity link --project acme_api --job acme_api_build">
+            <div class="entry-meta">
+              <div class="id">link-monorepo</div>
+              <h4>teamcity link (path scope)</h4>
+              <p>Path-scoped binding for sub-projects in a monorepo</p>
+              <div class="tags"><span>link</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">cd services/api &amp;&amp; teamcity link --project Acme_API --job Acme_API_Build</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">cd services/api &amp;&amp; teamcity link --project Acme_API --job Acme_API_Build</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Linked <span class="term-fg36">https:&#47;&#47;tc.example.com</span> — services&#47;api
+  Project: Acme_API
+  Default job: Acme_API_Build
+  Wrote: .&#47;teamcity.toml</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="link-multi-server" data-cmd="link-multi-server" data-search="link-multi-server teamcity link (second server) add a second [[server]] entry to the same teamcity.toml teamcity link --server https://nightly.example --project acme_nightly --jobs acme_nightly_release,acme_nightly_eval">
+            <div class="entry-meta">
+              <div class="id">link-multi-server</div>
+              <h4>teamcity link (second server)</h4>
+              <p>Add a second [[server]] entry to the same teamcity.toml</p>
+              <div class="tags"><span>link</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity link --server https://nightly.example --project Acme_Nightly --jobs Acme_Nightly_Release,Acme_Nightly_Eval</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity link --server https://nightly.example --project Acme_Nightly --jobs Acme_Nightly_Release,Acme_Nightly_Eval</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Linked <span class="term-fg36">https:&#47;&#47;nightly.example</span> — (top-level)
+  Project: Acme_Nightly
+  Jobs: Acme_Nightly_Release, Acme_Nightly_Eval
+  Wrote: .&#47;teamcity.toml</pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-auth" data-grp="auth">
+        <div class="section-head">
+          <div class="section-num">§ 10</div>
           <div class="section-name">Auth</div>
           <div class="section-blurb">Login, logout, multi-server status.</div>
         </div>
@@ -3279,11 +3508,11 @@ Head Job: MyApp_CI
               </div>
             </div>
           </article>
-          <article class="entry" id="auth-login" data-cmd="auth-login" data-search="auth-login auth login interactive authentication flow (browser-based pkce) teamcity auth login">
+          <article class="entry" id="auth-login" data-cmd="auth-login" data-search="auth-login auth login browser-based pkce login (terminal scrollback after the huh forms self-clear) teamcity auth login">
             <div class="entry-meta">
               <div class="id">auth-login</div>
               <h4>auth login</h4>
-              <p>Interactive authentication flow (browser-based PKCE)</p>
+              <p>Browser-based PKCE login (terminal scrollback after the huh forms self-clear)</p>
               <div class="tags"><span>auth</span></div>
             </div>
             <div class="entry-term">
@@ -3294,14 +3523,45 @@ Head Job: MyApp_CI
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity auth login</span></div>
-                <pre class="term-body">Secure browser login available on this server
-Opening browser for authentication...
+                <pre class="term-body"><span class="term-fg33">Tip:</span> Press Ctrl+C at any time to cancel
+&nbsp;
+Checking <span class="term-fg36">https:&#47;&#47;tc.example.com</span>... <span class="term-fg32">✓</span>
+Opening browser to authenticate with 19 permissions...
   <span class="term-fg33">→</span> Approve access in TeamCity
 &nbsp;
-<span class="term-fg32">✓</span>
-<span class="term-fg32">✓</span> Logged in as <span class="term-fg36">Viktor Tiulpin</span>
+Validating... <span class="term-fg32">✓</span>
+<span class="term-fg32">✓</span> Logged in to <span class="term-fg36">https:&#47;&#47;tc.example.com</span> as <span class="term-fg36">Viktor Tiulpin</span>
 <span class="term-fg32">✓</span> Token stored in system keyring
-Token expires: <span class="term-fg33">Dec 31, 2026</span></pre>
+Token expires: <span class="term-fg33">Dec 31, 2026</span>
+&nbsp;
+<span class="term-fg33">Tip:</span> To enable read-only mode, set <span class="term-fg36">TEAMCITY_RO=1</span> or run <span class="term-fg36">teamcity config set ro true</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="auth-login-scopes" data-cmd="auth-login-scopes" data-search="auth-login-scopes auth login (pkce scope picker) huh.multiselect frame shown briefly during login — pre-checked defaults can be trimmed teamcity auth login">
+            <div class="entry-meta">
+              <div class="id">auth-login-scopes</div>
+              <h4>auth login (PKCE scope picker)</h4>
+              <p>huh.MultiSelect frame shown briefly during login — pre-checked defaults can be trimmed</p>
+              <div class="tags"><span>auth</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity auth login</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity auth login</span></div>
+                <pre class="term-body"><span class="term-fg1">Select permissions to request</span>
+<span class="term-fg2">19 total · your server role limits the final permission set</span>
+<span class="term-fg33">→</span> <span class="term-fg32">✓</span> View project and all parent projects <span class="term-fg2">(VIEW_PROJECT)</span>
+  <span class="term-fg32">✓</span> View build configuration settings <span class="term-fg2">(VIEW_BUILD_CONFIGURATION_SETTINGS)</span>
+  <span class="term-fg32">✓</span> View agent details <span class="term-fg2">(VIEW_AGENT_DETAILS)</span>
+  <span class="term-fg32">✓</span> Run build <span class="term-fg2">(RUN_BUILD)</span>
+  <span class="term-fg32">✓</span> Stop build &#47; remove from queue <span class="term-fg2">(CANCEL_BUILD)</span>
+  <span class="term-fg32">✓</span> Tag build <span class="term-fg2">(TAG_BUILD)</span>
+  <span class="term-fg32">✓</span> Comment build <span class="term-fg2">(COMMENT_BUILD)</span></pre>
               </div>
             </div>
           </article>
@@ -3329,7 +3589,7 @@ Token expires: <span class="term-fg33">Dec 31, 2026</span></pre>
       </section>
       <section class="section" id="section-config" data-grp="config">
         <div class="section-head">
-          <div class="section-num">§ 10</div>
+          <div class="section-num">§ 11</div>
           <div class="section-name">Config</div>
           <div class="section-blurb">CLI configuration values.</div>
         </div>
@@ -3349,29 +3609,9 @@ Token expires: <span class="term-fg33">Dec 31, 2026</span></pre>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity config list</span></div>
-                <pre class="term-body"><span class="term-fg2">Config:</span> ~&#47;.config&#47;tc&#47;config.yml
+                <pre class="term-body"><span class="term-fg2">Config:</span> &#47;var&#47;folders&#47;4y&#47;7q13x9990bv9hf94lw6g4ptm0000gn&#47;T&#47;TestGenerateGallery504013534&#47;001&#47;tc&#47;config.yml
 &nbsp;
-default_server=https:&#47;&#47;tc.example.com
-&nbsp;
-https:&#47;&#47;tc.example.com<span class="term-fg2"> (default)</span>
-  guest=true
-  ro=false
-&nbsp;
-https:&#47;&#47;staging.tc.example.com
-  guest=false
-  ro=false
-  token_expiry=2026-05-17T14:39:53.398Z
-&nbsp;
-https:&#47;&#47;ai.tc.example.com
-  guest=false
-  ro=false
-&nbsp;
-https:&#47;&#47;nightly.tc.example.com
-  guest=false
-  ro=false
-  token_expiry=2026-05-08T10:59:42.408Z
-&nbsp;
-<span class="term-fg2">Aliases:</span> 1 configured <span class="term-fg2">(run &#39;teamcity alias list&#39; to view)</span>
+default_server=
 &nbsp;
 <span class="term-fg2">Environment overrides:</span>
   <span class="term-fg33">!</span> TEAMCITY_TOKEN=****
@@ -3394,7 +3634,7 @@ https:&#47;&#47;nightly.tc.example.com
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity config get default_server</span></div>
-                <pre class="term-body">https:&#47;&#47;tc.example.com</pre>
+                <pre class="term-body"></pre>
               </div>
             </div>
           </article>
@@ -3417,12 +3657,37 @@ https:&#47;&#47;nightly.tc.example.com
               </div>
             </div>
           </article>
+          <article class="entry" id="config-set-picker" data-cmd="config-set-picker" data-search="config-set-picker config set (interactive picker) huh.select frame for default_server, then echo &#43; success after submit teamcity config set default_server">
+            <div class="entry-meta">
+              <div class="id">config-set-picker</div>
+              <h4>config set (interactive picker)</h4>
+              <p>huh.Select frame for default_server, then echo &#43; Success after submit</p>
+              <div class="tags"><span>config</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity config set default_server</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity config set default_server</span></div>
+                <pre class="term-body"><span class="term-fg1">Select default server</span>
+<span class="term-fg33">→</span> https:&#47;&#47;tc.example.com (current)
+  https:&#47;&#47;staging.tc.example.com
+  https:&#47;&#47;nightly.tc.example.com
+&nbsp;
+Select default server: <span class="term-fg36">https:&#47;&#47;tc.example.com (current)</span>
+<span class="term-fg32">✓</span> Set default_server to &quot;https:&#47;&#47;tc.example.com&quot;</pre>
+              </div>
+            </div>
+          </article>
           
         </div>
       </section>
       <section class="section" id="section-aliases" data-grp="aliases">
         <div class="section-head">
-          <div class="section-num">§ 11</div>
+          <div class="section-num">§ 12</div>
           <div class="section-name">Aliases</div>
           <div class="section-blurb">Command shortcuts.</div>
         </div>
@@ -3444,8 +3709,7 @@ https:&#47;&#47;nightly.tc.example.com
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity alias list</span></div>
                 <pre class="term-body">NAME       EXPANSION  TYPE
 build      run        built-in
-buildtype  job        built-in
-testing    run        expansion</pre>
+buildtype  job        built-in</pre>
               </div>
             </div>
           </article>
@@ -3492,7 +3756,7 @@ testing    run        expansion</pre>
       </section>
       <section class="section" id="section-skills" data-grp="skills">
         <div class="section-head">
-          <div class="section-num">§ 12</div>
+          <div class="section-num">§ 13</div>
           <div class="section-name">Skills</div>
           <div class="section-blurb">AI coding agent skills: install, update, remove.</div>
         </div>
@@ -3513,7 +3777,7 @@ testing    run        expansion</pre>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill list</span></div>
                 <pre class="term-body">Name          Version  Description
-teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user provides a TeamCity build URL. Use `teamcity` CLI for builds, logs, jobs, queues, agents, and pipelines.  (default)</pre>
+teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user provides a TeamCity build URL — drives the `teamcity` CLI for builds, logs, jobs, queues, agents, pools, projects, and pipelines.  (default)</pre>
               </div>
             </div>
           </article>
@@ -3532,15 +3796,14 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill install teamcity-cli</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Installed teamcity-cli for warp (0.9.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for claude-code (0.9.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for codex (0.9.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for opencode (0.9.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for cursor (0.9.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for droid (0.9.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for antigravity (0.9.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for gemini-cli (0.9.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for junie (0.9.1)</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Installed teamcity-cli for warp (0.10.1)
+<span class="term-fg32">✓</span> Installed teamcity-cli for claude-code (0.10.1)
+<span class="term-fg32">✓</span> Installed teamcity-cli for codex (0.10.1)
+<span class="term-fg32">✓</span> Installed teamcity-cli for cursor (0.10.1)
+<span class="term-fg32">✓</span> Installed teamcity-cli for droid (0.10.1)
+<span class="term-fg32">✓</span> Installed teamcity-cli for antigravity (0.10.1)
+<span class="term-fg32">✓</span> Installed teamcity-cli for gemini-cli (0.10.1)
+<span class="term-fg32">✓</span> Installed teamcity-cli for junie (0.10.1)</pre>
               </div>
             </div>
           </article>
@@ -3559,7 +3822,7 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill update</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (0.9.1)</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (0.10.1)</pre>
               </div>
             </div>
           </article>
@@ -3581,7 +3844,6 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
                 <pre class="term-body"><span class="term-fg32">✓</span> Removed teamcity-cli from warp
 <span class="term-fg32">✓</span> Removed teamcity-cli from claude-code
 <span class="term-fg32">✓</span> Removed teamcity-cli from codex
-<span class="term-fg32">✓</span> Removed teamcity-cli from opencode
 <span class="term-fg32">✓</span> Removed teamcity-cli from cursor
 <span class="term-fg32">✓</span> Removed teamcity-cli from droid
 <span class="term-fg32">✓</span> Removed teamcity-cli from antigravity
@@ -3595,7 +3857,7 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
       </section>
       <section class="section" id="section-api" data-grp="api">
         <div class="section-head">
-          <div class="section-num">§ 13</div>
+          <div class="section-num">§ 14</div>
           <div class="section-name">API</div>
           <div class="section-blurb">Raw authenticated REST calls.</div>
         </div>
@@ -3630,7 +3892,7 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
       </section>
       <section class="section" id="section-update" data-grp="update">
         <div class="section-head">
-          <div class="section-num">§ 14</div>
+          <div class="section-num">§ 15</div>
           <div class="section-name">Update</div>
           <div class="section-blurb">Check for new CLI releases.</div>
         </div>
@@ -3651,8 +3913,8 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity update</span></div>
                 <pre class="term-body">Checking for updates...
-<span class="term-fg2">vdev</span> → <span class="term-fg32">v0.9.1</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
-<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v0.9.1</span></pre>
+<span class="term-fg2">vdev</span> → <span class="term-fg32">v0.10.0</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
+<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v0.10.0</span></pre>
               </div>
             </div>
           </article>
@@ -3661,7 +3923,7 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
       </section>
       <section class="section" id="section-errors" data-grp="errors">
         <div class="section-head">
-          <div class="section-num">§ 15</div>
+          <div class="section-num">§ 16</div>
           <div class="section-name">Errors</div>
           <div class="section-blurb">Error message shapes and hints.</div>
         </div>
@@ -3801,7 +4063,7 @@ teamcity-cli  0.9.1    Use when working with TeamCity CI&#47;CD or when user pro
       </section>
       <section class="section" id="section-help" data-grp="help">
         <div class="section-head">
-          <div class="section-num">§ 16</div>
+          <div class="section-num">§ 17</div>
           <div class="section-name">Help Screens</div>
           <div class="section-blurb">Built-in --help output for every command group.</div>
         </div>
@@ -3851,6 +4113,7 @@ CONFIGURATION
   api         Make an authenticated API request
   auth        Authenticate with TeamCity
   config      Manage CLI configuration
+  link        Bind this repository to a TeamCity project
   skill       Manage AI coding agent skills
   update      Check for CLI updates
 &nbsp;
@@ -4235,6 +4498,7 @@ Available Commands:
   list        List pipelines
   pull        Download pipeline YAML
   push        Upload pipeline YAML
+  schema      Print the pipeline JSON schema for the current server
   validate    Validate pipeline YAML against server schema
   view        View pipeline details
 &nbsp;
@@ -4600,6 +4864,9 @@ Usage:
   teamcity project connection [command]
 &nbsp;
 Available Commands:
+  authorize   Open a browser to authorize the current TeamCity user against a connection
+  create      Create a project connection
+  delete      Delete a project connection
   list        List project connections
 &nbsp;
 Flags:
@@ -4847,6 +5114,9 @@ Parameters are typed key-value pairs attached to a project. They drive
 build behavior, can reference other parameters, and may be marked
 as password (secure) so their values never appear in logs.
 &nbsp;
+The &lt;project-id&gt; positional is optional when teamcity.toml binds this
+repo via &#39;teamcity link&#39; — the linked project is used automatically.
+&nbsp;
 See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-parameters.html
 &nbsp;
 Usage:
@@ -4894,6 +5164,9 @@ Parameters are typed key-value pairs attached to a job. They drive
 build behavior, can reference other parameters, and may be marked
 as password (secure) so their values never appear in logs.
 &nbsp;
+The &lt;job-id&gt; positional is optional when teamcity.toml binds this
+repo via &#39;teamcity link&#39; — the linked job is used automatically.
+&nbsp;
 See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-parameters.html
 &nbsp;
 Usage:
@@ -4920,6 +5193,105 @@ Use &quot;teamcity job param [command] --help&quot; for more information about a
               </div>
             </div>
           </article>
+          <article class="entry" id="help-link" data-cmd="help-link" data-search="help-link link bind this repository to a teamcity project teamcity link --help">
+            <div class="entry-meta">
+              <div class="id">help-link</div>
+              <h4>link</h4>
+              <p>Bind this repository to a TeamCity project</p>
+              <div class="tags"><span>help</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity link --help</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity link --help</span></div>
+                <pre class="term-body">Upsert a [[server]] entry in teamcity.toml binding this repo to a TeamCity
+instance. Per-path scopes (monorepo) are upserted under [server.paths.&quot;&lt;path&gt;&quot;].
+&nbsp;
+Resolution cascade (highest to lowest):
+  --flag → TEAMCITY_* env → matching [[server]] entry, deepest matching path scope
+&nbsp;
+Usage:
+  teamcity link [flags]
+&nbsp;
+Examples:
+  # Bind the repo (uses active server, top-level scope)
+  teamcity link --project Acme_Backend --job Acme_Backend_Build
+&nbsp;
+  # Add a second server&#39;s pipelines to the same teamcity.toml
+  teamcity link --server https:&#47;&#47;nightly.example --project Acme_Nightly \
+      --jobs Acme_Nightly_Release,Acme_Nightly_Eval
+&nbsp;
+  # Path-scoped: cwd relative to teamcity.toml&#39;s dir is the implicit scope
+  cd services&#47;api &amp;&amp; teamcity link --project Acme_API --job Acme_API_Build
+&nbsp;
+  # Inspect or remove the file directly:
+  cat teamcity.toml
+  rm  teamcity.toml
+&nbsp;
+Flags:
+  -h, --help             help for link
+  -j, --job string       Default job&#47;pipeline ID for this scope
+      --jobs strings     Additional job&#47;pipeline IDs (comma-separated or repeated)
+  -p, --project string   TeamCity project ID for this scope
+      --scope string     Path scope inside the server entry (default: cwd relative to teamcity.toml&#39;s dir; pass --scope= for top-level)
+      --server string    TeamCity server URL (default: active server)
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="help-project-connection-create" data-cmd="help-project-connection-create" data-search="help-project-connection-create project connection create create-connection subcommands (github app, docker) teamcity project connection create --help">
+            <div class="entry-meta">
+              <div class="id">help-project-connection-create</div>
+              <h4>project connection create</h4>
+              <p>Create-connection subcommands (GitHub App, Docker)</p>
+              <div class="tags"><span>help</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity project connection create --help</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project connection create --help</span></div>
+                <pre class="term-body">Create a connection to an external service (GitHub App, Docker registry, ...).
+&nbsp;
+Each provider has its own subcommand because property names differ.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-connections.html
+&nbsp;
+Usage:
+  teamcity project connection create [flags]
+  teamcity project connection create [command]
+&nbsp;
+Available Commands:
+  docker      Create a Docker registry connection
+  github-app  Create a GitHub App connection
+&nbsp;
+Flags:
+  -h, --help   help for create
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity project connection create [command] --help&quot; for more information about a command.</pre>
+              </div>
+            </div>
+          </article>
           
         </div>
       </section>
@@ -4928,7 +5300,7 @@ Use &quot;teamcity job param [command] --help&quot; for more information about a
 
     <footer class="foot">
       <div>teamcity cli · screen gallery</div>
-      <div>134 screens · 2026-04-21 10:43</div>
+      <div>146 screens · 2026-04-29 18:23</div>
     </footer>
     <div class="attrib">
 			<span class="jb-wordmark">JetBrains</span>
