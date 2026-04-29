@@ -8,7 +8,6 @@ exec teamcity project tree _Root --depth 1 --no-input
 stdout '_Root'
 ! stderr 'Error'
 
-# --no-jobs hides build configurations
 exec teamcity project tree _Root --no-jobs --no-input
 stdout '_Root'
 ! stderr 'Error'

@@ -15,6 +15,5 @@ stdout '"name"'
 stdout '"projectId"'
 ! stderr 'Error'
 
-# nonexistent
 ! exec teamcity job view nonexistent_job_id_12345 --no-input
 stderr '.'

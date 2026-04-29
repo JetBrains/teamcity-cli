@@ -15,7 +15,6 @@ stdout '"id"'
 stdout '"vcs-root"'
 ! stderr 'Error'
 
-# List --json=id,name field selection
 exec teamcity project vcs list --project CLI --json=id,name --no-input
 stdout '"id"'
 stdout '"name"'
@@ -45,6 +44,5 @@ stdout '"id"'
 stdout '"properties"'
 ! stderr 'Error'
 
-# View not found
 ! exec teamcity project vcs view NonExistentVcsRoot123456 --no-input
 stderr '.'

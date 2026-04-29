@@ -16,6 +16,5 @@ exec teamcity job tree $JOB_ID --only dependents --no-input
 exec teamcity job tree $JOB_ID --only dependencies --no-input
 ! stderr 'Error'
 
-# --only with invalid value
 ! exec teamcity job tree $JOB_ID --only bogus --no-input
 stderr '.'

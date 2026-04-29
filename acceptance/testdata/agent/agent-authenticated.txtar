@@ -36,7 +36,6 @@ exec teamcity agent jobs $AGENT_ID --no-input
 stdout '(Compatible|Incompatible|Jobs)'
 ! stderr 'Error'
 
-# agent list with connected agent
 exec teamcity agent list --limit 1 --json --no-input
 stdout '"id"'
 stdout '"name"'

@@ -17,7 +17,6 @@ exec teamcity run tests $BUILD_ID --failed --no-input
 exec teamcity run tests $BUILD_ID --limit 5 --no-input
 ! stderr 'Error'
 
-# --job (by job ID instead of build ID)
 exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 

@@ -8,6 +8,5 @@ stdout '--job'
 stdout '--jobs'
 ! stderr 'Error'
 
-# Refuses with no field flags
 ! exec teamcity link --server https://x.example --no-input
 stderr 'at least one of --project'

@@ -15,7 +15,6 @@ stdout '"id"'
 stdout '"state"'
 ! stderr 'Error'
 
-# --json=field,field selective output
 exec teamcity run list --limit 3 --json=id,state,webUrl --no-input
 stdout '"id"'
 stdout '"state"'

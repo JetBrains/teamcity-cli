@@ -16,6 +16,5 @@ stdout '"id"'
 stdout '"name"'
 ! stderr 'Error'
 
-# nonexistent pool
 ! exec teamcity pool view 999999999 --no-input
 stderr '.'

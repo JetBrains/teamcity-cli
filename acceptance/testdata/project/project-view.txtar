@@ -10,11 +10,9 @@ stdout '"id"'
 stdout '"name"'
 ! stderr 'Error'
 
-# nonexistent
 ! exec teamcity project view NonExistentProject12345 --no-input
 stderr '.'
 
-# discovered via API
 exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
 extract '"id":"([^"]+)"' PROJECT_ID
 

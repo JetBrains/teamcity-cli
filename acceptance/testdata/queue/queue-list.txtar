@@ -8,7 +8,6 @@ exec teamcity queue list --json --no-input
 stdout '"count"'
 ! stderr 'Error'
 
-# --json=f1,f2 field selection
 exec teamcity queue list --json=id,state --no-input
 stdout '"count"'
 ! stderr 'Error'

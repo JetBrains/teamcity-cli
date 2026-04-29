@@ -4,17 +4,14 @@
 exec teamcity api '/app/rest/builds?locator=buildType:Sandbox_Build,count:1,state:finished,status:SUCCESS&fields=build(id)' --raw --no-input
 extract '"id":(\d+)' BUILD_ID
 
-# Download with --path filter
 exec teamcity run download $BUILD_ID --path . -o $WORK/dl-path --no-input
 stdout '(downloaded|No artifacts)'
 ! stderr 'Error'
 
-# Download with --artifact glob pattern
 exec teamcity run download $BUILD_ID --artifact '*.txt' -o $WORK/dl-glob --no-input
 stdout '(downloaded|No artifacts)'
 ! stderr 'Error'
 
-# Download with nonexistent --artifact pattern
 exec teamcity run download $BUILD_ID --artifact 'nonexistent-pattern-xyz' -o $WORK/dl-none --no-input
 stdout '(No artifacts match|No artifacts found)'
 ! stderr 'Error'

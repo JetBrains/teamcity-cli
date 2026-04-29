@@ -15,7 +15,6 @@ stdout '.'
 exec teamcity run log $BUILD_ID --failed --no-input
 ! stderr 'Error'
 
-# --job (by job ID)
 exec teamcity run log --job Sandbox_Build --no-input
 stdout '.'
 ! stderr 'Error'

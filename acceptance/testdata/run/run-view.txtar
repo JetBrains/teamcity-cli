@@ -14,6 +14,5 @@ stdout '"status"'
 stdout '"state"'
 ! stderr 'Error'
 
-# nonexistent
 ! exec teamcity run view 999999999 --no-input
 stderr '.'

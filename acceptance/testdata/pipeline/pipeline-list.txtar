@@ -7,15 +7,12 @@ stdout 'PROJECT'
 stdout 'JOBS'
 ! stderr 'Error'
 
-# --json
 exec teamcity pipeline list --limit 2 --json --no-input
 stdout '"count"'
 ! stderr 'Error'
 
-# --plain
 exec teamcity pipeline list --plain --no-input
 ! stderr 'Error'
 
-# --plain --no-header
 exec teamcity pipeline list --plain --no-header --no-input
 ! stderr 'Error'

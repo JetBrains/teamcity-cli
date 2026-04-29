@@ -7,7 +7,6 @@ stdout 'NAME'
 stdout 'PROJECT'
 ! stderr 'Error'
 
-# --json
 exec teamcity job list --all --limit 2 --json --no-input
 stdout '"count"'
 ! stderr 'Error'
@@ -18,7 +17,6 @@ stdout '"name"'
 stdout '"projectId"'
 ! stderr 'Error'
 
-# --json=f1,f2 field selection
 exec teamcity job list --all --limit 1 --json=id,name,projectId --no-input
 stdout '"id"'
 stdout '"name"'

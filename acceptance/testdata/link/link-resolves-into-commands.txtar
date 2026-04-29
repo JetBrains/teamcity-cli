@@ -3,9 +3,10 @@
 
 [!has_token] skip 'requires authentication token to call project view'
 
-exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
-extract '"id":"([^"]+)"' PROJECT_ID
-exec teamcity api '/app/rest/buildTypes?locator=project:'$PROJECT_ID',count:1&fields=buildType(id)' --raw --no-input
+# Pick the first buildType and use its project — guarantees the project has at
+# least one job so 'run start --dry-run' below has something to resolve.
+exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id,projectId)' --raw --no-input
+extract '"projectId":"([^"]+)"' PROJECT_ID
 extract '"id":"([^"]+)"' JOB_ID
 
 exec teamcity link --project $PROJECT_ID --job $JOB_ID --no-input
