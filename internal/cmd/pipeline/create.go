@@ -7,6 +7,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +37,9 @@ func newPipelineCreateCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&opts.vcsRoot, "vcs-root", "", "VCS root ID (interactive selection if omitted)")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", ".teamcity.yml", "Path to pipeline YAML file")
 	_ = cmd.MarkFlagRequired("project")
+	_ = cmd.MarkFlagFilename("file", "yml", "yaml")
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }

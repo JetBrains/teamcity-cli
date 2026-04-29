@@ -9,6 +9,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/git"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -65,6 +66,8 @@ func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }
@@ -301,6 +304,9 @@ Tests the connection before creating unless --no-test is specified.`,
 	cmd.Flags().StringVar(&opts.passphrase, "passphrase", "", "SSH key passphrase")
 	cmd.Flags().StringVar(&opts.connectionID, "connection-id", "", "OAuth connection ID")
 	cmd.Flags().BoolVar(&opts.noTest, "no-test", false, "Skip connection test before creating")
+
+	_ = cmd.RegisterFlagCompletionFunc("auth", completion.VCSAuthMethods())
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -43,6 +44,8 @@ them alongside classic build configurations.`,
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().BoolVar(&opts.all, "all", false, "Include pipelines")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }
@@ -119,11 +122,12 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 func newJobViewCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &cmdutil.ViewOptions{}
 	cmd := &cobra.Command{
-		Use:     "view [job-id]",
-		Short:   "View job details",
-		Long:    "View details of a TeamCity build configuration. With no argument, uses the linked default job from teamcity.toml.",
-		Aliases: []string{"show"},
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "view [job-id]",
+		Short:             "View job details",
+		Long:              "View details of a TeamCity build configuration. With no argument, uses the linked default job from teamcity.toml.",
+		Aliases:           []string{"show"},
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completion.LinkedJobs(),
 		Example: `  teamcity job view Falcon_Build
   teamcity job view Falcon_Build --web
   teamcity job view              # uses linked default job (see 'teamcity link')`,

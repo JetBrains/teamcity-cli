@@ -10,6 +10,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
@@ -77,6 +78,13 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 
 	cmd.MarkFlagsMutuallyExclusive("json", "plain")
+
+	_ = cmd.RegisterFlagCompletionFunc("status", completion.RunStatuses())
+	_ = cmd.RegisterFlagCompletionFunc("branch", completion.GitBranches())
+	_ = cmd.RegisterFlagCompletionFunc("revision", completion.AtHead())
+	_ = cmd.RegisterFlagCompletionFunc("user", completion.AtMe())
+	_ = cmd.RegisterFlagCompletionFunc("job", completion.LinkedJobs())
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }

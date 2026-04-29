@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,9 @@ func newAuthLogoutCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&serverFlag, "server", "s", "", "Server URL to log out from")
+
+	_ = cmd.RegisterFlagCompletionFunc("server", completion.ConfiguredServers())
+
 	return cmd
 }
 

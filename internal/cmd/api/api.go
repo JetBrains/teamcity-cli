@@ -13,6 +13,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -82,6 +83,9 @@ See: https://www.jetbrains.com/help/teamcity/rest/teamcity-rest-api-documentatio
 	cmd.Flags().BoolVar(&opts.slurp, "slurp", false, "Combine paginated results into a JSON array (requires --paginate)")
 
 	cmd.MarkFlagsMutuallyExclusive("input", "field")
+
+	_ = cmd.RegisterFlagCompletionFunc("method", completion.HTTPMethods())
+	_ = cmd.MarkFlagFilename("input")
 
 	return cmd
 }

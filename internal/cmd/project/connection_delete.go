@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +33,8 @@ The id is the one shown in the first column of 'connection list'.`,
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
 	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation")
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }

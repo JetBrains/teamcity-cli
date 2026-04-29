@@ -27,6 +27,9 @@ func newPipelineValidateCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:   "validate [file]",
 		Short: "Validate pipeline YAML against server schema",
 		Args:  cobra.MaximumNArgs(1),
+		ValidArgsFunction: func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+			return []string{"yml", "yaml"}, cobra.ShellCompDirectiveFilterFileExt
+		},
 		Example: `  teamcity pipeline validate
   teamcity pipeline validate .teamcity.yml
   teamcity pipeline validate --schema custom-schema.json
@@ -42,6 +45,8 @@ func newPipelineValidateCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVar(&opts.schemaPath, "schema", "", "Path to a local JSON schema file")
 	cmd.Flags().BoolVar(&opts.refreshSchema, "refresh-schema", false, "Force re-fetch schema from server")
+
+	_ = cmd.MarkFlagFilename("schema", "json")
 
 	return cmd
 }

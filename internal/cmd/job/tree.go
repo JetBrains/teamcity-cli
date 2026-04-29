@@ -5,6 +5,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -40,9 +41,10 @@ func newJobTreeCmd(f *cmdutil.Factory) *cobra.Command {
 	var jsonOut bool
 
 	cmd := &cobra.Command{
-		Use:   "tree [job-id]",
-		Short: "Display snapshot dependency tree",
-		Long:  "Display the snapshot dependency tree for a build configuration. With no argument, uses the linked default job from teamcity.toml.",
+		Use:               "tree [job-id]",
+		Short:             "Display snapshot dependency tree",
+		ValidArgsFunction: completion.LinkedJobs(),
+		Long:              "Display the snapshot dependency tree for a build configuration. With no argument, uses the linked default job from teamcity.toml.",
 		Example: `  teamcity job tree MyProject_Build
   teamcity job tree                          # uses linked default job
   teamcity job tree Falcon_Deploy --depth 2
@@ -69,6 +71,8 @@ func newJobTreeCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().IntVarP(&depth, "depth", "d", 0, "Limit tree depth (0 = unlimited)")
 	cmd.Flags().StringVar(&only, "only", "", "Show only 'dependents' or 'dependencies'")
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "Output as JSON")
+
+	_ = cmd.RegisterFlagCompletionFunc("only", completion.JobTreeOnly())
 
 	return cmd
 }

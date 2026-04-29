@@ -5,6 +5,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -47,6 +48,10 @@ var JobParamAPI = ParamAPI{
 // NewCmd creates a param subcommand for a resource (project or job). resolveID supplies the
 // linked default when the user omits the resource-id positional.
 func NewCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver) *cobra.Command {
+	idComplete := completion.LinkedProjects()
+	if resource == "job" {
+		idComplete = completion.LinkedJobs()
+	}
 	cmd := &cobra.Command{
 		Use:   "param",
 		Short: fmt.Sprintf("Manage %s parameters", resource),
@@ -64,10 +69,10 @@ See: https://www.jetbrains.com/help/teamcity/configuring-build-parameters.html`,
 		RunE: cmdutil.SubcommandRequired,
 	}
 
-	cmd.AddCommand(newParamListCmd(f, resource, paramAPI, resolveID))
-	cmd.AddCommand(newParamGetCmd(f, resource, paramAPI, resolveID))
-	cmd.AddCommand(newParamSetCmd(f, resource, paramAPI, resolveID))
-	cmd.AddCommand(newParamDeleteCmd(f, resource, paramAPI, resolveID))
+	cmd.AddCommand(newParamListCmd(f, resource, paramAPI, resolveID, idComplete))
+	cmd.AddCommand(newParamGetCmd(f, resource, paramAPI, resolveID, idComplete))
+	cmd.AddCommand(newParamSetCmd(f, resource, paramAPI, resolveID, idComplete))
+	cmd.AddCommand(newParamDeleteCmd(f, resource, paramAPI, resolveID, idComplete))
 
 	return cmd
 }
@@ -94,13 +99,14 @@ type paramListOptions struct {
 	noHeader bool
 }
 
-func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver) *cobra.Command {
+func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	opts := &paramListOptions{}
 
 	cmd := &cobra.Command{
-		Use:   fmt.Sprintf("list [%s-id]", resource),
-		Short: fmt.Sprintf("List %s parameters", resource),
-		Args:  cobra.MaximumNArgs(1),
+		Use:               fmt.Sprintf("list [%s-id]", resource),
+		Short:             fmt.Sprintf("List %s parameters", resource),
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: idComplete,
 		Example: fmt.Sprintf(`  teamcity %s param list MyID
   teamcity %s param list                # uses linked %s (see 'teamcity link')
   teamcity %s param list MyID --json
@@ -167,13 +173,14 @@ func runParamList(f *cmdutil.Factory, id string, opts *paramListOptions, paramAP
 	return nil
 }
 
-func newParamGetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver) *cobra.Command {
+func newParamGetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	var jsonOutput bool
 
 	cmd := &cobra.Command{
-		Use:   fmt.Sprintf("get [%s-id] <name>", resource),
-		Short: fmt.Sprintf("Get a %s parameter value", resource),
-		Args:  cobra.RangeArgs(1, 2),
+		Use:               fmt.Sprintf("get [%s-id] <name>", resource),
+		Short:             fmt.Sprintf("Get a %s parameter value", resource),
+		Args:              cobra.RangeArgs(1, 2),
+		ValidArgsFunction: paramFirstArgComplete(idComplete),
 		Example: fmt.Sprintf(`  teamcity %s param get MyID MY_PARAM
   teamcity %s param get MY_PARAM         # uses linked %s
   teamcity %s param get MyID VERSION`, resource, resource, resource, resource),
@@ -218,7 +225,7 @@ type paramSetOptions struct {
 	secure bool
 }
 
-func newParamSetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver) *cobra.Command {
+func newParamSetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	opts := &paramSetOptions{}
 
 	cmd := &cobra.Command{
@@ -230,7 +237,8 @@ Use --secure to mark the parameter as a password. Secure values are
 stored encrypted server-side and masked in logs and UI output.
 
 Omit the <%s-id> when this repo is linked via 'teamcity link'.`, resource, resource),
-		Args: cobra.RangeArgs(2, 3),
+		Args:              cobra.RangeArgs(2, 3),
+		ValidArgsFunction: paramFirstArgComplete(idComplete),
 		Example: fmt.Sprintf(`  teamcity %s param set MyID MY_PARAM "my value"
   teamcity %s param set MY_PARAM "my value"           # uses linked %s
   teamcity %s param set MyID SECRET_KEY "****" --secure`, resource, resource, resource, resource),
@@ -262,11 +270,12 @@ func runParamSet(f *cmdutil.Factory, id, name, value string, opts *paramSetOptio
 	return nil
 }
 
-func newParamDeleteCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver) *cobra.Command {
+func newParamDeleteCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   fmt.Sprintf("delete [%s-id] <name>", resource),
-		Short: fmt.Sprintf("Delete a %s parameter", resource),
-		Args:  cobra.RangeArgs(1, 2),
+		Use:               fmt.Sprintf("delete [%s-id] <name>", resource),
+		Short:             fmt.Sprintf("Delete a %s parameter", resource),
+		Args:              cobra.RangeArgs(1, 2),
+		ValidArgsFunction: paramFirstArgComplete(idComplete),
 		Example: fmt.Sprintf(`  teamcity %s param delete MyID MY_PARAM
   teamcity %s param delete MY_PARAM      # uses linked %s`, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -293,4 +302,14 @@ func runParamDelete(f *cmdutil.Factory, id, name string, paramAPI ParamAPI) erro
 
 	f.Printer.Success("Deleted parameter %s", name)
 	return nil
+}
+
+// paramFirstArgComplete applies idComplete only to the resource-id slot (args[0]).
+func paramFirstArgComplete(idComplete completion.CompFunc) completion.CompFunc {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) == 0 {
+			return idComplete(cmd, args, toComplete)
+		}
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
 }

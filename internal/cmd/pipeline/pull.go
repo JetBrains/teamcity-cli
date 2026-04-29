@@ -30,6 +30,8 @@ func newPipelinePullCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "Write YAML to file instead of stdout")
 
+	_ = cmd.MarkFlagFilename("output", "yml", "yaml")
+
 	return cmd
 }
 

@@ -51,6 +51,8 @@ artifact tree). Use --output to choose the local destination directory
 	cmd.Flags().StringVarP(&opts.artifact, "artifact", "a", "", "Artifact name pattern to filter")
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 10*time.Minute, "Download timeout (e.g. 30m, 1h)")
 
+	_ = cmd.MarkFlagDirname("output")
+
 	return cmd
 }
 

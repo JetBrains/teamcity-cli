@@ -11,6 +11,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/git"
 	"github.com/JetBrains/teamcity-cli/internal/link"
@@ -105,6 +106,12 @@ Resolution cascade (highest to lowest):
 	cmd.Flags().StringVarP(&job, "job", "j", "", "Default job/pipeline ID for this scope")
 	cmd.Flags().StringSliceVar(&jobs, "jobs", nil, "Additional job/pipeline IDs (comma-separated or repeated)")
 	cmd.Flags().StringVar(&scope, "scope", "", "Path scope inside the server entry (default: cwd relative to teamcity.toml's dir; pass --scope= for top-level)")
+
+	_ = cmd.RegisterFlagCompletionFunc("server", completion.ConfiguredServers())
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
+	_ = cmd.RegisterFlagCompletionFunc("job", completion.LinkedJobs())
+	_ = cmd.RegisterFlagCompletionFunc("jobs", completion.LinkedJobs())
+	_ = cmd.RegisterFlagCompletionFunc("scope", completion.LinkScopes())
 
 	return cmd
 }

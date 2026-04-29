@@ -12,6 +12,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/git"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -155,9 +156,10 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "start [job-id]",
-		Short: "Start a new run",
-		Args:  cobra.MaximumNArgs(1),
+		Use:               "start [job-id]",
+		Short:             "Start a new run",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completion.LinkedJobs(),
 		Example: `  teamcity run start Falcon_Build
   teamcity run start                              # uses linked default (see 'teamcity link')
   teamcity run start Falcon_Build --branch feature/test
@@ -208,6 +210,12 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", false, "Preview without triggering")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+
+	_ = cmd.RegisterFlagCompletionFunc("branch", completion.GitBranches())
+	_ = cmd.RegisterFlagCompletionFunc("revision", completion.AtHead())
+	_ = cmd.RegisterFlagCompletionFunc("local-changes", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"git", "-"}, cobra.ShellCompDirectiveDefault
+	})
 
 	return cmd
 }

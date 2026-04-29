@@ -6,6 +6,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -69,6 +70,8 @@ func newCloudProfileListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }
@@ -193,6 +196,8 @@ func newCloudImageListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().StringVar(&opts.profile, "profile", "", "Filter by cloud profile")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }
@@ -367,6 +372,8 @@ func newCloudInstanceListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().StringVar(&opts.image, "image", "", "Filter by cloud image")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }
