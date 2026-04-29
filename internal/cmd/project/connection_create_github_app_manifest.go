@@ -3,6 +3,7 @@ package project
 import (
 	"cmp"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -160,30 +161,9 @@ func defaultGitHubAppName(projectID, serverURL string) string {
 	return githubAppName(fmt.Sprintf("TC %s@%s", projectID, host))
 }
 
-var startPageTmpl = template.Must(template.New("manifest-start").Parse(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>teamcity-cli: register GitHub App</title>
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 520px; margin: 80px auto; padding: 0 20px; color: #27282E; }
-    h1 { font-size: 18px; font-weight: 600; }
-    p { color: #6C707E; line-height: 1.5; }
-    button { background: #2ea44f; color: #fff; border: 0; padding: 10px 16px; border-radius: 6px; font: 14px sans-serif; cursor: pointer; margin-top: 16px; }
-    button:hover { background: #2c974b; }
-  </style>
-</head>
-<body>
-  <h1>Redirecting you to GitHub…</h1>
-  <p>Click the button below if your browser doesn't redirect automatically.</p>
-  <form method="POST" action="{{.Action}}">
-    <input type="hidden" name="manifest" value="{{.Manifest}}">
-    <input type="hidden" name="state" value="{{.State}}">
-    <button type="submit">Continue to GitHub</button>
-  </form>
-  <script>setTimeout(function(){document.forms[0].submit()},200)</script>
-</body>
-</html>`))
+//go:embed templates/manifest_start.html
+var startPageHTML string
+var startPageTmpl = template.Must(template.New("manifest-start").Parse(startPageHTML))
 
 // buildStartHandler returns an http.Handler that auto-submits the manifest to GitHub.
 func buildStartHandler(org string, manifestJSON []byte, state string) http.Handler {
