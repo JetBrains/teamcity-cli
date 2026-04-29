@@ -98,7 +98,7 @@ func connectionToMap(feat api.ProjectFeature) map[string]any {
 }
 
 func filterJSONList[T any](items []T, fields []string, toMap func(T) map[string]any) any {
-	var result []map[string]any
+	result := make([]map[string]any, 0, len(items))
 	for _, item := range items {
 		full := toMap(item)
 		filtered := make(map[string]any, len(fields))

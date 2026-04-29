@@ -331,6 +331,9 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	}
 
 	authMethod := opts.auth
+	if authMethod == "" && opts.connectionID != "" {
+		authMethod = authToken
+	}
 	if authMethod == "" {
 		if !interactive {
 			authMethod = inferAuthFromURL(repoURL)
@@ -344,6 +347,12 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 				return err
 			}
 		}
+	}
+	if opts.connectionID != "" && authMethod != authToken {
+		return api.Validation(
+			"--connection-id requires --auth token",
+			fmt.Sprintf("Drop --connection-id, or use --auth token (got --auth %s)", authMethod),
+		)
 	}
 
 	props, testReq, err := resolveAuth(f, client, projectID, authMethod, opts, interactive)
@@ -372,7 +381,7 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 		Name:         name,
 		VcsName:      "jetbrains.git",
 		Project:      &api.Project{ID: projectID},
-		ConnectionID: opts.connectionID, // POST-only; server auto-fills auth from a connection
+		ConnectionID: testReq.ConnectionID, // POST-only; server auto-fills auth from a connection
 		Properties: &api.PropertyList{
 			Property: props,
 		},

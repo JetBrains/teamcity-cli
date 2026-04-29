@@ -365,7 +365,17 @@ func resolveSecret(f *cmdutil.Factory, value string, stdin, interactive bool, la
 		return value, nil
 	}
 	if stdin {
-		return readStdin(f)
+		secret, err := readStdin(f)
+		if err != nil {
+			return "", err
+		}
+		if secret == "" {
+			return "", api.Validation(
+				label+" is required",
+				"Pipe the secret on stdin (got empty input), or use --"+flagName,
+			)
+		}
+		return secret, nil
 	}
 	if !interactive {
 		return "", api.Validation(
