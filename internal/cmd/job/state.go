@@ -5,6 +5,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -23,10 +24,11 @@ var jobStateActions = map[string]jobStateAction{
 
 func newJobStateCmd(f *cmdutil.Factory, a jobStateAction) *cobra.Command {
 	return &cobra.Command{
-		Use:   a.use + " [job-id]",
-		Short: a.short,
-		Long:  a.long + " With no argument, uses the linked default job from teamcity.toml.",
-		Args:  cobra.MaximumNArgs(1),
+		Use:               a.use + " [job-id]",
+		Short:             a.short,
+		Long:              a.long + " With no argument, uses the linked default job from teamcity.toml.",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completion.LinkedJobs(),
 		Example: fmt.Sprintf(`  teamcity job %s Falcon_Build
   teamcity job %s                # uses linked default job (see 'teamcity link')`, a.use, a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {

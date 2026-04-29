@@ -5,6 +5,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +35,8 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
+
+	_ = cmd.RegisterFlagCompletionFunc("job", completion.LinkedJobs())
 
 	return cmd
 }

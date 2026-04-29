@@ -128,6 +128,19 @@ func UncommittedDiff() ([]byte, error) {
 	return out, nil
 }
 
+// LocalBranches returns short names of local branches, or nil outside a working tree.
+func LocalBranches() []string {
+	out, err := exec.Command("git", "for-each-ref", "--format=%(refname:short)", "refs/heads/").Output()
+	if err != nil {
+		return nil
+	}
+	s := strings.TrimSpace(string(out))
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, "\n")
+}
+
 // CanonicalURL reduces any supported git remote URL form (SSH short, ssh://, http(s)://) to "host/org/repo", or "" if unparseable.
 func CanonicalURL(rawURL string) string {
 	raw := strings.TrimSpace(rawURL)

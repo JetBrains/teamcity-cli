@@ -11,6 +11,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/param"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -73,6 +74,8 @@ func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.parent, "parent", "p", "", "Filter by parent project ID")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
 
+	_ = cmd.RegisterFlagCompletionFunc("parent", completion.LinkedProjects())
+
 	return cmd
 }
 
@@ -113,11 +116,12 @@ func (opts *projectListOptions) fetch(client api.ClientInterface, fields []strin
 func newProjectViewCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &cmdutil.ViewOptions{}
 	cmd := &cobra.Command{
-		Use:     "view [project-id]",
-		Short:   "View project details",
-		Long:    `View details of a TeamCity project. With no argument, uses the linked project from teamcity.toml.`,
-		Aliases: []string{"show"},
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "view [project-id]",
+		Short:             "View project details",
+		Long:              `View details of a TeamCity project. With no argument, uses the linked project from teamcity.toml.`,
+		Aliases:           []string{"show"},
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completion.LinkedProjects(),
 		Example: `  teamcity project view Falcon
   teamcity project view Falcon --web
   teamcity project view              # uses linked project (see 'teamcity link')`,
@@ -201,8 +205,9 @@ func newProjectTokenPutCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &projectTokenPutOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "put <project-id> [value]",
-		Short: "Store a secret and get a secure token",
+		Use:               "put <project-id> [value]",
+		Short:             "Store a secret and get a secure token",
+		ValidArgsFunction: completion.LinkedProjects(),
 		Long: `Store a sensitive value and get a secure token reference.
 
 The returned token can be used in versioned settings configuration files
@@ -284,8 +289,9 @@ func runProjectTokenPut(f *cmdutil.Factory, projectID, value string, opts *proje
 
 func newProjectTokenGetCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get <project-id> <token>",
-		Short: "Get the value of a secure token",
+		Use:               "get <project-id> <token>",
+		Short:             "Get the value of a secure token",
+		ValidArgsFunction: firstArgComplete(completion.LinkedProjects()),
 		Long: `Retrieve the original value for a secure token.
 
 This operation requires CHANGE_SERVER_SETTINGS permission,
@@ -351,7 +357,8 @@ func newProjectTreeCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity project tree --no-jobs
   teamcity project tree --depth 2
   teamcity project tree --json`,
-		Args: cobra.MaximumNArgs(1),
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completion.LinkedProjects(),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			explicit := ""
 			if len(args) > 0 {
@@ -524,4 +531,14 @@ func resolveHiddenProjects(client api.ClientInterface, known map[string]*api.Pro
 
 func newProjectSettingsCmd(f *cmdutil.Factory) *cobra.Command {
 	return newSettingsCmd(f)
+}
+
+// firstArgComplete applies fn only to args[0]; later positionals get no completions.
+func firstArgComplete(fn completion.CompFunc) completion.CompFunc {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) == 0 {
+			return fn(cmd, args, toComplete)
+		}
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
 }

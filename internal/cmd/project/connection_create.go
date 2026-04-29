@@ -9,6 +9,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -85,6 +86,9 @@ automatically. Use --no-manifest to enter existing credentials manually.`,
 	cmd.Flags().StringVar(&opts.privateKeyFile, "private-key-file", "", "Path to GitHub App private key (manual mode)")
 	cmd.Flags().BoolVar(&opts.noManifest, "no-manifest", false, "Skip the manifest flow; collect credentials manually")
 	cmd.Flags().BoolVar(&opts.noAuthorize, "no-authorize", false, "Skip the post-create authorize prompt")
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
+	_ = cmd.MarkFlagFilename("private-key-file", "pem")
 
 	return cmd
 }
@@ -299,6 +303,8 @@ over a personal account.`,
 	cmd.Flags().StringVar(&opts.username, "username", "", "Registry username")
 	cmd.Flags().StringVar(&opts.password, "password", "", "Registry password (prefer --stdin)")
 	cmd.Flags().BoolVar(&opts.stdin, "stdin", false, "Read password from stdin")
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }

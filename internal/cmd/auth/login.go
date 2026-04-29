@@ -8,6 +8,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/JetBrains/teamcity-cli/internal/version"
@@ -56,6 +57,8 @@ For CI/CD, set TEAMCITY_URL and TEAMCITY_TOKEN environment variables
 	cmd.Flags().BoolVar(&opts.guest, "guest", false, "Use guest authentication (no token needed; must be enabled on the server)")
 	cmd.Flags().BoolVar(&opts.insecureStorage, "insecure-storage", false, "Store token in plain text config file instead of system keyring")
 	cmd.Flags().BoolVar(&opts.noBrowser, "no-browser", false, "Skip browser-based auth, use manual token entry")
+
+	_ = cmd.RegisterFlagCompletionFunc("server", completion.ConfiguredServers())
 
 	return cmd
 }

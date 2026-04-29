@@ -5,6 +5,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -44,6 +45,12 @@ func newPoolProjectCmd(f *cmdutil.Factory, a poolProjectAction) *cobra.Command {
 		Long:    a.long,
 		Args:    cobra.ExactArgs(2),
 		Example: fmt.Sprintf("  teamcity pool %s 1 MyProject", a.use),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) == 1 {
+				return completion.LinkedProjects()(cmd, args, toComplete)
+			}
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			poolID, err := cmdutil.ParseID(args[0], "pool")
 			if err != nil {

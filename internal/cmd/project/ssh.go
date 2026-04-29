@@ -8,6 +8,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -57,6 +58,8 @@ func newSSHListCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }
@@ -120,6 +123,8 @@ func newSSHUploadCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
 	cmd.Flags().StringVar(&opts.name, "name", "", "Key name (default: filename)")
 
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
+
 	return cmd
 }
 
@@ -180,6 +185,9 @@ func newSSHGenerateCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&opts.name, "name", "", "Key name (required)")
 	cmd.Flags().StringVar(&opts.keyType, "type", "ed25519", "Key type: ed25519 or rsa")
 
+	_ = cmd.RegisterFlagCompletionFunc("type", completion.SSHKeyTypes())
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
+
 	return cmd
 }
 
@@ -236,6 +244,8 @@ func newSSHDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
 	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "")
 	cmdutil.DeprecateFlag(cmd, "force", "yes", "v1.0.0")
+
+	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
 	return cmd
 }

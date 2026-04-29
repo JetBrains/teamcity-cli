@@ -6,6 +6,7 @@ import (
 
 	teamcitycli "github.com/JetBrains/teamcity-cli"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/tiulpin/instill"
@@ -120,6 +121,9 @@ func addSkillFlags(cmd *cobra.Command, opts *skillOptions) {
 	cmd.Flags().StringSliceVarP(&opts.agents, "agent", "a", nil, "Target agent(s); auto-detects if omitted")
 	cmd.Flags().BoolVar(&opts.all, "all", false, "Install/update all bundled skills")
 	cmd.Flags().BoolVar(&opts.project, "project", false, "Install to current project instead of globally")
+
+	cmd.ValidArgsFunction = completion.SkillNames()
+	_ = cmd.RegisterFlagCompletionFunc("agent", completion.SkillAgents())
 }
 
 func runSkillInstall(p *output.Printer, opts *skillOptions, args []string, checkVersion bool) error {

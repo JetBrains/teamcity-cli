@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -177,11 +178,12 @@ func collectBuiltinAliases(rootCmd *cobra.Command) map[string]string {
 
 func newAliasDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:     "delete <name>",
-		Short:   "Delete an alias",
-		Aliases: []string{"rm"},
-		Args:    cobra.ExactArgs(1),
-		Example: `  teamcity alias delete rl`,
+		Use:               "delete <name>",
+		Short:             "Delete an alias",
+		Aliases:           []string{"rm"},
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completion.AliasNames(),
+		Example:           `  teamcity alias delete rl`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			if err := config.DeleteAlias(name); err != nil {

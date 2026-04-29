@@ -15,6 +15,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -49,8 +50,9 @@ func newProjectSettingsStatusCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &projectSettingsStatusOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "status <project-id>",
-		Short: "Show versioned settings sync status",
+		Use:               "status <project-id>",
+		Short:             "Show versioned settings sync status",
+		ValidArgsFunction: completion.LinkedProjects(),
 		Long: `Show the synchronization status of versioned settings for a project.
 
 Displays:
@@ -192,8 +194,9 @@ func newProjectSettingsExportCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &projectSettingsExportOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "export <project-id>",
-		Short: "Export project settings as Kotlin DSL or XML",
+		Use:               "export <project-id>",
+		Short:             "Export project settings as Kotlin DSL or XML",
+		ValidArgsFunction: completion.LinkedProjects(),
 		Long: `Export project settings as a ZIP archive containing Kotlin DSL or XML configuration.
 
 The exported archive can be used to:
@@ -224,6 +227,8 @@ By default, exports in Kotlin DSL format.`,
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "Output file path (default: projectSettings.zip)")
 	cmd.Flags().BoolVar(&opts.useRelativeIds, "relative-ids", true, "Use relative IDs in exported settings")
 	cmd.MarkFlagsMutuallyExclusive("kotlin", "xml")
+
+	_ = cmd.MarkFlagFilename("output", "zip")
 
 	return cmd
 }

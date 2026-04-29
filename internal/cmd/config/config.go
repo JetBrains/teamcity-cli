@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/completion"
 	cfg "github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/charmbracelet/huh"
@@ -169,7 +170,8 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity config get default_server
   teamcity config get ro
   teamcity config get guest --server tc.example.com`,
-		Args: cobra.ExactArgs(1),
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completion.ConfigKeys(),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			value, err := cfg.GetField(args[0], serverURL)
 			if err != nil {
@@ -185,6 +187,9 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&serverURL, "server", "s", "", "Server URL for per-server settings")
 	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output as JSON")
+
+	_ = cmd.RegisterFlagCompletionFunc("server", completion.ConfiguredServers())
+
 	return cmd
 }
 
@@ -207,6 +212,20 @@ func newSetCmd(f *cmdutil.Factory) *cobra.Command {
   # Enable guest auth for the default server
   teamcity config set guest true`,
 		Args: cobra.RangeArgs(1, 2),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				return completion.ConfigKeys()(cmd, args, toComplete)
+			case 1:
+				if args[0] == "default_server" {
+					return completion.ConfiguredServers()(cmd, args, toComplete)
+				}
+				if args[0] == "guest" || args[0] == "ro" {
+					return completion.Fixed("true", "false")(cmd, args, toComplete)
+				}
+			}
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 			var value string
@@ -232,6 +251,9 @@ func newSetCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&serverURL, "server", "s", "", "Server URL for per-server settings")
+
+	_ = cmd.RegisterFlagCompletionFunc("server", completion.ConfiguredServers())
+
 	return cmd
 }
 
