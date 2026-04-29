@@ -561,6 +561,7 @@ func inferAuthFromURL(repoURL string) string {
 }
 
 func newVcsTestCmd(f *cmdutil.Factory) *cobra.Command {
+	var connectionID string
 	cmd := &cobra.Command{
 		Use:     "test <vcs-root-id>",
 		Short:   "Test a VCS root connection",
@@ -568,14 +569,15 @@ func newVcsTestCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity project vcs test MyProject_GitHubRepo`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runVcsTest(f, args[0])
+			return runVcsTest(f, args[0], connectionID)
 		},
 	}
+	cmd.Flags().StringVar(&connectionID, "connection-id", "", "Connection ID to test against (required for token-backed roots whose connection isn't returned by GET)")
 
 	return cmd
 }
 
-func runVcsTest(f *cmdutil.Factory, id string) error {
+func runVcsTest(f *cmdutil.Factory, id, overrideConnID string) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -595,7 +597,25 @@ func runVcsTest(f *cmdutil.Factory, id string) error {
 		projectID = root.Project.ID
 	}
 
-	req := buildTestRequestFromRoot(root)
+	req, missingConn := buildTestRequestFromRoot(root)
+	if overrideConnID != "" {
+		ptype, err := lookupConnectionProviderType(client, projectID, overrideConnID)
+		if err != nil {
+			return err
+		}
+		if !vcsCapableProviders[ptype] {
+			return api.Validation(
+				fmt.Sprintf("connection %s (%s) cannot back a VCS root", overrideConnID, ptype),
+				"Use a GitHub/GitLab/Bitbucket/Azure DevOps/Space connection",
+			)
+		}
+		req.ConnectionID = overrideConnID
+	} else if missingConn {
+		return api.Validation(
+			fmt.Sprintf("VCS root %s authenticates via a connection that the server doesn't return on GET", id),
+			"Pass --connection-id <id> to test, or test from the TeamCity UI",
+		)
+	}
 	if err := runConnectionTest(f, client, req, projectID); err != nil {
 		return err
 	}
@@ -626,14 +646,19 @@ func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.T
 	return nil
 }
 
-func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
-	req := api.TestConnectionRequest{
+// buildTestRequestFromRoot builds a TestConnectionRequest from a fetched VCS root.
+// missingConn is true when the root authenticates via ACCESS_TOKEN but no
+// connection id is recoverable from the response (the server doesn't return
+// connectionId on GET, so a server-resolved root has no way back to its
+// connection without an explicit hint).
+func buildTestRequestFromRoot(root *api.VcsRoot) (req api.TestConnectionRequest, missingConn bool) {
+	req = api.TestConnectionRequest{
 		VcsName:      root.VcsName,
 		ConnectionID: root.ConnectionID,
 	}
 
 	if root.Properties == nil {
-		return req
+		return req, false
 	}
 
 	var authMethod string
@@ -659,7 +684,8 @@ func buildTestRequestFromRoot(root *api.VcsRoot) api.TestConnectionRequest {
 		req.IsPrivate = true
 	}
 
-	return req
+	missingConn = authMethod == "ACCESS_TOKEN" && req.ConnectionID == ""
+	return req, missingConn
 }
 
 type vcsDeleteOptions struct {
