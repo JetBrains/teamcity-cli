@@ -108,15 +108,6 @@ func JSON(w http.ResponseWriter, v any) {
 	}
 }
 
-// JSONStatus writes a JSON response with specified status code.
-func JSONStatus(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
 // Text writes a plain text response.
 func Text(w http.ResponseWriter, s string) {
 	w.Header().Set("Content-Type", "text/plain")

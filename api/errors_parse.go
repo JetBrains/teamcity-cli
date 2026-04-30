@@ -23,7 +23,7 @@ var (
 	// notFoundRE matches `No <kind> found by locator '…id:X…'`.
 	notFoundRE = regexp.MustCompile(`^No (build types?|build|project|user|agent) found by locator '(?:[^']*?id:)?([^,')]+)`)
 	// nothingFoundRE matches `Nothing is found by locator 'count:1,<kind>:(id:X)…'`.
-	nothingFoundRE = regexp.MustCompile(`Nothing is found by locator '[^']*?(buildType|project|user|agent):?\(?(?:[^']*?id:)([^,')]+)`)
+	nothingFoundRE = regexp.MustCompile(`Nothing is found by locator '[^']*?(buildType|project|user|agent):?\(?[^']*?id:([^,')]+)`)
 
 	resourceAliases = map[string]string{
 		"build types": "job",

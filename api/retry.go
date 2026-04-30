@@ -19,6 +19,8 @@ type RetryConfig struct {
 }
 
 // Predefined retry configurations for different operation types.
+//
+//goland:noinspection GoUnusedGlobalVariable
 var (
 	// ReadRetry is the default for idempotent read operations (GET).
 	// Retries on network errors, 429, and 5xx responses.

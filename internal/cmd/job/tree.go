@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//goland:noinspection GoUnnecessarilyExportedIdentifiers
 type JobTreeNode struct {
 	ID           string        `json:"id"`
 	Name         string        `json:"name"`
