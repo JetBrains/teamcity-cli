@@ -43,7 +43,9 @@ var defaultManifestPermissions = map[string]string{
 	"checks":        "write",
 }
 
-// defaultManifestEvents must stay []string{} (not nil) so the JSON manifest emits "default_events": [], not null. GitHub's manifest schema rejects null. Empty array is intentional: TeamCity polls VCS roots; webhooks need a public TeamCity URL we shouldn't assume.
+// defaultManifestEvents must stay []string{} (not nil) so the JSON manifest emits "default_events": [], not null.
+//
+//goland:noinspection GoPreferNilSlice
 var defaultManifestEvents = []string{}
 
 // manifestCreds is the subset of GitHub's app-manifest conversion response we need.

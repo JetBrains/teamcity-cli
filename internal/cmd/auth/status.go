@@ -32,9 +32,9 @@ type authStatus struct {
 	Error       string      `json:"error,omitempty"`
 	IsDefault   bool        `json:"is_default,omitempty"`
 
-	versionCheckErr string `json:"-"`
-	keyringErr      error  `json:"-"`
-	configUser      string `json:"-"`
+	versionCheckErr string
+	keyringErr      error
+	configUser      string
 }
 
 type authUser struct {
