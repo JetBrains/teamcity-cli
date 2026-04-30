@@ -150,8 +150,8 @@ func keyringService(serverURL string) string {
 
 // GetServerURL resolves the target server from TEAMCITY_URL, then the configured default; never from DSL (avoids routing a stored token to an untrusted repo's .teamcity/pom.xml — opt in via `auth login`).
 func GetServerURL() string {
-	if url := os.Getenv(EnvServerURL); url != "" {
-		return NormalizeURL(url)
+	if serverUrl := os.Getenv(EnvServerURL); serverUrl != "" {
+		return NormalizeURL(serverUrl)
 	}
 	return cfg.DefaultServer
 }
@@ -278,8 +278,8 @@ func writeConfig() error {
 	w.Set("default_server", cfg.DefaultServer)
 
 	servers := make(map[string]any, len(cfg.Servers))
-	for url, sc := range cfg.Servers {
-		servers[url] = serverConfigToMap(sc)
+	for serverUrl, sc := range cfg.Servers {
+		servers[serverUrl] = serverConfigToMap(sc)
 	}
 	w.Set("servers", servers)
 	w.Set("aliases", cfg.Aliases)

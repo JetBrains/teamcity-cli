@@ -43,7 +43,7 @@ var defaultManifestPermissions = map[string]string{
 	"checks":        "write",
 }
 
-// defaultManifestEvents is empty: TeamCity polls VCS roots; webhooks need a public TeamCity URL we shouldn't assume.
+// defaultManifestEvents must stay []string{} (not nil) so the JSON manifest emits "default_events": [], not null. GitHub's manifest schema rejects null. Empty array is intentional: TeamCity polls VCS roots; webhooks need a public TeamCity URL we shouldn't assume.
 var defaultManifestEvents = []string{}
 
 // manifestCreds is the subset of GitHub's app-manifest conversion response we need.
@@ -193,8 +193,8 @@ func manifestSubmitURL(org string) string {
 
 // exchangeManifestCode trades the one-shot code for the new GitHub App's credentials.
 func exchangeManifestCode(ctx context.Context, code string) (*manifestCreds, error) {
-	url := fmt.Sprintf("%s/app-manifests/%s/conversions", strings.TrimSuffix(githubAPIHost, "/"), code)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	ghUrl := fmt.Sprintf("%s/app-manifests/%s/conversions", strings.TrimSuffix(githubAPIHost, "/"), code)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ghUrl, nil)
 	if err != nil {
 		return nil, err
 	}
