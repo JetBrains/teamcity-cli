@@ -30,6 +30,14 @@ func Prompt(field huh.Field) error {
 		Run()
 }
 
+// RunForm runs a multi-group huh form with shift+tab navigation; use it instead of chaining Prompt calls so groups can navigate between each other.
+func RunForm(groups ...*huh.Group) error {
+	return huh.NewForm(groups...).
+		WithTheme(promptTheme()).
+		WithShowHelp(true).
+		Run()
+}
+
 // PromptString asks for free-form text and echoes the answer back so it survives in scrollback.
 func PromptString(p *output.Printer, title, description string, value *string) error {
 	input := huh.NewInput().

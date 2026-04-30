@@ -127,6 +127,32 @@ func TestRemoteForBranch(t *testing.T) {
 	})
 }
 
+func TestRemoteURLs(t *testing.T) {
+	t.Run("none configured", func(t *testing.T) {
+		t.Chdir(setupRepo(t))
+		assert.Empty(t, RemoteURLs())
+	})
+
+	t.Run("origin first then others, dedup", func(t *testing.T) {
+		dir := setupRepo(t)
+		t.Chdir(dir)
+		runGit(t, dir, "remote", "add", "upstream", "https://example.com/upstream.git")
+		runGit(t, dir, "remote", "add", "origin", "https://example.com/origin.git")
+		runGit(t, dir, "remote", "add", "fork", "https://example.com/origin.git") // dup of origin URL
+
+		got := RemoteURLs()
+		assert.Equal(t, []string{
+			"https://example.com/origin.git",
+			"https://example.com/upstream.git",
+		}, got)
+	})
+
+	t.Run("not a repo", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		assert.Empty(t, RemoteURLs())
+	})
+}
+
 func TestBranchExistsOnRemote(t *testing.T) {
 	dir := setupRepo(t)
 	t.Chdir(dir)

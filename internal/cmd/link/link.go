@@ -4,6 +4,7 @@ package link
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,6 +47,29 @@ Resolution cascade (highest to lowest):
   rm  teamcity.toml`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			path, err := writePath()
+			if err != nil {
+				return err
+			}
+			scopePath, err := resolveScopePath(scope, cmd.Flags().Changed("scope"), path)
+			if err != nil {
+				return err
+			}
+			cfg, err := loadOrEmpty(path)
+			if err != nil {
+				return fmt.Errorf("read %s: %w", path, err)
+			}
+
+			noFields := project == "" && job == "" && len(jobs) == 0
+			if noFields && f.IsInteractive() {
+				if err := runPicker(f, server, cfg, scopePath, path, &server, &project, &job, &jobs); err != nil {
+					if errors.Is(err, errPickerHandled) {
+						return nil
+					}
+					return err
+				}
+			}
+
 			serverURL := config.NormalizeURL(cmp.Or(server, config.GetServerURL()))
 			if serverURL == "" {
 				return api.Validation(
@@ -56,23 +80,10 @@ Resolution cascade (highest to lowest):
 			if project == "" && job == "" && len(jobs) == 0 {
 				return api.Validation(
 					"at least one of --project, --job, or --jobs is required",
-					"Pass --project <id> (and optionally --job <id> or --jobs A,B,C)",
+					"Pass --project <id> (and optionally --job <id> or --jobs A,B,C), or rerun in an interactive shell",
 				)
 			}
 
-			path, err := writePath()
-			if err != nil {
-				return err
-			}
-			scopePath, err := resolveScopePath(scope, cmd.Flags().Changed("scope"), path)
-			if err != nil {
-				return err
-			}
-
-			cfg, err := loadOrEmpty(path)
-			if err != nil {
-				return fmt.Errorf("read %s: %w", path, err)
-			}
 			cfg.UpsertScope(serverURL, scopePath, link.PathScope{
 				Project: project,
 				Job:     job,
