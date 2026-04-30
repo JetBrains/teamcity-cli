@@ -1,39 +1,36 @@
-//go:build terminal_pty
+//go:build integration || terminal_pty
 
-// Drives `teamcity agent term` under a real pty against live agents on
-// cli.teamcity.com. Agent ids come from TC_PTY_{LINUX,WINDOWS}_AGENT_ID.
+// Drives `teamcity agent term` and `teamcity agent exec` under a real pty,
+// against whichever server the integration testenv brought up. Per-OS
+// subtests skip cleanly when no agent of that family is connected.
 package api_test
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	expect "github.com/Netflix/go-expect"
 	"github.com/stretchr/testify/require"
+
+	"github.com/JetBrains/teamcity-cli/api"
 )
 
 const (
-	ptyEnvBinary       = "TC_PTY_BINARY"
-	ptyEnvHost         = "TC_PTY_HOST"
-	ptyEnvToken        = "TC_PTY_TOKEN"
-	ptyEnvLinuxAgent   = "TC_PTY_LINUX_AGENT_ID"
-	ptyEnvWindowsAgent = "TC_PTY_WINDOWS_AGENT_ID"
-
-	ptyDefaultHost = "https://cli.teamcity.com"
-	ptyIdleWait    = 75 * time.Second // > pingInterval (60s) so a missed pong would be visible
-	ptyExitWait    = 30 * time.Second // grace period for the spawned binary to exit after remote EOF
+	ptyIdleWait = 75 * time.Second // > pingInterval (60s) so a missed pong would surface
+	ptyExitWait = 30 * time.Second // grace period for the spawned binary to exit after remote EOF
 )
 
 func ptyBinary(t *testing.T) string {
 	t.Helper()
-	if bin := os.Getenv(ptyEnvBinary); bin != "" {
-		abs, err := filepath.Abs(bin)
-		require.NoError(t, err)
-		return abs
-	}
 	bin := filepath.Join(t.TempDir(), "teamcity")
 	cmd := exec.Command("go", "build", "-o", bin, "./tc")
 	cmd.Dir = repoRoot(t)
@@ -58,26 +55,95 @@ func repoRoot(t *testing.T) string {
 	}
 }
 
+// ptyEnv hands the spawned `teamcity` process the same URL+token the test process uses.
 func ptyEnv() []string {
-	host := os.Getenv(ptyEnvHost)
-	if host == "" {
-		host = ptyDefaultHost
-	}
-	env := append(os.Environ(), "TEAMCITY_URL="+host)
-	token := os.Getenv(ptyEnvToken)
-	if token == "" {
-		token = os.Getenv("TEAMCITY_TOKEN")
-	}
-	if token != "" {
-		env = append(env, "TEAMCITY_TOKEN="+token)
+	env := os.Environ()
+	if testEnvRef != nil && testEnvRef.URL != "" {
+		env = append(env, "TEAMCITY_URL="+testEnvRef.URL)
+		if testEnvRef.Token != "" {
+			env = append(env, "TEAMCITY_TOKEN="+testEnvRef.Token)
+		}
 	}
 	return env
 }
 
+// pickAgentByOS returns the first authorized+connected agent whose teamcity.agent.os.family matches, or "" with a skip reason.
+func pickAgentByOS(t *testing.T, osFamily string) (id, skip string) {
+	t.Helper()
+
+	if testEnvRef == nil || testEnvRef.Client == nil {
+		return "", "no integration env (set TEAMCITY_URL/TEAMCITY_TOKEN or have Docker for testcontainers)"
+	}
+	if testEnvRef.guestAuth {
+		return "", "guest auth lacks CONNECT_TO_AGENT permission"
+	}
+
+	agents, err := testEnvRef.Client.GetAgents(api.AgentsOptions{})
+	if err != nil {
+		return "", fmt.Sprintf("could not list agents: %v", err)
+	}
+
+	want := strings.ToLower(osFamily)
+	for _, a := range agents.Agents {
+		if !a.Connected || !a.Authorized {
+			continue
+		}
+		family, err := agentOSFamily(t.Context(), testEnvRef.URL, testEnvRef.Token, a.ID)
+		if err != nil {
+			t.Logf("agent %d: could not read os family: %v", a.ID, err)
+			continue
+		}
+		if strings.Contains(strings.ToLower(family), want) {
+			return strconv.Itoa(a.ID), ""
+		}
+	}
+	return "", fmt.Sprintf("no authorized %s agent connected", osFamily)
+}
+
+// agentOSFamily reads a single agent's teamcity.agent.os.family property via a narrow field selector.
+func agentOSFamily(ctx context.Context, serverURL, token string, agentID int) (string, error) {
+	url := fmt.Sprintf("%s/app/rest/agents/id:%d?fields=properties(property(name,value))",
+		strings.TrimSuffix(serverURL, "/"), agentID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("agent %d: HTTP %d", agentID, resp.StatusCode)
+	}
+
+	var body struct {
+		Properties struct {
+			Property []struct {
+				Name  string `json:"name"`
+				Value string `json:"value"`
+			} `json:"property"`
+		} `json:"properties"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return "", err
+	}
+	for _, p := range body.Properties.Property {
+		if p.Name == "teamcity.agent.os.family" {
+			return p.Value, nil
+		}
+	}
+	return "", nil // property absent — caller treats as "no match"
+}
+
 // ptyProc bundles the pty console with the spawned `teamcity` process so
-// callers can assert the process exited cleanly after the remote shell EOFs.
-// Without the exit-status assertion, a subprocess that prints the expected
-// output but crashes on teardown would still pass these tests.
+// callers can assert clean exit. Without that assertion, a subprocess that
+// prints the right output but crashes on teardown would still pass.
 type ptyProc struct {
 	*expect.Console
 	cmd     *exec.Cmd
@@ -85,9 +151,6 @@ type ptyProc struct {
 	waitErr error
 }
 
-// AssertCleanExit waits for the spawned `teamcity` process to exit and fails
-// the test if it either times out or returns a non-zero status. Call after
-// `ExpectEOF`.
 func (p *ptyProc) AssertCleanExit(t *testing.T) {
 	t.Helper()
 	select {
@@ -135,9 +198,9 @@ func ptySpawn(t *testing.T, args ...string) *ptyProc {
 }
 
 func TestTerminalPtyLinux(t *testing.T) {
-	agentID := os.Getenv(ptyEnvLinuxAgent)
-	if agentID == "" {
-		t.Skipf("%s not set — bring up an agent via CLI_LinuxAgentTerminal and export its id", ptyEnvLinuxAgent)
+	agentID, skip := pickAgentByOS(t, "Linux")
+	if skip != "" {
+		t.Skipf("Linux PTY skipped: %s", skip)
 	}
 
 	t.Run("prompt echo exit", func(t *testing.T) {
@@ -176,9 +239,9 @@ func TestTerminalPtyLinux(t *testing.T) {
 }
 
 func TestTerminalPtyWindows(t *testing.T) {
-	agentID := os.Getenv(ptyEnvWindowsAgent)
-	if agentID == "" {
-		t.Skipf("%s not set — bring up an agent via CLI_WindowsAgentTerminal and export its id", ptyEnvWindowsAgent)
+	agentID, skip := pickAgentByOS(t, "Windows")
+	if skip != "" {
+		t.Skipf("Windows PTY skipped: %s", skip)
 	}
 
 	t.Run("powershell prompt echo exit", func(t *testing.T) {
@@ -197,15 +260,14 @@ func TestTerminalPtyWindows(t *testing.T) {
 	})
 }
 
-// Regresses the deadline-scope decision: Exec must not inherit the
-// interactive read deadline, or silent long commands time out before ctx.
+// TestTerminalPtyExecSilentLong regresses the deadline-scope decision: Exec must not inherit the interactive read deadline.
 func TestTerminalPtyExecSilentLong(t *testing.T) {
 	if testing.Short() {
 		t.Skip("170s exec — skipped under -short")
 	}
-	agentID := os.Getenv(ptyEnvLinuxAgent)
-	if agentID == "" {
-		t.Skipf("%s not set", ptyEnvLinuxAgent)
+	agentID, skip := pickAgentByOS(t, "Linux")
+	if skip != "" {
+		t.Skipf("exec long skipped: %s", skip)
 	}
 
 	cmd := exec.Command(ptyBinary(t), "agent", "exec", agentID,
