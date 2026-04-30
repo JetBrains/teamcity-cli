@@ -1,4 +1,4 @@
-//go:build integration || guest
+//go:build integration || guest || terminal_pty
 
 // Integration tests for the TeamCity API client.
 // Uses a real TeamCity server: either from TEAMCITY_URL/TEAMCITY_TOKEN env vars,

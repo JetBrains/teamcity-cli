@@ -1,7 +1,20 @@
-//go:build integration
+//go:build integration || guest
 
-// Drift detection tests validate that Go types match TeamCity's swagger spec.
-// Runs as part of integration tests using testcontainers.
+// Drift detection tests catch when TeamCity's API contract changes.
+//
+// Two layers, both run under `-run TestAPIDrift`:
+//
+//   - TestAPIDrift           — static drift: parses our Go structs, fetches the
+//     server's swagger.json, asserts every JSON field
+//     we declare exists in the spec.
+//   - TestAPIDriftEndpoints  — runtime drift: calls every read-only Client
+//     method against the live server and asserts the
+//     response decodes. Catches contract changes that
+//     the swagger comparison can miss (status codes,
+//     empty bodies, renamed paths, query params).
+//   - TestAPIDriftAgentEndpoints — same as above for agent-scoped endpoints,
+//     skips when no agents are connected.
+//
 // Run with: go test -tags=integration ./api -v -run TestAPIDrift
 package api_test
 
@@ -16,9 +29,12 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/JetBrains/teamcity-cli/api"
 )
 
 // SwaggerSpec represents relevant parts of OpenAPI/Swagger spec
@@ -282,5 +298,169 @@ func swaggerPropertyExists(props map[string]SwaggerProperty, jsonName string) bo
 		}
 	}
 
+	return false
+}
+
+// endpointDriftCase pairs a label with a closure that exercises one read endpoint.
+// We hold heterogeneous response types behind `any` so the table is one-line per
+// endpoint; assertions are intentionally shallow (err == nil, result != nil) so
+// this layer stays cheap and fast — TestAPIDrift handles the deep field-level shape.
+type endpointDriftCase struct {
+	name string
+	call func() (any, error)
+}
+
+func TestAPIDriftEndpoints(t *testing.T) {
+	if client == nil {
+		t.Skip("no TeamCity client configured")
+	}
+	if testBuild == nil {
+		t.Skip("no test build available")
+	}
+	buildID := strconv.Itoa(testBuild.ID)
+
+	cases := []endpointDriftCase{
+		// Server / users
+		{"GetServer", func() (any, error) { return client.GetServer() }},
+		{"GetCurrentUser", func() (any, error) { return client.GetCurrentUser() }},
+
+		// Project graph
+		{"GetProjects", func() (any, error) { return client.GetProjects(api.ProjectsOptions{}) }},
+		{"GetProject", func() (any, error) { return client.GetProject(testProject) }},
+		{"GetVersionedSettingsConfig", func() (any, error) { return client.GetVersionedSettingsConfig(testProject) }},
+		{"GetVersionedSettingsStatus", func() (any, error) { return client.GetVersionedSettingsStatus(testProject) }},
+		{"GetSSHKeys", func() (any, error) { return client.GetSSHKeys(testProject) }},
+		{"GetProjectConnections", func() (any, error) { return client.GetProjectConnections(testProject) }},
+
+		// Build configurations
+		{"GetBuildTypes", func() (any, error) { return client.GetBuildTypes(api.BuildTypesOptions{}) }},
+		{"GetBuildType", func() (any, error) { return client.GetBuildType(testConfig) }},
+		{"GetBuildTypeParameters", func() (any, error) { return client.GetBuildTypeParameters(testConfig) }},
+		{"GetSnapshotDependencies", func() (any, error) { return client.GetSnapshotDependencies(testConfig) }},
+		{"GetDependentBuildTypes", func() (any, error) { return client.GetDependentBuildTypes(testConfig) }},
+		{"GetVcsRootEntries", func() (any, error) { return client.GetVcsRootEntries(testConfig) }},
+
+		// Builds (read)
+		{"GetBuilds", func() (any, error) { return client.GetBuilds(t.Context(), api.BuildsOptions{Limit: 5}) }},
+		{"GetBuild", func() (any, error) { return client.GetBuild(t.Context(), buildID) }},
+		{"GetBuildChanges", func() (any, error) { return client.GetBuildChanges(t.Context(), buildID) }},
+		{"GetBuildTags", func() (any, error) { return client.GetBuildTags(buildID) }},
+		{"GetBuildTests", func() (any, error) { return client.GetBuildTests(t.Context(), buildID, false, 0) }},
+		{"GetBuildTestSummary", func() (any, error) { return client.GetBuildTestSummary(buildID) }},
+		{"GetBuildProblems", func() (any, error) { return client.GetBuildProblems(buildID) }},
+		{"GetBuildMessages", func() (any, error) {
+			return client.GetBuildMessages(t.Context(), buildID, api.BuildMessagesOptions{})
+		}},
+		{"GetBuildSnapshotDependencies", func() (any, error) { return client.GetBuildSnapshotDependencies(buildID) }},
+		{"GetBuildResultingProperties", func() (any, error) { return client.GetBuildResultingProperties(buildID) }},
+		{"GetBuildUsedByOtherBuilds", func() (any, error) { return client.GetBuildUsedByOtherBuilds(buildID) }},
+		{"GetArtifacts", func() (any, error) { return client.GetArtifacts(t.Context(), buildID, "") }},
+
+		// Queue
+		{"GetBuildQueue", func() (any, error) { return client.GetBuildQueue(api.QueueOptions{}) }},
+
+		// Agents and pools
+		{"GetAgents", func() (any, error) { return client.GetAgents(api.AgentsOptions{}) }},
+		{"GetAgentPools", func() (any, error) { return client.GetAgentPools(nil) }},
+
+		// VCS
+		{"GetVcsRoots", func() (any, error) { return client.GetVcsRoots(api.VcsRootsOptions{}) }},
+
+		// Cloud
+		{"GetCloudProfiles", func() (any, error) { return client.GetCloudProfiles(api.CloudProfilesOptions{}) }},
+		{"GetCloudImages", func() (any, error) { return client.GetCloudImages(api.CloudImagesOptions{}) }},
+		{"GetCloudInstances", func() (any, error) { return client.GetCloudInstances(api.CloudInstancesOptions{}) }},
+
+		// Pipelines (TeamCity 2026.1+; skips cleanly on older servers)
+		{"GetPipelines", func() (any, error) { return client.GetPipelines(api.PipelinesOptions{}) }},
+		{"GetPipelineSchema", func() (any, error) { return client.GetPipelineSchema() }},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := tc.call()
+			if err != nil {
+				if isFeatureUnavailable(err) {
+					t.Skipf("endpoint not supported on this server: %v", err)
+				}
+				t.Fatalf("%s drifted: %v", tc.name, err)
+			}
+			if result == nil {
+				t.Fatalf("%s returned nil result", tc.name)
+			}
+		})
+	}
+}
+
+func TestAPIDriftAgentEndpoints(t *testing.T) {
+	if client == nil {
+		t.Skip("no TeamCity client configured")
+	}
+	agents, err := client.GetAgents(api.AgentsOptions{})
+	if err != nil {
+		t.Skipf("could not list agents: %v", err)
+	}
+	if len(agents.Agents) == 0 {
+		t.Skip("no agents available")
+	}
+	agentID := agents.Agents[0].ID
+
+	cases := []endpointDriftCase{
+		{"GetAgentCompatibleBuildTypes", func() (any, error) { return client.GetAgentCompatibleBuildTypes(agentID) }},
+		{"GetAgentIncompatibleBuildTypes", func() (any, error) { return client.GetAgentIncompatibleBuildTypes(agentID) }},
+		{"GetAgentBuildTypeCompatibility", func() (any, error) {
+			return client.GetAgentBuildTypeCompatibility(agentID, testConfig, 0)
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := tc.call()
+			if err != nil {
+				if isFeatureUnavailable(err) {
+					t.Skipf("endpoint not supported on this server: %v", err)
+				}
+				t.Fatalf("%s drifted: %v", tc.name, err)
+			}
+			if result == nil {
+				t.Fatalf("%s returned nil result", tc.name)
+			}
+		})
+	}
+}
+
+// isFeatureUnavailable reports whether err means "I can't exercise this endpoint from where I'm standing" — auth, permission, not-found, or feature-not-configured. All environmental, none real contract drift.
+func isFeatureUnavailable(err error) bool {
+	for e := err; e != nil; {
+		switch typed := e.(type) {
+		case *api.PermissionError, *api.NotFoundError:
+			return true
+		case *api.HTTPError:
+			switch typed.Status {
+			case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
+				return true
+			}
+		}
+		u, ok := e.(interface{ Unwrap() error })
+		if !ok {
+			break
+		}
+		e = u.Unwrap()
+	}
+	// Message fallback for endpoints whose CLI-side wrapper hides the typed error.
+	msg := err.Error()
+	for _, marker := range []string{
+		"not supported",
+		"predates",
+		"not available",
+		"not enabled",
+		"never been enabled",
+		"not configured",
+	} {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
 	return false
 }
