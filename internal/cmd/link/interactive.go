@@ -36,11 +36,11 @@ type serverResult struct {
 	err       error
 }
 
-// runPicker drives interactive `teamcity link`; mutates outputs on Change, returns errPickerHandled on Keep/Clear (already finalized).
-func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopePath, tomlPath string, server, project, job *string, jobs *[]string) error {
+// findHits runs discovery shared by --auto and the interactive picker; returns servers that produced ≥1 project match.
+func findHits(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopePath string) ([]serverResult, []string, error) {
 	candidates := candidateServers(serverOverride)
 	if len(candidates) == 0 {
-		return errors.New("no TeamCity server configured\n  Run 'teamcity auth login' first")
+		return nil, nil, errors.New("no TeamCity server configured\n  Run 'teamcity auth login' first")
 	}
 
 	printHeader(f, candidates, cfg, scopePath, serverOverride != "")
@@ -60,7 +60,16 @@ func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scop
 		}
 	}
 	if len(hits) == 0 {
-		return noMatchHint(remotes, results)
+		return nil, remotes, noMatchHint(remotes, results)
+	}
+	return hits, remotes, nil
+}
+
+// runPicker drives interactive `teamcity link`; mutates outputs on Change, returns errPickerHandled on Keep/Clear (already finalized).
+func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopePath, tomlPath string, server, project, job *string, jobs *[]string) error {
+	hits, _, err := findHits(f, serverOverride, cfg, scopePath)
+	if err != nil {
+		return err
 	}
 
 	hitByURL := map[string]*discovery{}
@@ -111,6 +120,78 @@ func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scop
 	*project = inputs.project
 	*job = inputs.job
 	*jobs = inputs.jobs
+	return nil
+}
+
+// autoResolution is what runAuto computes from discovery hits before writing.
+type autoResolution struct {
+	server  string
+	project string
+	job     string
+	jobs    []string
+}
+
+// resolveAuto picks a unique binding from hits; ambiguity yields a typed error the caller renders to the user.
+// activeServer, if set and present in hits, is preferred when multiple servers match — that's the user's working server.
+func resolveAuto(hits []serverResult, activeServer string) (autoResolution, error) {
+	if len(hits) > 1 {
+		if activeServer != "" {
+			for _, h := range hits {
+				if h.url == activeServer {
+					hits = []serverResult{h}
+					break
+				}
+			}
+		}
+	}
+	if len(hits) > 1 {
+		urls := make([]string, len(hits))
+		for i, h := range hits {
+			urls[i] = h.url
+		}
+		slices.Sort(urls)
+		return autoResolution{}, fmt.Errorf("multiple servers match this repo: %s\n  Pass --server <url> --auto to disambiguate", strings.Join(urls, ", "))
+	}
+	h := hits[0]
+	if len(h.discovery.Projects) > 1 {
+		ids := make([]string, len(h.discovery.Projects))
+		for i, p := range h.discovery.Projects {
+			ids[i] = p.ProjectID
+		}
+		slices.Sort(ids)
+		return autoResolution{}, fmt.Errorf("multiple projects match on %s: %s\n  Drop --auto and pass --project <id> --job <id>", h.url, strings.Join(ids, ", "))
+	}
+
+	pm := h.discovery.Projects[0]
+	res := autoResolution{server: h.url, project: pm.ProjectID}
+	if len(pm.Jobs) == 1 {
+		res.job = pm.Jobs[0].ID
+	}
+	for _, j := range allJobsOnServer(h.discovery) {
+		if j.ID != res.job {
+			res.jobs = append(res.jobs, j.ID)
+		}
+	}
+	return res, nil
+}
+
+// runAuto runs discovery and writes the resolved binding without prompting; the same outputs the picker would persist on Change.
+func runAuto(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopePath string, server, project, job *string, jobs *[]string) error {
+	hits, _, err := findHits(f, serverOverride, cfg, scopePath)
+	if err != nil {
+		return err
+	}
+	res, err := resolveAuto(hits, config.NormalizeURL(config.GetServerURL()))
+	if err != nil {
+		return err
+	}
+	*server = res.server
+	*project = res.project
+	*job = res.job
+	*jobs = res.jobs
+	if res.job == "" && len(allJobsOnServer(hits[0].discovery)) > 1 {
+		f.Printer.Info("  No single default job in %s; pass --job <id> to set one", output.Cyan(res.project))
+	}
 	return nil
 }
 
