@@ -11,6 +11,8 @@ import (
 )
 
 // ParamAPI defines the interface for parameter operations
+//
+//goland:noinspection GoNameStartsWithPackageName
 type ParamAPI struct {
 	List   func(client api.ClientInterface, id string) (*api.ParameterList, error)
 	Get    func(client api.ClientInterface, id, name string) (*api.Parameter, error)

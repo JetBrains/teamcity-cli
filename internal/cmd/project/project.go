@@ -324,6 +324,7 @@ func runProjectTokenGet(f *cmdutil.Factory, projectID, token string) error {
 	return nil
 }
 
+//goland:noinspection GoUnnecessarilyExportedIdentifiers
 type ProjectTreeNode struct {
 	ID        string            `json:"id"`
 	Name      string            `json:"name"`

@@ -630,11 +630,15 @@ type BuildRef struct {
 }
 
 // APIError represents an error from TeamCity's REST API
+//
+//goland:noinspection GoNameStartsWithPackageName
 type APIError struct {
 	Message string `json:"message"`
 }
 
 // APIErrorResponse represents TeamCity's error response format
+//
+//goland:noinspection GoNameStartsWithPackageName
 type APIErrorResponse struct {
 	Errors []APIError `json:"errors"`
 }

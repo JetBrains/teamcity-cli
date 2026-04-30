@@ -19,6 +19,8 @@ func DeprecateFlag(cmd *cobra.Command, old, new, removeVersion string) {
 }
 
 // DeprecateCommand marks a command as deprecated with a consistent message format.
+//
+//goland:noinspection GoUnusedExportedFunction
 func DeprecateCommand(cmd *cobra.Command, new, removeVersion string) {
 	cmd.Deprecated = fmt.Sprintf("use %q instead (will be removed in %s)", new, removeVersion)
 }

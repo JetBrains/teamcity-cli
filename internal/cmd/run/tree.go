@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//goland:noinspection GoUnnecessarilyExportedIdentifiers
 type RunTreeNode struct {
 	ID           int           `json:"id"`
 	Number       string        `json:"number,omitempty"`
