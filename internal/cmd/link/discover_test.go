@@ -166,6 +166,89 @@ func TestDiscoverProjectsDedupsAcrossFragments(t *testing.T) {
 	require.Len(t, got.Projects[0].Jobs, 1)
 }
 
+func TestResolveAuto(t *testing.T) {
+	makeHit := func(url, projID string, jobIDs ...string) serverResult {
+		jobs := make([]jobOption, len(jobIDs))
+		for i, id := range jobIDs {
+			jobs[i] = jobOption{ID: id, Name: id, ProjectName: projID}
+		}
+		return serverResult{
+			url: url,
+			discovery: &discovery{Projects: []projectMatch{{
+				ProjectID: projID, ProjectName: projID, Jobs: jobs,
+			}}},
+		}
+	}
+
+	t.Run("single server, single project, single job", func(t *testing.T) {
+		res, err := resolveAuto([]serverResult{makeHit("https://a", "P", "P_Build")}, "")
+		require.NoError(t, err)
+		assert.Equal(t, "https://a", res.server)
+		assert.Equal(t, "P", res.project)
+		assert.Equal(t, "P_Build", res.job)
+		assert.Empty(t, res.jobs)
+	})
+
+	t.Run("single server, single project, multiple jobs", func(t *testing.T) {
+		res, err := resolveAuto([]serverResult{makeHit("https://a", "P", "P_Build", "P_Test")}, "")
+		require.NoError(t, err)
+		assert.Equal(t, "P", res.project)
+		assert.Empty(t, res.job, "multiple jobs in project -> default left empty")
+		assert.ElementsMatch(t, []string{"P_Build", "P_Test"}, res.jobs)
+	})
+
+	t.Run("multiple servers, no active match", func(t *testing.T) {
+		_, err := resolveAuto([]serverResult{
+			makeHit("https://b", "P", "j"),
+			makeHit("https://a", "Q", "k"),
+		}, "")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "multiple servers")
+		assert.Contains(t, err.Error(), "https://a, https://b")
+	})
+
+	t.Run("multiple servers, active server tiebreaker", func(t *testing.T) {
+		res, err := resolveAuto([]serverResult{
+			makeHit("https://b", "P_b", "j"),
+			makeHit("https://a", "P_a", "k"),
+		}, "https://a")
+		require.NoError(t, err)
+		assert.Equal(t, "https://a", res.server)
+		assert.Equal(t, "P_a", res.project)
+		assert.Equal(t, "k", res.job)
+	})
+
+	t.Run("multiple servers, active not in hits, still ambiguous", func(t *testing.T) {
+		_, err := resolveAuto([]serverResult{
+			makeHit("https://b", "P", "j"),
+			makeHit("https://c", "Q", "k"),
+		}, "https://a")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "multiple servers")
+	})
+
+	t.Run("multiple projects on one server", func(t *testing.T) {
+		h := makeHit("https://a", "Z", "Z_Build")
+		h.discovery.Projects = append(h.discovery.Projects, projectMatch{
+			ProjectID: "A", ProjectName: "A", Jobs: []jobOption{{ID: "A_Build", Name: "A_Build"}},
+		})
+		_, err := resolveAuto([]serverResult{h}, "")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "multiple projects")
+		assert.Contains(t, err.Error(), "A, Z", "project IDs sorted alphabetically")
+	})
+
+	t.Run("additional jobs include cross-project matches on same server", func(t *testing.T) {
+		h := makeHit("https://a", "P", "P_Build")
+		// resolveAuto only fires when there's a single project; this test covers the case
+		// where allJobsOnServer returns the picked project's jobs.
+		res, err := resolveAuto([]serverResult{h}, "")
+		require.NoError(t, err)
+		assert.Equal(t, "P_Build", res.job)
+		assert.Empty(t, res.jobs, "single job -> nothing extra")
+	})
+}
+
 func TestJobLabelNonPipeline(t *testing.T) {
 	o := jobOption{Name: "Build", ProjectName: "Acme"}
 	assert.Equal(t, "Acme · Build", jobLabel(o))

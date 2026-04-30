@@ -23,6 +23,7 @@ import (
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	var server, project, job, scope string
 	var jobs []string
+	var auto bool
 
 	cmd := &cobra.Command{
 		Use:   "link",
@@ -34,6 +35,12 @@ Resolution cascade (highest to lowest):
   --flag → TEAMCITY_* env → matching [[server]] entry, deepest matching path scope`,
 		Example: `  # Bind the repo (uses active server, top-level scope)
   teamcity link --project Acme_Backend --job Acme_Backend_Build
+
+  # Auto-discover from git remotes (no prompts; ideal for AI agents and CI)
+  teamcity link --auto
+
+  # Auto on a specific server when multiple are authenticated
+  teamcity link --auto --server https://nightly.example
 
   # Add a second server's pipelines to the same teamcity.toml
   teamcity link --server https://nightly.example --project Acme_Nightly \
@@ -47,6 +54,13 @@ Resolution cascade (highest to lowest):
   rm  teamcity.toml`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if auto && (project != "" || job != "" || len(jobs) > 0) {
+				return api.Validation(
+					"--auto cannot be combined with --project/--job/--jobs",
+					"Use --auto alone to discover from git remotes, or pass explicit IDs without --auto",
+				)
+			}
+
 			path, err := writePath()
 			if err != nil {
 				return err
@@ -61,7 +75,12 @@ Resolution cascade (highest to lowest):
 			}
 
 			noFields := project == "" && job == "" && len(jobs) == 0
-			if noFields && f.IsInteractive() {
+			switch {
+			case auto:
+				if err := runAuto(f, server, cfg, scopePath, &server, &project, &job, &jobs); err != nil {
+					return err
+				}
+			case noFields && f.IsInteractive():
 				if err := runPicker(f, server, cfg, scopePath, path, &server, &project, &job, &jobs); err != nil {
 					if errors.Is(err, errPickerHandled) {
 						return nil
@@ -117,6 +136,7 @@ Resolution cascade (highest to lowest):
 	cmd.Flags().StringVarP(&job, "job", "j", "", "Default job/pipeline ID for this scope")
 	cmd.Flags().StringSliceVar(&jobs, "jobs", nil, "Additional job/pipeline IDs (comma-separated or repeated)")
 	cmd.Flags().StringVar(&scope, "scope", "", "Path scope inside the server entry (default: cwd relative to teamcity.toml's dir; pass --scope= for top-level)")
+	cmd.Flags().BoolVarP(&auto, "auto", "a", false, "Auto-discover the binding from git remotes; mutually exclusive with --project/--job/--jobs")
 
 	_ = cmd.RegisterFlagCompletionFunc("server", completion.ConfiguredServers())
 	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
