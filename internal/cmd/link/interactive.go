@@ -90,18 +90,21 @@ func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scop
 		}
 	}
 
-	switch action {
-	case "keep":
-		f.Printer.Success("Kept existing binding")
-		return errPickerHandled
-	case "clear":
-		clearScope(cfg, inputs.server, scopePath)
-		if err := link.Save(tomlPath, cfg); err != nil {
-			return fmt.Errorf("write %s: %w", tomlPath, err)
+	// Honor Keep/Clear only when the finally-picked server has a binding; a stale action from an earlier server falls through to a Change write.
+	if lookupScope(cfg, inputs.server, scopePath) != nil {
+		switch action {
+		case "keep":
+			f.Printer.Success("Kept existing binding")
+			return errPickerHandled
+		case "clear":
+			clearScope(cfg, inputs.server, scopePath)
+			if err := link.Save(tomlPath, cfg); err != nil {
+				return fmt.Errorf("write %s: %w", tomlPath, err)
+			}
+			f.Printer.Success("Cleared binding for %s", output.Cyan(scopeLabel(scopePath)))
+			f.Printer.Info("  Wrote: %s", tomlPath)
+			return errPickerHandled
 		}
-		f.Printer.Success("Cleared binding for %s", output.Cyan(scopeLabel(scopePath)))
-		f.Printer.Info("  Wrote: %s", tomlPath)
-		return errPickerHandled
 	}
 
 	*server = inputs.server
@@ -224,7 +227,7 @@ func buildGroups(hits []serverResult, hitByURL map[string]*discovery, cfg *link.
 				}, &in.server).
 				Value(&in.project),
 		).WithHideFunc(func() bool {
-			if *action != "change" {
+			if keptOrCleared(cfg, in.server, scopePath, *action) {
 				return true
 			}
 			d := hitByURL[in.server]
@@ -246,7 +249,7 @@ func buildGroups(hits []serverResult, hitByURL map[string]*discovery, cfg *link.
 					return out
 				}, []any{&in.server, &in.project}).
 				Value(&in.job),
-		).WithHideFunc(func() bool { return *action != "change" }),
+		).WithHideFunc(func() bool { return keptOrCleared(cfg, in.server, scopePath, *action) }),
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Select additional jobs").
@@ -264,7 +267,7 @@ func buildGroups(hits []serverResult, hitByURL map[string]*discovery, cfg *link.
 				}, []any{&in.server, &in.job}).
 				Value(&in.jobs),
 		).WithHideFunc(func() bool {
-			if *action != "change" {
+			if keptOrCleared(cfg, in.server, scopePath, *action) {
 				return true
 			}
 			return len(allJobsOnServer(hitByURL[in.server])) <= 1
@@ -272,6 +275,14 @@ func buildGroups(hits []serverResult, hitByURL map[string]*discovery, cfg *link.
 	)
 
 	return groups
+}
+
+// keptOrCleared hides project/job groups only when there is an existing binding the user chose to keep or clear; with no binding the action prompt never shows, so the picks are always required.
+func keptOrCleared(cfg *link.Config, serverURL, scopePath, action string) bool {
+	if lookupScope(cfg, serverURL, scopePath) == nil {
+		return false
+	}
+	return action != "change"
 }
 
 // findProject returns the matching project (by ID) on a server, or nil.
