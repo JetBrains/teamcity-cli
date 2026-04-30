@@ -1,4 +1,4 @@
-//go:build integration || guest
+//go:build integration || guest || terminal_pty
 
 package api_test
 
