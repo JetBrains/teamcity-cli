@@ -26,6 +26,20 @@ func TestGetBuildTypes(t *testing.T) {
 	assert.Equal(t, 1, result.Count)
 }
 
+func TestGetBuildTypesVcsRootURLFilter(t *testing.T) {
+	t.Parallel()
+	var seenLocator string
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		seenLocator = r.URL.Query().Get("locator")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(BuildTypeList{Count: 0})
+	})
+
+	_, err := client.GetBuildTypes(BuildTypesOptions{VcsRootURL: "acme/repo"})
+	require.NoError(t, err)
+	assert.Contains(t, seenLocator, "vcsRoot:(property:(name:url,value:acme/repo,matchType:contains))")
+}
+
 func TestGetBuildType(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
@@ -138,6 +152,34 @@ func TestGetVcsRootEntries(t *testing.T) {
 	entries, err := client.GetVcsRootEntries("bt1")
 	require.NoError(t, err)
 	assert.Equal(t, 0, entries.Count)
+}
+
+func TestVcsRootEntryDecodesNestedProperties(t *testing.T) {
+	t.Parallel()
+	const payload = `{
+		"id": "Repo",
+		"vcs-root": {
+			"id": "Repo",
+			"name": "repo",
+			"properties": {
+				"property": [
+					{"name": "url", "value": "git@github.com:acme/repo.git"},
+					{"name": "branch", "value": "refs/heads/main"}
+				]
+			}
+		}
+	}`
+	var entry VcsRootEntry
+	require.NoError(t, json.Unmarshal([]byte(payload), &entry))
+	require.NotNil(t, entry.VcsRoot)
+	require.NotNil(t, entry.VcsRoot.Properties)
+
+	got := map[string]string{}
+	for _, p := range entry.VcsRoot.Properties.Property {
+		got[p.Name] = p.Value
+	}
+	assert.Equal(t, "git@github.com:acme/repo.git", got["url"])
+	assert.Equal(t, "refs/heads/main", got["branch"])
 }
 
 func TestSetBuildTypeSetting(t *testing.T) {

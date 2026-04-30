@@ -64,6 +64,29 @@ func ResolveRevision(rev string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// RemoteURLs returns each configured remote's fetch URL, with origin first when present and duplicates removed; empty outside a working tree.
+func RemoteURLs() []string {
+	out, err := exec.Command("git", "remote", "-v").Output()
+	if err != nil {
+		return nil
+	}
+	var origin, others []string
+	seen := map[string]bool{}
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 3 || fields[2] != "(fetch)" || seen[fields[1]] {
+			continue
+		}
+		seen[fields[1]] = true
+		if fields[0] == "origin" {
+			origin = append(origin, fields[1])
+		} else {
+			others = append(others, fields[1])
+		}
+	}
+	return append(origin, others...)
+}
+
 // RemoteForBranch returns the configured remote for branch, defaulting to "origin".
 func RemoteForBranch(branch string) string {
 	out, err := exec.Command("git", "config", "--get", "branch."+branch+".remote").Output()
