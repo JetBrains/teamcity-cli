@@ -1,9 +1,9 @@
 [[server]]
-  url = "https://cli.teamcity.com"
-  project = "CLI"
-  job = "CLI_CiCd"
+url = 'https://cli.teamcity.com'
+project = 'CLI'
+job = 'CLI_CiCd'
 
 [[server]]
-  url = "https://teamcity-nightly.labs.intellij.net"
-  project = "TeamCity_TeamCityCLI"
-  jobs = ["TeamCity_TeamCityCLI_Release", "TeamCity_TeamCityCLI_SkillEval"]
+url = 'https://teamcity-nightly.labs.intellij.net'
+project = 'TeamCity_TeamCityCLI'
+jobs = ['TeamCity_TeamCityCLI_Release', 'TeamCity_TeamCityCLI_SkillEval']
