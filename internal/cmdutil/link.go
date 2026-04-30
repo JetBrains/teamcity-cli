@@ -54,6 +54,12 @@ func (f *Factory) linkScope() (link.PathScope, bool) {
 	return f.link.scope, f.link.found
 }
 
+// HasLinkContext reports whether a teamcity.toml in the cwd hierarchy matched the active server.
+func (f *Factory) HasLinkContext() bool {
+	_, ok := f.linkScope()
+	return ok
+}
+
 // ResolveProject returns explicit, then TEAMCITY_PROJECT, then the linked scope's project.
 func (f *Factory) ResolveProject(explicit string) string {
 	if explicit != "" {

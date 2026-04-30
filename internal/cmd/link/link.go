@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
@@ -127,6 +128,12 @@ Resolution cascade (highest to lowest):
 				f.Printer.Info("  Jobs: %s", strings.Join(jobs, ", "))
 			}
 			f.Printer.Info("  Wrote: %s", path)
+
+			f.Analytics.Track(analytics.GroupWorkspace, analytics.EventLinked, map[string]any{
+				"source":       analytics.WorkspaceSourceFlag,
+				"is_ambiguous": false,
+				"is_subdir":    scopePath != "",
+			})
 			return nil
 		},
 	}

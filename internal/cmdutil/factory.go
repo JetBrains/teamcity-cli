@@ -4,8 +4,10 @@ import (
 	"context"
 	"io"
 	"os"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"golang.org/x/term"
 )
@@ -46,6 +48,12 @@ type Factory struct {
 
 	// UpdateNotice is called after command execution to print update notices.
 	UpdateNotice func()
+
+	// Analytics is the FUS telemetry client; always nil-safe.
+	Analytics *analytics.Client
+
+	// StartTime captured at PersistentPreRun for duration_ms.
+	StartTime time.Time
 
 	// ctx is the signal-aware root context set by cmd.Execute; read via Context(), unset falls back to Background.
 	ctx context.Context

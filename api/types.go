@@ -309,6 +309,7 @@ type Server struct {
 	VersionMinor int    `json:"versionMinor"`
 	BuildNumber  string `json:"buildNumber"`
 	WebURL       string `json:"webUrl"`
+	InternalID   string `json:"internalId,omitempty"`
 }
 
 type Change struct {

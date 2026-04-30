@@ -1,0 +1,75 @@
+# Verifies every documented analytics opt-out path + priority order.
+# Each `teamcity --debug` triggers PersistentPreRun → setupAnalytics, which
+# logs the analytics enable/disable state to stderr via Printer.Debug.
+#
+# Priority chain (first match wins):
+#   1. DO_NOT_TRACK=1                  → disabled
+#   2. TEAMCITY_ANALYTICS=0|false|no   → disabled
+#   3. config: analytics=false         → disabled
+#   4. otherwise                       → enabled
+
+# Clear server URL/token so the bare `teamcity` invocation just renders the
+# welcome banner without network activity.
+env TEAMCITY_URL=
+env TEAMCITY_TOKEN=
+env TEAMCITY_GUEST=
+
+# 1. Default: no opt-out → enabled.
+exec teamcity --debug
+stderr '\[debug\] analytics: enabled '
+
+# 2. DO_NOT_TRACK=1 disables (highest priority).
+env DO_NOT_TRACK=1
+exec teamcity --debug
+stderr '\[debug\] analytics: disabled \(DO_NOT_TRACK\)'
+! stderr '\[debug\] analytics: enabled '
+env DO_NOT_TRACK=
+
+# 3. TEAMCITY_ANALYTICS=0 disables.
+env TEAMCITY_ANALYTICS=0
+exec teamcity --debug
+stderr '\[debug\] analytics: disabled \(TEAMCITY_ANALYTICS=0\)'
+env TEAMCITY_ANALYTICS=
+
+# 4. TEAMCITY_ANALYTICS=false disables (alternate falsy spelling).
+env TEAMCITY_ANALYTICS=false
+exec teamcity --debug
+stderr '\[debug\] analytics: disabled \(TEAMCITY_ANALYTICS=0\)'
+env TEAMCITY_ANALYTICS=
+
+# 5. TEAMCITY_ANALYTICS=no disables (another falsy spelling).
+env TEAMCITY_ANALYTICS=no
+exec teamcity --debug
+stderr '\[debug\] analytics: disabled \(TEAMCITY_ANALYTICS=0\)'
+env TEAMCITY_ANALYTICS=
+
+# 6. Persistent config flag: `teamcity config set analytics false`.
+exec teamcity config set analytics false --no-input
+exec teamcity --debug
+stderr '\[debug\] analytics: disabled \(config: analytics=false\)'
+
+# 7. Priority: TEAMCITY_ANALYTICS=0 wins over config=true.
+exec teamcity config set analytics true --no-input
+env TEAMCITY_ANALYTICS=0
+exec teamcity --debug
+stderr '\[debug\] analytics: disabled \(TEAMCITY_ANALYTICS=0\)'
+env TEAMCITY_ANALYTICS=
+
+# 8. Priority: DO_NOT_TRACK wins over TEAMCITY_ANALYTICS=0.
+env DO_NOT_TRACK=1
+env TEAMCITY_ANALYTICS=0
+exec teamcity --debug
+stderr '\[debug\] analytics: disabled \(DO_NOT_TRACK\)'
+env DO_NOT_TRACK=
+env TEAMCITY_ANALYTICS=
+
+# 9. Re-enable via config: clearing all opt-outs returns to enabled.
+exec teamcity --debug
+stderr '\[debug\] analytics: enabled '
+
+# 10. config get reports the current value.
+exec teamcity config get analytics --no-input
+stdout '^true$'
+exec teamcity config set analytics false --no-input
+exec teamcity config get analytics --no-input
+stdout '^false$'

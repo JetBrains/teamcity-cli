@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/git"
@@ -296,6 +297,15 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		if opts.agent > 0 {
 			_, _ = fmt.Fprintf(p.Out, "  Agent ID: %d\n", opts.agent)
 		}
+		f.Analytics.Track(analytics.GroupBuild, analytics.EventStarted, map[string]any{
+			"is_personal":       opts.personal,
+			"has_local_changes": opts.localChanges != "",
+			"has_branch":        opts.branch != "",
+			"has_revision":      opts.revision != "",
+			"param_count":       len(opts.params) + len(opts.systemProps) + len(opts.envVars),
+			"is_watched":        false,
+			"is_dry_run":        true,
+		})
 		return nil
 	}
 
@@ -369,6 +379,16 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	if err != nil {
 		return err
 	}
+
+	f.Analytics.Track(analytics.GroupBuild, analytics.EventStarted, map[string]any{
+		"is_personal":       opts.personal,
+		"has_local_changes": opts.localChanges != "",
+		"has_branch":        opts.branch != "",
+		"has_revision":      opts.revision != "",
+		"param_count":       len(opts.params) + len(opts.systemProps) + len(opts.envVars),
+		"is_watched":        opts.watch,
+		"is_dry_run":        false,
+	})
 
 	if opts.json {
 		if opts.watch {
