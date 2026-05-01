@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -121,14 +120,12 @@ func TestGetBuildTests(t *testing.T) {
 
 	cases := []struct {
 		name         string
-		call         func(context.Context, *Client) (*TestOccurrences, error)
+		opts         BuildTestsOptions
 		wantLocators []string
 	}{
 		{
 			name: "all",
-			call: func(ctx context.Context, c *Client) (*TestOccurrences, error) {
-				return c.GetBuildTests(ctx, "1", false, 10)
-			},
+			opts: BuildTestsOptions{Limit: 10},
 			wantLocators: []string{
 				"build:(id:1)",
 				"build:(id:1),count:10",
@@ -136,9 +133,7 @@ func TestGetBuildTests(t *testing.T) {
 		},
 		{
 			name: "failed_only_excludes_muted",
-			call: func(ctx context.Context, c *Client) (*TestOccurrences, error) {
-				return c.GetBuildTests(ctx, "1", true, 10)
-			},
+			opts: BuildTestsOptions{FailedOnly: true, Limit: 10},
 			wantLocators: []string{
 				"build:(id:1),status:FAILURE,muted:false",
 				"build:(id:1),status:FAILURE,muted:false,count:10",
@@ -146,9 +141,7 @@ func TestGetBuildTests(t *testing.T) {
 		},
 		{
 			name: "muted_only",
-			call: func(ctx context.Context, c *Client) (*TestOccurrences, error) {
-				return c.GetBuildTestsWithOptions(ctx, "1", BuildTestsOptions{MutedOnly: true, Limit: 5})
-			},
+			opts: BuildTestsOptions{MutedOnly: true, Limit: 5},
 			wantLocators: []string{
 				"build:(id:1),status:FAILURE,muted:true",
 				"build:(id:1),status:FAILURE,muted:true,count:5",
@@ -156,9 +149,7 @@ func TestGetBuildTests(t *testing.T) {
 		},
 		{
 			name: "no_limit_uses_summary_count",
-			call: func(ctx context.Context, c *Client) (*TestOccurrences, error) {
-				return c.GetBuildTests(ctx, "1", false, 0)
-			},
+			opts: BuildTestsOptions{},
 			wantLocators: []string{
 				"build:(id:1)",
 				"build:(id:1),count:2",
@@ -194,7 +185,7 @@ func TestGetBuildTests(t *testing.T) {
 				json.NewEncoder(w).Encode(TestOccurrences{Count: 2, Passed: 1, Failed: 1, Muted: 1})
 			})
 
-			tests, err := tc.call(t.Context(), client)
+			tests, err := client.GetBuildTests(t.Context(), "1", tc.opts)
 			require.NoError(t, err)
 			assert.Equal(t, 1, tests.Failed)
 			assert.Equal(t, 1, tests.Muted)
@@ -212,13 +203,13 @@ func TestGetBuildTests(t *testing.T) {
 	}
 }
 
-func TestGetBuildTestsWithOptionsRejectsConflictingFilters(t *testing.T) {
+func TestGetBuildTestsRejectsConflictingFilters(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
 	})
 
-	_, err := client.GetBuildTestsWithOptions(t.Context(), "1", BuildTestsOptions{FailedOnly: true, MutedOnly: true})
+	_, err := client.GetBuildTests(t.Context(), "1", BuildTestsOptions{FailedOnly: true, MutedOnly: true})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mutually exclusive")
 }

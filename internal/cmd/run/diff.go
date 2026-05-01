@@ -161,7 +161,7 @@ func fetchBuildData(ctx context.Context, client api.ClientInterface, id string, 
 		return buildData{}, fmt.Errorf("#%s: %w", id, err)
 	}
 	d := buildData{build: b}
-	if d.tests, err = client.GetBuildTests(ctx, id, true, 0); err != nil {
+	if d.tests, err = client.GetBuildTests(ctx, id, api.BuildTestsOptions{FailedOnly: true}); err != nil {
 		p.Warn("Could not fetch tests for #%s: %v", id, err)
 	}
 	if d.testSummary, err = client.GetBuildTestSummary(id); err != nil {

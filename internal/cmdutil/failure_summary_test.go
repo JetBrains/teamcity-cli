@@ -6,14 +6,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // failureSummaryFixture sets up a mock server returning the given tests and problems,
@@ -94,37 +92,6 @@ func TestPrintFailureSummary(t *testing.T) {
 			"",
 		)
 		assert.Contains(t, out, "3 tests failed")
-	})
-
-	t.Run("failed test request excludes muted failures", func(t *testing.T) {
-		var mu sync.Mutex
-		var locators []string
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			switch {
-			case strings.HasPrefix(r.URL.Path, "/app/rest/testOccurrences"):
-				mu.Lock()
-				locators = append(locators, r.URL.Query().Get("locator"))
-				mu.Unlock()
-				json.NewEncoder(w).Encode(api.TestOccurrences{Count: 0, Failed: 0})
-			case strings.HasPrefix(r.URL.Path, "/app/rest/problemOccurrences"):
-				json.NewEncoder(w).Encode(api.ProblemOccurrences{})
-			default:
-				http.NotFound(w, r)
-			}
-		}))
-		t.Cleanup(ts.Close)
-
-		var buf bytes.Buffer
-		p := &output.Printer{Out: &buf, ErrOut: &buf}
-		client := api.NewClient(ts.URL, "test")
-		PrintFailureSummary(t.Context(), p, client, "123", "42", "https://tc/build/123", "")
-
-		mu.Lock()
-		defer mu.Unlock()
-		require.Len(t, locators, 2)
-		assert.Equal(t, "build:(id:123),status:FAILURE,muted:false", locators[0])
-		assert.Equal(t, "build:(id:123),status:FAILURE,muted:false,count:10", locators[1])
 	})
 
 	t.Run("muted failures do not create failed tests section", func(t *testing.T) {

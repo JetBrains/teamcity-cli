@@ -206,11 +206,7 @@ type BuildTestsOptions struct {
 	Limit      int
 }
 
-func (c *Client) GetBuildTests(ctx context.Context, buildID string, failedOnly bool, limit int) (*TestOccurrences, error) {
-	return c.GetBuildTestsWithOptions(ctx, buildID, BuildTestsOptions{FailedOnly: failedOnly, Limit: limit})
-}
-
-func (c *Client) GetBuildTestsWithOptions(ctx context.Context, buildID string, opts BuildTestsOptions) (*TestOccurrences, error) {
+func (c *Client) GetBuildTests(ctx context.Context, buildID string, opts BuildTestsOptions) (*TestOccurrences, error) {
 	if opts.FailedOnly && opts.MutedOnly {
 		return nil, Validation("failedOnly and mutedOnly are mutually exclusive", "set only one test result filter")
 	}
@@ -220,34 +216,30 @@ func (c *Client) GetBuildTestsWithOptions(ctx context.Context, buildID string, o
 		return nil, err
 	}
 
-	baseLocator := NewLocator().AddLocator("build", NewLocator().Add("id", id))
-	if opts.FailedOnly || opts.MutedOnly {
-		baseLocator.AddUpper("status", "FAILURE")
-		if opts.FailedOnly {
-			baseLocator.Add("muted", "false")
-		} else {
-			baseLocator.Add("muted", "true")
-		}
+	locator := NewLocator().AddLocator("build", NewLocator().Add("id", id))
+	switch {
+	case opts.FailedOnly:
+		locator.AddUpper("status", "FAILURE").Add("muted", "false")
+	case opts.MutedOnly:
+		locator.AddUpper("status", "FAILURE").Add("muted", "true")
 	}
 
 	summaryFields := "count,passed,failed,ignored,muted"
-	summaryPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", baseLocator.Encode(), url.QueryEscape(summaryFields))
+	summaryPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(summaryFields))
 
 	var summary TestOccurrences
 	if err := c.get(ctx, summaryPath, &summary); err != nil {
 		return nil, err
 	}
 
-	detailLocator := NewLocator()
-	detailLocator.parts = append(detailLocator.parts, baseLocator.parts...)
-	if opts.Limit > 0 {
-		detailLocator.AddInt("count", opts.Limit)
-	} else {
-		detailLocator.parts = append(detailLocator.parts, fmt.Sprintf("count:%d", summary.Count))
+	count := opts.Limit
+	if count <= 0 {
+		count = summary.Count
 	}
+	locator.AddInt("count", count)
 
 	detailFields := "testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)))"
-	detailPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", detailLocator.Encode(), url.QueryEscape(detailFields))
+	detailPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(detailFields))
 
 	var details TestOccurrences
 	if err := c.get(ctx, detailPath, &details); err != nil {

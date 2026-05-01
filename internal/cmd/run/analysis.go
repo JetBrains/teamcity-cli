@@ -1,7 +1,6 @@
 package run
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -128,10 +127,6 @@ type runTestsOptions struct {
 	job    string
 }
 
-type buildTestsOptionsClient interface {
-	GetBuildTestsWithOptions(context.Context, string, api.BuildTestsOptions) (*api.TestOccurrences, error)
-}
-
 func newRunTestsCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &runTestsOptions{}
 
@@ -191,7 +186,11 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
 
-	tests, err := getRunTests(f.Context(), client, runID, opts)
+	tests, err := client.GetBuildTests(f.Context(), runID, api.BuildTestsOptions{
+		FailedOnly: opts.failed,
+		MutedOnly:  opts.muted,
+		Limit:      opts.limit,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to get tests: %w", err)
 	}
@@ -201,11 +200,12 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	}
 
 	if tests.Count == 0 {
-		if opts.muted {
+		switch {
+		case opts.muted:
 			p.Success("No muted failed tests in this run")
-		} else if opts.failed {
+		case opts.failed:
 			p.Success("No failed tests in this run")
-		} else {
+		default:
 			p.Info("No tests in this run")
 		}
 		return nil
@@ -244,20 +244,6 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	}
 
 	return nil
-}
-
-func getRunTests(ctx context.Context, client api.ClientInterface, runID string, opts *runTestsOptions) (*api.TestOccurrences, error) {
-	if !opts.muted {
-		return client.GetBuildTests(ctx, runID, opts.failed, opts.limit)
-	}
-	testClient, ok := client.(buildTestsOptionsClient)
-	if !ok {
-		return nil, api.Validation("muted test filter unsupported", "use the standard TeamCity API client")
-	}
-	return testClient.GetBuildTestsWithOptions(ctx, runID, api.BuildTestsOptions{
-		MutedOnly: true,
-		Limit:     opts.limit,
-	})
 }
 
 func runTestsBrowserURL(webURL string, opts *runTestsOptions) string {

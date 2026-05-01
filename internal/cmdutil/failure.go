@@ -24,7 +24,7 @@ func PrintFailureSummary(ctx context.Context, p *output.Printer, client api.Clie
 	var testsErr error
 	var tests *api.TestOccurrences
 
-	tests, testsErr = client.GetBuildTests(ctx, buildID, true, maxFailedTestsToShow)
+	tests, testsErr = client.GetBuildTests(ctx, buildID, api.BuildTestsOptions{FailedOnly: true, Limit: maxFailedTestsToShow})
 	if testsErr != nil {
 		p.Debug("Failed to fetch tests: %v", testsErr)
 	} else if tests.Failed > 0 {

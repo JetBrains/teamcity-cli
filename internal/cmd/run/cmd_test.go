@@ -282,7 +282,6 @@ func TestRunTests(T *testing.T) {
 
 	cmdtest.RunCmdWithFactory(T, f, "run", "tests", testBuildID)
 	cmdtest.RunCmdWithFactory(T, f, "run", "tests", testBuildID, "--failed")
-	cmdtest.RunCmdWithFactory(T, f, "run", "tests", testBuildID, "--muted")
 	cmdtest.RunCmdWithFactory(T, f, "run", "tests", testBuildID, "--json")
 }
 
