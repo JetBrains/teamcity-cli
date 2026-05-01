@@ -123,7 +123,8 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ### Flags for `teamcity run tests`
 
-- `--failed` - Show only failed tests
+- `--failed` - Show only failed tests, excluding muted failures
+- `--muted` - Show only muted failed tests
 - `-j, --job <id>` - Get tests for latest run of this job
 - `--json` - Output as JSON
 - `-n, --limit <n>` - Maximum number of tests to show

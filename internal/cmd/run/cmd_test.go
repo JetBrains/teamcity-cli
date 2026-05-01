@@ -282,7 +282,99 @@ func TestRunTests(T *testing.T) {
 
 	cmdtest.RunCmdWithFactory(T, f, "run", "tests", testBuildID)
 	cmdtest.RunCmdWithFactory(T, f, "run", "tests", testBuildID, "--failed")
+	cmdtest.RunCmdWithFactory(T, f, "run", "tests", testBuildID, "--muted")
 	cmdtest.RunCmdWithFactory(T, f, "run", "tests", testBuildID, "--json")
+}
+
+func TestRunTestsFailedAndMutedFilters(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	installRunTestsFilterHandler(ts)
+
+	failed := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--failed")
+	assert.Contains(T, failed, "PlainFailure")
+	assert.NotContains(T, failed, "MutedFailure")
+	assert.Contains(T, failed, "TESTS: 1 failed")
+	assert.Contains(T, failed, "buildTab=tests&status=failed")
+
+	muted := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--muted")
+	assert.Contains(T, muted, "MutedFailure")
+	assert.NotContains(T, muted, "PlainFailure")
+	assert.Contains(T, muted, "TESTS: 1 muted")
+	assert.Contains(T, muted, "buildTab=tests&status=muted")
+}
+
+func TestRunTestsAllLabelsMutedOccurrences(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	installRunTestsFilterHandler(ts)
+
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID)
+	assert.Contains(T, got, "PlainFailure")
+	assert.Contains(T, got, "MutedFailure")
+	assert.Contains(T, got, "TESTS: 1 passed, 1 failed, 1 muted, 1 ignored")
+}
+
+func TestRunTestsMutedJSON(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	installRunTestsFilterHandler(ts)
+
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--muted", "--json")
+	var tests api.TestOccurrences
+	require.NoError(T, json.Unmarshal([]byte(got), &tests))
+	assert.Equal(T, 1, tests.Muted)
+	require.Len(T, tests.TestOccurrence, 1)
+	assert.True(T, tests.TestOccurrence[0].Muted)
+}
+
+func TestRunTestsFailedAndMutedAreMutuallyExclusive(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "tests", testBuildID, "--failed", "--muted")
+	assert.Contains(T, err.Error(), "failed")
+	assert.Contains(T, err.Error(), "muted")
+}
+
+func installRunTestsFilterHandler(ts *cmdtest.TestServer) {
+	ts.Handle("GET /app/rest/testOccurrences", func(w http.ResponseWriter, r *http.Request) {
+		locator := r.URL.Query().Get("locator")
+		fields := r.URL.Query().Get("fields")
+		detail := strings.Contains(fields, "testOccurrence(")
+
+		switch {
+		case strings.Contains(locator, "muted:false"):
+			if detail {
+				cmdtest.JSON(w, api.TestOccurrences{
+					TestOccurrence: []api.TestOccurrence{
+						{ID: "failed", Name: "PlainFailure", Status: "FAILURE"},
+					},
+				})
+				return
+			}
+			cmdtest.JSON(w, api.TestOccurrences{Count: 1, Failed: 1})
+		case strings.Contains(locator, "muted:true"):
+			if detail {
+				cmdtest.JSON(w, api.TestOccurrences{
+					TestOccurrence: []api.TestOccurrence{
+						{ID: "muted", Name: "MutedFailure", Status: "FAILURE", Muted: true},
+					},
+				})
+				return
+			}
+			cmdtest.JSON(w, api.TestOccurrences{Count: 1, Muted: 1})
+		default:
+			if detail {
+				cmdtest.JSON(w, api.TestOccurrences{
+					TestOccurrence: []api.TestOccurrence{
+						{ID: "passed", Name: "PassingTest", Status: "SUCCESS"},
+						{ID: "failed", Name: "PlainFailure", Status: "FAILURE"},
+						{ID: "muted", Name: "MutedFailure", Status: "FAILURE", Muted: true},
+						{ID: "ignored", Name: "IgnoredTest", Status: "IGNORED"},
+					},
+				})
+				return
+			}
+			cmdtest.JSON(w, api.TestOccurrences{Count: 4, Passed: 1, Failed: 1, Muted: 1, Ignored: 1})
+		}
+	})
 }
 
 func TestRunListWithAtMe(T *testing.T) {

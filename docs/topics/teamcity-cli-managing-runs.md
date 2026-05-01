@@ -998,10 +998,16 @@ teamcity run tests 12345
 teamcity run tests --job MyProject_Build
 ```
 
-Show only failed tests:
+Show only failed tests, excluding muted failures:
 
 ```Shell
 teamcity run tests 12345 --failed
+```
+
+Show only muted failed tests:
+
+```Shell
+teamcity run tests 12345 --muted
 ```
 
 <img src="run-tests.gif" alt="Viewing test results" border-effect="rounded"/>

@@ -14,6 +14,9 @@ stdout '"count"'
 exec teamcity run tests $BUILD_ID --failed --no-input
 ! stderr 'Error'
 
+exec teamcity run tests $BUILD_ID --muted --no-input
+! stderr 'Error'
+
 exec teamcity run tests $BUILD_ID --limit 5 --no-input
 ! stderr 'Error'
 
