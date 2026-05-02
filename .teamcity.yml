@@ -71,9 +71,15 @@ jobs:
       - type: script
         name: Install Go
         script-content: |-
-          sudo add-apt-repository -y ppa:longsleep/golang-backports
-          sudo apt-get update
-          sudo apt-get install -y golang-1.26-go
+          set -eu
+          ARCH=$(dpkg --print-architecture)
+          curl -fsSL 'https://go.dev/dl/?mode=json' -o /tmp/go-dl.json
+          GO_VERSION=$(python3 -c 'import json; print(next(r["version"] for r in json.load(open("/tmp/go-dl.json")) if r["version"].startswith("go1.26.")))')
+          curl -fsSL "https://go.dev/dl/${GO_VERSION}.linux-${ARCH}.tar.gz" -o /tmp/go.tar.gz
+          sudo rm -rf /usr/lib/go-1.26
+          sudo mkdir -p /usr/lib/go-1.26
+          sudo tar -C /usr/lib/go-1.26 --strip-components=1 -xzf /tmp/go.tar.gz
+          /usr/lib/go-1.26/bin/go version
       - type: script
         name: Setup
         script-content: |-
@@ -125,9 +131,15 @@ jobs:
       - type: script
         name: Install Go
         script-content: |-
-          sudo add-apt-repository -y ppa:longsleep/golang-backports
-          sudo apt-get update
-          sudo apt-get install -y golang-1.26-go
+          set -eu
+          ARCH=$(dpkg --print-architecture)
+          curl -fsSL 'https://go.dev/dl/?mode=json' -o /tmp/go-dl.json
+          GO_VERSION=$(python3 -c 'import json; print(next(r["version"] for r in json.load(open("/tmp/go-dl.json")) if r["version"].startswith("go1.26.")))')
+          curl -fsSL "https://go.dev/dl/${GO_VERSION}.linux-${ARCH}.tar.gz" -o /tmp/go.tar.gz
+          sudo rm -rf /usr/lib/go-1.26
+          sudo mkdir -p /usr/lib/go-1.26
+          sudo tar -C /usr/lib/go-1.26 --strip-components=1 -xzf /tmp/go.tar.gz
+          /usr/lib/go-1.26/bin/go version
       - type: script
         name: Setup
         script-content: |-
