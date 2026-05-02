@@ -199,34 +199,47 @@ func (c *Client) UploadDiffChanges(patch []byte, description string) (string, er
 	return strings.TrimSpace(string(resp.Body)), nil
 }
 
-func (c *Client) GetBuildTests(ctx context.Context, buildID string, failedOnly bool, limit int) (*TestOccurrences, error) {
+// BuildTestsOptions controls test occurrence filtering for a build.
+type BuildTestsOptions struct {
+	FailedOnly bool
+	MutedOnly  bool
+	Limit      int
+}
+
+func (c *Client) GetBuildTests(ctx context.Context, buildID string, opts BuildTestsOptions) (*TestOccurrences, error) {
+	if opts.FailedOnly && opts.MutedOnly {
+		return nil, Validation("failedOnly and mutedOnly are mutually exclusive", "set only one test result filter")
+	}
+
 	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
 		return nil, err
 	}
 
-	baseLocator := fmt.Sprintf("build:(id:%s)", id)
-	if failedOnly {
-		baseLocator += ",status:FAILURE"
+	locator := NewLocator().AddLocator("build", NewLocator().Add("id", id))
+	switch {
+	case opts.FailedOnly:
+		locator.AddUpper("status", "FAILURE").Add("muted", "false")
+	case opts.MutedOnly:
+		locator.AddUpper("status", "FAILURE").Add("muted", "true")
 	}
 
-	summaryFields := "count,passed,failed,ignored"
-	summaryPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", url.QueryEscape(baseLocator), url.QueryEscape(summaryFields))
+	summaryFields := "count,passed,failed,ignored,muted"
+	summaryPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(summaryFields))
 
 	var summary TestOccurrences
 	if err := c.get(ctx, summaryPath, &summary); err != nil {
 		return nil, err
 	}
 
-	detailLocator := baseLocator
-	if limit > 0 {
-		detailLocator += fmt.Sprintf(",count:%d", limit)
-	} else {
-		detailLocator += fmt.Sprintf(",count:%d", summary.Count)
+	count := opts.Limit
+	if count <= 0 {
+		count = summary.Count
 	}
+	locator.AddInt("count", count)
 
-	detailFields := "testOccurrence(id,name,status,duration,details,newFailure,firstFailed(build(id,number)))"
-	detailPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", url.QueryEscape(detailLocator), url.QueryEscape(detailFields))
+	detailFields := "testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)))"
+	detailPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(detailFields))
 
 	var details TestOccurrences
 	if err := c.get(ctx, detailPath, &details); err != nil {
@@ -244,7 +257,7 @@ func (c *Client) GetBuildTestSummary(buildID string) (*TestOccurrences, error) {
 	}
 
 	locator := fmt.Sprintf("build:(id:%s)", id)
-	fields := "count,passed,failed,ignored"
+	fields := "count,passed,failed,ignored,muted"
 	path := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(fields))
 
 	var summary TestOccurrences

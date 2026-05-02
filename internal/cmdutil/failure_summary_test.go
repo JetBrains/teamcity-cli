@@ -94,6 +94,19 @@ func TestPrintFailureSummary(t *testing.T) {
 		assert.Contains(t, out, "3 tests failed")
 	})
 
+	t.Run("muted failures do not create failed tests section", func(t *testing.T) {
+		out := failureSummaryFixture(t,
+			api.TestOccurrences{
+				Count: 1, Failed: 0, Muted: 1,
+				TestOccurrence: []api.TestOccurrence{{Name: "MutedBroken", Status: "FAILURE", Muted: true}},
+			},
+			api.ProblemOccurrences{},
+			"",
+		)
+		assert.NotContains(t, out, "Failed tests")
+		assert.NotContains(t, out, "MutedBroken")
+	})
+
 	t.Run("overflow shows remaining count", func(t *testing.T) {
 		out := failureSummaryFixture(t,
 			api.TestOccurrences{

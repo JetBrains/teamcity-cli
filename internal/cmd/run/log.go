@@ -511,7 +511,7 @@ func runLogFailed(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 			summary.Problems = problems.ProblemOccurrence
 		}
 		if build.Status != "SUCCESS" {
-			if tests, err := client.GetBuildTests(f.Context(), runID, true, 0); err == nil {
+			if tests, err := client.GetBuildTests(f.Context(), runID, api.BuildTestsOptions{FailedOnly: true}); err == nil {
 				summary.Tests = tests
 			}
 		}

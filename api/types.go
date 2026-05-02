@@ -343,6 +343,7 @@ type TestOccurrence struct {
 	Details    string `json:"details,omitempty"`
 	NewFailure bool   `json:"newFailure,omitempty"`
 	Ignored    bool   `json:"ignored,omitempty"`
+	Muted      bool   `json:"muted,omitempty"`
 	Href       string `json:"href,omitempty"`
 
 	FirstFailed *TestOccurrence `json:"firstFailed,omitempty"`
@@ -354,6 +355,7 @@ type TestOccurrences struct {
 	Passed         int              `json:"passed,omitempty"`
 	Failed         int              `json:"failed,omitempty"`
 	Ignored        int              `json:"ignored,omitempty"`
+	Muted          int              `json:"muted,omitempty"`
 	TestOccurrence []TestOccurrence `json:"testOccurrence"`
 }
 

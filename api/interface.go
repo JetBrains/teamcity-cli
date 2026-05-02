@@ -60,7 +60,7 @@ type ClientInterface interface {
 	DeleteBuildComment(buildID string) error
 	GetBuildSnapshotDependencies(buildID string) (*BuildList, error)
 	GetBuildChanges(ctx context.Context, buildID string) (*ChangeList, error)
-	GetBuildTests(ctx context.Context, buildID string, failedOnly bool, limit int) (*TestOccurrences, error)
+	GetBuildTests(ctx context.Context, buildID string, opts BuildTestsOptions) (*TestOccurrences, error)
 	GetBuildTestSummary(buildID string) (*TestOccurrences, error)
 	GetBuildProblems(buildID string) (*ProblemOccurrences, error)
 	GetBuildResultingProperties(buildID string) (*ParameterList, error)

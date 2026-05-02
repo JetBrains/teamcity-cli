@@ -345,7 +345,7 @@ func TestAPIDriftEndpoints(t *testing.T) {
 		{"GetBuild", func() (any, error) { return client.GetBuild(t.Context(), buildID) }},
 		{"GetBuildChanges", func() (any, error) { return client.GetBuildChanges(t.Context(), buildID) }},
 		{"GetBuildTags", func() (any, error) { return client.GetBuildTags(buildID) }},
-		{"GetBuildTests", func() (any, error) { return client.GetBuildTests(t.Context(), buildID, false, 0) }},
+		{"GetBuildTests", func() (any, error) { return client.GetBuildTests(t.Context(), buildID, api.BuildTestsOptions{}) }},
 		{"GetBuildTestSummary", func() (any, error) { return client.GetBuildTestSummary(buildID) }},
 		{"GetBuildProblems", func() (any, error) { return client.GetBuildProblems(buildID) }},
 		{"GetBuildMessages", func() (any, error) {

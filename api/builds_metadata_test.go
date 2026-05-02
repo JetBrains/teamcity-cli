@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -115,30 +117,101 @@ func TestGetBuildChanges(t *testing.T) {
 
 func TestGetBuildTests(t *testing.T) {
 	t.Parallel()
-	callCount := 0
-	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/app/rest/builds" || r.URL.Path == "/httpAuth/app/rest/builds" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		callCount++
-		if callCount <= 1 {
-			// Summary call
-			json.NewEncoder(w).Encode(TestOccurrences{Count: 2, Passed: 1, Failed: 1})
-		} else {
-			// Detail call
-			json.NewEncoder(w).Encode(TestOccurrences{
-				TestOccurrence: []TestOccurrence{{ID: "1", Name: "TestFoo", Status: "FAILURE"}},
+
+	cases := []struct {
+		name         string
+		opts         BuildTestsOptions
+		wantLocators []string
+	}{
+		{
+			name: "all",
+			opts: BuildTestsOptions{Limit: 10},
+			wantLocators: []string{
+				"build:(id:1)",
+				"build:(id:1),count:10",
+			},
+		},
+		{
+			name: "failed_only_excludes_muted",
+			opts: BuildTestsOptions{FailedOnly: true, Limit: 10},
+			wantLocators: []string{
+				"build:(id:1),status:FAILURE,muted:false",
+				"build:(id:1),status:FAILURE,muted:false,count:10",
+			},
+		},
+		{
+			name: "muted_only",
+			opts: BuildTestsOptions{MutedOnly: true, Limit: 5},
+			wantLocators: []string{
+				"build:(id:1),status:FAILURE,muted:true",
+				"build:(id:1),status:FAILURE,muted:true,count:5",
+			},
+		},
+		{
+			name: "no_limit_uses_summary_count",
+			opts: BuildTestsOptions{},
+			wantLocators: []string{
+				"build:(id:1)",
+				"build:(id:1),count:2",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var mu sync.Mutex
+			var locators []string
+			var fields []string
+
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if r.URL.Path != "/app/rest/testOccurrences" {
+					http.NotFound(w, r)
+					return
+				}
+
+				field := r.URL.Query().Get("fields")
+				mu.Lock()
+				locators = append(locators, r.URL.Query().Get("locator"))
+				fields = append(fields, field)
+				mu.Unlock()
+
+				if strings.Contains(field, "testOccurrence(") {
+					json.NewEncoder(w).Encode(TestOccurrences{
+						TestOccurrence: []TestOccurrence{{ID: "1", Name: "TestFoo", Status: "FAILURE", Muted: true}},
+					})
+					return
+				}
+				json.NewEncoder(w).Encode(TestOccurrences{Count: 2, Passed: 1, Failed: 1, Muted: 1})
 			})
-		}
+
+			tests, err := client.GetBuildTests(t.Context(), "1", tc.opts)
+			require.NoError(t, err)
+			assert.Equal(t, 1, tests.Failed)
+			assert.Equal(t, 1, tests.Muted)
+			require.Len(t, tests.TestOccurrence, 1)
+			assert.True(t, tests.TestOccurrence[0].Muted)
+
+			mu.Lock()
+			defer mu.Unlock()
+			assert.Equal(t, tc.wantLocators, locators)
+			assert.Equal(t, []string{
+				"count,passed,failed,ignored,muted",
+				"testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)))",
+			}, fields)
+		})
+	}
+}
+
+func TestGetBuildTestsRejectsConflictingFilters(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
 	})
 
-	tests, err := client.GetBuildTests(t.Context(), "1", true, 10)
-	require.NoError(t, err)
-	assert.Equal(t, 1, tests.Failed)
-	assert.Len(t, tests.TestOccurrence, 1)
+	_, err := client.GetBuildTests(t.Context(), "1", BuildTestsOptions{FailedOnly: true, MutedOnly: true})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mutually exclusive")
 }
 
 func TestGetBuildProblems(t *testing.T) {

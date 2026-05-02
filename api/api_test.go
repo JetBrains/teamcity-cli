@@ -709,7 +709,7 @@ func TestGetBuildTests(T *testing.T) {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			tests, err := client.GetBuildTests(t.Context(), buildID, tc.failedOnly, tc.limit)
+			tests, err := client.GetBuildTests(t.Context(), buildID, api.BuildTestsOptions{FailedOnly: tc.failedOnly, Limit: tc.limit})
 			if err != nil {
 				t.Logf("GetBuildTests: %v", err)
 				return
