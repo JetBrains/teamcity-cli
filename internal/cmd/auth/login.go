@@ -312,9 +312,9 @@ func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool)
 	return nil
 }
 
-// trackLoginOutcome emits one login.completed event (and login.abandoned on user interrupt) tagged with the phase that was active when the cancel hit.
+// trackLoginOutcome emits login.completed (or login.abandoned on user interrupt — both Ctrl-C and huh prompt aborts) tagged with the phase that was active when the cancel hit.
 func trackLoginOutcome(f *cmdutil.Factory, method, failedStep string, err error) {
-	if errors.Is(err, context.Canceled) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, huh.ErrUserAborted) {
 		f.Analytics.Track(analytics.GroupAuth, analytics.EventLoginAbandoned, map[string]any{
 			"method":      method,
 			"failed_step": failedStep,
