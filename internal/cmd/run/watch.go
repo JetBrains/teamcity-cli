@@ -87,9 +87,14 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 		if watchHasTTYFn() {
 			tuiStart := time.Now()
 			tuiErr := runWatchTUIFn(ctx, client, runID, opts.interval)
+			status := watchExitStatus(tuiErr)
+			// TUI returns nil even when the user quits early; treat any context cancel as canceled.
+			if errors.Is(ctx.Err(), context.Canceled) || errors.Is(topCtx.Err(), context.Canceled) {
+				status = analytics.BuildStatusCanceled
+			}
 			f.Analytics.Track(analytics.GroupBuild, analytics.EventWatchFinished, map[string]any{
 				"duration_seconds": int(time.Since(tuiStart).Seconds()),
-				"final_status":     watchExitStatus(tuiErr),
+				"final_status":     status,
 				"had_logs":         true,
 				"is_timed_out":     errors.Is(ctx.Err(), context.DeadlineExceeded),
 			})
