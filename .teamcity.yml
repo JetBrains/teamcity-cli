@@ -182,6 +182,15 @@ jobs:
         name: Build & Test
         docker-image: goreleaser/goreleaser-pro:latest
         script-content: goreleaser release --snapshot --clean --skip=publish,chocolatey,npm
+    files-publication:
+      - dist/teamcity_*.tar.gz
+      - dist/teamcity_*.zip
+      - dist/teamcity_*.deb
+      - dist/teamcity_*.rpm
+      - dist/teamcity_*.apk
+      - dist/teamcity_*.pkg.tar.zst
+      - dist/*.tgz
+      - dist/checksums.txt
   lint:
     name: Lint
     allow-reuse: true
