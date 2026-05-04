@@ -70,7 +70,8 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 	if opts.guest {
 		method = analytics.AuthMethodGuest
 	}
-	defer func() { trackLoginOutcome(f, method, err) }()
+	failedStep := analytics.AuthStepServer
+	defer func() { trackLoginOutcome(f, method, failedStep, err) }()
 
 	if opts.guest && opts.token != "" {
 		return api.Validation(
@@ -100,8 +101,10 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 	f.WarnInsecureHTTP(serverURL, reason)
 
 	if opts.guest {
+		failedStep = analytics.AuthStepVerify
 		return finishGuestLogin(ctx, f, serverURL)
 	}
+	failedStep = analytics.AuthStepToken
 	return finishTokenLogin(ctx, f, serverURL, opts, interactive)
 }
 
@@ -309,12 +312,12 @@ func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool)
 	return nil
 }
 
-// trackLoginOutcome emits one login.completed event (and login.abandoned on user interrupt).
-func trackLoginOutcome(f *cmdutil.Factory, method string, err error) {
+// trackLoginOutcome emits one login.completed event (and login.abandoned on user interrupt) tagged with the phase that was active when the cancel hit.
+func trackLoginOutcome(f *cmdutil.Factory, method, failedStep string, err error) {
 	if errors.Is(err, context.Canceled) {
 		f.Analytics.Track(analytics.GroupAuth, analytics.EventLoginAbandoned, map[string]any{
 			"method":      method,
-			"failed_step": analytics.AuthStepToken,
+			"failed_step": failedStep,
 		})
 		return
 	}
