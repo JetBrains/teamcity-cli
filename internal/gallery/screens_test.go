@@ -303,19 +303,30 @@ func projectScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity project ssh delete deploy-key --project MyApp", capture(t, ts, "project", "ssh", "delete", "deploy-key", "--project", "MyApp")),
 		termbook.Scr("project-connection-list", "project connection list", "List project connections",
 			"teamcity project connection list --project MyApp", capture(t, ts, "project", "connection", "list", "--project", "MyApp")),
-		termbook.Manual("project-connection-create-github-app", "project connection create github-app", "Manifest flow: huh prompts echo, browser registers the App, post-create authorize prompt", "teamcity project connection create github-app -p Backend --owner my-org", func(w io.Writer) {
+		termbook.Manual("project-connection-create-github-app", "project connection create github-app", "Wizard: register the App, sign in, install on a repo, then point at vcs create", "teamcity project connection create github-app -p Backend --owner my-org", func(w io.Writer) {
 			p := &output.Printer{Out: w, ErrOut: w}
 			fmt.Fprintf(w, "Connection name: %s\n", output.Cyan("GitHub App"))
-			p.Info("Opening browser to register a GitHub App for %s...", "my-org")
-			fmt.Fprintf(w, "  %s Click %q on GitHub\n", output.Yellow("→"), "Create GitHub App for my-org")
 			fmt.Fprintln(w)
+			fmt.Fprintf(w, "%s %s\n", output.Bold("Step 1 of 3:"), output.Bold("Register a GitHub App"))
+			fmt.Fprintln(w, "  GitHub will create the App and hand its credentials back to TeamCity.")
+			fmt.Fprintf(w, "  %s On GitHub, click %q to confirm.\n", output.Yellow("→"), "Create GitHub App for my-org")
+			fmt.Fprintln(w, "Open browser?  yes  no")
+			p.Info("Opening browser to register the App on GitHub...")
 			p.Success("Created connection %q (%s) in project %s", "GitHub App", "PROJECT_EXT_42", "Backend")
-			p.Info("Opening browser to authorize connection %s as your TeamCity user...", "PROJECT_EXT_42")
+			fmt.Fprintln(w)
+			fmt.Fprintf(w, "%s %s\n", output.Bold("Step 2 of 3:"), output.Bold("Sign in to the App"))
+			fmt.Fprintln(w, "  TeamCity calls GitHub as you when testing VCS roots — your sign-in lets it.")
+			fmt.Fprintln(w, "Open browser to sign in?  yes  no")
+			p.Info("Opening browser to sign in for connection %s...", "PROJECT_EXT_42")
 			p.Tip("Complete the flow in your browser. The tab closes on success; you can return here then.")
 			fmt.Fprintln(w)
+			fmt.Fprintf(w, "%s %s\n", output.Bold("Step 3 of 3:"), output.Bold("Install on a repository"))
+			fmt.Fprintln(w, "  GitHub Apps work per-repo. Install the App on the repos TeamCity should clone.")
+			fmt.Fprintln(w, "Open browser?  yes  no")
+			p.Info("Opening browser to install the App...")
+			fmt.Fprintln(w)
 			fmt.Fprintln(w, "Next steps:")
-			fmt.Fprintf(w, "  1. Install on a repo: %s\n", output.Cyan("https://github.com/apps/tc-backend/installations/new"))
-			fmt.Fprintf(w, "  2. Create a VCS root: %s\n", output.Cyan("teamcity project vcs create -p Backend --auth token --connection-id PROJECT_EXT_42 --url ..."))
+			fmt.Fprintf(w, "  1. Create a VCS root: %s\n", output.Cyan("teamcity project vcs create -p Backend --auth token --connection-id PROJECT_EXT_42 --url <repo-url>"))
 		}),
 		termbook.Scr("project-connection-create-docker", "project connection create docker", "Register Docker registry credentials",
 			"echo $DOCKER_TOKEN | teamcity project connection create docker -p Backend --name GHCR --url https://ghcr.io --username my-org --password t0p-secret",

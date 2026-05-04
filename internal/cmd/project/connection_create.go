@@ -124,6 +124,17 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 				return err
 			}
 		}
+		target := cmp.Or(owner, "your account")
+		printWizardStep(f.Printer, 1, 3, "Register a GitHub App",
+			"GitHub will create the App and hand its credentials back to TeamCity.")
+		_, _ = fmt.Fprintf(f.Printer.Out, "  %s On GitHub, click %q to confirm.\n", output.Yellow("→"), "Create GitHub App for "+target)
+		ok := true
+		if err := cmdutil.Confirm("Open browser?", &ok); err != nil {
+			return err
+		}
+		if !ok {
+			return api.Validation("canceled before registering the App", "Re-run when ready, or pass --no-manifest to enter existing credentials")
+		}
 		appName := githubAppName(cmp.Or(opts.appName, defaultGitHubAppName(projectID, client.ServerURL())))
 		creds, err := runGitHubAppManifestFlow(f.Context(), f.Printer, client.ServerURL(), appName, projectID, owner)
 		if err != nil {
@@ -190,34 +201,72 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	f.Printer.Success("Created connection %q (%s) in project %s", name, created.ID, projectID)
 
 	authorizeDone := false
+	installOpened := false
+
 	if interactive && !opts.noAuthorize {
+		if useManifest {
+			printWizardStep(f.Printer, 2, 3, "Sign in to the App",
+				"TeamCity calls GitHub as you when testing VCS roots — your sign-in lets it.")
+		} else {
+			printWizardStep(f.Printer, 0, 0, "Sign in to the connection",
+				"Per-user sign-in lets TeamCity call upstream as you (e.g. when testing VCS roots).")
+		}
 		ask := true
-		if err := cmdutil.Confirm("Authorize as your TeamCity user now?", &ask); err != nil {
+		if err := cmdutil.Confirm("Open browser to sign in?", &ask); err != nil {
 			return err
 		}
 		if ask {
 			if err := openConnectionAuthorize(f, client, projectID, created.ID, "GitHubApp"); err != nil {
-				f.Printer.Warn("Could not start authorize flow: %v", err)
+				f.Printer.Warn("Could not start sign-in flow: %v", err)
 			} else {
 				authorizeDone = true
 			}
 		}
 	}
 
-	printGitHubAppNextSteps(f, projectID, created.ID, installSlug, authorizeDone)
+	if interactive && installSlug != "" {
+		printWizardStep(f.Printer, 3, 3, "Install on a repository",
+			"GitHub Apps work per-repo. Install the App on the repos TeamCity should clone.")
+		ok := true
+		if err := cmdutil.Confirm("Open browser?", &ok); err != nil {
+			return err
+		}
+		if ok {
+			installURL := "https://github.com/apps/" + installSlug + "/installations/new"
+			f.Printer.Info("Opening browser to install the App...")
+			if err := openBrowser(installURL); err != nil {
+				f.Printer.Warn("Could not open browser automatically: %v", err)
+				_, _ = fmt.Fprintf(f.Printer.Out, "  Open this URL:\n  %s\n", output.Cyan(installURL))
+			}
+			installOpened = true
+		}
+	}
+
+	printGitHubAppNextSteps(f, projectID, created.ID, installSlug, authorizeDone, installOpened)
 	return nil
 }
 
-func printGitHubAppNextSteps(f *cmdutil.Factory, projectID, connectionID, installSlug string, authorizeDone bool) {
+// printWizardStep prints a numbered step header + one-line rationale; pass total <= 0 to omit the "Step N of M:" prefix.
+func printWizardStep(p *output.Printer, n, total int, title, why string) {
+	_, _ = fmt.Fprintln(p.Out)
+	if total > 0 {
+		_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Bold(fmt.Sprintf("Step %d of %d:", n, total)), output.Bold(title))
+	} else {
+		_, _ = fmt.Fprintln(p.Out, output.Bold(title))
+	}
+	_, _ = fmt.Fprintf(p.Out, "  %s\n", why)
+}
+
+func printGitHubAppNextSteps(f *cmdutil.Factory, projectID, connectionID, installSlug string, authorizeDone, installOpened bool) {
 	type step struct{ label, value string }
 	var steps []step
 	if !authorizeDone {
-		steps = append(steps, step{"Authorize as user:", fmt.Sprintf("teamcity project connection authorize %s -p %s", connectionID, projectID)})
+		steps = append(steps, step{"Sign in:", fmt.Sprintf("teamcity project connection authorize %s -p %s", connectionID, projectID)})
 	}
-	if installSlug != "" {
+	if installSlug != "" && !installOpened {
 		steps = append(steps, step{"Install on a repo:", "https://github.com/apps/" + installSlug + "/installations/new"})
 	}
-	steps = append(steps, step{"Create a VCS root:", fmt.Sprintf("teamcity project vcs create -p %s --auth token --connection-id %s --url ...", projectID, connectionID)})
+	steps = append(steps, step{"Create a VCS root:", fmt.Sprintf("teamcity project vcs create -p %s --auth token --connection-id %s --url <repo-url>", projectID, connectionID)})
 
 	_, _ = fmt.Fprintln(f.Printer.Out)
 	_, _ = fmt.Fprintln(f.Printer.Out, "Next steps:")

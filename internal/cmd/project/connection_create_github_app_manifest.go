@@ -1,7 +1,6 @@
 package project
 
 import (
-	"cmp"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -87,9 +86,7 @@ func runGitHubAppManifestFlow(ctx context.Context, p *output.Printer, serverURL,
 
 	startHandler := buildStartHandler(org, manifestJSON, state)
 
-	target := cmp.Or(org, "your account")
-	p.Info("Opening browser to register a GitHub App for %s...", target)
-	_, _ = fmt.Fprintf(p.Out, "  %s Click \"Create GitHub App for %s\" on GitHub\n", output.Yellow("→"), target)
+	p.Info("Opening browser to register the App on GitHub...")
 
 	openURL := fmt.Sprintf("http://localhost:%d%s", port, manifestStartPath)
 	result, err := browserflow.Run(ctx, browserflow.Options{
