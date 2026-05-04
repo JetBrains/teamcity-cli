@@ -126,10 +126,10 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 		}
 		target := cmp.Or(owner, "your account")
 		printWizardStep(f.Printer, 1, 3, "Register a GitHub App",
-			"Creates the App on GitHub and brings the credentials back to TeamCity.")
+			"You'll be taken to GitHub to confirm the App registration.")
 		_, _ = fmt.Fprintf(f.Printer.Out, "  %s On GitHub, click %q.\n", output.Yellow("→"), "Create GitHub App for "+target)
 		ok := true
-		if err := cmdutil.Confirm("Open browser to register the App?", &ok); err != nil {
+		if err := cmdutil.Confirm("Open a browser to register the App?", &ok); err != nil {
 			return err
 		}
 		if !ok {
@@ -206,13 +206,13 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	if interactive && !opts.noAuthorize {
 		if useManifest {
 			printWizardStep(f.Printer, 2, 3, "Sign in to the App",
-				"TeamCity calls GitHub as you when testing VCS roots.")
+				"Sign in so TeamCity can list and test repos as you (used by VCS root pickers).")
 		} else {
 			printWizardStep(f.Printer, 0, 0, "Sign in",
-				"TeamCity calls GitHub as you when testing VCS roots.")
+				"Sign in so TeamCity can list and test repos as you (used by VCS root pickers).")
 		}
 		ask := true
-		if err := cmdutil.Confirm("Open browser to sign in?", &ask); err != nil {
+		if err := cmdutil.Confirm("Open a browser to sign in?", &ask); err != nil {
 			return err
 		}
 		if ask {
@@ -226,9 +226,9 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 
 	if interactive && installSlug != "" {
 		printWizardStep(f.Printer, 3, 3, "Install on a repository",
-			"GitHub Apps are scoped per-repo – pick which ones TeamCity can clone.")
+			"GitHub Apps grant access per repo — install on the ones TeamCity should clone.")
 		ok := true
-		if err := cmdutil.Confirm("Open browser to install the App?", &ok); err != nil {
+		if err := cmdutil.Confirm("Open a browser to install the App?", &ok); err != nil {
 			return err
 		}
 		if ok {
