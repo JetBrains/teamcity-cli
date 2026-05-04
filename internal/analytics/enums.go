@@ -26,7 +26,7 @@ func allCommands() []string {
 		"project.param.list", "project.param.get", "project.param.set", "project.param.delete",
 		"queue.list", "queue.remove", "queue.top", "queue.approve",
 		"agent.list", "agent.view", "agent.jobs", "agent.move", "agent.enable",
-		"agent.disable", "agent.authorize", "agent.deauthorize", "agent.terminal",
+		"agent.disable", "agent.authorize", "agent.deauthorize", "agent.term",
 		"agent.exec", "agent.reboot",
 		"pool.list", "pool.view", "pool.link", "pool.unlink",
 		"pipeline.list", "pipeline.view", "pipeline.validate", "pipeline.create",
