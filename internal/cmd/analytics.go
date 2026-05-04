@@ -175,8 +175,11 @@ func countSetFlags(cmd *cobra.Command) int {
 	return n
 }
 
-// detectAuthSourceForAnalytics maps the existing config token-source string to the wire enum.
+// detectAuthSourceForAnalytics maps the active auth path to the wire enum; build-step credentials win over user-token sources.
 func detectAuthSourceForAnalytics() string {
+	if _, ok := config.GetBuildAuth(); ok {
+		return analytics.AuthSourceBuildProperties
+	}
 	if config.IsGuestAuth() {
 		return analytics.AuthSourceGuest
 	}
