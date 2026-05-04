@@ -46,9 +46,12 @@ func isBuiltinCommand(rootCmd *cobra.Command, name string) bool {
 
 func newExpansionAliasCmd(p *output.Printer, name, expansion string) *cobra.Command {
 	return &cobra.Command{
-		Use:                name,
-		Short:              fmt.Sprintf("Alias for %q", expansion),
-		Annotations:        map[string]string{"is_alias": "true"},
+		Use:   name,
+		Short: fmt.Sprintf("Alias for %q", expansion),
+		Annotations: map[string]string{
+			"is_alias":        "true",
+			"alias_expansion": expansion,
+		},
 		DisableFlagParsing: true,
 		SilenceUsage:       true,
 		SilenceErrors:      true,
