@@ -31,12 +31,16 @@ func SampleEvents() []fus.LogEvent {
 	build := "0.0.1"
 	now := time.Now().UnixMilli()
 	mk := func(group, eventID string, state bool, data map[string]any) fus.LogEvent {
+		v := groupVersion[group]
+		if v == 0 {
+			v = 1
+		}
 		return fus.LogEvent{
 			Recorder: fus.Recorder{ID: RecorderID, Version: RecorderVersion},
 			Product:  ProductCode,
 			Build:    build,
 			Time:     now,
-			Group:    fus.EventGroup{ID: group, Version: groupVersion, State: state},
+			Group:    fus.EventGroup{ID: group, Version: v, State: state},
 			Event:    fus.EventAction{ID: eventID, Data: data, Count: 1},
 		}
 	}
@@ -91,6 +95,9 @@ func SampleEvents() []fus.LogEvent {
 		}),
 		mk(GroupBuild, EventTestsViewed, false, map[string]any{
 			"filter": TestsFilterFailed, "is_from_job": false,
+		}),
+		mk(GroupBuild, EventTestsViewed, false, map[string]any{
+			"filter": TestsFilterMuted, "is_from_job": false,
 		}),
 		mk(GroupBuild, EventDiffViewed, false, map[string]any{
 			"had_log_diff": true,

@@ -153,7 +153,11 @@ func (c *Client) track(group string, state bool, eventID string, data map[string
 	if c.logger == nil {
 		return
 	}
-	c.logger.Track(fus.EventGroup{ID: group, Version: groupVersion, State: state}, eventID, data)
+	v := groupVersion[group]
+	if v == 0 {
+		v = 1
+	}
+	c.logger.Track(fus.EventGroup{ID: group, Version: v, State: state}, eventID, data)
 	c.logf("analytics: emit %s/%s (%d fields)", group, eventID, len(data))
 }
 

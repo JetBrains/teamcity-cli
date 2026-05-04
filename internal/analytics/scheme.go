@@ -24,7 +24,20 @@ const (
 	GroupWorkspace = "teamcity.cli.workspace"
 )
 
-const groupVersion = 1
+// groupVersion maps each FUS group to its schema version.
+// Bump the version for a group whenever its schema changes (new fields, new enum values)
+// so AP can distinguish events from old vs new client versions.
+var groupVersion = map[string]int{
+	GroupSession:   1,
+	GroupCommand:   2, // "link" command added (FUS-7820)
+	GroupAPI:       1,
+	GroupAuth:      1,
+	GroupBuild:     2, // "muted" filter value added (FUS-7820)
+	GroupAgent:     1,
+	GroupPipeline:  1,
+	GroupSkill:     1,
+	GroupWorkspace: 1, // new group, initial version
+}
 
 const (
 	regexpUUID          = "uuid"
@@ -198,7 +211,7 @@ func buildGroup() fus.GroupSchema {
 				"is_timed_out":      {fus.EnumRefExpr(enumBoolean)},
 				"mode":              {fus.EnumExpr("full", "failed", "raw", "follow")},
 				"is_from_job":       {fus.EnumRefExpr(enumBoolean)},
-				"filter":            {fus.EnumExpr("all", "failed")},
+				"filter":            {fus.EnumExpr("all", "failed", "muted")},
 				"had_log_diff":      {fus.EnumRefExpr(enumBoolean)},
 			},
 		},
