@@ -26,8 +26,10 @@ func TestClient_NilSafe(t *testing.T) {
 }
 
 // TestClient_BootFailureBecomesNoop exercises the lazy-boot error path.
+// DataDir fails when XDG_CONFIG_HOME points to a non-directory, so boot always errors
+// without touching the network.
 func TestClient_BootFailureBecomesNoop(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "/dev/null")
 
 	c := New(Config{
 		CLIVersion: "0.1.0-test",

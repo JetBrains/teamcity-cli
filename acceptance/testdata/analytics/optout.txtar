@@ -14,6 +14,10 @@ env TEAMCITY_URL=
 env TEAMCITY_TOKEN=
 env TEAMCITY_GUEST=
 
+# Clear the suite-wide DO_NOT_TRACK so this test owns the opt-out env-var state
+# end-to-end and can verify each priority level individually.
+env DO_NOT_TRACK=
+
 # 1. Default: no opt-out → enabled.
 exec teamcity --debug
 stderr '\[debug\] analytics: enabled '
