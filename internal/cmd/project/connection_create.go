@@ -126,10 +126,10 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 		}
 		target := cmp.Or(owner, "your account")
 		printWizardStep(f.Printer, 1, 3, "Register a GitHub App",
-			"GitHub will create the App and hand its credentials back to TeamCity.")
-		_, _ = fmt.Fprintf(f.Printer.Out, "  %s On GitHub, click %q to confirm.\n", output.Yellow("→"), "Create GitHub App for "+target)
+			"Creates the App on GitHub and brings the credentials back to TeamCity.")
+		_, _ = fmt.Fprintf(f.Printer.Out, "  %s On GitHub, click %q.\n", output.Yellow("→"), "Create GitHub App for "+target)
 		ok := true
-		if err := cmdutil.Confirm("Open browser?", &ok); err != nil {
+		if err := cmdutil.Confirm("Open browser to register the App?", &ok); err != nil {
 			return err
 		}
 		if !ok {
@@ -206,10 +206,10 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	if interactive && !opts.noAuthorize {
 		if useManifest {
 			printWizardStep(f.Printer, 2, 3, "Sign in to the App",
-				"TeamCity calls GitHub as you when testing VCS roots — your sign-in lets it.")
+				"TeamCity calls GitHub as you when testing VCS roots.")
 		} else {
-			printWizardStep(f.Printer, 0, 0, "Sign in to the connection",
-				"Per-user sign-in lets TeamCity call upstream as you (e.g. when testing VCS roots).")
+			printWizardStep(f.Printer, 0, 0, "Sign in",
+				"TeamCity calls GitHub as you when testing VCS roots.")
 		}
 		ask := true
 		if err := cmdutil.Confirm("Open browser to sign in?", &ask); err != nil {
@@ -226,9 +226,9 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 
 	if interactive && installSlug != "" {
 		printWizardStep(f.Printer, 3, 3, "Install on a repository",
-			"GitHub Apps work per-repo. Install the App on the repos TeamCity should clone.")
+			"GitHub Apps are scoped per-repo – pick which ones TeamCity can clone.")
 		ok := true
-		if err := cmdutil.Confirm("Open browser?", &ok); err != nil {
+		if err := cmdutil.Confirm("Open browser to install the App?", &ok); err != nil {
 			return err
 		}
 		if ok {
