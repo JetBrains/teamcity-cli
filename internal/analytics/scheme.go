@@ -127,8 +127,9 @@ func sessionGroup() fus.GroupSchema {
 
 func commandGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID:   GroupCommand,
-		Type: fus.GroupTypeCounter,
+		ID:       GroupCommand,
+		Type:     fus.GroupTypeCounter,
+		Versions: []fus.SchemeRange{{From: "2"}}, // bumped per FUS-7820 (added "link" + others)
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventExecuted)},
 			EventData: map[string][]string{
@@ -191,8 +192,9 @@ func authGroup() fus.GroupSchema {
 
 func buildGroup() fus.GroupSchema {
 	return fus.GroupSchema{
-		ID:   GroupBuild,
-		Type: fus.GroupTypeCounter,
+		ID:       GroupBuild,
+		Type:     fus.GroupTypeCounter,
+		Versions: []fus.SchemeRange{{From: "2"}}, // bumped per FUS-7820 (added "muted" filter value)
 		Rules: &fus.SchemeRules{
 			EventID: []string{
 				fus.EnumExpr(EventStarted, EventWatchFinished, EventLogViewed, EventTestsViewed, EventDiffViewed),
