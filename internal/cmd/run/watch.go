@@ -91,7 +91,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 				"duration_seconds": int(time.Since(tuiStart).Seconds()),
 				"final_status":     watchExitStatus(tuiErr),
 				"had_logs":         true,
-				"is_timed_out":     false,
+				"is_timed_out":     errors.Is(ctx.Err(), context.DeadlineExceeded),
 			})
 			return tuiErr
 		}
