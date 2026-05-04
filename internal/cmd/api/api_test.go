@@ -680,6 +680,26 @@ func TestFetchAllPagesSinglePage(T *testing.T) {
 	assert.Len(T, pages, 1, "fetchAllPages() page count")
 }
 
+// TestFetchAllPagesErrorsWhenCapExceeded locks the behavior change from silent truncation to an explicit error so future refactors can't regress to dropping pages without telling the caller.
+func TestFetchAllPagesErrorsWhenCapExceeded(T *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"count":    1,
+			"build":    []map[string]int{{"id": 1}},
+			"nextHref": "/app/rest/builds?page=next",
+		})
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL, "test-token")
+	pages, status, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
+	require.Error(T, err, "fetchAllPages must error when nextHref still set after the page cap")
+	assert.Contains(T, err.Error(), "page cap", "error should explain why")
+	assert.Equal(T, http.StatusOK, status, "last status reflects the last successful page")
+	assert.Empty(T, pages, "no pages should be surfaced when the result is incomplete")
+}
+
 func TestFetchAllPagesPropagatesErrorStatus(T *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)

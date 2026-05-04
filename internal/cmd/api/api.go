@@ -294,7 +294,7 @@ func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeade
 	return nil
 }
 
-// fetchAllPages walks the pagination chain and returns (pages, lastStatus, err); lastStatus is the HTTP status of the failed request when err is non-nil (0 for transport errors), or 200 on success.
+// fetchAllPages walks the pagination chain and returns (pages, lastStatus, err); lastStatus is the HTTP status of the failed request when err is non-nil (0 for transport errors that produced no response), or 200 on success.
 func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint string, headers map[string]string) ([][]byte, int, error) {
 	var pages [][]byte
 	currentEndpoint := endpoint
@@ -303,7 +303,9 @@ func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint str
 	for range maxPaginationPages {
 		resp, err := client.RawRequest(ctx, "GET", currentEndpoint, nil, headers)
 		if err != nil {
-			return nil, lastStatus, err
+			// Transport error: no HTTP response observed. Returning the previous page's status here
+			// would misclassify the failure as the prior page's success in analytics.
+			return nil, 0, err
 		}
 		lastStatus = resp.StatusCode
 
@@ -322,13 +324,13 @@ func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint str
 		}
 
 		if nextHref == "" {
-			break
+			return pages, lastStatus, nil
 		}
 
 		currentEndpoint = nextHref
 	}
 
-	return pages, lastStatus, nil
+	return nil, lastStatus, fmt.Errorf("--paginate hit the page cap of %d with more pages still available; refine your query (e.g. add a locator filter)", maxPaginationPages)
 }
 
 func extractNextHref(data []byte) (string, error) {
