@@ -65,11 +65,18 @@ func findHits(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scope
 	return hits, remotes, nil
 }
 
-// runPicker drives interactive `teamcity link`; mutates outputs on Change, returns errPickerHandled on Keep/Clear (already finalized).
-func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopePath, tomlPath string, server, project, job *string, jobs *[]string) error {
+// runPicker drives interactive `teamcity link`, mutates outputs on Change, returns errPickerHandled on Keep/Clear; ambig reports whether discovery presented more than one candidate.
+func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopePath, tomlPath string, server, project, job *string, jobs *[]string) (ambig bool, err error) {
 	hits, _, err := findHits(f, serverOverride, cfg, scopePath)
 	if err != nil {
-		return err
+		return false, err
+	}
+	ambig = len(hits) > 1
+	for _, h := range hits {
+		if len(h.discovery.Projects) > 1 {
+			ambig = true
+			break
+		}
 	}
 
 	hitByURL := map[string]*discovery{}
@@ -95,7 +102,7 @@ func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scop
 	groups := buildGroups(hits, hitByURL, cfg, scopePath, &action, &inputs)
 	if len(groups) > 0 {
 		if err := cmdutil.RunForm(groups...); err != nil {
-			return err
+			return ambig, err
 		}
 	}
 
@@ -104,15 +111,15 @@ func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scop
 		switch action {
 		case "keep":
 			f.Printer.Success("Kept existing binding")
-			return errPickerHandled
+			return ambig, errPickerHandled
 		case "clear":
 			clearScope(cfg, inputs.server, scopePath)
 			if err := link.Save(tomlPath, cfg); err != nil {
-				return fmt.Errorf("write %s: %w", tomlPath, err)
+				return ambig, fmt.Errorf("write %s: %w", tomlPath, err)
 			}
 			f.Printer.Success("Cleared binding for %s", output.Cyan(scopeLabel(scopePath)))
 			f.Printer.Info("  Wrote: %s", tomlPath)
-			return errPickerHandled
+			return ambig, errPickerHandled
 		}
 	}
 
@@ -120,7 +127,7 @@ func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scop
 	*project = inputs.project
 	*job = inputs.job
 	*jobs = inputs.jobs
-	return nil
+	return ambig, nil
 }
 
 // autoResolution is what runAuto computes from discovery hits before writing.
@@ -175,24 +182,26 @@ func resolveAuto(hits []serverResult, activeServer string) (autoResolution, erro
 	return res, nil
 }
 
-// runAuto runs discovery and writes the resolved binding without prompting; the same outputs the picker would persist on Change.
-func runAuto(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopePath string, server, project, job *string, jobs *[]string) error {
+// runAuto resolves the binding from git remotes and writes it; ambig reports whether discovery surfaced multiple candidates before defaulting.
+func runAuto(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopePath string, server, project, job *string, jobs *[]string) (ambig bool, err error) {
 	hits, _, err := findHits(f, serverOverride, cfg, scopePath)
 	if err != nil {
-		return err
+		return false, err
 	}
+	multiServer := len(hits) > 1
 	res, err := resolveAuto(hits, config.NormalizeURL(config.GetServerURL()))
 	if err != nil {
-		return err
+		return false, err
 	}
 	*server = res.server
 	*project = res.project
 	*job = res.job
 	*jobs = res.jobs
-	if res.job == "" && len(allJobsOnServer(hits[0].discovery)) > 1 {
+	multiJob := res.job == "" && len(allJobsOnServer(hits[0].discovery)) > 1
+	if multiJob {
 		f.Printer.Info("  No single default job in %s; pass --job <id> to set one", output.Cyan(res.project))
 	}
-	return nil
+	return multiServer || multiJob, nil
 }
 
 // candidateServers returns server URLs to probe: --server override is a single result, otherwise active server first then any others with saved credentials.

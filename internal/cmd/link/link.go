@@ -76,18 +76,26 @@ Resolution cascade (highest to lowest):
 			}
 
 			noFields := project == "" && job == "" && len(jobs) == 0
+			source := analytics.WorkspaceSourceFlag
+			isAmbiguous := false
 			switch {
 			case auto:
-				if err := runAuto(f, server, cfg, scopePath, &server, &project, &job, &jobs); err != nil {
+				source = analytics.WorkspaceSourceAuto
+				ambig, err := runAuto(f, server, cfg, scopePath, &server, &project, &job, &jobs)
+				if err != nil {
 					return err
 				}
+				isAmbiguous = ambig
 			case noFields && f.IsInteractive():
-				if err := runPicker(f, server, cfg, scopePath, path, &server, &project, &job, &jobs); err != nil {
+				source = analytics.WorkspaceSourceInteractive
+				ambig, err := runPicker(f, server, cfg, scopePath, path, &server, &project, &job, &jobs)
+				if err != nil {
 					if errors.Is(err, errPickerHandled) {
 						return nil
 					}
 					return err
 				}
+				isAmbiguous = ambig
 			}
 
 			serverURL := config.NormalizeURL(cmp.Or(server, config.GetServerURL()))
@@ -130,8 +138,8 @@ Resolution cascade (highest to lowest):
 			f.Printer.Info("  Wrote: %s", path)
 
 			f.Analytics.Track(analytics.GroupWorkspace, analytics.EventLinked, map[string]any{
-				"source":       analytics.WorkspaceSourceFlag,
-				"is_ambiguous": false,
+				"source":       source,
+				"is_ambiguous": isAmbiguous,
 				"is_subdir":    scopePath != "",
 			})
 			return nil
