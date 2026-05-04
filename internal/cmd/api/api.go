@@ -164,11 +164,11 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	}
 
 	if opts.paginate {
-		err := runAPIPaginated(f.Context(), f.Printer, client, endpoint, headers, opts)
+		lastStatus, err := runAPIPaginated(f.Context(), f.Printer, client, endpoint, headers, opts)
 		f.Analytics.TrackAPI(analytics.APIEvent{
 			Method:     opts.method,
 			Endpoint:   endpoint,
-			StatusCode: statusCodeForTracking(err, http.StatusOK),
+			StatusCode: statusCodeForTracking(err, lastStatus),
 			Paginated:  true,
 			Slurp:      opts.slurp,
 			HadFields:  len(opts.fields) > 0,
@@ -208,30 +208,31 @@ func statusCodeForTracking(err error, observed int) int {
 	return observed
 }
 
-func runAPIPaginated(ctx context.Context, p *output.Printer, client api.ClientInterface, endpoint string, headers map[string]string, opts *apiOptions) error {
-	pages, err := fetchAllPages(ctx, client, endpoint, headers)
+// runAPIPaginated drives the multi-page fetch and returns (lastStatus, err); lastStatus is the HTTP status of the failed request when err is non-nil and 200 on success, so analytics never silently records 200 for a failed pagination.
+func runAPIPaginated(ctx context.Context, p *output.Printer, client api.ClientInterface, endpoint string, headers map[string]string, opts *apiOptions) (int, error) {
+	pages, lastStatus, err := fetchAllPages(ctx, client, endpoint, headers)
 	if err != nil {
-		return err
+		return lastStatus, err
 	}
 
 	if len(pages) == 0 {
-		return nil
+		return lastStatus, nil
 	}
 
 	if opts.slurp {
 		arrayKey, err := detectArrayKey(pages[0])
 		if err != nil {
-			return fmt.Errorf("failed to detect array key: %w", err)
+			return lastStatus, fmt.Errorf("failed to detect array key: %w", err)
 		}
 		if arrayKey == "" {
-			return errors.New("--slurp requires response with array field (build, project, etc.)")
+			return lastStatus, errors.New("--slurp requires response with array field (build, project, etc.)")
 		}
 
 		merged, err := mergePages(pages, arrayKey)
 		if err != nil {
-			return fmt.Errorf("failed to merge pages: %w", err)
+			return lastStatus, fmt.Errorf("failed to merge pages: %w", err)
 		}
-		return outputAPIResponse(p, merged, http.StatusOK, nil, opts)
+		return lastStatus, outputAPIResponse(p, merged, http.StatusOK, nil, opts)
 	}
 
 	for i, page := range pages {
@@ -239,11 +240,11 @@ func runAPIPaginated(ctx context.Context, p *output.Printer, client api.ClientIn
 			_, _ = fmt.Fprintln(p.Out)
 		}
 		if err := outputAPIResponse(p, page, http.StatusOK, nil, opts); err != nil {
-			return err
+			return lastStatus, err
 		}
 	}
 
-	return nil
+	return lastStatus, nil
 }
 
 func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeaders map[string][]string, opts *apiOptions) error {
@@ -293,28 +294,31 @@ func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeade
 	return nil
 }
 
-func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint string, headers map[string]string) ([][]byte, error) {
+// fetchAllPages walks the pagination chain and returns (pages, lastStatus, err); lastStatus is the HTTP status of the failed request when err is non-nil (0 for transport errors), or 200 on success.
+func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint string, headers map[string]string) ([][]byte, int, error) {
 	var pages [][]byte
 	currentEndpoint := endpoint
+	lastStatus := 0
 
 	for range maxPaginationPages {
 		resp, err := client.RawRequest(ctx, "GET", currentEndpoint, nil, headers)
 		if err != nil {
-			return nil, err
+			return nil, lastStatus, err
 		}
+		lastStatus = resp.StatusCode
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			if len(resp.Body) > 0 {
-				return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(resp.Body))
+				return nil, lastStatus, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(resp.Body))
 			}
-			return nil, fmt.Errorf("request failed with status %d", resp.StatusCode)
+			return nil, lastStatus, fmt.Errorf("request failed with status %d", resp.StatusCode)
 		}
 
 		pages = append(pages, resp.Body)
 
 		nextHref, err := extractNextHref(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("--paginate requires JSON response: %w", err)
+			return nil, lastStatus, fmt.Errorf("--paginate requires JSON response: %w", err)
 		}
 
 		if nextHref == "" {
@@ -324,7 +328,7 @@ func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint str
 		currentEndpoint = nextHref
 	}
 
-	return pages, nil
+	return pages, lastStatus, nil
 }
 
 func extractNextHref(data []byte) (string, error) {

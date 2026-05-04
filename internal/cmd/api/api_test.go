@@ -640,8 +640,9 @@ func TestFetchAllPages(T *testing.T) {
 
 	client := api.NewClient(server.URL, "test-token")
 
-	pages, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
+	pages, status, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
 	require.NoError(T, err)
+	assert.Equal(T, http.StatusOK, status, "fetchAllPages() last status on success")
 	assert.Len(T, pages, 3, "fetchAllPages() page count")
 
 	arrayKey, _ := detectArrayKey(pages[0])
@@ -673,9 +674,24 @@ func TestFetchAllPagesSinglePage(T *testing.T) {
 
 	client := api.NewClient(server.URL, "test-token")
 
-	pages, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
+	pages, status, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
 	require.NoError(T, err)
+	assert.Equal(T, http.StatusOK, status, "fetchAllPages() last status on success")
 	assert.Len(T, pages, 1, "fetchAllPages() page count")
+}
+
+func TestFetchAllPagesPropagatesErrorStatus(T *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"message":"nope"}`))
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL, "test-token")
+	pages, status, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
+	require.Error(T, err, "fetchAllPages() must surface non-2xx as error")
+	assert.Equal(T, http.StatusForbidden, status, "fetchAllPages() must return the failed status (not 200) so analytics records the real code")
+	assert.Empty(T, pages, "no pages should be returned on first-page failure")
 }
 
 func TestPrettyPrintJSON(T *testing.T) {
