@@ -97,13 +97,21 @@ func trackAndFlushAnalytics(f *cmdutil.Factory, executedCmd *cobra.Command, runE
 	})
 }
 
-// commandPathForAnalytics joins the cobra command path with dots, dropping the binary name; for expansion aliases cobra.Find resolves the alias_expansion through the real tree so positional args, literal endpoints, and flags don't bleed into the recorded path.
+// commandPathForAnalytics joins the cobra command path with dots, dropping the binary name; for expansion aliases cobra.Find walks each alias_expansion through the real tree, following chains (a → b → run list) until a non-alias command is reached or a cycle is detected.
 func commandPathForAnalytics(cmd *cobra.Command) string {
 	target := cmd
-	if exp, ok := cmd.Annotations["alias_expansion"]; ok && exp != "" {
-		if found, _, err := cmd.Root().Find(strings.Fields(exp)); err == nil && found != cmd.Root() {
-			target = found
+	visited := map[*cobra.Command]bool{}
+	for !visited[target] {
+		visited[target] = true
+		exp, ok := target.Annotations["alias_expansion"]
+		if !ok || exp == "" {
+			break
 		}
+		found, _, err := cmd.Root().Find(strings.Fields(exp))
+		if err != nil || found == cmd.Root() {
+			break
+		}
+		target = found
 	}
 	parts := strings.Fields(target.CommandPath())
 	if len(parts) <= 1 {
