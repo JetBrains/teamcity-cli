@@ -54,6 +54,22 @@ func (f *Factory) linkScope() (link.PathScope, bool) {
 	return f.link.scope, f.link.found
 }
 
+// HasLinkContext reports whether a teamcity.toml in the cwd hierarchy matched the active server.
+func (f *Factory) HasLinkContext() bool {
+	_, ok := f.linkScope()
+	return ok
+}
+
+// HasLinkConfigFile reports whether any teamcity.toml exists in the cwd hierarchy without parsing it; safe to call from telemetry hooks because it never warns or triggers the once-gated load that HasLinkContext does.
+func (f *Factory) HasLinkConfigFile() bool {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return false
+	}
+	_, ok := link.Find(cwd)
+	return ok
+}
+
 // ResolveProject returns explicit, then TEAMCITY_PROJECT, then the linked scope's project.
 func (f *Factory) ResolveProject(explicit string) string {
 	if explicit != "" {

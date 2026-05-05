@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -91,6 +92,10 @@ func runRunDiff(f *cmdutil.Factory, args []string, opts *runDiffOptions) error {
 	if err != nil {
 		return err
 	}
+
+	f.Analytics.Track(analytics.GroupBuild, analytics.EventDiffViewed, map[string]any{
+		"had_log_diff": opts.log,
+	})
 
 	if opts.web {
 		b1, err1 := client.GetBuild(f.Context(), id1)

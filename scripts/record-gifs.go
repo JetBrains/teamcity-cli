@@ -174,7 +174,10 @@ func recordTape(tapeFile, theme, suffix string) error {
 		return fmt.Errorf("reading %s: %w", tapeFile, err)
 	}
 
-	tape := strings.ReplaceAll(string(content), "{{THEME}}", theme)
+	// Prepend DO_NOT_TRACK so the teamcity invocations inside the recorded shell
+	// session don't fire FUS events while we're capturing GIFs.
+	tape := "Env DO_NOT_TRACK \"1\"\n" + string(content)
+	tape = strings.ReplaceAll(tape, "{{THEME}}", theme)
 	tape = strings.ReplaceAll(tape, "{{OUTPUT}}", fmt.Sprintf("%q", output))
 
 	if strings.Contains(tape, "{{RUN_ID}}") {
@@ -204,7 +207,7 @@ func recordTape(tapeFile, theme, suffix string) error {
 
 func triggerBuild() (string, error) {
 	cmd := exec.Command("teamcity", "run", "start", "Sandbox_Build", "--branch", "main", "--json")
-	cmd.Env = append(os.Environ(), "TEAMCITY_URL=https://cli.teamcity.com")
+	cmd.Env = append(os.Environ(), "TEAMCITY_URL=https://cli.teamcity.com", "DO_NOT_TRACK=1")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out

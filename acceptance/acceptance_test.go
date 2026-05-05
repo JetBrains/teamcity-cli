@@ -100,6 +100,7 @@ func TestAcceptance(t *testing.T) {
 		"alias",
 		"link",
 		"skill",
+		"analytics",
 	}
 
 	for _, dir := range dirs {
@@ -150,6 +151,7 @@ func runScripts(t *testing.T, dir, host, token, scriptFilter string) {
 			env.Setenv("TC_INSECURE_SKIP_WARN", "1")
 			env.Setenv("TEAMCITY_URL", host)
 			env.Setenv("NO_COLOR", "1")
+			env.Setenv("DO_NOT_TRACK", "1") // suppress FUS events from acceptance runs; analytics/optout.txtar clears this where it tests the enabled path
 
 			if token != "" {
 				env.Setenv("TEAMCITY_TOKEN", token)

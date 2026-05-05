@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/JetBrains/teamcity-cli/internal/atomicfile"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -41,9 +42,11 @@ type ServerConfig struct {
 }
 
 type Config struct {
-	DefaultServer string                  `mapstructure:"default_server"`
-	Servers       map[string]ServerConfig `mapstructure:"servers"`
-	Aliases       map[string]string       `mapstructure:"aliases"`
+	DefaultServer        string                  `mapstructure:"default_server"`
+	Servers              map[string]ServerConfig `mapstructure:"servers"`
+	Aliases              map[string]string       `mapstructure:"aliases"`
+	Analytics            *bool                   `mapstructure:"analytics,omitempty"`
+	AnalyticsNoticeShown bool                    `mapstructure:"analytics_notice_shown,omitempty"`
 }
 
 var (
@@ -283,36 +286,18 @@ func writeConfig() error {
 	}
 	w.Set("servers", servers)
 	w.Set("aliases", cfg.Aliases)
+	if cfg.Analytics != nil {
+		w.Set("analytics", *cfg.Analytics)
+	}
+	if cfg.AnalyticsNoticeShown {
+		w.Set("analytics_notice_shown", true)
+	}
 
 	data, err := yaml.Marshal(w.AllSettings())
 	if err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
-	return writeFileAtomic0600(configPath, data)
-}
-
-// writeFileAtomic0600 writes data via a 0600 sibling temp file + rename, so a token-bearing config is never exposed at 0644 and concurrent writers can't interleave. If path is a symlink, writes go to the resolved target so dotfile-managed setups don't lose their link on first write.
-func writeFileAtomic0600(path string, data []byte) error {
-	path = resolveSymlink(path)
-	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-	tmpPath := tmp.Name()
-	cleanup := func() { _ = os.Remove(tmpPath) }
-
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		cleanup()
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		cleanup()
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		cleanup()
+	if err := atomicfile.Write(resolveSymlink(configPath), data); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	return nil
@@ -358,6 +343,34 @@ func RemoveServer(serverURL string) error {
 
 func ConfigPath() string {
 	return configPath
+}
+
+// IsAnalyticsEnabled returns the user's persisted preference; defaults to true.
+func IsAnalyticsEnabled() bool {
+	if cfg == nil || cfg.Analytics == nil {
+		return true
+	}
+	return *cfg.Analytics
+}
+
+func SetAnalyticsEnabled(enabled bool) error {
+	cfg.Analytics = &enabled
+	return writeConfig()
+}
+
+func IsAnalyticsNoticeShown() bool {
+	if cfg == nil {
+		return false
+	}
+	return cfg.AnalyticsNoticeShown
+}
+
+func MarkAnalyticsNoticeShown() error {
+	if cfg.AnalyticsNoticeShown {
+		return nil
+	}
+	cfg.AnalyticsNoticeShown = true
+	return writeConfig()
 }
 
 // IsGuestAuth returns true if guest authentication is enabled via env var or server config

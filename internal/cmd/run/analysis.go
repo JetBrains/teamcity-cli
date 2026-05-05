@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/dustin/go-humanize/english"
@@ -185,6 +186,18 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	if err != nil {
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
+
+	filter := analytics.TestsFilterAll
+	switch {
+	case opts.failed:
+		filter = analytics.TestsFilterFailed
+	case opts.muted:
+		filter = analytics.TestsFilterMuted
+	}
+	f.Analytics.Track(analytics.GroupBuild, analytics.EventTestsViewed, map[string]any{
+		"filter":      filter,
+		"is_from_job": opts.job != "",
+	})
 
 	tests, err := client.GetBuildTests(f.Context(), runID, api.BuildTestsOptions{
 		FailedOnly: opts.failed,

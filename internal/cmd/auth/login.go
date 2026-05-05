@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
@@ -63,7 +65,14 @@ For CI/CD, set TEAMCITY_URL and TEAMCITY_TOKEN environment variables
 	return cmd
 }
 
-func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) error {
+func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
+	method := analytics.AuthMethodToken
+	if opts.guest {
+		method = analytics.AuthMethodGuest
+	}
+	failedStep := analytics.AuthStepServer
+	defer func() { trackLoginOutcome(f, method, failedStep, err) }()
+
 	if opts.guest && opts.token != "" {
 		return api.Validation(
 			"cannot use --guest with --token",
@@ -92,8 +101,10 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) error {
 	f.WarnInsecureHTTP(serverURL, reason)
 
 	if opts.guest {
+		failedStep = analytics.AuthStepVerify
 		return finishGuestLogin(ctx, f, serverURL)
 	}
+	failedStep = analytics.AuthStepToken
 	return finishTokenLogin(ctx, f, serverURL, opts, interactive)
 }
 
@@ -180,6 +191,8 @@ func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string)
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
+	_ = analytics.SaveServerInfo(serverURL, formatServerVersion(server), classifyServerType(server))
+
 	p.Success("Guest access to %s", output.Cyan(serverURL))
 	_, _ = fmt.Fprintf(p.Out, "  Server: TeamCity %d.%d (build %s)\n",
 		server.VersionMajor, server.VersionMinor, server.BuildNumber)
@@ -204,6 +217,11 @@ func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 	if err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
+
+	cacheServerInfo(serverURL, api.NewClient(serverURL, token,
+		api.WithDebugFunc(p.Debug),
+		api.WithVersion(version.String()),
+	).WithContext(ctx))
 
 	p.Success("Logged in to %s as %s", output.Cyan(serverURL), output.Cyan(user.Name))
 	if insecureFallback {
@@ -292,4 +310,63 @@ func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool)
 	}
 	_, _ = fmt.Fprintln(p.Out)
 	return nil
+}
+
+// trackLoginOutcome emits login.completed (or login.abandoned on user interrupt — both Ctrl-C and huh prompt aborts) tagged with the phase that was active when the cancel hit.
+func trackLoginOutcome(f *cmdutil.Factory, method, failedStep string, err error) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, huh.ErrUserAborted) {
+		f.Analytics.Track(analytics.GroupAuth, analytics.EventLoginAbandoned, map[string]any{
+			"method":      method,
+			"failed_step": failedStep,
+		})
+		return
+	}
+	f.Analytics.Track(analytics.GroupAuth, analytics.EventLoginCompleted, map[string]any{
+		"method":     method,
+		"is_success": err == nil,
+		"error_type": loginErrorType(err),
+	})
+}
+
+// cacheServerInfo best-effort persists TC version + cloud/on-prem for the analytics session event.
+// Failures are silently ignored — telemetry must never block login.
+func cacheServerInfo(serverURL string, client *api.Client) {
+	server, err := client.GetServer()
+	if err != nil {
+		return
+	}
+	_ = analytics.SaveServerInfo(serverURL, formatServerVersion(server), classifyServerType(server))
+}
+
+func formatServerVersion(s *api.Server) string {
+	if s.VersionMajor == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d.%d", s.VersionMajor, s.VersionMinor)
+}
+
+func classifyServerType(s *api.Server) string {
+	if strings.HasPrefix(s.InternalID, "cloud-") {
+		return analytics.ServerTypeCloud
+	}
+	return analytics.ServerTypeOnPrem
+}
+
+func loginErrorType(err error) string {
+	if err == nil {
+		return analytics.ErrorNone
+	}
+	if ue, ok := errors.AsType[api.UserError](err); ok {
+		switch ue.Category() {
+		case api.CatAuth:
+			return analytics.ErrorAuth
+		case api.CatNetwork:
+			return analytics.ErrorNetwork
+		case api.CatPermission:
+			return analytics.ErrorPermission
+		case api.CatValidation:
+			return analytics.ErrorValidation
+		}
+	}
+	return analytics.ErrorInternal
 }

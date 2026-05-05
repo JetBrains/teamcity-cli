@@ -70,6 +70,7 @@ func NewTestServer(t *testing.T) *TestServer {
 	t.Setenv("TEAMCITY_URL", ts.URL)
 	t.Setenv("TEAMCITY_TOKEN", "test-token")
 	t.Setenv("TC_INSECURE_SKIP_WARN", "1")
+	t.Setenv("DO_NOT_TRACK", "1")
 	_ = config.Init()
 
 	ts.Factory = cmdutil.NewFactory()
@@ -223,9 +224,7 @@ func Dedent(s string) string {
 			continue
 		}
 		indent := len(line) - len(strings.TrimLeft(line, " \t"))
-		if indent < minIndent {
-			minIndent = indent
-		}
+		minIndent = min(minIndent, indent)
 	}
 	if minIndent == math.MaxInt {
 		minIndent = 0

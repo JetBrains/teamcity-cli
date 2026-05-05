@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/charmbracelet/huh"
@@ -69,6 +70,7 @@ func runPipelineCreate(f *cmdutil.Factory, name string, opts *createOptions) err
 		return fmt.Errorf("failed to create pipeline: %w", err)
 	}
 
+	f.Analytics.Track(analytics.GroupPipeline, analytics.EventCreated, map[string]any{"is_from_file": true})
 	f.Printer.Success("Created pipeline %q (%s)", pipeline.Name, pipeline.ID)
 	if pipeline.WebURL != "" {
 		_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", pipeline.WebURL)
