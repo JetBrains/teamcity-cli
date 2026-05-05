@@ -9,9 +9,10 @@ import (
 const (
 	EnvAnalytics  = "TEAMCITY_ANALYTICS"
 	EnvDoNotTrack = "DO_NOT_TRACK"
-	EnvStaging    = "TEAMCITY_ANALYTICS_STAGING"
-	EnvSalt       = "TEAMCITY_ANALYTICS_SALT"
 )
+
+// Salt is the per-product anonymization namespace baked into the binary (CDN config doesn't carry one); a namespace separator, not a secret, but changing it invalidates longitudinal hash correlation.
+const Salt = "tcx-fus-v1"
 
 const (
 	ConfigKey      = "analytics"
@@ -47,16 +48,6 @@ func isTruthy(v string) bool {
 		return true
 	}
 	return false
-}
-
-// IsStaging reports whether to route events to the FUS staging endpoint.
-func IsStaging() bool {
-	return isTruthy(os.Getenv(EnvStaging))
-}
-
-// Salt returns the anonymization salt from $TEAMCITY_ANALYTICS_SALT, empty if unset.
-func Salt() string {
-	return os.Getenv(EnvSalt)
 }
 
 // DataDir returns ($XDG_CONFIG_HOME|~/.config)/tc/.analytics, creating it if missing.

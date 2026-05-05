@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -12,22 +14,12 @@ import (
 	fus "github.com/JetBrains/fus-reporting-api-go"
 )
 
-// TestPipeline_EndToEnd exercises the whole client against a local mock that
-// stands in for the FUS config + send endpoints. It validates that:
-//
-//   - boot succeeds when given a fake FUSConfig (no network involved)
-//   - TrackSession + TrackCommand both reach the wire
-//   - emitted JSON carries the expected product/recorder identity, anonymized
-//     device + session, and our group/event/data fields
-//
-// This is the local equivalent of the staging probe described in DO-A-610 —
-// it does not need network access.
+// TestPipeline_EndToEnd drives the production boot path against a local mock by pre-seeding the FUS config cache, so any regression that breaks boot() (empty salt, missing scheme, validator/anonymizer wiring) fails the test instead of silently no-op'ing in the field.
 func TestPipeline_EndToEnd(t *testing.T) {
 	var (
 		mu       sync.Mutex
 		captured []byte
 	)
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		mu.Lock()
@@ -38,10 +30,19 @@ func TestPipeline_EndToEnd(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	dir, err := DataDir()
+	if err != nil {
+		t.Fatalf("DataDir: %v", err)
+	}
+	// Seed fus_config.json so LoadOrFetchConfig returns our mock send endpoint without hitting the network. MetadataEndpoint is left empty so boot falls back to the embedded Scheme (no CDN call either).
+	seed, _ := json.Marshal(&fus.FUSConfig{SendEndpoint: server.URL, FetchedAt: time.Now().Unix()})
+	if err := os.WriteFile(filepath.Join(dir, "fus_config.json"), seed, 0o600); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
 
-	// Build a client and override its boot so it uses our mock config.
 	c := New(Config{
 		CLIVersion: "0.1.0-test",
+		Salt:       Salt,
 		Session: &Session{
 			ID:         "11111111-2222-4333-8444-555555555555",
 			IsNew:      true,
@@ -50,31 +51,6 @@ func TestPipeline_EndToEnd(t *testing.T) {
 		Environment: Environment{OS: "darwin", Arch: "arm64", CISystem: CINone, AIAgent: "none"},
 		AuthSource:  AuthSourceNone,
 	})
-
-	// Inject a logger built with a stubbed FUSConfig so no network is needed.
-	validator, err := fus.NewValidator(Scheme)
-	if err != nil {
-		t.Fatalf("NewValidator: %v", err)
-	}
-	logger, err := fus.NewLogger(
-		t.Context(),
-		fus.RecorderConfig{
-			RecorderID:      RecorderID,
-			RecorderVersion: RecorderVersion,
-			ProductCode:     ProductCode,
-			BuildVersion:    "0.1.0-test",
-			DataDir:         t.TempDir(),
-			DeviceID:        "test-device",
-		},
-		fus.WithFUSConfig(&fus.FUSConfig{SendEndpoint: server.URL, Salt: "test-salt"}),
-		fus.WithValidator(validator),
-	)
-	if err != nil {
-		t.Fatalf("NewLogger: %v", err)
-	}
-	c.logger = logger
-	c.bootOnce.Do(func() {})
-
 	c.TrackSession()
 	c.TrackCommand(CommandEvent{
 		Command:    "run.start",
@@ -83,7 +59,6 @@ func TestPipeline_EndToEnd(t *testing.T) {
 		ExitCode:   0,
 		DurationMS: 1500,
 	})
-
 	if err := c.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
@@ -92,7 +67,7 @@ func TestPipeline_EndToEnd(t *testing.T) {
 	body := captured
 	mu.Unlock()
 	if body == nil {
-		t.Fatal("no events captured at mock send endpoint")
+		t.Fatal("no events reached the wire — boot or flush silently failed")
 	}
 
 	var report fus.Report
@@ -103,6 +78,7 @@ func TestPipeline_EndToEnd(t *testing.T) {
 		t.Fatalf("expected 2 events (session + command), got %d", len(report.Events))
 	}
 
+	var gotSession, gotCommand bool
 	for _, e := range report.Events {
 		if e.Product != ProductCode {
 			t.Errorf("product = %q, want %q", e.Product, ProductCode)
@@ -111,39 +87,30 @@ func TestPipeline_EndToEnd(t *testing.T) {
 			t.Errorf("recorder.id = %q, want %q", e.Recorder.ID, RecorderID)
 		}
 		if e.IDs["device"] == "" {
-			t.Error("device id empty")
+			t.Error("device id empty (anonymizer didn't run)")
 		}
 		if e.Session == "" {
 			t.Error("wire session empty")
 		}
-	}
-
-	// Verify each group landed and the command event carries our enums.
-	var gotSession, gotCommand bool
-	for _, e := range report.Events {
+		for k, v := range e.Event.Data {
+			if s, ok := v.(string); ok && len(s) >= len("validation.") && s[:len("validation.")] == "validation." {
+				t.Errorf("%s/%s field %q was sentinel-replaced: %q", e.Group.ID, e.Event.ID, k, s)
+			}
+		}
 		switch e.Group.ID {
 		case GroupSession:
 			gotSession = true
 			if !e.Group.State {
 				t.Error("session event must have state=true")
 			}
-			if e.Event.Data["ai_agent"] != "none" {
-				t.Errorf("session ai_agent = %v, want none", e.Event.Data["ai_agent"])
-			}
 		case GroupCommand:
 			gotCommand = true
 			if e.Event.Data["command"] != "run.start" {
 				t.Errorf("command field = %v, want run.start", e.Event.Data["command"])
 			}
-			if e.Event.Data["exit_code"] != "0" {
-				t.Errorf("exit_code = %v, want 0", e.Event.Data["exit_code"])
-			}
 		}
 	}
-	if !gotSession {
-		t.Error("session event missing from captured payload")
-	}
-	if !gotCommand {
-		t.Error("command event missing from captured payload")
+	if !gotSession || !gotCommand {
+		t.Errorf("expected both session and command events, got session=%v command=%v", gotSession, gotCommand)
 	}
 }

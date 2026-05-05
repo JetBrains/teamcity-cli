@@ -24,12 +24,6 @@ func TestStagingRealSend(t *testing.T) {
 	}
 	t.Logf("staging endpoint: %s", stagingCfg.SendEndpoint)
 
-	salt := os.Getenv(EnvSalt)
-	if salt == "" {
-		salt = "tcx-staging-probe-placeholder"
-		t.Logf("using placeholder salt; set %s to override", EnvSalt)
-	}
-
 	validator, err := fus.NewValidator(Scheme)
 	if err != nil {
 		t.Fatalf("NewValidator: %v", err)
@@ -44,7 +38,7 @@ func TestStagingRealSend(t *testing.T) {
 			ProductCode:       ProductCode,
 			BuildVersion:      "0.0.1-staging-probe",
 			DataDir:           dir,
-			AnonymizationSalt: salt,
+			AnonymizationSalt: Salt,
 		},
 		fus.WithFUSConfig(stagingCfg),
 		fus.WithValidator(validator),
