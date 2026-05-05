@@ -97,21 +97,15 @@ func trackAndFlushAnalytics(f *cmdutil.Factory, executedCmd *cobra.Command, runE
 	})
 }
 
-// commandPathForAnalytics joins the cobra command path with dots, dropping the binary name; for expansion aliases it derives the path from the alias's expansion so usage of `tc rl` records as `run.list`, not the alias wrapper.
+// commandPathForAnalytics joins the cobra command path with dots, dropping the binary name; for expansion aliases cobra.Find resolves the alias_expansion through the real tree so positional args, literal endpoints, and flags don't bleed into the recorded path.
 func commandPathForAnalytics(cmd *cobra.Command) string {
+	target := cmd
 	if exp, ok := cmd.Annotations["alias_expansion"]; ok && exp != "" {
-		var path []string
-		for _, w := range strings.Fields(exp) {
-			if strings.HasPrefix(w, "-") {
-				break
-			}
-			path = append(path, w)
-		}
-		if len(path) > 0 {
-			return strings.Join(path, ".")
+		if found, _, err := cmd.Root().Find(strings.Fields(exp)); err == nil && found != cmd.Root() {
+			target = found
 		}
 	}
-	parts := strings.Fields(cmd.CommandPath())
+	parts := strings.Fields(target.CommandPath())
 	if len(parts) <= 1 {
 		return "other"
 	}

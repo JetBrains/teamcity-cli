@@ -6,18 +6,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// TestCommandPathForAnalytics_AliasExpansion locks down the fix for expansion aliases collapsing to "other"; it asserts the alias_expansion annotation drives the recorded command and that trailing flags are dropped from the path.
+// TestCommandPathForAnalytics_AliasExpansion locks down alias-expansion path resolution: the recorded command must be the real subcommand chain, with positional placeholders, literal endpoints, and trailing flags excluded.
 func TestCommandPathForAnalytics_AliasExpansion(t *testing.T) {
+	mkRoot := func() *cobra.Command {
+		root := &cobra.Command{Use: "teamcity"}
+		run := &cobra.Command{Use: "run"}
+		run.AddCommand(&cobra.Command{Use: "list"}, &cobra.Command{Use: "view"}, &cobra.Command{Use: "log"})
+		root.AddCommand(run, &cobra.Command{Use: "api"})
+		return root
+	}
 	cases := map[string]struct {
 		expansion string
 		want      string
 	}{
 		"plain expansion":            {"run list", "run.list"},
-		"expansion with trailing flags": {"run log --tail 200", "run.log"},
+		"trailing flags":             {"run log --tail 200", "run.log"},
+		"positional placeholder":     {"run view $1", "run.view"},
+		"literal endpoint after api": {"api /app/rest/server", "api"},
+		"unknown leading word":       {"nope --foo", "x"}, // falls back to alias name
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			root := &cobra.Command{Use: "teamcity"}
+			root := mkRoot()
 			alias := &cobra.Command{
 				Use:         "x",
 				Annotations: map[string]string{"is_alias": "true", "alias_expansion": tc.expansion},

@@ -71,13 +71,7 @@ func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scop
 	if err != nil {
 		return false, err
 	}
-	ambig = len(hits) > 1
-	for _, h := range hits {
-		if len(h.discovery.Projects) > 1 {
-			ambig = true
-			break
-		}
-	}
+	ambig = len(hits) > 1 || slices.ContainsFunc(hits, func(h serverResult) bool { return len(h.discovery.Projects) > 1 })
 
 	hitByURL := map[string]*discovery{}
 	for _, h := range hits {
@@ -188,7 +182,6 @@ func runAuto(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopeP
 	if err != nil {
 		return false, err
 	}
-	multiServer := len(hits) > 1
 	res, err := resolveAuto(hits, config.NormalizeURL(config.GetServerURL()))
 	if err != nil {
 		return false, err
@@ -201,7 +194,7 @@ func runAuto(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scopeP
 	if multiJob {
 		f.Printer.Info("  No single default job in %s; pass --job <id> to set one", output.Cyan(res.project))
 	}
-	return multiServer || multiJob, nil
+	return len(hits) > 1 || multiJob, nil
 }
 
 // candidateServers returns server URLs to probe: --server override is a single result, otherwise active server first then any others with saved credentials.
