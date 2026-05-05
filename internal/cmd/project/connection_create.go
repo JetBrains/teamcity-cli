@@ -219,19 +219,19 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	if interactive && !opts.noAuthorize {
 		if useManifest {
 			stepNum++
-			printWizardStep(f.Printer, stepNum, totalSteps, "Sign in to the App",
-				"Sign in so TeamCity can list and test repos as you (used by VCS root pickers).")
+			printWizardStep(f.Printer, stepNum, totalSteps, "Authorize the App",
+				"Lets TeamCity list and test repos as you.")
 		} else {
-			printWizardStep(f.Printer, 0, 0, "Sign in",
-				"Sign in so TeamCity can list and test repos as you (used by VCS root pickers).")
+			printWizardStep(f.Printer, 0, 0, "Authorize the App",
+				"Lets TeamCity list and test repos as you.")
 		}
 		ask := true
-		if err := cmdutil.Confirm("Open a browser to sign in?", &ask); err != nil {
+		if err := cmdutil.Confirm("Open a browser to authorize?", &ask); err != nil {
 			return err
 		}
 		if ask {
 			if err := openConnectionAuthorize(f, client, projectID, created.ID, "GitHubApp"); err != nil {
-				f.Printer.Warn("Could not start sign-in flow: %v", err)
+				f.Printer.Warn("Could not open authorize flow: %v", err)
 			} else {
 				authorizeDone = true
 			}
@@ -276,7 +276,7 @@ func printGitHubAppNextSteps(f *cmdutil.Factory, projectID, connectionID, instal
 	type step struct{ label, value string }
 	var steps []step
 	if !authorizeDone {
-		steps = append(steps, step{"Sign in:", fmt.Sprintf("teamcity project connection authorize %s -p %s", connectionID, projectID)})
+		steps = append(steps, step{"Authorize:", fmt.Sprintf("teamcity project connection authorize %s -p %s", connectionID, projectID)})
 	}
 	if installSlug != "" && !installOpened {
 		steps = append(steps, step{"Install on a repo:", "https://github.com/apps/" + installSlug + "/installations/new"})
