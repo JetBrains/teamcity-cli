@@ -166,7 +166,8 @@ func TestGitHubAppName(t *testing.T) {
 		{"  spaced  ", "spaced"},
 		{"_leading_underscore", "leading-underscore"},
 		{"My_Project", "My-Project"},
-		{"TC _Root@host", "TC Root@host"},
+		{"My - Prod", "My - Prod"},
+		{"Release _Candidate", "Release -Candidate"},
 	}
 	for _, tc := range tests {
 		got := githubAppName(tc.in)

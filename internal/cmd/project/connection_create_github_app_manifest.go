@@ -143,7 +143,6 @@ func githubAppName(name string) string {
 	name = strings.TrimSpace(name)
 	name = strings.ReplaceAll(name, "/", "-")
 	name = strings.ReplaceAll(name, "_", "-")
-	name = strings.ReplaceAll(name, " -", " ") // "_Root" → "-Root" → "Root" (avoids double-dash after space→hyphen)
 	name = strings.Trim(name, "-")
 	lower := strings.ToLower(name)
 	if strings.HasPrefix(lower, "github") || strings.HasPrefix(lower, "gist") {
@@ -161,6 +160,7 @@ func defaultGitHubAppName(projectID, serverURL string) string {
 	if u, err := url.Parse(serverURL); err == nil && u.Host != "" {
 		host = u.Host
 	}
+	projectID = strings.TrimLeft(projectID, "_") // _Root → Root; otherwise sanitizer leaves a stranded "-" mid-string
 	return githubAppName(fmt.Sprintf("TC %s@%s", projectID, host))
 }
 

@@ -315,7 +315,7 @@ func projectScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			p.Success("Created connection %q (%s) in project %s", "GitHub App", "PROJECT_EXT_42", "Backend")
 			fmt.Fprintln(w)
 			fmt.Fprintf(w, "%s %s\n", output.Bold("Step 2 of 3:"), output.Bold("Authorize the App"))
-			fmt.Fprintln(w, "  Lets TeamCity list and test repos as you.")
+			fmt.Fprintln(w, "  Allows TeamCity to view and clone repos available to you.")
 			fmt.Fprintln(w, "Open a browser to authorize?  yes  no")
 			p.Info("Opening browser to authorize (connection %s)...", "PROJECT_EXT_42")
 			p.Tip("Complete the flow in your browser. The tab closes on success; you can return here then.")

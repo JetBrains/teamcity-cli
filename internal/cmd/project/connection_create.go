@@ -219,10 +219,10 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 		if useManifest {
 			stepNum++
 			printWizardStep(f.Printer, stepNum, totalSteps, "Authorize the App",
-				"Lets TeamCity list and test repos as you.")
+				"Allows TeamCity to view and clone repos available to you.")
 		} else {
 			printWizardStep(f.Printer, 0, 0, "Authorize the App",
-				"Lets TeamCity list and test repos as you.")
+				"Allows TeamCity to view and clone repos available to you.")
 		}
 		ask := true
 		if err := cmdutil.Confirm("Open a browser to authorize?", &ask); err != nil {
