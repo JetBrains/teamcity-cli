@@ -107,6 +107,18 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	}
 	useManifest := interactive && !opts.noManifest && opts.appID == ""
 
+	// Numbered wizard counter, only used in manifest flow. Total reflects which
+	// post-create steps are enabled — sign-in is gated by --no-authorize, install
+	// always fires after a successful manifest flow (slug is always populated).
+	totalSteps := 0
+	if useManifest {
+		totalSteps = 2
+		if !opts.noAuthorize {
+			totalSteps = 3
+		}
+	}
+	stepNum := 0
+
 	name, err := resolveGitHubAppName(f, opts.name, interactive)
 	if err != nil {
 		return err
@@ -125,7 +137,8 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 			}
 		}
 		target := cmp.Or(owner, "your account")
-		printWizardStep(f.Printer, 1, 3, "Register a GitHub App",
+		stepNum++
+		printWizardStep(f.Printer, stepNum, totalSteps, "Register a GitHub App",
 			"You'll be taken to GitHub to confirm the App registration.")
 		_, _ = fmt.Fprintf(f.Printer.Out, "  %s On GitHub, click %q.\n", output.Yellow("→"), "Create GitHub App for "+target)
 		ok := true
@@ -205,7 +218,8 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 
 	if interactive && !opts.noAuthorize {
 		if useManifest {
-			printWizardStep(f.Printer, 2, 3, "Sign in to the App",
+			stepNum++
+			printWizardStep(f.Printer, stepNum, totalSteps, "Sign in to the App",
 				"Sign in so TeamCity can list and test repos as you (used by VCS root pickers).")
 		} else {
 			printWizardStep(f.Printer, 0, 0, "Sign in",
@@ -225,7 +239,8 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	}
 
 	if interactive && installSlug != "" {
-		printWizardStep(f.Printer, 3, 3, "Install on a repository",
+		stepNum++
+		printWizardStep(f.Printer, stepNum, totalSteps, "Install on a repository",
 			"GitHub Apps grant access per repo — install on the ones TeamCity should clone.")
 		ok := true
 		if err := cmdutil.Confirm("Open a browser to install the App?", &ok); err != nil {
@@ -266,7 +281,7 @@ func printGitHubAppNextSteps(f *cmdutil.Factory, projectID, connectionID, instal
 	if installSlug != "" && !installOpened {
 		steps = append(steps, step{"Install on a repo:", "https://github.com/apps/" + installSlug + "/installations/new"})
 	}
-	steps = append(steps, step{"Create a VCS root:", fmt.Sprintf("teamcity project vcs create -p %s --auth token --connection-id %s --url <repo-url>", projectID, connectionID)})
+	steps = append(steps, step{"Create a VCS root:", fmt.Sprintf("teamcity project vcs create -p %s --auth token --connection-id %s --url '<repo-url>'", projectID, connectionID)})
 
 	_, _ = fmt.Fprintln(f.Printer.Out)
 	_, _ = fmt.Fprintln(f.Printer.Out, "Next steps:")

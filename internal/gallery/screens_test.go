@@ -326,7 +326,7 @@ func projectScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			p.Info("Opening browser to install the App...")
 			fmt.Fprintln(w)
 			fmt.Fprintln(w, "Next steps:")
-			fmt.Fprintf(w, "  1. Create a VCS root: %s\n", output.Cyan("teamcity project vcs create -p Backend --auth token --connection-id PROJECT_EXT_42 --url <repo-url>"))
+			fmt.Fprintf(w, "  1. Create a VCS root: %s\n", output.Cyan("teamcity project vcs create -p Backend --auth token --connection-id PROJECT_EXT_42 --url '<repo-url>'"))
 		}),
 		termbook.Scr("project-connection-create-docker", "project connection create docker", "Register Docker registry credentials",
 			"echo $DOCKER_TOKEN | teamcity project connection create docker -p Backend --name GHCR --url https://ghcr.io --username my-org --password t0p-secret",
