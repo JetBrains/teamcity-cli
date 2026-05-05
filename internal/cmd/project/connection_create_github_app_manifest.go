@@ -138,9 +138,13 @@ func buildManifest(appName, serverURL, redirectURL, projectID string) ([]byte, e
 // githubAppMaxNameLen is GitHub's documented limit for App display names.
 const githubAppMaxNameLen = 34
 
-// githubAppName sanitizes name to fit GitHub's rules: ≤34 chars, no leading "GitHub"/"Gist", no slashes.
+// githubAppName sanitizes a GitHub App name: ≤34 chars, no leading "GitHub"/"Gist", no slashes or underscores.
 func githubAppName(name string) string {
-	name = strings.ReplaceAll(strings.TrimSpace(name), "/", "-")
+	name = strings.TrimSpace(name)
+	name = strings.ReplaceAll(name, "/", "-")
+	name = strings.ReplaceAll(name, "_", "-")
+	name = strings.ReplaceAll(name, " -", " ") // "_Root" → "-Root" → "Root" (avoids double-dash after space→hyphen)
+	name = strings.Trim(name, "-")
 	lower := strings.ToLower(name)
 	if strings.HasPrefix(lower, "github") || strings.HasPrefix(lower, "gist") {
 		name = "TC " + name
