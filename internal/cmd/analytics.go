@@ -48,7 +48,7 @@ func setupAnalytics(f *cmdutil.Factory) {
 		ServerType:       serverType,
 		HasLinkedProject: f.HasLinkConfigFile(),
 		Staging:          analytics.IsStaging(),
-		Salt:             analytics.Salt(),
+		Salt:             analytics.Salt,
 		Debug:            f.Printer.Debug,
 	})
 	f.Printer.Debug("analytics: enabled (session=%s new=%v source=%s ai_agent=%s ci=%s staging=%v)",
