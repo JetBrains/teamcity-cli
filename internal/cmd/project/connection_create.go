@@ -214,7 +214,6 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	f.Printer.Success("Created connection %q (%s) in project %s", name, created.ID, projectID)
 
 	authorizeDone := false
-	installOpened := false
 
 	if interactive && !opts.noAuthorize {
 		if useManifest {
@@ -253,11 +252,10 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 				f.Printer.Warn("Could not open browser automatically: %v", err)
 				_, _ = fmt.Fprintf(f.Printer.Out, "  Open this URL:\n  %s\n", output.Cyan(installURL))
 			}
-			installOpened = true
 		}
 	}
 
-	printGitHubAppNextSteps(f, projectID, created.ID, installSlug, authorizeDone, installOpened)
+	printGitHubAppNextSteps(f, projectID, created.ID, installSlug, authorizeDone)
 	return nil
 }
 
@@ -272,13 +270,13 @@ func printWizardStep(p *output.Printer, n, total int, title, why string) {
 	_, _ = fmt.Fprintf(p.Out, "  %s\n", why)
 }
 
-func printGitHubAppNextSteps(f *cmdutil.Factory, projectID, connectionID, installSlug string, authorizeDone, installOpened bool) {
+func printGitHubAppNextSteps(f *cmdutil.Factory, projectID, connectionID, installSlug string, authorizeDone bool) {
 	type step struct{ label, value string }
 	var steps []step
 	if !authorizeDone {
 		steps = append(steps, step{"Authorize:", fmt.Sprintf("teamcity project connection authorize %s -p %s", connectionID, projectID)})
 	}
-	if installSlug != "" && !installOpened {
+	if installSlug != "" {
 		steps = append(steps, step{"Install on a repo:", "https://github.com/apps/" + installSlug + "/installations/new"})
 	}
 	steps = append(steps, step{"Create a VCS root:", fmt.Sprintf("teamcity project vcs create -p %s --auth token --connection-id %s --url '<repo-url>'", projectID, connectionID)})
