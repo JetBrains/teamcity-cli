@@ -101,6 +101,7 @@ func TestVcsCreateNoTest(T *testing.T) {
 	f := ts.Factory
 
 	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "create",
+		"--project", "TestProject",
 		"--url", "https://github.com/org/repo.git",
 		"--auth", "anonymous",
 		"--no-test",
@@ -113,7 +114,7 @@ func TestVcsCreateMissingURL(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory
 
-	cmdtest.RunCmdWithFactoryExpectErr(T, f, "url", "project", "vcs", "create", "--auth", "anonymous")
+	cmdtest.RunCmdWithFactoryExpectErr(T, f, "url", "project", "vcs", "create", "--project", "TestProject", "--auth", "anonymous")
 }
 
 func TestVcsTest(T *testing.T) {

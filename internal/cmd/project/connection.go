@@ -63,8 +63,7 @@ func newConnectionListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *connectionListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	projectID := cmp.Or(opts.project, "_Root")
-	features, err := client.GetProjectConnections(projectID)
+	features, err := client.GetProjectConnections(cmp.Or(opts.project, "_Root"))
 	if err != nil {
 		return nil, err
 	}

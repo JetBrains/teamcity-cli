@@ -1,7 +1,6 @@
 package project
 
 import (
-	"cmp"
 	"fmt"
 	"net/url"
 
@@ -52,7 +51,7 @@ Connection types that don't have a per-user OAuth flow (Docker, AWS) error out.`
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 
 	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
@@ -64,7 +63,10 @@ func runConnectionAuthorize(f *cmdutil.Factory, opts *connectionAuthorizeOptions
 	if err != nil {
 		return err
 	}
-	projectID := cmp.Or(opts.project, "_Root")
+	projectID, err := resolveProject(f, opts.project)
+	if err != nil {
+		return err
+	}
 
 	providerType, err := lookupConnectionProviderType(client, projectID, id)
 	if err != nil {

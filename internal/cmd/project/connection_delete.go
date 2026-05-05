@@ -1,7 +1,6 @@
 package project
 
 import (
-	"cmp"
 	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -31,7 +30,7 @@ The id is the one shown in the first column of 'connection list'.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation")
 
 	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
@@ -45,7 +44,10 @@ func runConnectionDelete(f *cmdutil.Factory, opts *connectionDeleteOptions, id s
 		return err
 	}
 
-	projectID := cmp.Or(opts.project, "_Root")
+	projectID, err := resolveProject(f, opts.project)
+	if err != nil {
+		return err
+	}
 
 	if !opts.force && f.IsInteractive() {
 		confirm := false
