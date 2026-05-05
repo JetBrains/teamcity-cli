@@ -14,7 +14,6 @@ import (
 type Client struct {
 	mu sync.Mutex
 
-	staging       bool
 	salt          string
 	logger        *fus.Logger
 	session       *Session
@@ -30,7 +29,6 @@ type Client struct {
 }
 
 type Config struct {
-	Staging          bool
 	Salt             string
 	CLIVersion       string
 	ServerVersion    string // YYYY.MM[.x]; omitted from session event when empty
@@ -40,8 +38,7 @@ type Config struct {
 	Session          *Session
 	Environment      Environment
 
-	// Debug, when non-nil, receives one line per lifecycle event (boot, track, flush).
-	// Pass f.Printer.Debug to surface only with --verbose / --debug.
+	// Debug, when non-nil, receives one line per lifecycle event (boot, track, flush). Pass f.Printer.Debug to surface only with --verbose / --debug.
 	Debug func(string, ...any)
 }
 
@@ -56,7 +53,6 @@ func New(cfg Config) *Client {
 		serverType:    cfg.ServerType,
 		authSource:    cfg.AuthSource,
 		hasLinkedPrj:  cfg.HasLinkedProject,
-		staging:       cfg.Staging,
 		salt:          cfg.Salt,
 		debug:         cfg.Debug,
 	}
@@ -84,12 +80,7 @@ func (c *Client) boot() {
 			return
 		}
 
-		var fusConfig *fus.FUSConfig
-		if c.staging {
-			fusConfig, err = fus.FetchTestConfig(RecorderID, ProductCode)
-		} else {
-			fusConfig, err = fus.LoadOrFetchConfig(RecorderID, ProductCode, c.cliVersion, dir, fus.RegionAll)
-		}
+		fusConfig, err := fus.LoadOrFetchConfig(RecorderID, ProductCode, c.cliVersion, dir, fus.RegionAll)
 		if err != nil {
 			c.logf("analytics: boot failed (config): %v", err)
 			return
@@ -138,8 +129,7 @@ func (c *Client) boot() {
 			return
 		}
 		c.logger = logger
-		c.logf("analytics: ready (recorder=%s product=%s staging=%v salt=%t buffer=%s)",
-			RecorderID, ProductCode, c.staging, c.salt != "", dir)
+		c.logf("analytics: ready (recorder=%s product=%s salt=%t buffer=%s)", RecorderID, ProductCode, c.salt != "", dir)
 	})
 }
 

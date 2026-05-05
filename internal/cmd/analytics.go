@@ -47,12 +47,11 @@ func setupAnalytics(f *cmdutil.Factory) {
 		ServerVersion:    serverVersion,
 		ServerType:       serverType,
 		HasLinkedProject: f.HasLinkConfigFile(),
-		Staging:          analytics.IsStaging(),
 		Salt:             analytics.Salt,
 		Debug:            f.Printer.Debug,
 	})
-	f.Printer.Debug("analytics: enabled (session=%s new=%v source=%s ai_agent=%s ci=%s staging=%v)",
-		session.ID, session.IsNew, analytics.ClassifySource(env), env.AIAgent, env.CISystem, analytics.IsStaging())
+	f.Printer.Debug("analytics: enabled (session=%s new=%v source=%s ai_agent=%s ci=%s)",
+		session.ID, session.IsNew, analytics.ClassifySource(env), env.AIAgent, env.CISystem)
 	f.Analytics.TrackSession()
 	if session.IsNew && authSource != analytics.AuthSourceNone {
 		f.Analytics.Track(analytics.GroupAuth, analytics.EventTokenLoaded, map[string]any{
