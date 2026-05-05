@@ -49,7 +49,7 @@ func newSSHListCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"ls"},
 		Example: `  teamcity project ssh list
   teamcity project ssh list --project MyProject
-  teamcity project ssh list --json
+  teamcity project ssh list --project MyProject --json
   teamcity project ssh list --plain`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.SSHKeyFields, opts.fetch)
@@ -65,8 +65,7 @@ func newSSHListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *sshListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	projectID := cmp.Or(opts.project, "_Root")
-	keys, err := client.GetSSHKeys(projectID)
+	keys, err := client.GetSSHKeys(cmp.Or(opts.project, "_Root"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +111,7 @@ func newSSHUploadCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upload <file>",
 		Short: "Upload an SSH private key",
-		Example: `  teamcity project ssh upload ~/.ssh/id_ed25519
+		Example: `  teamcity project ssh upload ~/.ssh/id_ed25519 --project MyProject
   teamcity project ssh upload key.pem --name my-deploy-key --project MyProject`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -120,7 +119,7 @@ func newSSHUploadCmd(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 	cmd.Flags().StringVar(&opts.name, "name", "", "Key name (default: filename)")
 
 	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
@@ -139,7 +138,10 @@ func runSSHUpload(f *cmdutil.Factory, filePath string, opts *sshUploadOptions) e
 		return fmt.Errorf("failed to read key file: %w", err)
 	}
 
-	projectID := cmp.Or(opts.project, "_Root")
+	projectID, err := resolveProject(f, opts.project)
+	if err != nil {
+		return err
+	}
 	name := opts.name
 	if name == "" {
 		name = baseName(filePath)
@@ -174,14 +176,14 @@ func newSSHGenerateCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:   "generate",
 		Short: "Generate an SSH key pair",
 		Long:  `Generate an SSH key pair in TeamCity and print the public key.`,
-		Example: `  teamcity project ssh generate --name deploy-key
+		Example: `  teamcity project ssh generate --name deploy-key --project MyProject
   teamcity project ssh generate --name deploy-key --type rsa --project MyProject`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSSHGenerate(f, opts)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 	cmd.Flags().StringVar(&opts.name, "name", "", "Key name (required)")
 	cmd.Flags().StringVar(&opts.keyType, "type", "ed25519", "Key type: ed25519 or rsa")
 
@@ -197,24 +199,24 @@ func runSSHGenerate(f *cmdutil.Factory, opts *sshGenerateOptions) error {
 		return err
 	}
 
-	projectID := cmp.Or(opts.project, "_Root")
-	name := opts.name
-
-	if name == "" {
-		if !f.IsInteractive() {
-			return api.RequiredFlag("name")
-		}
-		if err := cmdutil.PromptString(f.Printer, "Key name", "", &name); err != nil {
+	if f.IsInteractive() {
+		if err := runInteractiveForm(f, &opts.project, formField{title: "Key name", value: &opts.name}); err != nil {
 			return err
 		}
 	}
+	if opts.project == "" {
+		return api.RequiredFlag("project")
+	}
+	if opts.name == "" {
+		return api.RequiredFlag("name")
+	}
 
-	key, err := client.GenerateSSHKey(projectID, name, opts.keyType)
+	key, err := client.GenerateSSHKey(opts.project, opts.name, opts.keyType)
 	if err != nil {
 		return fmt.Errorf("failed to generate SSH key: %w", err)
 	}
 
-	f.Printer.Success("Generated SSH key %q in project %s", key.Name, projectID)
+	f.Printer.Success("Generated SSH key %q in project %s", key.Name, opts.project)
 	_, _ = fmt.Fprintln(f.Printer.Out)
 	_, _ = fmt.Fprintln(f.Printer.Out, key.PublicKey)
 	return nil
@@ -233,14 +235,14 @@ func newSSHDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 		Short:   "Delete an SSH key",
 		Aliases: []string{"rm"},
 		Args:    cobra.ExactArgs(1),
-		Example: `  teamcity project ssh delete my-deploy-key
-  teamcity project ssh delete my-deploy-key --yes`,
+		Example: `  teamcity project ssh delete my-deploy-key --project MyProject
+  teamcity project ssh delete my-deploy-key --project MyProject --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSSHDelete(f, args[0], opts)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
 	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "")
 	cmdutil.DeprecateFlag(cmd, "force", "yes", "v1.0.0")
@@ -256,7 +258,10 @@ func runSSHDelete(f *cmdutil.Factory, name string, opts *sshDeleteOptions) error
 		return err
 	}
 
-	projectID := cmp.Or(opts.project, "_Root")
+	projectID, err := resolveProject(f, opts.project)
+	if err != nil {
+		return err
+	}
 
 	if !opts.yes && f.IsInteractive() {
 		var confirm bool

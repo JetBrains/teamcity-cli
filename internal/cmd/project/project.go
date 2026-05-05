@@ -13,6 +13,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/charmbracelet/huh"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
@@ -532,6 +533,115 @@ func resolveHiddenProjects(client api.ClientInterface, known map[string]*api.Pro
 
 func newProjectSettingsCmd(f *cmdutil.Factory) *cobra.Command {
 	return newSettingsCmd(f)
+}
+
+// projectPickerOptions fetches all visible projects and returns huh picker options, or nil on failure.
+func projectPickerOptions(f *cmdutil.Factory) []huh.Option[string] {
+	client, err := f.Client()
+	if err != nil {
+		return nil
+	}
+	list, err := client.GetProjects(api.ProjectsOptions{Limit: 10000})
+	if err != nil || len(list.Projects) == 0 {
+		return nil
+	}
+	options := make([]huh.Option[string], len(list.Projects))
+	for i, p := range list.Projects {
+		label := p.ID
+		if p.Name != "" && p.Name != p.ID {
+			label = p.ID + " — " + p.Name
+		}
+		options[i] = huh.Option[string]{Key: label, Value: p.ID}
+	}
+	return options
+}
+
+// formField describes one text input for runInteractiveForm. Validate defaults to cmdutil.RequireNonEmpty.
+type formField struct {
+	title       string
+	description string
+	value       *string
+	validate    func(string) error
+}
+
+// resolveProject returns project if non-empty; otherwise runs the project picker (interactive) or errors (non-interactive).
+func resolveProject(f *cmdutil.Factory, project string) (string, error) {
+	if project != "" {
+		return project, nil
+	}
+	if !f.IsInteractive() {
+		return "", api.RequiredFlag("project")
+	}
+	if err := runInteractiveForm(f, &project); err != nil {
+		return "", err
+	}
+	return project, nil
+}
+
+// runInteractiveForm prompts for project (picker, with text-input fallback) and the given fields in a single huh form
+// so Shift+Tab navigates between them. Fields whose value is already non-empty are skipped; the rest are validated
+// (cmdutil.RequireNonEmpty by default) so the form will not exit with empty values. Each prompted field is echoed
+// to scrollback after the form completes.
+func runInteractiveForm(f *cmdutil.Factory, project *string, fields ...formField) error {
+	var groups []*huh.Group
+
+	needsProject := *project == ""
+	var pickerOptions []huh.Option[string]
+	if needsProject {
+		pickerOptions = projectPickerOptions(f)
+		if pickerOptions != nil {
+			sel := huh.NewSelect[string]().Title("Project").Options(pickerOptions...).Value(project)
+			if len(pickerOptions) >= 5 {
+				sel.Filtering(true)
+			}
+			groups = append(groups, huh.NewGroup(sel))
+		} else {
+			groups = append(groups, huh.NewGroup(huh.NewInput().Title("Project ID").Prompt("").Validate(cmdutil.RequireNonEmpty).Value(project)))
+		}
+	}
+
+	var prompted []formField
+	var huhFields []huh.Field
+	for _, fld := range fields {
+		if *fld.value != "" {
+			continue
+		}
+		validate := fld.validate
+		if validate == nil {
+			validate = cmdutil.RequireNonEmpty
+		}
+		in := huh.NewInput().Prompt("").Title(fld.title).Validate(validate).Value(fld.value)
+		if fld.description != "" {
+			in.Description(fld.description)
+		}
+		huhFields = append(huhFields, in)
+		prompted = append(prompted, fld)
+	}
+	if len(huhFields) > 0 {
+		groups = append(groups, huh.NewGroup(huhFields...))
+	}
+
+	if len(groups) == 0 {
+		return nil
+	}
+	if err := cmdutil.RunForm(groups...); err != nil {
+		return err
+	}
+
+	if needsProject {
+		label := *project
+		for _, o := range pickerOptions {
+			if o.Value == *project {
+				label = o.Key
+				break
+			}
+		}
+		_, _ = fmt.Fprintf(f.Printer.Out, "Project: %s\n", output.Cyan(label))
+	}
+	for _, fld := range prompted {
+		_, _ = fmt.Fprintf(f.Printer.Out, "%s: %s\n", fld.title, output.Cyan(*fld.value))
+	}
+	return nil
 }
 
 // firstArgComplete applies fn only to args[0]; later positionals get no completions.

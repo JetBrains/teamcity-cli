@@ -2,6 +2,7 @@ package project
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -75,7 +76,7 @@ automatically. Use --no-manifest to enter existing credentials manually.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 	cmd.Flags().StringVar(&opts.name, "name", "", "Connection display name in TeamCity (default: \"GitHub App\")")
 	cmd.Flags().StringVar(&opts.appName, "app-name", "", "GitHub App name; must be globally unique on github.com (default: TC <project>@<host>)")
 	cmd.Flags().StringVar(&opts.owner, "owner", "", "GitHub organization (interactive: posts the manifest under this org)")
@@ -99,8 +100,11 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 		return err
 	}
 
-	projectID := cmp.Or(opts.project, "_Root")
 	interactive := f.IsInteractive()
+	projectID, err := resolveProject(f, opts.project)
+	if err != nil {
+		return err
+	}
 	useManifest := interactive && !opts.noManifest && opts.appID == ""
 
 	name, err := resolveGitHubAppName(f, opts.name, interactive)
@@ -297,7 +301,7 @@ over a personal account.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 	cmd.Flags().StringVar(&opts.name, "name", "", "Display name")
 	cmd.Flags().StringVar(&opts.url, "url", "", "Registry URL (e.g. https://ghcr.io)")
 	cmd.Flags().StringVar(&opts.username, "username", "", "Registry username")
@@ -315,16 +319,19 @@ func runConnectionCreateDocker(f *cmdutil.Factory, opts *dockerOptions) error {
 		return err
 	}
 
-	projectID := cmp.Or(opts.project, "_Root")
 	interactive := f.IsInteractive()
 
-	if err := promptIfEmpty(f, &opts.name, "Connection name", "", interactive, "name"); err != nil {
-		return err
+	if interactive {
+		err := runInteractiveForm(f, &opts.project,
+			formField{title: "Connection name", value: &opts.name},
+			formField{title: "Registry URL", description: "e.g. https://ghcr.io", value: &opts.url, validate: validateRegistryURL},
+			formField{title: "Username", value: &opts.username},
+		)
+		if err != nil {
+			return err
+		}
 	}
-	if err := promptIfEmpty(f, &opts.url, "Registry URL", "e.g. https://ghcr.io", interactive, "url"); err != nil {
-		return err
-	}
-	if err := promptIfEmpty(f, &opts.username, "Username", "", interactive, "username"); err != nil {
+	if err := validateDockerOptions(opts); err != nil {
 		return err
 	}
 
@@ -346,24 +353,43 @@ func runConnectionCreateDocker(f *cmdutil.Factory, opts *dockerOptions) error {
 		},
 	}
 
-	created, err := client.CreateProjectFeature(projectID, feat)
+	created, err := client.CreateProjectFeature(opts.project, feat)
 	if err != nil {
 		return fmt.Errorf("failed to create connection: %w", err)
 	}
 
-	f.Printer.Success("Created connection %q (%s) in project %s", opts.name, created.ID, projectID)
+	f.Printer.Success("Created connection %q (%s) in project %s", opts.name, created.ID, opts.project)
 	f.Printer.Tip("%s", output.TipDockerServiceAccount)
 	return nil
 }
 
-func promptIfEmpty(f *cmdutil.Factory, value *string, title, description string, interactive bool, flagName string) error {
-	if *value != "" {
-		return nil
+func validateDockerOptions(opts *dockerOptions) error {
+	if opts.project == "" {
+		return api.RequiredFlag("project")
 	}
-	if !interactive {
-		return api.RequiredFlag(flagName)
+	if opts.name == "" {
+		return api.RequiredFlag("name")
 	}
-	return cmdutil.PromptString(f.Printer, title, description, value)
+	if opts.url == "" {
+		return api.RequiredFlag("url")
+	}
+	if err := validateRegistryURL(opts.url); err != nil {
+		return api.Validation(err.Error(), "e.g. --url https://ghcr.io")
+	}
+	if opts.username == "" {
+		return api.RequiredFlag("username")
+	}
+	return nil
+}
+
+func validateRegistryURL(s string) error {
+	if err := cmdutil.RequireNonEmpty(s); err != nil {
+		return err
+	}
+	if !strings.HasPrefix(s, "https://") && !strings.HasPrefix(s, "http://") {
+		return errors.New("must start with https:// or http://")
+	}
+	return nil
 }
 
 func resolveSecret(f *cmdutil.Factory, value string, stdin, interactive bool, label, flagName string) (string, error) {

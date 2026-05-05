@@ -73,9 +73,8 @@ func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *vcsListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	project := cmp.Or(opts.project, "_Root")
 	roots, err := client.GetVcsRoots(api.VcsRootsOptions{
-		Project: project,
+		Project: cmp.Or(opts.project, "_Root"),
 		Limit:   opts.Limit,
 		Fields:  fields,
 	})
@@ -290,7 +289,7 @@ Tests the connection before creating unless --no-test is specified.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
+	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 	cmd.Flags().StringVar(&opts.repoURL, "url", "", "Repository URL")
 	cmd.Flags().StringVar(&opts.name, "name", "", "Display name (auto-generated from URL if omitted)")
 	cmd.Flags().StringVar(&opts.branch, "branch", "refs/heads/main", "Default branch")
@@ -317,18 +316,22 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 		return err
 	}
 
-	projectID := cmp.Or(opts.project, "_Root")
 	interactive := f.IsInteractive()
 
-	repoURL := opts.repoURL
-	if repoURL == "" {
-		if !interactive {
-			return api.RequiredFlag("url")
-		}
-		if err := cmdutil.PromptString(f.Printer, "Repository URL", "", &repoURL); err != nil {
+	if interactive {
+		if err := runInteractiveForm(f, &opts.project, formField{title: "Repository URL", value: &opts.repoURL}); err != nil {
 			return err
 		}
 	}
+	if opts.project == "" {
+		return api.RequiredFlag("project")
+	}
+	if opts.repoURL == "" {
+		return api.RequiredFlag("url")
+	}
+
+	projectID := opts.project
+	repoURL := opts.repoURL
 
 	name := opts.name
 	if name == "" {

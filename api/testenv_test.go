@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/moby/moby/api/types/container"
 	"github.com/joho/godotenv"
+	"github.com/moby/moby/api/types/container"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
