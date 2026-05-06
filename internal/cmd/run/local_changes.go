@@ -38,7 +38,13 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 				"Run this command from within a git repository, or use --local-changes <path> to specify a diff file",
 			)
 		}
-		patch, err := git.UncommittedDiff()
+
+		base := "HEAD"
+		if git.HasUpstream() {
+			base = "@{u}"
+		}
+
+		patch, err := git.WorkingTreeDiffFrom(base)
 		if err != nil {
 			return nil, api.Validation(
 				"failed to generate git diff",
@@ -47,7 +53,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 		}
 		if len(patch) == 0 {
 			return nil, api.Validation(
-				"no uncommitted changes found",
+				"no local changes found",
 				"Make some changes to your files before running a personal build, or use --local-changes <path> to specify a diff file",
 			)
 		}
