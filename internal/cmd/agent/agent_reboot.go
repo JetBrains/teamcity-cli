@@ -76,11 +76,7 @@ Note: Local agents (running on the same machine as the server) cannot be reboote
 	}
 
 	cmd.Flags().BoolVar(&opts.graceful, "graceful", false, "Wait for current work to finish before rebooting")
-	cmd.Flags().BoolVar(&opts.graceful, "after-build", false, "")
-	cmdutil.DeprecateFlag(cmd, "after-build", "graceful", "v1.0.0")
 	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
-	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "")
-	cmdutil.DeprecateFlag(cmd, "force", "yes", "v1.0.0")
 
 	return cmd
 }

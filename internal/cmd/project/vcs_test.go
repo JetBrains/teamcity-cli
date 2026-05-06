@@ -78,7 +78,7 @@ func TestVcsDelete(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory
 
-	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "delete", "TestProject_Repo", "--force")
+	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "delete", "TestProject_Repo", "--yes")
 	assert.Contains(T, out, "Deleted VCS root TestProject_Repo")
 }
 

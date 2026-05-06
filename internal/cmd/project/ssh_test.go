@@ -29,6 +29,6 @@ func TestSSHDelete(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	f := ts.Factory
 
-	out := cmdtest.CaptureOutput(t, f, "project", "ssh", "delete", "deploy-key", "--force", "--project", "TestProject")
+	out := cmdtest.CaptureOutput(t, f, "project", "ssh", "delete", "deploy-key", "--yes", "--project", "TestProject")
 	assert.Contains(t, out, "Deleted SSH key")
 }

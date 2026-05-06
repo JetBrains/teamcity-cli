@@ -29,8 +29,6 @@ func newPipelineDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
-	cmd.Flags().BoolVar(&opts.yes, "force", false, "")
-	cmdutil.DeprecateFlag(cmd, "force", "yes", "v1.0.0")
 
 	return cmd
 }
