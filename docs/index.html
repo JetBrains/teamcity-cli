@@ -569,7 +569,7 @@ body {
       </button>
     </div>
 
-    <div class="sidebar-meta">146 screens · 2026-04-29 18:23</div>
+    <div class="sidebar-meta">146 screens · 2026-05-05 17:36</div>
 
     <div class="search">
       <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
@@ -810,7 +810,7 @@ body {
         <a href="#project-connection-list" data-cmd="project-connection-list" data-search="project-connection-list project connection list list project connections teamcity project connection list --project myapp">
           <span class="dot">·</span><span>project connection list</span>
         </a>
-        <a href="#project-connection-create-github-app" data-cmd="project-connection-create-github-app" data-search="project-connection-create-github-app project connection create github-app manifest flow: huh prompts echo, browser registers the app, post-create authorize prompt teamcity project connection create github-app -p backend --owner my-org">
+        <a href="#project-connection-create-github-app" data-cmd="project-connection-create-github-app" data-search="project-connection-create-github-app project connection create github-app wizard: register the app, sign in, install on a repo, then point at vcs create teamcity project connection create github-app -p backend --owner my-org">
           <span class="dot">·</span><span>project connection create github-app</span>
         </a>
         <a href="#project-connection-create-docker" data-cmd="project-connection-create-docker" data-search="project-connection-create-docker project connection create docker register docker registry credentials echo $docker_token | teamcity project connection create docker -p backend --name ghcr --url https://ghcr.io --username my-org --password t0p-secret">
@@ -1089,7 +1089,7 @@ body {
     <div class="side-foot">
       <a href="https://github.com/jetbrains/teamcity-cli/" target="_blank" rel="noopener">↗ github</a><br>
       146 screens · 17 groups<br>
-      generated 2026-04-29 18:23
+      generated 2026-05-05 17:36
     </div>
   </aside>
 
@@ -1586,7 +1586,7 @@ logs&#47;build.log          45 KiB  <span class="term-fg32">   ✓</span>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity run tests 1</span></div>
-                <pre class="term-body"><span class="term-fg2">View in browser:</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231?buildTab=tests
+                <pre class="term-body"><span class="term-fg2">View in browser:</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231&amp;buildTab=tests
 &nbsp;
 TESTS: <span class="term-fg32">145 passed</span>
 &nbsp;
@@ -2817,11 +2817,11 @@ PROJECT_EXT_5  Jira Cloud       JiraCloud</pre>
               </div>
             </div>
           </article>
-          <article class="entry" id="project-connection-create-github-app" data-cmd="project-connection-create-github-app" data-search="project-connection-create-github-app project connection create github-app manifest flow: huh prompts echo, browser registers the app, post-create authorize prompt teamcity project connection create github-app -p backend --owner my-org">
+          <article class="entry" id="project-connection-create-github-app" data-cmd="project-connection-create-github-app" data-search="project-connection-create-github-app project connection create github-app wizard: register the app, sign in, install on a repo, then point at vcs create teamcity project connection create github-app -p backend --owner my-org">
             <div class="entry-meta">
               <div class="id">project-connection-create-github-app</div>
               <h4>project connection create github-app</h4>
-              <p>Manifest flow: huh prompts echo, browser registers the App, post-create authorize prompt</p>
+              <p>Wizard: register the App, sign in, install on a repo, then point at vcs create</p>
               <div class="tags"><span>projects</span></div>
             </div>
             <div class="entry-term">
@@ -2833,16 +2833,27 @@ PROJECT_EXT_5  Jira Cloud       JiraCloud</pre>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity project connection create github-app -p Backend --owner my-org</span></div>
                 <pre class="term-body">Connection name: <span class="term-fg36">GitHub App</span>
-Opening browser to register a GitHub App for my-org...
-  <span class="term-fg33">→</span> Click &quot;Create GitHub App for my-org&quot; on GitHub
 &nbsp;
+<span class="term-fg1">Step 1 of 3:</span> <span class="term-fg1">Register a GitHub App</span>
+  You&#39;ll be taken to GitHub to confirm the App registration.
+  <span class="term-fg33">→</span> On GitHub, click &quot;Create GitHub App for my-org&quot;.
+Open a browser to register the App?  yes  no
+Opening browser to register the App on GitHub...
 <span class="term-fg32">✓</span> Created connection &quot;GitHub App&quot; (PROJECT_EXT_42) in project Backend
-Opening browser to authorize connection PROJECT_EXT_42 as your TeamCity user...
+&nbsp;
+<span class="term-fg1">Step 2 of 3:</span> <span class="term-fg1">Authorize the App</span>
+  Allows TeamCity to view and clone repos available to you.
+Open a browser to authorize?  yes  no
+Opening browser to authorize (connection PROJECT_EXT_42)...
 <span class="term-fg33">Tip:</span> Complete the flow in your browser. The tab closes on success; you can return here then.
 &nbsp;
+<span class="term-fg1">Step 3 of 3:</span> <span class="term-fg1">Install on a repository</span>
+  GitHub Apps grant access per repo — install on the ones TeamCity should clone.
+Open a browser to install the App?  yes  no
+Opening browser to install the App...
+&nbsp;
 Next steps:
-  1. Install on a repo: <span class="term-fg36">https:&#47;&#47;github.com&#47;apps&#47;tc-backend&#47;installations&#47;new</span>
-  2. Create a VCS root: <span class="term-fg36">teamcity project vcs create -p Backend --auth token --connection-id PROJECT_EXT_42 --url ...</span></pre>
+  1. Create a VCS root: <span class="term-fg36">teamcity project vcs create -p Backend --auth token --connection-id PROJECT_EXT_42 --url &#39;&lt;repo-url&gt;&#39;</span></pre>
               </div>
             </div>
           </article>
@@ -3609,7 +3620,7 @@ Token expires: <span class="term-fg33">Dec 31, 2026</span>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity config list</span></div>
-                <pre class="term-body"><span class="term-fg2">Config:</span> &#47;var&#47;folders&#47;4y&#47;7q13x9990bv9hf94lw6g4ptm0000gn&#47;T&#47;TestGenerateGallery504013534&#47;001&#47;tc&#47;config.yml
+                <pre class="term-body"><span class="term-fg2">Config:</span> &#47;var&#47;folders&#47;4y&#47;7q13x9990bv9hf94lw6g4ptm0000gn&#47;T&#47;TestGenerateGallery997979501&#47;001&#47;tc&#47;config.yml
 &nbsp;
 default_server=
 &nbsp;
@@ -4579,10 +4590,11 @@ Use &quot;teamcity auth [command] --help&quot; for more information about a comm
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity config --help</span></div>
                 <pre class="term-body">Get, set, and list CLI configuration values.
 &nbsp;
-Configuration is stored in ~&#47;.teamcity&#47;config.toml and covers the
-default server, per-server flags (guest, read-only), and aliases.
-Environment variables (TEAMCITY_URL, TEAMCITY_TOKEN, ...) override
-the persisted values at runtime.
+Configuration is stored in $XDG_CONFIG_HOME&#47;tc&#47;config.yml (defaults
+to ~&#47;.config&#47;tc&#47;config.yml) and covers the default server, per-server
+flags (guest, read-only), and aliases. Environment variables
+(TEAMCITY_URL, TEAMCITY_TOKEN, ...) override the persisted values
+at runtime.
 &nbsp;
 Usage:
   teamcity config [flags]
@@ -5221,6 +5233,12 @@ Examples:
   # Bind the repo (uses active server, top-level scope)
   teamcity link --project Acme_Backend --job Acme_Backend_Build
 &nbsp;
+  # Auto-discover from git remotes (no prompts; ideal for AI agents and CI)
+  teamcity link --auto
+&nbsp;
+  # Auto on a specific server when multiple are authenticated
+  teamcity link --auto --server https:&#47;&#47;nightly.example
+&nbsp;
   # Add a second server&#39;s pipelines to the same teamcity.toml
   teamcity link --server https:&#47;&#47;nightly.example --project Acme_Nightly \
       --jobs Acme_Nightly_Release,Acme_Nightly_Eval
@@ -5233,6 +5251,7 @@ Examples:
   rm  teamcity.toml
 &nbsp;
 Flags:
+  -a, --auto             Auto-discover the binding from git remotes; mutually exclusive with --project&#47;--job&#47;--jobs
   -h, --help             help for link
   -j, --job string       Default job&#47;pipeline ID for this scope
       --jobs strings     Additional job&#47;pipeline IDs (comma-separated or repeated)
@@ -5300,7 +5319,7 @@ Use &quot;teamcity project connection create [command] --help&quot; for more inf
 
     <footer class="foot">
       <div>teamcity cli · screen gallery</div>
-      <div>146 screens · 2026-04-29 18:23</div>
+      <div>146 screens · 2026-05-05 17:36</div>
     </footer>
     <div class="attrib">
 			<span class="jb-wordmark">JetBrains</span>

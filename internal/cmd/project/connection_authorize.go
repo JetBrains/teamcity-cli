@@ -89,7 +89,7 @@ func openConnectionAuthorize(f *cmdutil.Factory, client api.ClientInterface, pro
 	authorizeURL := fmt.Sprintf("%s/oauth/%s/repositories.html?projectId=%s&connectionId=%s&updateToken=true&showMode=popup",
 		client.ServerURL(), seg, url.QueryEscape(projectID), url.QueryEscape(id))
 
-	f.Printer.Info("Opening browser to authorize connection %s as your TeamCity user...", id)
+	f.Printer.Info("Opening browser to authorize (connection %s)...", id)
 	if err := openBrowser(authorizeURL); err != nil {
 		f.Printer.Warn("Could not open browser automatically: %v", err)
 		_, _ = fmt.Fprintf(f.Printer.Out, "  Open this URL:\n  %s\n", output.Cyan(authorizeURL))

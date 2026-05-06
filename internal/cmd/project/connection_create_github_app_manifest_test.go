@@ -139,7 +139,8 @@ func TestDefaultGitHubAppName(t *testing.T) {
 	}{
 		{"Sandbox", "https://cli.teamcity.com", "TC Sandbox@cli.teamcity.com"},
 		{"Sandbox", "https://tc.example.com:8111", "TC Sandbox@tc.example.com:8111"},
-		{"_Root", "https://cli.teamcity.com", "TC _Root@cli.teamcity.com"},
+		{"_Root", "https://cli.teamcity.com", "TC Root@cli.teamcity.com"},
+		{"My_Project", "https://cli.teamcity.com", "TC My-Project@cli.teamcity.com"},
 		{"VeryLongProjectName", "https://cli.teamcity.com", "TC VeryLongProjectName@cli.teamcit"}, // 34-char truncation
 	}
 	for _, tc := range tests {
@@ -163,6 +164,10 @@ func TestGitHubAppName(t *testing.T) {
 		{"backend/staging", "backend-staging"},
 		{"This-name-is-way-too-long-for-the-34-char-limit", "This-name-is-way-too-long-for-the-"},
 		{"  spaced  ", "spaced"},
+		{"_leading_underscore", "leading-underscore"},
+		{"My_Project", "My-Project"},
+		{"My - Prod", "My - Prod"},
+		{"Release _Candidate", "Release -Candidate"},
 	}
 	for _, tc := range tests {
 		got := githubAppName(tc.in)

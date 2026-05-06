@@ -1,7 +1,6 @@
 package project
 
 import (
-	"cmp"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -87,9 +86,7 @@ func runGitHubAppManifestFlow(ctx context.Context, p *output.Printer, serverURL,
 
 	startHandler := buildStartHandler(org, manifestJSON, state)
 
-	target := cmp.Or(org, "your account")
-	p.Info("Opening browser to register a GitHub App for %s...", target)
-	_, _ = fmt.Fprintf(p.Out, "  %s Click \"Create GitHub App for %s\" on GitHub\n", output.Yellow("→"), target)
+	p.Info("Opening browser to register the App on GitHub...")
 
 	openURL := fmt.Sprintf("http://localhost:%d%s", port, manifestStartPath)
 	result, err := browserflow.Run(ctx, browserflow.Options{
@@ -141,9 +138,12 @@ func buildManifest(appName, serverURL, redirectURL, projectID string) ([]byte, e
 // githubAppMaxNameLen is GitHub's documented limit for App display names.
 const githubAppMaxNameLen = 34
 
-// githubAppName sanitizes name to fit GitHub's rules: ≤34 chars, no leading "GitHub"/"Gist", no slashes.
+// githubAppName sanitizes a GitHub App name: ≤34 chars, no leading "GitHub"/"Gist", no slashes or underscores.
 func githubAppName(name string) string {
-	name = strings.ReplaceAll(strings.TrimSpace(name), "/", "-")
+	name = strings.TrimSpace(name)
+	name = strings.ReplaceAll(name, "/", "-")
+	name = strings.ReplaceAll(name, "_", "-")
+	name = strings.Trim(name, "-")
 	lower := strings.ToLower(name)
 	if strings.HasPrefix(lower, "github") || strings.HasPrefix(lower, "gist") {
 		name = "TC " + name
@@ -160,6 +160,7 @@ func defaultGitHubAppName(projectID, serverURL string) string {
 	if u, err := url.Parse(serverURL); err == nil && u.Host != "" {
 		host = u.Host
 	}
+	projectID = strings.TrimLeft(projectID, "_") // _Root → Root; otherwise sanitizer leaves a stranded "-" mid-string
 	return githubAppName(fmt.Sprintf("TC %s@%s", projectID, host))
 }
 
