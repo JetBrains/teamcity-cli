@@ -398,7 +398,9 @@ teamcity project ssh delete my-deploy-key --project MyProject --yes
 
 ## Project connections
 
-Connections (OAuth providers, Docker registries, cloud integrations) are configured at the project level. The CLI can list them for use with `vcs create --auth token`.
+Connections (OAuth providers, Docker registries, cloud integrations) are configured at the project level. They let TeamCity talk to external services without storing credentials in individual jobs, and the CLI can list, create, authorize, and delete them.
+
+See [Configuring Connections](https://www.jetbrains.com/help/teamcity/configuring-connections.html) for the full TeamCity reference.
 
 ### Listing connections
 
@@ -406,6 +408,67 @@ Connections (OAuth providers, Docker registries, cloud integrations) are configu
 teamcity project connection list --project MyProject
 teamcity project connection list --project MyProject --json
 ```
+
+The first column shows the connection ID (e.g. `PROJECT_EXT_42`). That ID is what `authorize`, `delete`, and `vcs create --auth token` consume.
+
+### Creating a GitHub App connection
+
+Register a GitHub App in a project. A GitHub App authenticates as itself (no per-user token), which is the right choice for CI workflows that don't need user-context OAuth.
+
+In interactive mode, the CLI registers a brand-new App via GitHub's manifest flow — it opens a browser, you click **Create**, and the credentials come back automatically:
+
+```Shell
+teamcity project connection create github-app -p Backend
+teamcity project connection create github-app -p Backend --owner my-org
+```
+
+If you already have a GitHub App, pass `--no-manifest` and supply the credentials yourself:
+
+```Shell
+teamcity project connection create github-app -p Backend --no-manifest \
+    --name "Backend" --app-id 1234567 --client-id Iv1.abc \
+    --private-key-file ./key.pem --stdin <<<"$CLIENT_SECRET"
+```
+
+After creation the CLI prompts to run [`authorize`](#authorizing-a-connection) so the current user gets a token bound to the App. Skip the prompt with `--no-authorize`.
+
+### Creating a Docker registry connection
+
+Register Docker registry credentials so jobs can pull and push images without inlining secrets:
+
+```Shell
+teamcity project connection create docker -p Backend
+```
+
+In non-interactive setups (CI/CD), feed the password through stdin:
+
+```Shell
+echo "$DOCKER_TOKEN" | teamcity project connection create docker -p Backend \
+    --name GHCR --url https://ghcr.io --username my-org --stdin
+```
+
+> The connection stores a long-lived password — prefer a service account or robot user over a personal account.
+>
+{style="note"}
+
+### Authorizing a connection
+
+OAuth-style connections (GitHub App, Bitbucket, GitLab, …) need a per-user authorization step before TeamCity can call upstream as that user. This is required, for example, before [`vcs create --auth token`](#creating-a-vcs-root) can verify a repository over the connection.
+
+```Shell
+teamcity project connection authorize PROJECT_EXT_42 -p Backend
+```
+
+The command opens a browser to complete the OAuth flow and stores the resulting token against the current user. Connection types without a user OAuth flow (Docker, AWS) return an error.
+
+### Deleting a connection
+
+```Shell
+teamcity project connection delete PROJECT_EXT_42 -p Backend
+teamcity project connection delete PROJECT_EXT_42 -p Backend --force
+```
+
+Pass `--force` (or `-f`) to skip the interactive confirmation prompt — useful in scripts.
 
 ## Managing project parameters
 
