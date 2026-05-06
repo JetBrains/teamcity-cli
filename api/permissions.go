@@ -37,3 +37,6 @@ var permissionByDescription = func() map[string]string {
 func PermissionEnum(description string) string {
 	return permissionByDescription[description]
 }
+
+// PermissionEditProject is the locator-form value for `userPermission:(permission:<name>,...)` (lowercase).
+const PermissionEditProject = "edit_project"

@@ -101,7 +101,7 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	}
 
 	interactive := f.IsInteractive()
-	projectID, err := resolveProject(f, opts.project)
+	projectID, err := resolveProject(f, opts.project, api.PermissionEditProject)
 	if err != nil {
 		return err
 	}
@@ -322,7 +322,7 @@ func runConnectionCreateDocker(f *cmdutil.Factory, opts *dockerOptions) error {
 	interactive := f.IsInteractive()
 
 	if interactive {
-		err := runInteractiveForm(f, &opts.project,
+		err := runInteractiveForm(f, &opts.project, api.PermissionEditProject,
 			formField{title: "Connection name", value: &opts.name},
 			formField{title: "Registry URL", description: "e.g. https://ghcr.io", value: &opts.url, validate: validateRegistryURL},
 			formField{title: "Username", value: &opts.username},

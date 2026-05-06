@@ -63,7 +63,7 @@ func runConnectionAuthorize(f *cmdutil.Factory, opts *connectionAuthorizeOptions
 	if err != nil {
 		return err
 	}
-	projectID, err := resolveProject(f, opts.project)
+	projectID, err := resolveProject(f, opts.project, api.PermissionEditProject)
 	if err != nil {
 		return err
 	}
