@@ -103,6 +103,11 @@ func BranchExistsOnRemote(branch string) bool {
 	return err == nil && strings.TrimSpace(string(out)) != ""
 }
 
+// HasUpstream reports whether the current branch has an upstream tracking branch configured.
+func HasUpstream() bool {
+	return exec.Command("git", "rev-parse", "--abbrev-ref", "@{u}").Run() == nil
+}
+
 // Push runs `git push -u <remote> <branch>` for the branch's configured remote.
 func Push(branch string) error {
 	remote := RemoteForBranch(branch)
@@ -147,6 +152,29 @@ func UncommittedDiff() ([]byte, error) {
 	out, err := exec.Command("git", "diff", "HEAD").Output()
 	if err != nil {
 		return nil, fmt.Errorf("git diff HEAD: %w", err)
+	}
+	return out, nil
+}
+
+// WorkingTreeDiffFrom returns `git diff <base>` output, including committed, staged,
+// unstaged, and untracked changes relative to base.
+func WorkingTreeDiffFrom(base string) ([]byte, error) {
+	untracked, err := UntrackedFiles()
+	if err != nil {
+		return nil, err
+	}
+	if len(untracked) > 0 {
+		addArgs := append([]string{"add", "-N", "--"}, untracked...)
+		if exec.Command("git", addArgs...).Run() == nil {
+			defer func() {
+				resetArgs := append([]string{"reset", "HEAD", "--"}, untracked...)
+				_ = exec.Command("git", resetArgs...).Run()
+			}()
+		}
+	}
+	out, err := exec.Command("git", "diff", base).Output()
+	if err != nil {
+		return nil, fmt.Errorf("git diff %s: %w", base, err)
 	}
 	return out, nil
 }
