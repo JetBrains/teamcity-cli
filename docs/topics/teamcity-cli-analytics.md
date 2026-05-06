@@ -8,24 +8,40 @@
 
 </tip>
 
-TeamCity CLI sends anonymous usage data to JetBrains so we can see which commands matter to people, where things break, and where to spend our time next.
+TeamCity CLI sends anonymous usage statistics to JetBrains so we can see which commands matter to people, where things break, and where to spend our time next. Every value we send is constrained to a fixed enum or a numeric count – the CLI never transmits free-form strings, identifiers, or anything you typed.
 
 ## What we collect
 
-- The command you ran – for example, `run list`, `pipeline validate`, `agent term`.
-- Whether you used common flags like `--json`, `--watch`, or `--web`.
-- A salted hash of your TeamCity server URL, so we can count distinct servers without learning the URL.
-- A per-machine session ID.
-- OS, CLI version, terminal type, and whether the run was interactive or in CI.
+**Once per CLI invocation** (a "session" event):
+
+- CLI version, TeamCity server version (for example, `2026.1`), and server type – `cloud` or `on_prem`.
+- OS (`darwin`, `linux`, `windows`, `freebsd`, `other`) and CPU architecture (`amd64`, `arm64`, `386`, `other`).
+- The CI system the CLI is running inside, if any: `github_actions`, `gitlab`, `jenkins`, `circleci`, `buildkite`, `azure`, `travis`, `teamcity`, `other`, or `none`.
+- The AI coding agent that invoked the CLI, if any: `claude_code`, `junie`, `cursor`, `gemini_cli`, `codex`, `goose`, `augment`, `github_copilot`, `amp`, `windsurf`, `opencode`, `trae`, `roo`, `other`, or `none`.
+- How you authenticated: `keyring`, `env`, `build_properties`, `guest`, or `none` – never the token itself.
+- Whether the working directory has a `teamcity.toml` linked-project file (a boolean).
+- A randomly-generated session ID that rotates after 30 minutes of inactivity. The ID is hashed locally before it leaves your machine.
+
+**Once per command** (a "command" event):
+
+- The command you ran, mapped to a fixed enum: `run.list`, `pipeline.validate`, `agent.term`, and so on. Anything outside the enum collapses to `other`.
+- Whether `--json` was used.
+- Whether the command ran with git context (one of `--local-changes`, `--branch=@this`, `--revision=@head`).
+- Whether a `teamcity.toml` link file was used to resolve the project or job.
+- The total number of flags you set (count only – never the values).
+- Exit code (`0`, `1`, `2`), duration in milliseconds, and an error category if the command failed: `auth`, `permission`, `not_found`, `network`, `validation`, `read_only`, `internal`, or `none`.
+
+**For specific command groups** (build runs, agent sessions, pipeline operations, skill install/update, REST API calls, login, link) we record a handful of additional behavioral booleans and counts – for example, `is_personal` for `run start`, `error_count` for `pipeline validate`, `had_timeout` for `agent term`. The full, exact schema is committed in [`internal/analytics/scheme.go`](https://github.com/JetBrains/teamcity-cli/blob/main/internal/analytics/scheme.go).
 
 ## What we don't collect
 
 - Tokens, passwords, SSH keys, or anything stored in the keyring or `config.yml`.
-- Repository contents, build logs, or arguments you pass to commands.
-- Project, job, agent, or pipeline names and IDs.
-- Usernames, emails, hostnames, or IP addresses.
+- Your TeamCity server URL, hostname, or IP address. The URL is used only as a local cache key in `~/.config/tc/.analytics/server-info.json` so the CLI can remember which server version it last saw; the URL itself never leaves your machine.
+- Repository contents, build logs, build numbers, or arguments you pass to commands.
+- Project, job, build, agent, pipeline, VCS-root, pool, or connection names or IDs.
+- Usernames, emails, branch names, file paths, or commit SHAs.
 
-**Nothing we collect can be used to identify you, your organization, or your repositories.** Identifiers that could be sensitive – like the server URL – are hashed locally with a salt before they leave your machine, and we don't sell or share the data we receive.
+**Nothing we collect can be used to identify you, your organization, your servers, or your repositories.** Every value goes through a published enum or numeric validator before it leaves your machine – the CLI cannot accidentally exfiltrate strings.
 
 ## How to opt out
 
