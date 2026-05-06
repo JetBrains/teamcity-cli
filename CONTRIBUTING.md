@@ -342,9 +342,7 @@ Command old-cmd is deprecated, use "new-cmd" instead (will be removed in v2.0)
 
 The command still runs — users are warned but not broken. Remove it in the target version.
 
-Currently deprecated flags:
-- `--after-build` on `agent reboot` (use `--graceful`)
-- `--force` on `agent reboot`, `pipeline delete`, `project ssh delete`, `project vcs delete`, `queue remove`, `run cancel` (use `--yes`)
+Currently deprecated flags: none.
 
 ## Submit a pull request
 

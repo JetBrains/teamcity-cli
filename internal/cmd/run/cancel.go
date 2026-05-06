@@ -34,8 +34,6 @@ in the TeamCity UI.`,
 
 	cmd.Flags().StringVarP(&opts.comment, "comment", "m", "", "Comment for cancellation")
 	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
-	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "")
-	cmdutil.DeprecateFlag(cmd, "force", "yes", "v1.0.0")
 
 	return cmd
 }

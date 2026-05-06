@@ -244,8 +244,6 @@ func newSSHDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID")
 	cmd.Flags().BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
-	cmd.Flags().BoolVarP(&opts.yes, "force", "f", false, "")
-	cmdutil.DeprecateFlag(cmd, "force", "yes", "v1.0.0")
 
 	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
