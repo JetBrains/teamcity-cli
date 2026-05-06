@@ -62,7 +62,7 @@ npm install -g @jetbrains/teamcity-cli
 
 For other methods (Scoop, Chocolatey, deb/rpm packages, building from source), see the [getting started guide](teamcity-cli-get-started.md).
 
-> TeamCity CLI requires a running TeamCity server (version 2020.1 or later) to connect to. No additional runtime dependencies are needed — the CLI is distributed as a standalone binary.
+> TeamCity CLI requires a running TeamCity server (version 2020.1 or later) to connect to. Some features may require newer TeamCity versions (for example, 2024.04 or later). No additional runtime dependencies are needed — the CLI is distributed as a standalone binary.
 >
 {style="note"}
 
@@ -141,12 +141,36 @@ Configuration file, environment variables, and shell completion
 <tr>
 <td>
 
+[Linking a repository](teamcity-cli-linking.md)
+
+</td>
+<td>
+
+Bind a repo (or monorepo subdirectories) to TeamCity projects via `teamcity.toml`
+
+</td>
+</tr>
+<tr>
+<td>
+
 [Managing runs](teamcity-cli-managing-runs.md)
 
 </td>
 <td>
 
 Start, monitor, and manage builds
+
+</td>
+</tr>
+<tr>
+<td>
+
+[Managing pipelines](teamcity-cli-managing-pipelines.md)
+
+</td>
+<td>
+
+Author, validate, and sync `.teamcity.yml` pipelines
 
 </td>
 </tr>
@@ -213,6 +237,18 @@ Assign projects and agents to pools
 <tr>
 <td>
 
+[Managing cloud agents](teamcity-cli-managing-cloud-agents.md)
+
+</td>
+<td>
+
+Manage cloud profiles, images, and ephemeral agent instances
+
+</td>
+</tr>
+<tr>
+<td>
+
 [REST API access](teamcity-cli-rest-api-access.md)
 
 </td>
@@ -267,6 +303,18 @@ Quick reference for all available commands and flags
 <td>
 
 Install the TeamCity skill for AI coding agents
+
+</td>
+</tr>
+<tr>
+<td>
+
+[Glossary](teamcity-cli-glossary.md)
+
+</td>
+<td>
+
+Definitions of CLI terms and how they map to TeamCity concepts
 
 </td>
 </tr>
