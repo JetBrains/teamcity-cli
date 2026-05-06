@@ -3,6 +3,7 @@ package project
 import (
 	"fmt"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
@@ -44,7 +45,7 @@ func runConnectionDelete(f *cmdutil.Factory, opts *connectionDeleteOptions, id s
 		return err
 	}
 
-	projectID, err := resolveProject(f, opts.project)
+	projectID, err := resolveProject(f, opts.project, api.PermissionEditProject)
 	if err != nil {
 		return err
 	}

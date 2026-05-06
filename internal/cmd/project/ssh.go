@@ -138,7 +138,7 @@ func runSSHUpload(f *cmdutil.Factory, filePath string, opts *sshUploadOptions) e
 		return fmt.Errorf("failed to read key file: %w", err)
 	}
 
-	projectID, err := resolveProject(f, opts.project)
+	projectID, err := resolveProject(f, opts.project, api.PermissionEditProject)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func runSSHGenerate(f *cmdutil.Factory, opts *sshGenerateOptions) error {
 	}
 
 	if f.IsInteractive() {
-		if err := runInteractiveForm(f, &opts.project, formField{title: "Key name", value: &opts.name}); err != nil {
+		if err := runInteractiveForm(f, &opts.project, api.PermissionEditProject, formField{title: "Key name", value: &opts.name}); err != nil {
 			return err
 		}
 	}
@@ -258,7 +258,7 @@ func runSSHDelete(f *cmdutil.Factory, name string, opts *sshDeleteOptions) error
 		return err
 	}
 
-	projectID, err := resolveProject(f, opts.project)
+	projectID, err := resolveProject(f, opts.project, api.PermissionEditProject)
 	if err != nil {
 		return err
 	}

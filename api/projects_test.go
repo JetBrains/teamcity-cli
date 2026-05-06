@@ -6,12 +6,35 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestGetProjectsLocator(t *testing.T) {
+	t.Parallel()
+
+	var captured string
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		captured = r.URL.RawQuery
+		_ = json.NewEncoder(w).Encode(ProjectList{Count: 0})
+	})
+
+	_, err := client.GetProjects(ProjectsOptions{
+		Permission:      PermissionEditProject,
+		ExcludeArchived: true,
+		Limit:           100,
+	})
+	require.NoError(t, err)
+
+	decoded, err := url.QueryUnescape(captured)
+	require.NoError(t, err)
+	assert.Contains(t, decoded, "userPermission:(permission:edit_project,user:current)")
+	assert.Contains(t, decoded, "archived:false")
+}
 
 func TestGetVersionedSettingsStatus(T *testing.T) {
 	T.Parallel()

@@ -15,6 +15,10 @@ type ProjectsOptions struct {
 	Parent string
 	Limit  int
 	Fields []string
+	// Permission, when set, restricts results to projects where the current user holds it (e.g. PermissionEditProject).
+	Permission string
+	// ExcludeArchived, when true, drops archived projects (which can't accept new features).
+	ExcludeArchived bool
 }
 
 // GetProjects returns a list of projects, automatically following pagination.
@@ -22,6 +26,14 @@ func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
 	locator := NewLocator().
 		Add("parentProject", opts.Parent).
 		AddIntDefault("count", opts.Limit, 30)
+	if opts.Permission != "" {
+		locator.AddLocator("userPermission", NewLocator().
+			Add("permission", opts.Permission).
+			Add("user", "current"))
+	}
+	if opts.ExcludeArchived {
+		locator.Add("archived", "false")
+	}
 
 	fields := opts.Fields
 	if len(fields) == 0 {

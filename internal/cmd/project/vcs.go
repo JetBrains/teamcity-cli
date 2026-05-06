@@ -319,7 +319,7 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	interactive := f.IsInteractive()
 
 	if interactive {
-		if err := runInteractiveForm(f, &opts.project, formField{title: "Repository URL", value: &opts.repoURL}); err != nil {
+		if err := runInteractiveForm(f, &opts.project, api.PermissionEditProject, formField{title: "Repository URL", value: &opts.repoURL}); err != nil {
 			return err
 		}
 	}

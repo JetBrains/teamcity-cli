@@ -14,9 +14,14 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/charmbracelet/huh"
+	"github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize/english"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
+
+// pickerVisibleRows is the viewport size for the project picker; extras scroll.
+const pickerVisibleRows = 10
 
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -535,18 +540,24 @@ func newProjectSettingsCmd(f *cmdutil.Factory) *cobra.Command {
 	return newSettingsCmd(f)
 }
 
-// projectPickerOptions fetches all visible projects and returns huh picker options, or nil on failure.
-func projectPickerOptions(f *cmdutil.Factory) []huh.Option[string] {
+// projectPickerOptions fetches projects the user can act on, then collapses to permission roots so the picker isn't drowned by inherited descendants.
+func projectPickerOptions(f *cmdutil.Factory, permission string) []huh.Option[string] {
 	client, err := f.Client()
 	if err != nil {
 		return nil
 	}
-	list, err := client.GetProjects(api.ProjectsOptions{Limit: 10000})
+	list, err := client.GetProjects(api.ProjectsOptions{
+		Limit:           10000,
+		Fields:          []string{"id", "name", "parentProjectId"},
+		Permission:      permission,
+		ExcludeArchived: true,
+	})
 	if err != nil || len(list.Projects) == 0 {
 		return nil
 	}
-	options := make([]huh.Option[string], len(list.Projects))
-	for i, p := range list.Projects {
+	roots := permissionRoots(list.Projects)
+	options := make([]huh.Option[string], len(roots))
+	for i, p := range roots {
 		label := p.ID
 		if p.Name != "" && p.Name != p.ID {
 			label = p.ID + " — " + p.Name
@@ -554,6 +565,30 @@ func projectPickerOptions(f *cmdutil.Factory) []huh.Option[string] {
 		options[i] = huh.Option[string]{Key: label, Value: p.ID}
 	}
 	return options
+}
+
+// permissionRoots keeps only projects whose parent is not also in the set; descendants inherit the permission via the kept root.
+func permissionRoots(projects []api.Project) []api.Project {
+	inSet := make(map[string]bool, len(projects))
+	for _, p := range projects {
+		inSet[p.ID] = true
+	}
+	out := make([]api.Project, 0, len(projects))
+	for _, p := range projects {
+		if !inSet[p.ParentProjectID] {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// pickerDescription renders the count below the picker title; appends a filter hint when the list overflows the viewport.
+func pickerDescription(total int) string {
+	desc := fmt.Sprintf("%s %s", humanize.Comma(int64(total)), english.PluralWord(total, "project", ""))
+	if total > pickerVisibleRows {
+		desc += " · type to filter"
+	}
+	return desc
 }
 
 // formField describes one text input for runInteractiveForm. Validate defaults to cmdutil.RequireNonEmpty.
@@ -565,32 +600,34 @@ type formField struct {
 }
 
 // resolveProject returns project if non-empty; otherwise runs the project picker (interactive) or errors (non-interactive).
-func resolveProject(f *cmdutil.Factory, project string) (string, error) {
+func resolveProject(f *cmdutil.Factory, project, permission string) (string, error) {
 	if project != "" {
 		return project, nil
 	}
 	if !f.IsInteractive() {
 		return "", api.RequiredFlag("project")
 	}
-	if err := runInteractiveForm(f, &project); err != nil {
+	if err := runInteractiveForm(f, &project, permission); err != nil {
 		return "", err
 	}
 	return project, nil
 }
 
-// runInteractiveForm prompts for project (picker, with text-input fallback) and the given fields in a single huh form
-// so Shift+Tab navigates between them. Fields whose value is already non-empty are skipped; the rest are validated
-// (cmdutil.RequireNonEmpty by default) so the form will not exit with empty values. Each prompted field is echoed
-// to scrollback after the form completes.
-func runInteractiveForm(f *cmdutil.Factory, project *string, fields ...formField) error {
+// runInteractiveForm prompts for project (picker scoped to permission, with text-input fallback) and the given fields in a single huh form so Shift+Tab navigates between them.
+func runInteractiveForm(f *cmdutil.Factory, project *string, permission string, fields ...formField) error {
 	var groups []*huh.Group
 
 	needsProject := *project == ""
 	var pickerOptions []huh.Option[string]
 	if needsProject {
-		pickerOptions = projectPickerOptions(f)
+		pickerOptions = projectPickerOptions(f, permission)
 		if pickerOptions != nil {
-			sel := huh.NewSelect[string]().Title("Project").Options(pickerOptions...).Value(project)
+			sel := huh.NewSelect[string]().
+				Title("Project").
+				Description(pickerDescription(len(pickerOptions))).
+				Options(pickerOptions...).
+				Height(pickerVisibleRows).
+				Value(project)
 			if len(pickerOptions) >= 5 {
 				sel.Filtering(true)
 			}

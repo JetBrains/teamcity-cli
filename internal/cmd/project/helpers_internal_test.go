@@ -5,9 +5,27 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestPermissionRoots(t *testing.T) {
+	t.Parallel()
+
+	// A is a root; B and C inherit via A. D is a separate root (parent not in set).
+	got := permissionRoots([]api.Project{
+		{ID: "A", ParentProjectID: "_Root"},
+		{ID: "B", ParentProjectID: "A"},
+		{ID: "C", ParentProjectID: "B"},
+		{ID: "D", ParentProjectID: "Other"},
+	})
+	ids := make([]string, 0, len(got))
+	for _, p := range got {
+		ids = append(ids, p.ID)
+	}
+	assert.Equal(t, []string{"A", "D"}, ids)
+}
 
 func TestIsSSHURL(t *testing.T) {
 	t.Parallel()
