@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-api = ["anthropic>=0.40"]
+api = ["anthropic>=0.87.0"]
 dev = ["ruff>=0.8"]
 
 [tool.pytest.ini_options]
