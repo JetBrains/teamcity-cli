@@ -174,9 +174,11 @@ func recordTape(tapeFile, theme, suffix string) error {
 		return fmt.Errorf("reading %s: %w", tapeFile, err)
 	}
 
-	// Prepend DO_NOT_TRACK so the teamcity invocations inside the recorded shell
-	// session don't fire FUS events while we're capturing GIFs.
-	tape := "Env DO_NOT_TRACK \"1\"\n" + string(content)
+	// Inject DO_NOT_TRACK alongside the tape's settings block so the teamcity
+	// invocations don't fire FUS events while we record. Prepending at the very
+	// top of the file would push Set/Theme directives out of vhs's settings
+	// region, causing them to be silently ignored (theme would fall back to dark).
+	tape := injectEnv(string(content), `Env DO_NOT_TRACK "1"`)
 	tape = strings.ReplaceAll(tape, "{{THEME}}", theme)
 	tape = strings.ReplaceAll(tape, "{{OUTPUT}}", fmt.Sprintf("%q", output))
 
@@ -203,6 +205,32 @@ func recordTape(tapeFile, theme, suffix string) error {
 	}
 	fmt.Printf("  -> %s (%s)\n", output, formatSize(info.Size()))
 	return nil
+}
+
+// injectEnv inserts a directive line (typically "Env KEY \"VALUE\"") into a vhs
+// tape after the settings block (Output / Require / Set / Env) and before the
+// first command (Type / Enter / Sleep / ...). Comments and blank lines do not
+// terminate the settings block.
+func injectEnv(tape, directive string) string {
+	lines := strings.Split(tape, "\n")
+	insertAt := len(lines)
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "Set ") || strings.HasPrefix(trimmed, "Env ") ||
+			strings.HasPrefix(trimmed, "Output ") || strings.HasPrefix(trimmed, "Require ") {
+			continue
+		}
+		insertAt = i
+		break
+	}
+	out := make([]string, 0, len(lines)+1)
+	out = append(out, lines[:insertAt]...)
+	out = append(out, directive)
+	out = append(out, lines[insertAt:]...)
+	return strings.Join(out, "\n")
 }
 
 func triggerBuild() (string, error) {
