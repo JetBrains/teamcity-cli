@@ -283,7 +283,7 @@ Then push:
 teamcity pipeline push CLI_MyPipeline
 ```
 
-> Create tokens in the **pipeline's own project** (e.g., `CLI_MyPipeline`), not the parent. Use `teamcity pipeline list` to find the pipeline project ID.
+> Create tokens in the **pipeline's own project** (for example, `CLI_MyPipeline`), not the parent. Use `teamcity pipeline list` to find the pipeline project ID.
 >
 {style="tip"}
 

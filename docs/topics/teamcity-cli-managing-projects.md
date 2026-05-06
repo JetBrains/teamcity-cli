@@ -409,7 +409,7 @@ teamcity project connection list --project MyProject
 teamcity project connection list --project MyProject --json
 ```
 
-The first column shows the connection ID (e.g. `PROJECT_EXT_42`). That ID is what `authorize`, `delete`, and `vcs create --auth token` consume.
+The first column shows the connection ID (for example, `PROJECT_EXT_42`). That ID is what `authorize`, `delete`, and `vcs create --auth token` consume.
 
 ### Creating a GitHub App connection
 

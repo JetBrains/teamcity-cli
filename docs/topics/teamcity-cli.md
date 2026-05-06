@@ -1,24 +1,29 @@
 [//]: # (title: TeamCity CLI)
 
-[![](https://camo.githubusercontent.com/078d7efd31e09afaa403fc886eac57d43ece79ad24fb75be8e05ac2b13175bef/68747470733a2f2f6a622e67672f6261646765732f6f6666696369616c2d706c61737469632e737667)](https://github.com/JetBrains)
-[![GitHub Release](https://img.shields.io/github/v/release/JetBrains/teamcity-cli?style=plastic)](https://github.com/JetBrains/teamcity-cli/releases/latest)
-
-TeamCity CLI (`teamcity`) is a command-line interface for [TeamCity](https://www.jetbrains.com/teamcity/). Start builds, tail logs, manage agents and queues — without leaving your terminal.
-
-The project is [open source on GitHub](https://github.com/JetBrains/teamcity-cli) under the Apache-2.0 license.
+TeamCity CLI is the official command-line interface for TeamCity. Type `teamcity` in your terminal to start builds, tail logs, manage agents and queues, and more.
 
 <img src="showcase.gif" alt="TeamCity CLI in action" border-effect="rounded"/>
 
+> TeamCity CLI is an open-source tool developed and maintained by TeamCity developers. It is not bundled with TeamCity server installers or Docker images. The project is [available on GitHub](https://github.com/JetBrains/teamcity-cli) under the Apache-2.0 license.
+>
+{style="note"}
+
+> TeamCity CLI supports TeamCity server versions 2020.1 and later and is distributed as a standalone binary with no additional runtime dependencies. Some features may require newer TeamCity versions (for example, 2024.04 or later).
+>
+{style="tip"}
+
 ## Features
 
-- **Stay in your terminal** — Start builds, view logs, manage queues — no browser needed
-- **Remote agent access** — Shell into any build agent with `teamcity agent term`, or run commands with `teamcity agent exec`
-- **Real-time logs** — Stream build output as it happens with `teamcity run watch --logs`
-- **Scriptable** — `--json` and `--plain` output for pipelines, plus direct REST API access via `teamcity api`
-- **Multi-server support** — Authenticate with and switch between multiple TeamCity instances
-- **AI agent ready** — Built-in [skill](https://agentskills.io) for Claude Code, Cursor, and other AI coding agents — just run `teamcity skill install`
+- **Stay in your terminal** — Start builds, view logs, manage queues — no browser needed.
+- **Remote agent access** — Shell into any build agent with `teamcity agent term`, or run commands with `teamcity agent exec`.
+- **Real-time logs** — Stream build output as it happens with `teamcity run watch --logs`.
+- **Scriptable** — `--json` and `--plain` output for pipelines, plus direct REST API access via `teamcity api`.
+- **Multi-server support** — Authenticate with and switch between multiple TeamCity instances.
+- **AI agent ready** — Built-in [skill](https://agentskills.io) for Claude Code, Cursor, and other AI coding agents — just run `teamcity skill install`.
 
 ## Installing TeamCity CLI {id="installing"}
+
+<snippet id="install-cli">
 
 <tabs>
 <tab title="macOS and Linux">
@@ -34,7 +39,6 @@ brew install jetbrains/utils/teamcity
 ```bash
 curl -fsSL https://jb.gg/tc/install | bash
 ```
-
 
 </tab>
 <tab title="Windows">
@@ -54,6 +58,8 @@ irm https://jb.gg/tc/install.ps1 | iex
 </tab>
 </tabs>
 
+</snippet>
+
 **npm (cross-platform):**
 
 ```bash
@@ -61,10 +67,6 @@ npm install -g @jetbrains/teamcity-cli
 ```
 
 For other methods (Scoop, Chocolatey, deb/rpm packages, building from source), see the [getting started guide](teamcity-cli-get-started.md).
-
-> TeamCity CLI requires a running TeamCity server (version 2020.1 or later) to connect to. Some features may require newer TeamCity versions (for example, 2024.04 or later). No additional runtime dependencies are needed — the CLI is distributed as a standalone binary.
->
-{style="note"}
 
 ## Quick start
 
@@ -194,7 +196,7 @@ View and configure build configurations
 </td>
 <td>
 
-Browse projects, manage parameters and versioned settings
+Browse projects, manage VCS roots, parameters, and versioned settings
 
 </td>
 </tr>
@@ -315,6 +317,18 @@ Install the TeamCity skill for AI coding agents
 <td>
 
 Definitions of CLI terms and how they map to TeamCity concepts
+
+</td>
+</tr>
+<tr>
+<td>
+
+[Anonymous usage statistics](teamcity-cli-analytics.md)
+
+</td>
+<td>
+
+What the CLI sends to JetBrains and how to opt out
 
 </td>
 </tr>
