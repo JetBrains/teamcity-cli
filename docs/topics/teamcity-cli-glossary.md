@@ -31,6 +31,43 @@ teamcity project list
 teamcity project view MyProject
 ```
 
+## Pipeline
+
+A YAML-defined collection of jobs that share a single `.teamcity.yml` source. Pipelines are TeamCity's declarative alternative to Kotlin DSL and the web UI; the CLI can list, view, validate, and sync them.
+
+```Shell
+teamcity pipeline list
+teamcity pipeline validate
+teamcity pipeline schema
+```
+
+## VCS Root
+
+A pointer to a version control repository (Git, Mercurial, Perforce, …). Jobs attach to one or more VCS roots to fetch source for their builds. The CLI manages VCS roots at the project level.
+
+```Shell
+teamcity project vcs list --project MyProject
+teamcity project vcs view MyProject_GitHubRepo
+```
+
+## Connection
+
+Stored credentials for an external service (GitHub App, Bitbucket, Docker registry, AWS, …) that TeamCity uses on behalf of jobs. Connections live at the project level and avoid embedding secrets in individual jobs.
+
+```Shell
+teamcity project connection list --project MyProject
+teamcity project connection authorize PROJECT_EXT_42 -p MyProject
+```
+
+## Versioned Settings
+
+A TeamCity feature that synchronizes a project's configuration (jobs, parameters, triggers) with a Git repository as Kotlin DSL or XML. The CLI can export and validate the DSL locally without round-tripping through the UI.
+
+```Shell
+teamcity project settings status MyProject
+teamcity project settings export MyProject --format kotlin
+```
+
 ## Build Queue
 
 A list of builds waiting to be assigned to an available agent. Builds in the queue are distributed to compatible agents as resources become available. The queue can be reordered manually.
@@ -56,6 +93,32 @@ A named group of build agents. Projects can be linked to pools to control which 
 ```Shell
 teamcity pool list
 teamcity pool view 1
+```
+
+## Cloud Profile
+
+A binding between a project and a cloud provider (AWS, GCP, Azure, Kubernetes, …). A profile defines one or more images that TeamCity uses to start ephemeral build agents on demand.
+
+```Shell
+teamcity project cloud profile list --project MyProject
+```
+
+## Cloud Image
+
+A template for spinning up ephemeral agents from a cloud profile — for example, an AMI on EC2 or a container image on Kubernetes. Each image specifies the agent runtime that TeamCity boots when builds need capacity.
+
+```Shell
+teamcity project cloud image list --project MyProject
+teamcity project cloud image start <image-id>
+```
+
+## Cloud Instance
+
+A single running ephemeral agent created from a cloud image. Instances are short-lived: TeamCity provisions them when builds need an agent and tears them down when the work finishes.
+
+```Shell
+teamcity project cloud instance list --project MyProject
+teamcity project cloud instance stop i-0245b46070c443201
 ```
 
 ## Change
