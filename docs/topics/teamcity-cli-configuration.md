@@ -123,6 +123,23 @@ Token expiry timestamp (RFC 3339). Normally set by `auth login`.
 
 </td>
 </tr>
+<tr>
+<td>
+
+`analytics`
+
+</td>
+<td>
+
+Global
+
+</td>
+<td>
+
+Enable or disable [anonymous usage statistics](teamcity-cli-analytics.md). Default: `true`. Set to `false` to opt out.
+
+</td>
+</tr>
 </table>
 
 Authentication fields (`token`, `user`) are managed by `teamcity auth login` / `teamcity auth logout` and cannot be set via `config set`.
@@ -325,6 +342,30 @@ Set to `1`, `true`, or `yes` to disable automatic update checks. Update checks a
 <td>
 
 Add an HTTP header to every outgoing request. The suffix becomes the header name with underscores converted to hyphens, canonical-cased: `TEAMCITY_HEADER_FOO_BAR=baz` sends `Foo-Bar: baz`. Empty values are ignored; values containing CR/LF/NUL are dropped to prevent header injection. Header values are redacted in `--verbose` output.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`DO_NOT_TRACK`
+
+</td>
+<td>
+
+Set to `1`, `true`, `yes`, or `on` to disable [anonymous usage statistics](teamcity-cli-analytics.md). Follows the [industry convention](https://donottrack.sh/). Takes precedence over `TEAMCITY_ANALYTICS` and the config file.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`TEAMCITY_ANALYTICS`
+
+</td>
+<td>
+
+Set to `0`, `false`, `no`, or `off` to disable [anonymous usage statistics](teamcity-cli-analytics.md) for this CLI specifically. Takes precedence over the config file.
 
 </td>
 </tr>
