@@ -29,6 +29,7 @@
         <toc-element toc-title="Reference">
             <toc-element topic="teamcity-cli-commands.md"/>
             <toc-element topic="teamcity-cli-glossary.md"/>
+            <toc-element topic="teamcity-cli-analytics.md"/>
         </toc-element>
     </toc-element>
 </instance-profile>
