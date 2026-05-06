@@ -12,7 +12,7 @@ body:
     attributes:
       label: CLI Version
       description: Run `teamcity --version` to get this
-      placeholder: "v0.2.0"
+      placeholder: "v1.0.0"
     validations:
       required: true
 

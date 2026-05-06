@@ -388,7 +388,7 @@ Chocolatey pushes can fail with `503 Service Unavailable` or other transient err
 
 1. Check out the release tag and build the package locally:
    ```sh
-   git checkout v0.9.0
+   git checkout v1.0.0
    ```
 
 2. Download the existing `.nupkg` for the previous version to use as a template:
