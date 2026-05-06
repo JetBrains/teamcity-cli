@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,7 +64,34 @@ func TestLoadLocalChanges(t *testing.T) {
 
 		_, err := loadLocalChanges("git", nil)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "no uncommitted changes")
+		assert.Contains(t, err.Error(), "no local changes found")
+	})
+
+	t.Run("git source committed but not pushed", func(t *testing.T) {
+		remoteDir := t.TempDir()
+		cmd := exec.Command("git", "init", "--bare", remoteDir)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git init --bare: %s", out)
+
+		localDir := setupRepo(t)
+		gitDo(t, localDir, "remote", "add", "origin", remoteDir)
+		writeFile(t, localDir, "test.txt", "content")
+		gitDo(t, localDir, "add", ".")
+		gitDo(t, localDir, "commit", "-m", "initial")
+
+		branchOut, err := exec.Command("git", "-C", localDir, "symbolic-ref", "--short", "HEAD").Output()
+		require.NoError(t, err)
+		branch := strings.TrimSpace(string(branchOut))
+		gitDo(t, localDir, "push", "-u", "origin", branch)
+
+		writeFile(t, localDir, "test.txt", "modified")
+		gitDo(t, localDir, "add", ".")
+		gitDo(t, localDir, "commit", "-m", "unpushed change")
+
+		t.Chdir(localDir)
+		patch, err := loadLocalChanges("git", nil)
+		require.NoError(t, err)
+		assert.Contains(t, string(patch), "modified")
 	})
 
 	t.Run("git source not in repo", func(t *testing.T) {
