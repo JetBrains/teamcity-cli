@@ -1034,6 +1034,52 @@ teamcity run changes 12345 --no-files
 teamcity run changes 12345 --json
 ```
 
+## Comparing runs
+
+Compare two runs side-by-side and highlight what changed between them — status, duration, agent, parameters, test results, problems, and VCS changes:
+
+```Shell
+teamcity run diff 12345 12346
+```
+
+<img src="run-diff.gif" alt="Comparing two runs" border-effect="rounded"/>
+
+If only one run ID is given, the CLI compares it against the previous finished run of the same job — handy for "what changed since last time?":
+
+```Shell
+teamcity run diff 12345
+```
+
+### Diffing build logs
+
+Pass `--log` to compare the two build logs as a colored unified diff. Timestamps, temp paths, and noisy git progress lines are normalized so the diff focuses on real content:
+
+```Shell
+teamcity run diff 12345 12346 --log
+teamcity run diff 12345 12346 --log -U5            # 5 lines of context
+```
+
+The output is piped through your pager (`$PAGER`, defaults to `less`). Strip colors and pipe to an external diff viewer for richer rendering:
+
+```Shell
+teamcity run diff 12345 12346 --log --no-color | delta
+teamcity run diff 12345 12346 --log --no-color | diff-so-fancy
+```
+
+### Other forms
+
+Open both runs in the browser:
+
+```Shell
+teamcity run diff 12345 12346 --web
+```
+
+Machine-readable output for scripts:
+
+```Shell
+teamcity run diff 12345 12346 --json
+```
+
 ## Pinning runs
 
 Pin a run to prevent it from being cleaned up by retention policies:

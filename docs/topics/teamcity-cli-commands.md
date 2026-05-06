@@ -134,7 +134,7 @@ Set or view comment
 </td>
 <td>
 
-[experimental] Compare two runs and show differences
+Compare two runs and show differences
 
 </td>
 </tr>
