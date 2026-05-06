@@ -68,7 +68,6 @@ finished run of the same job.`,
 	cmd.MarkFlagsMutuallyExclusive("json", "web")
 	cmd.MarkFlagsMutuallyExclusive("log", "web")
 
-	cmdutil.MarkExperimental(f, cmd)
 	return cmd
 }
 
