@@ -7,6 +7,7 @@ Checks are referenced by ID in tasks.json.
 from __future__ import annotations
 
 import re
+from typing import Pattern
 
 from scaffold.runner import EvalRunner
 
@@ -40,6 +41,16 @@ KNOWN_HALLUCINATIONS = [
     "--project-id", "--build-id", "--agent-id", "--pool-id",
     "--count", "--max", "--tail", "--follow",
 ]
+
+VALIDATE_WITH_DOT_PATH_RE: Pattern[str] = re.compile(
+    r"teamcity\s+project\s+settings\s+validate\s+\.(?:\s|$)",
+    re.IGNORECASE,
+)
+VALIDATE_COMMAND_RE: Pattern[str] = re.compile(
+    r"teamcity\s+project\s+settings\s+validate(?:\s|$)",
+    re.IGNORECASE,
+)
+MAVEN_COMMAND_RE: Pattern[str] = re.compile(r"(?:^|\s)(?:\./)?mvnw?(?:\s|$)", re.IGNORECASE)
 
 
 def ran_teamcity_commands(runner: EvalRunner) -> None:
@@ -437,6 +448,47 @@ def uses_json_flag(runner: EvalRunner) -> None:
 
 
 # ---------------------------------------------------------------------------
+# kotlin-dsl-validate-workflow
+# ---------------------------------------------------------------------------
+
+def uses_project_settings_validate(runner: EvalRunner) -> None:
+    if runner.has_command("teamcity", "project", "settings", "validate"):
+        runner.passed("Uses 'teamcity project settings validate'")
+    else:
+        runner.failed("Missing 'teamcity project settings validate'")
+
+
+def validates_with_explicit_dot_path(runner: EvalRunner) -> None:
+    validate_cmds = [
+        cmd for cmd in runner.events.commands_run
+        if VALIDATE_COMMAND_RE.search(cmd)
+    ]
+    if not validate_cmds:
+        runner.failed("No validate command found")
+        return
+
+    has_dot_path = any(
+        VALIDATE_WITH_DOT_PATH_RE.search(cmd)
+        for cmd in validate_cmds
+    )
+    if has_dot_path:
+        runner.passed("Uses explicit '.' path for root-layout DSL")
+    else:
+        runner.failed("Did not pass explicit '.' path to validate")
+
+
+def avoids_raw_maven_for_dsl_validation(runner: EvalRunner) -> None:
+    maven_cmds = [
+        cmd for cmd in runner.events.commands_run
+        if MAVEN_COMMAND_RE.search(cmd)
+    ]
+    if maven_cmds:
+        runner.failed(f"Used raw Maven for DSL validation (found {len(maven_cmds)} command(s))")
+    else:
+        runner.passed("Avoids raw Maven validation commands")
+
+
+# ---------------------------------------------------------------------------
 # negative-unrelated
 # ---------------------------------------------------------------------------
 
@@ -535,6 +587,10 @@ CHECK_REGISTRY: dict[str, callable] = {
     "no_sort_flag": no_sort_flag,
     "acknowledges_limitation": acknowledges_limitation,
     "uses_json_flag": uses_json_flag,
+    # kotlin-dsl-validate-workflow
+    "uses_project_settings_validate": uses_project_settings_validate,
+    "validates_with_explicit_dot_path": validates_with_explicit_dot_path,
+    "avoids_raw_maven_for_dsl_validation": avoids_raw_maven_for_dsl_validation,
     # negative
     "no_thrashing": no_thrashing,
     # negative
