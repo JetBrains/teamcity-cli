@@ -14,17 +14,8 @@ import (
 func setupRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	for _, args := range [][]string{
-		{"init"},
-		{"config", "user.email", "test@test.com"},
-		{"config", "user.name", "Test User"},
-		{"config", "commit.gpgsign", "false"},
-	} {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		out, err := cmd.CombinedOutput()
-		require.NoError(t, err, "git %v: %s", args, string(out))
-	}
+	gitDo(t, dir, "init")
+	configureGitIdentity(t, dir)
 	return dir
 }
 
@@ -34,6 +25,13 @@ func gitDo(t *testing.T, dir string, args ...string) {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "git %v: %s", args, string(out))
+}
+
+func configureGitIdentity(t *testing.T, dir string) {
+	t.Helper()
+	gitDo(t, dir, "config", "user.email", "test@test.com")
+	gitDo(t, dir, "config", "user.name", "Test User")
+	gitDo(t, dir, "config", "commit.gpgsign", "false")
 }
 
 func writeFile(t *testing.T, dir, name, content string) {
@@ -114,6 +112,7 @@ func TestLoadLocalChanges(t *testing.T) {
 		otherDir := t.TempDir()
 		out, err = exec.Command("git", "clone", remoteDir, otherDir).CombinedOutput()
 		require.NoError(t, err, "git clone: %s", string(out))
+		configureGitIdentity(t, otherDir)
 		writeFile(t, otherDir, "from_remote.txt", "added on remote")
 		gitDo(t, otherDir, "add", ".")
 		gitDo(t, otherDir, "commit", "-m", "remote ahead commit")
@@ -150,6 +149,7 @@ func TestLoadLocalChanges(t *testing.T) {
 		otherDir := t.TempDir()
 		out, err = exec.Command("git", "clone", remoteDir, otherDir).CombinedOutput()
 		require.NoError(t, err, "git clone: %s", string(out))
+		configureGitIdentity(t, otherDir)
 		writeFile(t, otherDir, "from_remote.txt", "added on remote")
 		gitDo(t, otherDir, "add", ".")
 		gitDo(t, otherDir, "commit", "-m", "remote ahead commit")
