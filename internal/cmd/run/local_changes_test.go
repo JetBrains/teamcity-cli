@@ -94,6 +94,78 @@ func TestLoadLocalChanges(t *testing.T) {
 		assert.Contains(t, string(patch), "modified")
 	})
 
+	t.Run("git source behind upstream clean tree after fetch", func(t *testing.T) {
+		remoteDir := t.TempDir()
+		cmd := exec.Command("git", "init", "--bare", remoteDir)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git init --bare: %s", out)
+
+		localDir := setupRepo(t)
+		gitDo(t, localDir, "remote", "add", "origin", remoteDir)
+		writeFile(t, localDir, "test.txt", "content")
+		gitDo(t, localDir, "add", ".")
+		gitDo(t, localDir, "commit", "-m", "initial")
+
+		branchOut, err := exec.Command("git", "-C", localDir, "symbolic-ref", "--short", "HEAD").Output()
+		require.NoError(t, err)
+		branch := strings.TrimSpace(string(branchOut))
+		gitDo(t, localDir, "push", "-u", "origin", branch)
+
+		otherDir := t.TempDir()
+		out, err = exec.Command("git", "clone", remoteDir, otherDir).CombinedOutput()
+		require.NoError(t, err, "git clone: %s", string(out))
+		writeFile(t, otherDir, "from_remote.txt", "added on remote")
+		gitDo(t, otherDir, "add", ".")
+		gitDo(t, otherDir, "commit", "-m", "remote ahead commit")
+		gitDo(t, otherDir, "push", "origin", branch)
+
+		gitDo(t, localDir, "fetch", "origin")
+		diffOut, err := exec.Command("git", "-C", localDir, "diff", "@{u}").CombinedOutput()
+		require.NoError(t, err)
+		require.NotEmpty(t, diffOut, "sanity: git diff @{u} must be non-empty when behind upstream (reverse patch)")
+
+		t.Chdir(localDir)
+		_, err = loadLocalChanges("git", nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no local changes found")
+	})
+
+	t.Run("git source behind remote with local working tree changes", func(t *testing.T) {
+		remoteDir := t.TempDir()
+		cmd := exec.Command("git", "init", "--bare", remoteDir)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git init --bare: %s", out)
+
+		localDir := setupRepo(t)
+		gitDo(t, localDir, "remote", "add", "origin", remoteDir)
+		writeFile(t, localDir, "test.txt", "content")
+		gitDo(t, localDir, "add", ".")
+		gitDo(t, localDir, "commit", "-m", "initial")
+
+		branchOut, err := exec.Command("git", "-C", localDir, "symbolic-ref", "--short", "HEAD").Output()
+		require.NoError(t, err)
+		branch := strings.TrimSpace(string(branchOut))
+		gitDo(t, localDir, "push", "-u", "origin", branch)
+
+		otherDir := t.TempDir()
+		out, err = exec.Command("git", "clone", remoteDir, otherDir).CombinedOutput()
+		require.NoError(t, err, "git clone: %s", string(out))
+		writeFile(t, otherDir, "from_remote.txt", "added on remote")
+		gitDo(t, otherDir, "add", ".")
+		gitDo(t, otherDir, "commit", "-m", "remote ahead commit")
+		gitDo(t, otherDir, "push", "origin", branch)
+
+		gitDo(t, localDir, "fetch", "origin")
+		writeFile(t, localDir, "test.txt", "local working tree edit")
+
+		t.Chdir(localDir)
+		patch, err := loadLocalChanges("git", nil)
+		require.NoError(t, err)
+		p := string(patch)
+		assert.Contains(t, p, "local working tree edit")
+		assert.NotContains(t, p, "from_remote.txt")
+	})
+
 	t.Run("git source not in repo", func(t *testing.T) {
 		t.Chdir(t.TempDir())
 		_, err := loadLocalChanges("git", nil)

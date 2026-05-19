@@ -108,6 +108,19 @@ func HasUpstream() bool {
 	return exec.Command("git", "rev-parse", "--abbrev-ref", "@{u}").Run() == nil
 }
 
+// LocalChangesGitDiffBase returns the ref to pass to WorkingTreeDiffFrom for --local-changes git.
+// With an upstream it uses merge-base(HEAD, @{u}), without an upstream it returns HEAD.
+func LocalChangesGitDiffBase() (string, error) {
+	if !HasUpstream() {
+		return "HEAD", nil
+	}
+	out, err := exec.Command("git", "merge-base", "HEAD", "@{u}").Output()
+	if err != nil {
+		return "", fmt.Errorf("git merge-base HEAD @{u}: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 // Push runs `git push -u <remote> <branch>` for the branch's configured remote.
 func Push(branch string) error {
 	remote := RemoteForBranch(branch)
