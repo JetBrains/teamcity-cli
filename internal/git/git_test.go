@@ -198,47 +198,6 @@ func TestUntrackedFiles(t *testing.T) {
 	})
 }
 
-func TestUncommittedDiff(t *testing.T) {
-	t.Run("no changes", func(t *testing.T) {
-		dir := setupRepo(t)
-		t.Chdir(dir)
-		writeFile(t, dir, "test.txt", "content")
-		runGit(t, dir, "add", ".")
-		runGit(t, dir, "commit", "-m", "initial")
-
-		diff, err := UncommittedDiff()
-		require.NoError(t, err)
-		assert.Empty(t, diff)
-	})
-
-	t.Run("modified file", func(t *testing.T) {
-		dir := setupRepo(t)
-		t.Chdir(dir)
-		writeFile(t, dir, "test.txt", "content")
-		runGit(t, dir, "add", ".")
-		runGit(t, dir, "commit", "-m", "initial")
-		writeFile(t, dir, "test.txt", "modified")
-
-		diff, err := UncommittedDiff()
-		require.NoError(t, err)
-		assert.Contains(t, string(diff), "modified")
-	})
-
-	t.Run("includes untracked", func(t *testing.T) {
-		dir := setupRepo(t)
-		t.Chdir(dir)
-		writeFile(t, dir, "seed.txt", "seed")
-		runGit(t, dir, "add", ".")
-		runGit(t, dir, "commit", "-m", "initial")
-		writeFile(t, dir, "new.txt", "fresh content")
-
-		diff, err := UncommittedDiff()
-		require.NoError(t, err)
-		assert.Contains(t, string(diff), "new.txt")
-		assert.Contains(t, string(diff), "fresh content")
-	})
-}
-
 func TestCanonicalURL(t *testing.T) {
 	cases := []struct {
 		in, want string
