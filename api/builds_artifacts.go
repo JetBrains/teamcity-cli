@@ -2,10 +2,8 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"strings"
 )
@@ -84,33 +82,11 @@ func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath s
 	}
 
 	path := fmt.Sprintf("/app/rest/builds/id:%s/artifacts/content/%s", id, encodeArtifactPath(artifactPath))
-	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
-	streamClient := &http.Client{Transport: c.HTTPClient.Transport}
-
-	resp, err := withRetry(ctx, ReadRetry, func() (*http.Response, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		c.setAuth(req)
-		c.applyStandardHeaders(req)
-		return streamClient.Do(req)
-	})
+	resp, err := c.streamRequest(ctx, path)
 	if err != nil {
-		if resp != nil {
-			defer func() { _ = resp.Body.Close() }()
-			return 0, c.handleErrorResponse(resp)
-		}
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return 0, err
-		}
-		return 0, &NetworkError{URL: c.BaseURL, Cause: err}
+		return 0, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return 0, c.handleErrorResponse(resp)
-	}
 
 	return io.Copy(w, resp.Body)
 }
@@ -121,7 +97,7 @@ func (c *Client) GetBuildLogStream(ctx context.Context, buildID string) (io.Read
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.doGetStream(ctx, "/downloadBuildLog.html?buildId="+id)
+	resp, err := c.streamRequest(ctx, "/downloadBuildLog.html?buildId="+id)
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -108,4 +110,31 @@ func TestGetBuildLogStream(t *testing.T) {
 	data, err := io.ReadAll(rc)
 	require.NoError(t, err)
 	assert.Equal(t, "chunk-one\nchunk-two\n", string(data))
+}
+
+func TestGetBuildLogStreamBypassesHTTPClientTimeout(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/app/rest/builds") {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
+			return
+		}
+		flusher, _ := w.(http.Flusher)
+		_, _ = w.Write([]byte("first\n"))
+		if flusher != nil {
+			flusher.Flush()
+		}
+		time.Sleep(250 * time.Millisecond)
+		_, _ = w.Write([]byte("second\n"))
+	})
+	client.HTTPClient.Timeout = 100 * time.Millisecond
+
+	rc, err := client.GetBuildLogStream(t.Context(), "1")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = rc.Close() })
+
+	data, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	assert.Equal(t, "first\nsecond\n", string(data))
 }
