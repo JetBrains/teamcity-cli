@@ -112,6 +112,34 @@ func TestGetBuildLogStream(t *testing.T) {
 	assert.Equal(t, "chunk-one\nchunk-two\n", string(data))
 }
 
+func TestGetBuildLogStreamHonorsCheckRedirect(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/app/rest/builds"):
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
+		case r.URL.Path == "/after-redirect":
+			_, _ = w.Write([]byte("followed"))
+		default:
+			w.Header().Set("Location", "/after-redirect")
+			w.WriteHeader(http.StatusFound)
+		}
+	})
+
+	rc, err := client.GetBuildLogStream(t.Context(), "1")
+	require.NoError(t, err)
+	data, _ := io.ReadAll(rc)
+	_ = rc.Close()
+	assert.Equal(t, "followed", string(data))
+
+	client.HTTPClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	_, err = client.GetBuildLogStream(t.Context(), "1")
+	require.Error(t, err)
+}
+
 func TestGetBuildLogStreamBypassesHTTPClientTimeout(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {

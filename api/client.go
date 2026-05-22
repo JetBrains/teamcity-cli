@@ -419,10 +419,11 @@ func (c *Client) doGetStream(ctx context.Context, path string) (*http.Response, 
 	return resp, nil
 }
 
-// streamRequest GETs path with ReadRetry on a client that shares c.HTTPClient.Transport but omits the wall-clock Timeout; intended for endpoints with large or open-ended response bodies (build logs, artifacts).
+// streamRequest GETs path with ReadRetry on a copy of c.HTTPClient that omits the wall-clock Timeout but preserves Transport/Jar/CheckRedirect; intended for endpoints with large or open-ended response bodies (build logs, artifacts).
 func (c *Client) streamRequest(ctx context.Context, path string) (*http.Response, error) {
 	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
-	client := &http.Client{Transport: c.HTTPClient.Transport}
+	streamClient := *c.HTTPClient
+	streamClient.Timeout = 0
 
 	resp, err := withRetry(ctx, ReadRetry, func() (*http.Response, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
@@ -432,7 +433,7 @@ func (c *Client) streamRequest(ctx context.Context, path string) (*http.Response
 		c.setAuth(req)
 		c.applyStandardHeaders(req)
 		c.debugLogRequest(req)
-		return client.Do(req)
+		return streamClient.Do(req)
 	})
 	if err != nil {
 		if resp != nil {
