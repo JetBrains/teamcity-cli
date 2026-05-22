@@ -384,6 +384,38 @@ func TestAPICommandPaginate(T *testing.T) {
 	assert.Equal(T, 2, pageNum, "request count")
 }
 
+func TestAPICommandPaginatePreservesProxyErrorBody(T *testing.T) {
+	pageNum := 0
+	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {
+		pageNum++
+		if pageNum == 1 {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"count":    1,
+				"nextHref": "/app/rest/builds?start=2",
+				"build":    []map[string]int{{"id": 1}},
+			})
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusBadGateway)
+		_, _ = w.Write([]byte(`<html><head><title>502 Bad Gateway</title></head><body>nginx/1.18.0</body></html>`))
+	})
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "--paginate"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	require.Error(T, err)
+	msg := err.Error()
+	assert.Contains(T, msg, "502", "status code must be present")
+	assert.Contains(T, msg, "Bad Gateway", "body snippet must surface the actual server message")
+	assert.Contains(T, msg, "nginx/1.18.0", "body snippet must preserve diagnostic detail (proxy version)")
+}
+
 func TestAPICommandPaginateNoNextHref(T *testing.T) {
 	requestCount := 0
 	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {

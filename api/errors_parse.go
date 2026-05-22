@@ -39,10 +39,17 @@ func ErrorFromResponse(resp *http.Response) error {
 	return ErrorFromBody(resp.StatusCode, body)
 }
 
+// maxStoredRawBody caps the body retained on HTTPError; the rendered snippet is ≤512 bytes.
+const maxStoredRawBody = 1024
+
 // ErrorFromBody classifies a non-2xx status + body into a typed UserError; pure for ease of testing.
 func ErrorFromBody(status int, body []byte) error {
 	w := parseWire(body)
 	base := HTTPError{Status: status, Wire: w}
+	if w.Message == "" && len(body) > 0 {
+		n := min(len(body), maxStoredRawBody)
+		base.rawBody = body[:n]
+	}
 
 	switch status {
 	case http.StatusUnauthorized:
