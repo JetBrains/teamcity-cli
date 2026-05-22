@@ -643,6 +643,42 @@ func TestDebugLogging(T *testing.T) {
 	})
 }
 
+func TestRawRequestAcceptDefaultForNonJSONBody(T *testing.T) {
+	T.Parallel()
+
+	tests := []struct {
+		name       string
+		method     string
+		body       io.Reader
+		headers    map[string]string
+		wantAccept string
+	}{
+		{"PUT with text/plain body → */*", "PUT", bytes.NewReader([]byte("x")), map[string]string{"Content-Type": "text/plain"}, "*/*"},
+		{"POST with XML body → */*", "POST", bytes.NewReader([]byte("<x/>")), map[string]string{"Content-Type": "application/xml"}, "*/*"},
+		{"PUT with JSON body keeps application/json", "PUT", bytes.NewReader([]byte("{}")), map[string]string{"Content-Type": "application/json"}, "application/json"},
+		{"PUT with JSON body + charset param keeps application/json", "PUT", bytes.NewReader([]byte("{}")), map[string]string{"Content-Type": "application/json; charset=utf-8"}, "application/json"},
+		{"user-set Accept wins over default", "PUT", bytes.NewReader([]byte("x")), map[string]string{"Content-Type": "text/plain", "Accept": "application/xml"}, "application/xml"},
+		{"user-set Accept wins (lowercase key)", "PUT", bytes.NewReader([]byte("x")), map[string]string{"Content-Type": "text/plain", "accept": "application/xml"}, "application/xml"},
+		{"GET (no body) keeps application/json default", "GET", nil, nil, "application/json"},
+	}
+
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var gotAccept string
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				gotAccept = r.Header.Get("Accept")
+				w.WriteHeader(http.StatusOK)
+			})
+
+			_, err := client.RawRequest(T.Context(), tc.method, "/app/rest/x", tc.body, tc.headers)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantAccept, gotAccept)
+		})
+	}
+}
+
 func TestRawRequestNoRetryOn406WithBody(T *testing.T) {
 	T.Parallel()
 
