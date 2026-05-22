@@ -147,28 +147,6 @@ func UntrackedFiles() ([]string, error) {
 	return strings.Split(s, "\n"), nil
 }
 
-// UncommittedDiff returns `git diff HEAD` output, including untracked files via a transient intent-to-add.
-func UncommittedDiff() ([]byte, error) {
-	untracked, err := UntrackedFiles()
-	if err != nil {
-		return nil, err
-	}
-	if len(untracked) > 0 {
-		addArgs := append([]string{"add", "-N", "--"}, untracked...)
-		if exec.Command("git", addArgs...).Run() == nil {
-			defer func() {
-				resetArgs := append([]string{"reset", "HEAD", "--"}, untracked...)
-				_ = exec.Command("git", resetArgs...).Run()
-			}()
-		}
-	}
-	out, err := exec.Command("git", "diff", "HEAD").Output()
-	if err != nil {
-		return nil, fmt.Errorf("git diff HEAD: %w", err)
-	}
-	return out, nil
-}
-
 // WorkingTreeDiffFrom returns `git diff <base>` output, including committed, staged,
 // unstaged, and untracked changes relative to base.
 func WorkingTreeDiffFrom(base string) ([]byte, error) {
