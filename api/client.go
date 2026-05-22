@@ -86,6 +86,10 @@ func (c *Client) debugLogRequest(req *http.Request) {
 	}
 	c.debugLog("> %s %s", req.Method, req.URL.String())
 	c.debugLogHeaders(">", req.Header)
+	// req.ContentLength isn't in req.Header — log it separately so --verbose shows body size.
+	if req.ContentLength > 0 {
+		c.debugLog("> Content-Length: %d", req.ContentLength)
+	}
 }
 
 func (c *Client) debugLogResponse(resp *http.Response) {

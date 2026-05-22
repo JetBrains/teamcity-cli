@@ -611,6 +611,24 @@ func TestDebugLogging(T *testing.T) {
 		assert.Contains(t, captured, "> Authorization: [REDACTED]")
 		assert.Contains(t, captured, "< HTTP/1.1 200 OK")
 		assert.NotContains(t, captured, "test-token")
+		assert.NotContains(t, captured, "> Content-Length", "no request Content-Length on body-less GET")
+	})
+
+	T.Run("logs Content-Length when request has a body", func(t *testing.T) {
+		t.Parallel()
+
+		var buf bytes.Buffer
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+		client.DebugFunc = func(format string, args ...any) {
+			fmt.Fprintf(&buf, format+"\n", args...)
+		}
+
+		_, _ = client.RawRequest(T.Context(), "PUT", "/api/test",
+			bytes.NewReader([]byte("hello world")), nil)
+
+		assert.Contains(t, buf.String(), "> Content-Length: 11")
 	})
 
 	T.Run("silent when DebugFunc not set", func(t *testing.T) {
