@@ -131,7 +131,7 @@ func WithAPIVersion(version string) ClientOption {
 	}
 }
 
-// WithTimeout sets a wall-clock cap on every HTTP request (including body read); leave unset to rely on transport + context deadlines.
+// WithTimeout sets a wall-clock cap on standard HTTP requests; streaming endpoints (build logs, artifacts) bypass it by design and must be bounded via the request context.
 func WithTimeout(timeout time.Duration) ClientOption {
 	return func(c *Client) {
 		c.HTTPClient.Timeout = timeout
