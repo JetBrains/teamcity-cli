@@ -270,10 +270,7 @@ func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeade
 		if opts.raw && len(body) > 0 {
 			_, _ = fmt.Fprint(p.Out, string(body))
 		}
-		if msg := api.ExtractErrorMessage(body); msg != "" {
-			return fmt.Errorf("%d %s — %s", statusCode, http.StatusText(statusCode), msg)
-		}
-		return fmt.Errorf("request failed with status %d", statusCode)
+		return api.ErrorFromBody(statusCode, body)
 	}
 
 	if len(body) > 0 {
@@ -310,10 +307,7 @@ func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint str
 		lastStatus = resp.StatusCode
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			if len(resp.Body) > 0 {
-				return nil, lastStatus, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(resp.Body))
-			}
-			return nil, lastStatus, fmt.Errorf("request failed with status %d", resp.StatusCode)
+			return nil, lastStatus, api.ErrorFromBody(resp.StatusCode, resp.Body)
 		}
 
 		pages = append(pages, resp.Body)

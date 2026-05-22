@@ -124,7 +124,7 @@ func TestErrorFromBody(T *testing.T) {
 
 	T.Run("401 → HTTPError with auth category", func(t *testing.T) {
 		t.Parallel()
-		err := errorFromBody(http.StatusUnauthorized, nil)
+		err := ErrorFromBody(http.StatusUnauthorized, nil)
 		he, ok := errors.AsType[*HTTPError](err)
 		require.True(t, ok)
 		assert.Equal(t, CatAuth, he.Category())
@@ -135,7 +135,7 @@ func TestErrorFromBody(T *testing.T) {
 		t.Parallel()
 		// Real server output: project id is single-quoted in the body.
 		body := []byte(`{"errors":[{"message":"You do not have \"Comment build\" permission in project with internal id: 'MyProj'"}]}`)
-		err := errorFromBody(http.StatusForbidden, body)
+		err := ErrorFromBody(http.StatusForbidden, body)
 		pe, ok := errors.AsType[*PermissionError](err)
 		require.True(t, ok)
 		assert.Equal(t, CatPermission, pe.Category())
@@ -147,7 +147,7 @@ func TestErrorFromBody(T *testing.T) {
 	T.Run("403 without parseable permission falls back to wire message", func(t *testing.T) {
 		t.Parallel()
 		body := []byte(`{"errors":[{"message":"Access denied."}]}`)
-		err := errorFromBody(http.StatusForbidden, body)
+		err := ErrorFromBody(http.StatusForbidden, body)
 		pe, ok := errors.AsType[*PermissionError](err)
 		require.True(t, ok)
 		assert.Empty(t, pe.Permission)
@@ -157,7 +157,7 @@ func TestErrorFromBody(T *testing.T) {
 	T.Run("404 with locator parsed", func(t *testing.T) {
 		t.Parallel()
 		body := []byte(`{"errors":[{"message":"No build types found by locator 'Sandbox_Demo'."}]}`)
-		err := errorFromBody(http.StatusNotFound, body)
+		err := ErrorFromBody(http.StatusNotFound, body)
 		nf, ok := errors.AsType[*NotFoundError](err)
 		require.True(t, ok)
 		assert.Equal(t, "job", nf.Resource)
@@ -168,7 +168,7 @@ func TestErrorFromBody(T *testing.T) {
 	T.Run("500 falls back to wire message", func(t *testing.T) {
 		t.Parallel()
 		body := []byte(`{"errors":[{"message":"database down"}]}`)
-		err := errorFromBody(http.StatusInternalServerError, body)
+		err := ErrorFromBody(http.StatusInternalServerError, body)
 		he, ok := errors.AsType[*HTTPError](err)
 		require.True(t, ok)
 		assert.Equal(t, CatInternal, he.Category())

@@ -192,7 +192,8 @@ func TestAPICommandErrorResponse(T *testing.T) {
 
 	err := rootCmd.Execute()
 	require.Error(T, err, "expected error for 404 response")
-	assert.Contains(T, err.Error(), "404")
+	var nf *api.NotFoundError
+	assert.ErrorAs(T, err, &nf, "404 should classify as NotFoundError")
 }
 
 func TestAPICommandXMLErrorResponse(T *testing.T) {
@@ -210,7 +211,9 @@ func TestAPICommandXMLErrorResponse(T *testing.T) {
 
 	err := rootCmd.Execute()
 	require.Error(T, err, "expected error for 404 response")
-	assert.Contains(T, err.Error(), "404")
+	var nf *api.NotFoundError
+	assert.ErrorAs(T, err, &nf, "404 should classify as NotFoundError")
+	assert.Contains(T, err.Error(), "snapshot-dependencies", "wire message should be preserved")
 }
 
 func TestAPICommand406RetriesWithWildcardAccept(T *testing.T) {
@@ -237,7 +240,8 @@ func TestAPICommand406RetriesWithWildcardAccept(T *testing.T) {
 
 	err := rootCmd.Execute()
 	require.Error(T, err)
-	assert.Contains(T, err.Error(), "404")
+	var nf *api.NotFoundError
+	assert.ErrorAs(T, err, &nf, "404 should classify as NotFoundError")
 	assert.Equal(T, 2, requestCount)
 }
 

@@ -193,7 +193,7 @@ func (c *Client) UploadDiffChanges(patch []byte, description string) (string, er
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return "", errorFromBody(resp.StatusCode, resp.Body)
+		return "", ErrorFromBody(resp.StatusCode, resp.Body)
 	}
 
 	return strings.TrimSpace(string(resp.Body)), nil

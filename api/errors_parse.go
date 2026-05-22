@@ -36,11 +36,11 @@ var (
 // ErrorFromResponse reads a non-2xx body (capped at maxErrorBody) and returns the typed error.
 func ErrorFromResponse(resp *http.Response) error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
-	return errorFromBody(resp.StatusCode, body)
+	return ErrorFromBody(resp.StatusCode, body)
 }
 
-// errorFromBody is a pure function for ease of testing.
-func errorFromBody(status int, body []byte) error {
+// ErrorFromBody classifies a non-2xx status + body into a typed UserError; pure for ease of testing.
+func ErrorFromBody(status int, body []byte) error {
 	w := parseWire(body)
 	base := HTTPError{Status: status, Wire: w}
 
