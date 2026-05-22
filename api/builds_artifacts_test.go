@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
@@ -81,4 +82,30 @@ func TestGetBuildLog(t *testing.T) {
 	log, err := client.GetBuildLog(t.Context(), "1")
 	require.NoError(t, err)
 	assert.Contains(t, log, "Build started")
+}
+
+func TestGetBuildLogStream(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/app/rest/builds" || r.URL.Path == "/httpAuth/app/rest/builds" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
+			return
+		}
+		assert.Contains(t, r.URL.Path, "/downloadBuildLog.html")
+		flusher, _ := w.(http.Flusher)
+		_, _ = w.Write([]byte("chunk-one\n"))
+		if flusher != nil {
+			flusher.Flush()
+		}
+		_, _ = w.Write([]byte("chunk-two\n"))
+	})
+
+	rc, err := client.GetBuildLogStream(t.Context(), "1")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = rc.Close() })
+
+	data, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	assert.Equal(t, "chunk-one\nchunk-two\n", string(data))
 }

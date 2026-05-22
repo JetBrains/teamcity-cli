@@ -115,24 +115,30 @@ func (c *Client) DownloadArtifactTo(ctx context.Context, buildID, artifactPath s
 	return io.Copy(w, resp.Body)
 }
 
-// GetBuildLog returns the build log (accepts ID or #number)
-func (c *Client) GetBuildLog(ctx context.Context, buildID string) (string, error) {
+// GetBuildLogStream streams the raw build log (accepts ID or #number); caller must Close the returned reader.
+func (c *Client) GetBuildLogStream(ctx context.Context, buildID string) (io.ReadCloser, error) {
 	id, err := c.ResolveBuildID(ctx, buildID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	path := "/downloadBuildLog.html?buildId=" + id
+	resp, err := c.doGetStream(ctx, "/downloadBuildLog.html?buildId="+id)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
+}
 
-	resp, err := c.doGetStream(ctx, path)
+// GetBuildLog returns the build log (accepts ID or #number); for large logs prefer GetBuildLogStream to avoid buffering in memory.
+func (c *Client) GetBuildLog(ctx context.Context, buildID string) (string, error) {
+	rc, err := c.GetBuildLogStream(ctx, buildID)
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = rc.Close() }()
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(rc)
 	if err != nil {
 		return "", err
 	}
-
 	return string(data), nil
 }
