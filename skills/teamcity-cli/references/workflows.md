@@ -169,7 +169,7 @@ teamcity run watch <run-id> --json
 
 > **Kotlin DSL caveat:** `--local-changes` does **not** include changes to Kotlin DSL (`.teamcity/`). Always push Kotlin DSL changes to the remote before running the build.
 
-**Run build with uncommitted git changes:**
+**Run build with local git changes:**
 ```bash
 teamcity run start <job-id> --local-changes
 ```
