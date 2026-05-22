@@ -131,7 +131,7 @@ func WithAPIVersion(version string) ClientOption {
 	}
 }
 
-// WithTimeout sets a custom HTTP timeout
+// WithTimeout sets a wall-clock cap on every HTTP request (including body read); leave unset to rely on transport + context deadlines.
 func WithTimeout(timeout time.Duration) ClientOption {
 	return func(c *Client) {
 		c.HTTPClient.Timeout = timeout
@@ -188,11 +188,11 @@ func WithExtraHeaders(h map[string]string) ClientOption {
 }
 
 // newClientBase returns a Client populated with shared defaults: trimmed BaseURL, default HTTPClient, env extras.
+// HTTPClient.Timeout is intentionally unset so streaming endpoints (logs, artifacts) aren't capped by a wall-clock deadline; "server is alive" detection lives on the transport (ResponseHeaderTimeout) and command-level deadlines come from context.
 func newClientBase(baseURL string) *Client {
 	return &Client{
 		BaseURL: strings.TrimSuffix(baseURL, "/"),
 		HTTPClient: &http.Client{
-			Timeout:   30 * time.Second,
 			Transport: defaultTransport(),
 		},
 		serverInfo:   &serverInfoCache{},

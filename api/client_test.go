@@ -172,6 +172,29 @@ func TestClientOptions(T *testing.T) {
 	assert.Equal(T, 60*time.Second, client.HTTPClient.Timeout)
 }
 
+func TestDefaultHTTPClientHasNoWallClockTimeout(T *testing.T) {
+	T.Parallel()
+
+	client := NewClient("https://example.com", "token")
+	assert.Zero(T, client.HTTPClient.Timeout, "default client must not impose a wall-clock cap; streaming endpoints depend on it being unset")
+}
+
+func TestDefaultTransportSetsResponseHeaderTimeout(T *testing.T) {
+	T.Parallel()
+
+	rt := defaultTransport()
+	var tr *http.Transport
+	switch v := rt.(type) {
+	case *http.Transport:
+		tr = v
+	case *pemFallbackTransport:
+		tr = v.platform.(*http.Transport)
+	default:
+		T.Fatalf("unexpected transport type %T", rt)
+	}
+	assert.Equal(T, responseHeaderTimeout, tr.ResponseHeaderTimeout)
+}
+
 func TestCheckVersion(T *testing.T) {
 	T.Parallel()
 

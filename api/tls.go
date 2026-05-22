@@ -10,16 +10,22 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
+
+// responseHeaderTimeout bounds how long we wait for the server to start sending response headers; body reads are unbounded so streaming endpoints (logs, artifacts) work for large payloads.
+const responseHeaderTimeout = 30 * time.Second
 
 // defaultTransport returns a transport with PEM fallback when the platform TLS verifier is blocked.
 var defaultTransport = sync.OnceValue(func() http.RoundTripper {
 	platform := http.DefaultTransport.(*http.Transport).Clone()
+	platform.ResponseHeaderTimeout = responseHeaderTimeout
 	pool := loadRootCAs()
 	if pool == nil {
 		return platform
 	}
 	pem := http.DefaultTransport.(*http.Transport).Clone()
+	pem.ResponseHeaderTimeout = responseHeaderTimeout
 	pem.TLSClientConfig = &tls.Config{RootCAs: pool}
 	return &pemFallbackTransport{platform: platform, pem: pem}
 })
