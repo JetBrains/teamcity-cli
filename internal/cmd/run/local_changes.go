@@ -43,7 +43,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 		if err != nil {
 			return nil, api.Validation(
 				fmt.Sprintf("failed to resolve merge base for local changes against upstream: %v", err),
-				"Computing the merge base with your upstream failed, check for conflicts and fix them then try again or pass a patch with --local-changes instead.",
+				"Computing the merge base with your upstream failed, run git fetch, or pass a patch with --local-changes <path> instead.",
 			)
 		}
 
