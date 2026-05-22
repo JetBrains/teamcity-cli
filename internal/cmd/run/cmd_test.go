@@ -130,6 +130,17 @@ func TestRunLog(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, ts.Factory, "run", "log", testBuildID)
 }
 
+func TestRunLogStreamErrorSurfaces(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /downloadBuildLog.html", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "9999")
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("partial line without newline"))
+	})
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "log", testBuildID)
+	assert.Contains(T, err.Error(), "failed to read run log")
+}
+
 func TestRunLogJSON(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "log", testBuildID, "--json")
