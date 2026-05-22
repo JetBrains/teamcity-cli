@@ -188,7 +188,7 @@ func WithExtraHeaders(h map[string]string) ClientOption {
 }
 
 // newClientBase returns a Client populated with shared defaults: trimmed BaseURL, default HTTPClient, env extras.
-// HTTPClient.Timeout is intentionally unset so streaming endpoints (logs, artifacts) aren't capped by a wall-clock deadline; "server is alive" detection lives on the transport (ResponseHeaderTimeout) and command-level deadlines come from context.
+// HTTPClient.Timeout intentionally unset — server-alive detection lives on Transport.ResponseHeaderTimeout, deadlines come from context.
 func newClientBase(baseURL string) *Client {
 	return &Client{
 		BaseURL: strings.TrimSuffix(baseURL, "/"),

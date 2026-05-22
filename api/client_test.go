@@ -176,7 +176,7 @@ func TestDefaultHTTPClientHasNoWallClockTimeout(T *testing.T) {
 	T.Parallel()
 
 	client := NewClient("https://example.com", "token")
-	assert.Zero(T, client.HTTPClient.Timeout, "default client must not impose a wall-clock cap; streaming endpoints depend on it being unset")
+	assert.Zero(T, client.HTTPClient.Timeout)
 }
 
 func TestDefaultTransportSetsResponseHeaderTimeout(T *testing.T) {

@@ -266,7 +266,6 @@ func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, op
 	}
 	defer func() { _ = rc.Close() }()
 
-	// Peek the first byte so we can show an "empty" hint without buffering the whole log.
 	br := bufio.NewReader(rc)
 	if _, err := br.Peek(1); err != nil {
 		if errors.Is(err, io.EOF) {
@@ -276,21 +275,35 @@ func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, op
 		return fmt.Errorf("failed to get run log: %w", err)
 	}
 
+	var streamErr error
 	output.WithPager(f.Printer.Out, func(w io.Writer) {
 		if opts.raw {
-			_, _ = io.Copy(w, br)
+			if _, err := io.Copy(w, br); err != nil {
+				streamErr = err
+				return
+			}
 			_, _ = fmt.Fprintln(w)
 			return
 		}
-		scanner := bufio.NewScanner(br)
-		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-		for scanner.Scan() {
-			formatted := formatLogLine(scanner.Text())
-			if formatted != "" {
-				_, _ = fmt.Fprintln(w, formatted)
+		for {
+			line, err := br.ReadString('\n')
+			if line != "" {
+				formatted := formatLogLine(strings.TrimSuffix(line, "\n"))
+				if formatted != "" {
+					_, _ = fmt.Fprintln(w, formatted)
+				}
+			}
+			if err != nil {
+				if !errors.Is(err, io.EOF) {
+					streamErr = err
+				}
+				return
 			}
 		}
 	})
+	if streamErr != nil {
+		return fmt.Errorf("failed to read run log: %w", streamErr)
+	}
 	return nil
 }
 

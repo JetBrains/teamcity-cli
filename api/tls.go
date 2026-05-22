@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-// responseHeaderTimeout bounds how long we wait for the server to start sending response headers; body reads are unbounded so streaming endpoints (logs, artifacts) work for large payloads.
 const responseHeaderTimeout = 30 * time.Second
 
 // defaultTransport returns a transport with PEM fallback when the platform TLS verifier is blocked.
