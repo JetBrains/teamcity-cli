@@ -49,6 +49,7 @@ type ClientInterface interface {
 	RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, error)
 	CancelBuild(buildID string, comment string) error
 	GetBuildLog(ctx context.Context, buildID string) (string, error)
+	GetBuildLogStream(ctx context.Context, buildID string) (io.ReadCloser, error)
 	GetBuildMessages(ctx context.Context, buildID string, opts BuildMessagesOptions) (*BuildMessagesResponse, error)
 	PinBuild(buildID string, comment string) error
 	UnpinBuild(buildID string) error

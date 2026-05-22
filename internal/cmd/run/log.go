@@ -1,8 +1,10 @@
 package run
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -250,30 +252,40 @@ func runRunLog(f *cmdutil.Factory, runID string, opts *runLogOptions) error {
 }
 
 func runLogFull(f *cmdutil.Factory, client api.ClientInterface, runID string, opts *runLogOptions) error {
-	log, err := client.GetBuildLog(f.Context(), runID)
+	if opts.json {
+		log, err := client.GetBuildLog(f.Context(), runID)
+		if err != nil {
+			return fmt.Errorf("failed to get run log: %w", err)
+		}
+		return f.Printer.PrintJSON(buildLogJSON{RunID: runID, Log: log})
+	}
+
+	rc, err := client.GetBuildLogStream(f.Context(), runID)
 	if err != nil {
 		return fmt.Errorf("failed to get run log: %w", err)
 	}
+	defer func() { _ = rc.Close() }()
 
-	if opts.json {
-		return f.Printer.PrintJSON(buildLogJSON{
-			RunID: runID,
-			Log:   log,
-		})
-	}
-
-	if log == "" {
-		f.Printer.Empty("No log available", output.TipNoLogFor(runID))
-		return nil
+	// Peek the first byte so we can show an "empty" hint without buffering the whole log.
+	br := bufio.NewReader(rc)
+	if _, err := br.Peek(1); err != nil {
+		if errors.Is(err, io.EOF) {
+			f.Printer.Empty("No log available", output.TipNoLogFor(runID))
+			return nil
+		}
+		return fmt.Errorf("failed to get run log: %w", err)
 	}
 
 	output.WithPager(f.Printer.Out, func(w io.Writer) {
 		if opts.raw {
-			_, _ = fmt.Fprintln(w, log)
+			_, _ = io.Copy(w, br)
+			_, _ = fmt.Fprintln(w)
 			return
 		}
-		for line := range strings.SplitSeq(log, "\n") {
-			formatted := formatLogLine(line)
+		scanner := bufio.NewScanner(br)
+		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+		for scanner.Scan() {
+			formatted := formatLogLine(scanner.Text())
 			if formatted != "" {
 				_, _ = fmt.Fprintln(w, formatted)
 			}
