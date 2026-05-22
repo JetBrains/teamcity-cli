@@ -539,10 +539,9 @@ func (c *Client) RawRequest(ctx context.Context, method, path string, body io.Re
 		return nil, err
 	}
 
-	// TeamCity returns 406 when it can only produce XML for an error but the client
-	// requested JSON. Retry with Accept: */* to get the real error.
-	if resp.StatusCode == http.StatusNotAcceptable {
-		resp, err = c.doRawRequest(ctx, method, path, body, headers, "*/*")
+	// Retry only when there's no body — an io.Reader is single-shot and would resend empty.
+	if resp.StatusCode == http.StatusNotAcceptable && body == nil {
+		resp, err = c.doRawRequest(ctx, method, path, nil, headers, "*/*")
 		if err != nil {
 			return nil, err
 		}

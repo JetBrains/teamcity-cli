@@ -625,6 +625,27 @@ func TestDebugLogging(T *testing.T) {
 	})
 }
 
+func TestRawRequestNoRetryOn406WithBody(T *testing.T) {
+	T.Parallel()
+
+	var attempts int
+	var receivedBody string
+	client := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		buf, _ := io.ReadAll(r.Body)
+		receivedBody = string(buf)
+		w.WriteHeader(http.StatusNotAcceptable)
+	})
+
+	resp, err := client.RawRequest(T.Context(), "PUT", "/app/rest/x",
+		bytes.NewReader([]byte("hello world")),
+		map[string]string{"Content-Type": "text/plain"})
+	require.NoError(T, err)
+	assert.Equal(T, 1, attempts, "body-bearing 406 must not retry — second attempt would send empty body")
+	assert.Equal(T, "hello world", receivedBody, "first attempt must carry the body")
+	assert.Equal(T, http.StatusNotAcceptable, resp.StatusCode, "406 should propagate")
+}
+
 func TestApproveQueuedBuild(T *testing.T) {
 	T.Parallel()
 
