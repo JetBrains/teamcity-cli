@@ -1,10 +1,10 @@
 package api
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 // Category classifies user-facing errors for UI rendering and JSON output.
@@ -33,24 +33,26 @@ type Wire struct {
 
 // HTTPError covers HTTP-derived errors without extra structured fields (401, generic 4xx/5xx).
 type HTTPError struct {
-	Status int
-	Wire   Wire
-	cat    Category
+	Status  int
+	Wire    Wire
+	rawBody []byte // surfaced only when Wire has no message — preserves diagnostic detail from proxy HTML / oversized text
+	cat     Category
 }
 
 func (e *HTTPError) Error() string {
 	if e.Wire.Message != "" {
 		return e.Wire.Message
 	}
+	snippet := bodySnippet(e.rawBody)
 	switch e.cat {
 	case CatAuth:
-		return "authentication failed: invalid or expired credentials"
+		return joinSnippet("authentication failed: invalid or expired credentials", snippet)
 	case CatPermission:
-		return "permission denied"
+		return joinSnippet("permission denied", snippet)
 	case CatNotFound:
-		return "resource not found"
+		return joinSnippet("resource not found", snippet)
 	}
-	return fmt.Sprintf("server returned %d", e.Status)
+	return joinSnippet(fmt.Sprintf("server returned %d", e.Status), snippet)
 }
 
 func (e *HTTPError) Category() Category { return e.cat }
@@ -70,7 +72,10 @@ func (e *PermissionError) Error() string {
 	case e.Permission != "":
 		return fmt.Sprintf("missing %q permission", e.Permission)
 	}
-	return cmp.Or(e.Wire.Message, "permission denied")
+	if e.Wire.Message != "" {
+		return e.Wire.Message
+	}
+	return joinSnippet("permission denied", bodySnippet(e.rawBody))
 }
 
 // NotFoundError is returned for HTTP 404 responses.
@@ -84,7 +89,10 @@ func (e *NotFoundError) Error() string {
 	if e.Resource != "" && e.ID != "" {
 		return fmt.Sprintf("%s %q not found", e.Resource, e.ID)
 	}
-	return cmp.Or(e.Wire.Message, "resource not found")
+	if e.Wire.Message != "" {
+		return e.Wire.Message
+	}
+	return joinSnippet("resource not found", bodySnippet(e.rawBody))
 }
 
 // NetworkError wraps transport-level failures (DNS, connect, TLS, timeout).
@@ -142,6 +150,38 @@ func (readOnlyError) Category() Category { return CatReadOnly }
 
 // ErrReadOnly is returned when a non-GET request is attempted in read-only mode.
 var ErrReadOnly UserError = readOnlyError{}
+
+// joinSnippet appends a body-snippet diagnostic to base when one is available.
+func joinSnippet(base, snippet string) string {
+	if snippet == "" {
+		return base
+	}
+	return base + ": " + snippet
+}
+
+// bodySnippet returns a single-line, control-stripped excerpt of body (≤512 bytes), or "" if there is nothing useful to show.
+func bodySnippet(body []byte) string {
+	s := strings.TrimSpace(string(body))
+	if s == "" {
+		return ""
+	}
+	s = strings.Join(strings.Fields(s), " ")
+	s = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, s)
+	const max = 512
+	if len(s) > max {
+		cut := max
+		for cut > 0 && !utf8.RuneStart(s[cut]) {
+			cut--
+		}
+		s = s[:cut] + "..."
+	}
+	return s
+}
 
 // IsSandboxBlocked reports whether a sandbox is blocking outbound network access.
 func IsSandboxBlocked(err error) bool {

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -173,6 +174,41 @@ func TestErrorFromBody(T *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, CatInternal, he.Category())
 		assert.Equal(t, "database down", err.Error())
+	})
+
+	T.Run("502 with HTML body surfaces snippet", func(t *testing.T) {
+		t.Parallel()
+		body := []byte(`<html><head><title>502 Bad Gateway</title></head><body><h1>502 Bad Gateway</h1><hr>nginx/1.18.0</body></html>`)
+		err := ErrorFromBody(http.StatusBadGateway, body)
+		he, ok := errors.AsType[*HTTPError](err)
+		require.True(t, ok)
+		assert.Equal(t, CatInternal, he.Category())
+		msg := err.Error()
+		assert.Contains(t, msg, "server returned 502")
+		assert.Contains(t, msg, "502 Bad Gateway")
+		assert.Contains(t, msg, "nginx/1.18.0")
+	})
+
+	T.Run("oversized plain-text body is single-lined and truncated", func(t *testing.T) {
+		t.Parallel()
+		body := bytes.Repeat([]byte("xxxxxxxxxx\n"), 400)
+		err := ErrorFromBody(http.StatusInternalServerError, body)
+		msg := err.Error()
+		assert.True(t, strings.HasPrefix(msg, "server returned 500: "))
+		assert.True(t, strings.HasSuffix(msg, "..."), "truncated snippet should end with ellipsis")
+		assert.NotContains(t, msg, "\n", "snippet must be single-line")
+		assert.Less(t, len(msg), 700, "snippet must be bounded so it doesn't flood the terminal")
+	})
+
+	T.Run("403 with unparseable proxy body surfaces snippet", func(t *testing.T) {
+		t.Parallel()
+		body := []byte(`<html><body>Blocked by WAF rule 4242</body></html>`)
+		err := ErrorFromBody(http.StatusForbidden, body)
+		pe, ok := errors.AsType[*PermissionError](err)
+		require.True(t, ok)
+		msg := pe.Error()
+		assert.Contains(t, msg, "permission denied")
+		assert.Contains(t, msg, "WAF rule 4242")
 	})
 }
 
