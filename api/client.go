@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"runtime"
 	"sort"
@@ -532,6 +533,16 @@ type RawResponse struct {
 	Body       []byte
 }
 
+func hasHeader(headers map[string]string, name string) bool {
+	canonical := http.CanonicalHeaderKey(name)
+	for k := range headers {
+		if http.CanonicalHeaderKey(k) == canonical {
+			return true
+		}
+	}
+	return false
+}
+
 // RawRequest performs a raw HTTP request and returns the response without parsing.
 func (c *Client) RawRequest(ctx context.Context, method, path string, body io.Reader, headers map[string]string) (*RawResponse, error) {
 	if c.ReadOnly && method != "GET" {
@@ -572,6 +583,14 @@ func (c *Client) doRawRequest(ctx context.Context, method, path string, body io.
 	// Per-request headers run last so callers can override Accept / Content-Type / extras.
 	for k, v := range headers {
 		req.Header.Set(k, v)
+	}
+
+	// Non-JSON bodies default to Accept: */* — JSON-only servers would 406 on the response.
+	if body != nil && !hasHeader(headers, "Accept") {
+		mediaType, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
+		if mediaType != "application/json" {
+			req.Header.Set("Accept", "*/*")
+		}
 	}
 
 	c.debugLogRequest(req)
