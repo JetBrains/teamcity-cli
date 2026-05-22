@@ -188,11 +188,11 @@ func WithExtraHeaders(h map[string]string) ClientOption {
 }
 
 // newClientBase returns a Client populated with shared defaults: trimmed BaseURL, default HTTPClient, env extras.
-// HTTPClient.Timeout intentionally unset — server-alive detection lives on Transport.ResponseHeaderTimeout, deadlines come from context.
 func newClientBase(baseURL string) *Client {
 	return &Client{
 		BaseURL: strings.TrimSuffix(baseURL, "/"),
 		HTTPClient: &http.Client{
+			Timeout:   30 * time.Second,
 			Transport: defaultTransport(),
 		},
 		serverInfo:   &serverInfoCache{},
@@ -412,6 +412,39 @@ func (c *Client) doGetStream(ctx context.Context, path string) (*http.Response, 
 		}
 		return nil, &NetworkError{URL: c.BaseURL, Cause: err}
 	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		defer func() { _ = resp.Body.Close() }()
+		return nil, c.handleErrorResponse(resp)
+	}
+	return resp, nil
+}
+
+// streamRequest GETs path with ReadRetry on a client that shares c.HTTPClient.Transport but omits the wall-clock Timeout; intended for endpoints with large or open-ended response bodies (build logs, artifacts).
+func (c *Client) streamRequest(ctx context.Context, path string) (*http.Response, error) {
+	reqURL := fmt.Sprintf("%s%s", c.BaseURL, c.apiPath(path))
+	client := &http.Client{Transport: c.HTTPClient.Transport}
+
+	resp, err := withRetry(ctx, ReadRetry, func() (*http.Response, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setAuth(req)
+		c.applyStandardHeaders(req)
+		c.debugLogRequest(req)
+		return client.Do(req)
+	})
+	if err != nil {
+		if resp != nil {
+			defer func() { _ = resp.Body.Close() }()
+			return nil, c.handleErrorResponse(resp)
+		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, err
+		}
+		return nil, &NetworkError{URL: c.BaseURL, Cause: err}
+	}
+	c.debugLogResponse(resp)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		defer func() { _ = resp.Body.Close() }()
 		return nil, c.handleErrorResponse(resp)

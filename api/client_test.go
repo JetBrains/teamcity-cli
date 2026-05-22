@@ -172,11 +172,11 @@ func TestClientOptions(T *testing.T) {
 	assert.Equal(T, 60*time.Second, client.HTTPClient.Timeout)
 }
 
-func TestDefaultHTTPClientHasNoWallClockTimeout(T *testing.T) {
+func TestDefaultHTTPClientHasWallClockTimeout(T *testing.T) {
 	T.Parallel()
 
 	client := NewClient("https://example.com", "token")
-	assert.Zero(T, client.HTTPClient.Timeout)
+	assert.Equal(T, 30*time.Second, client.HTTPClient.Timeout)
 }
 
 func TestDefaultTransportSetsResponseHeaderTimeout(T *testing.T) {
