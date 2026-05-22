@@ -104,7 +104,7 @@ func (c *Client) GetBuildLogStream(ctx context.Context, buildID string) (io.Read
 	return resp.Body, nil
 }
 
-// GetBuildLog returns the build log (accepts ID or #number); for large logs prefer GetBuildLogStream to avoid buffering in memory.
+// GetBuildLog returns the build log (accepts ID or #number); for large logs prefer GetBuildLogStream to avoid buffering in memory. Bypasses HTTPClient.Timeout — bound the read via ctx if needed.
 func (c *Client) GetBuildLog(ctx context.Context, buildID string) (string, error) {
 	rc, err := c.GetBuildLogStream(ctx, buildID)
 	if err != nil {
