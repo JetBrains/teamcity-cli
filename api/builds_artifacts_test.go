@@ -127,7 +127,7 @@ func TestGetBuildLogStreamBypassesHTTPClientTimeout(t *testing.T) {
 		if flusher != nil {
 			flusher.Flush()
 		}
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 		_, _ = w.Write([]byte("second\n"))
 	})
 	client.HTTPClient.Timeout = 100 * time.Millisecond

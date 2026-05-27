@@ -130,6 +130,22 @@ func TestRunLog(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, ts.Factory, "run", "log", testBuildID)
 }
 
+func TestRunLogRaw(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "log", testBuildID, "--raw")
+	assert.Contains(T, got, "Build started")
+	assert.Contains(T, got, "Build finished")
+}
+
+func TestRunLogEmpty(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /downloadBuildLog.html", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "log", testBuildID)
+	assert.Contains(T, got, "No log available")
+}
+
 func TestRunLogStreamErrorSurfaces(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	ts.Handle("GET /downloadBuildLog.html", func(w http.ResponseWriter, r *http.Request) {
