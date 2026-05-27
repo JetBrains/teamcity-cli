@@ -132,9 +132,12 @@ func TestRunLog(T *testing.T) {
 
 func TestRunLogRaw(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /downloadBuildLog.html", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("plain text line\n"))
+	})
 	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "log", testBuildID, "--raw")
-	assert.Contains(T, got, "Build started")
-	assert.Contains(T, got, "Build finished")
+	assert.Contains(T, got, "plain text line")
+	assert.NotContains(T, got, "  plain text line")
 }
 
 func TestRunLogEmpty(T *testing.T) {
