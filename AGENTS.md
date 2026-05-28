@@ -18,14 +18,20 @@ just docs-generate  # regenerate CLI command reference
 just record-gifs <name>  # record GIF from docs/tapes/<name>.tape → docs/images/
 ```
 
+## Code style
+
+- **Start lean.** First draft is the bare minimum — the observable behavior plus the guards needed to make it correct. Don't pre-emptively add throttle files, `*_NO_*` env knobs, marker state, helper helpers, or "in case" escape hatches. Add them when a real signal asks for them.
+- **One-line comments by default.** Single-line godoc on exported symbols; only wrap when an invariant or trade-off truly needs the room.
+- **Reuse what's there before inventing.** Output goes through `internal/output` — tip strings live in `output/tips.go` and render via `output.FormatTip`; status messages via `output.Printer`. Search for an existing helper before adding a parallel path.
+- **Verify visible behavior before claiming done.** For runtime/UX changes, build (`just build`) and exercise the binary — the `verify` and `run` skills exist for this. Type-check passing ≠ feature works.
+
 ## Commits and PRs
 
 - Don't commit unless asked.
 - Conventional format: `feat(scope):`, `fix(scope):`, `refactor(scope):`.
-- **Always respect `.github/PULL_REQUEST_TEMPLATE.md` when opening a PR.** Read the
-  template before writing the body, fill in every section it defines (don't drop
-  any), and don't invent extra sections. If a section doesn't apply, say so
-  explicitly rather than silently omitting it.
+- **Subject line only by default.** Recent commits are single-line; push the *why* into the PR description, not the commit body. Add a body only when context genuinely won't fit anywhere else.
+- **Always respect `.github/PULL_REQUEST_TEMPLATE.md` when opening a PR.** Fill every section the template defines — its `<!-- Delete ... -->` hints are misleading, never drop a section. Write `N/A — <reason>` for sections that don't apply. Don't invent extra sections.
+- **PR descriptions stay lean.** Summary fits a paragraph; Changes is a short bullet list; no marketing copy, no restated diff. If Design Decisions has nothing non-obvious, write `Straightforward.` and move on.
 
 ## Terminology
 
