@@ -1,0 +1,88 @@
+---
+version: 2
+plan:
+  project-key: PROJ
+  key: SAMP
+  name: Sample CI Plan
+  description: Build, test and publish the sample app.
+stages:
+  - 'Build':
+      manual: false
+      jobs:
+        - Build
+  - 'Test':
+      jobs:
+        - Unit Tests
+        - Integration Tests
+  - 'Deploy':
+      manual: true
+      jobs:
+        - Deploy
+Build:
+  key: BLD
+  description: Compile the project
+  tasks:
+    - checkout:
+        force-clean-build: true
+    - script:
+        interpreter: SHELL
+        scripts:
+          - 'echo "Building ${bamboo.buildPlanName} #${bamboo.build.number}"'
+          - mvn clean package -DskipTests
+        working-dir: app
+    - inject-variables:
+        file: target/build.properties
+        scope: RESULT
+  artifacts:
+    - name: app-jar
+      pattern: 'target/*.jar'
+      shared: true
+      required: true
+  requirements:
+    - linux
+Unit Tests:
+  description: Run unit tests
+  tasks:
+    - script:
+        - mvn test
+  final-tasks:
+    - test-parser:
+        type: junit
+        test-results: '**/target/surefire-reports/*.xml'
+  artifact-subscriptions:
+    - artifact: app-jar
+      destination: build/
+Integration Tests:
+  tasks:
+    - script:
+        - mvn verify -Pintegration
+    - npm:
+        command: test
+  artifact-subscriptions:
+    - artifact: app-jar
+      destination: build/
+Deploy:
+  tasks:
+    - script:
+        - ./deploy.sh ${bamboo.repository.branch.name}
+    - aws-code-deploy:
+        application-name: sample-app
+        deployment-group: production
+        s3-bucket: sample-deploy-bucket
+  requirements:
+    - linux
+triggers:
+  - polling:
+      period: 180
+  - cron:
+      expression: '0 0 * * *'
+branches:
+  create: manually
+  delete:
+    after-deleted-days: 7
+  link-to-jira: true
+notifications: []
+labels: []
+variables:
+  greeting: hello
+  release_channel: stable

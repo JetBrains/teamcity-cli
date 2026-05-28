@@ -3,6 +3,7 @@ package pipeline
 import (
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/internal/pipelineschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -62,14 +63,14 @@ func TestConvertYAMLToJSON(t *testing.T) {
 
 	t.Run("string keys passthrough", func(t *testing.T) {
 		in := map[string]any{"k": "v"}
-		got := convertYAMLToJSON(in)
+		got := pipelineschema.ConvertYAMLToJSON(in)
 		assert.Equal(t, map[string]any{"k": "v"}, got)
 	})
 
 	t.Run("integer keys stringified", func(t *testing.T) {
 		// jsonschema only accepts string keys, so map[any]any keys must stringify.
 		in := map[any]any{1: "one", "two": 2}
-		got := convertYAMLToJSON(in)
+		got := pipelineschema.ConvertYAMLToJSON(in)
 		want := map[string]any{"1": "one", "two": 2}
 		assert.Equal(t, want, got)
 	})
@@ -84,7 +85,7 @@ func TestConvertYAMLToJSON(t *testing.T) {
 				},
 			},
 		}
-		got := convertYAMLToJSON(in).(map[string]any)
+		got := pipelineschema.ConvertYAMLToJSON(in).(map[string]any)
 		jobs := got["jobs"].(map[string]any)
 		build := jobs["build"].(map[string]any)
 		steps := build["steps"].([]any)
@@ -92,10 +93,10 @@ func TestConvertYAMLToJSON(t *testing.T) {
 	})
 
 	t.Run("scalars unchanged", func(t *testing.T) {
-		assert.Equal(t, "x", convertYAMLToJSON("x"))
-		assert.Equal(t, 42, convertYAMLToJSON(42))
-		assert.Equal(t, true, convertYAMLToJSON(true))
-		assert.Equal(t, nil, convertYAMLToJSON(nil))
+		assert.Equal(t, "x", pipelineschema.ConvertYAMLToJSON("x"))
+		assert.Equal(t, 42, pipelineschema.ConvertYAMLToJSON(42))
+		assert.Equal(t, true, pipelineschema.ConvertYAMLToJSON(true))
+		assert.Equal(t, nil, pipelineschema.ConvertYAMLToJSON(nil))
 	})
 }
 

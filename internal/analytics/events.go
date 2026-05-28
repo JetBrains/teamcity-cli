@@ -25,6 +25,35 @@ const (
 	EventManaged = "managed"
 
 	EventLinked = "linked"
+
+	EventCompleted = "completed"
+)
+
+const (
+	MigrateSourceGitHubActions = "github_actions"
+	MigrateSourceBamboo        = "bamboo"
+	MigrateSourceGitLab        = "gitlab"
+	MigrateSourceJenkins       = "jenkins"
+	MigrateSourceCircleCI      = "circleci"
+	MigrateSourceAzure         = "azure"
+	MigrateSourceBitbucket     = "bitbucket"
+	MigrateSourceTravis        = "travis"
+	MigrateSourceMixed         = "mixed"
+	MigrateSourceOther         = "other"
+	MigrateSourceNone          = "none"
+)
+
+const (
+	MigrateOutcomeClean        = "clean"
+	MigrateOutcomePartial      = "partial"
+	MigrateOutcomeFailed       = "failed"
+	MigrateOutcomeNothingFound = "nothing_found"
+)
+
+const (
+	MigrateValidationValid   = "valid"
+	MigrateValidationInvalid = "invalid"
+	MigrateValidationSkipped = "skipped"
 )
 
 const (
