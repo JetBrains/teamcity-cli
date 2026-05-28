@@ -1,28 +1,32 @@
+<!-- Keep this lean. Every section stays — write "N/A — <reason>" instead of removing one. The diff carries the details; this body explains what you can't read from the diff. -->
+
 ## Summary
 
-<!-- What does this PR do? Link related issues with "Fixes #123" -->
+<!-- One paragraph. What does this PR do, and why? Link related issues with "Fixes #123". -->
 
 
 
 ## Changes
 
-<!-- Key changes, organized by area. Delete empty sections. -->
+<!-- Short bullet list of key changes; group by area if useful. Keep terse. -->
 
 -
 
 ## Design Decisions
 
-<!-- Explain non-obvious choices. Delete section if straightforward. -->
+<!-- Non-obvious choices and trade-offs. Write "Straightforward." if there are none. -->
 
 ## Example
 
-<!-- For CLI changes: show command + output. Delete if not applicable. -->
+<!-- For CLI changes: show command + output. Write "N/A — not user-visible." if not applicable. -->
 
 ```bash
 teamcity <command>
 ```
 
 ## Test Plan
+
+<!-- For conditional checkboxes that don't apply, leave unchecked and note "N/A — <reason>" inline. -->
 
 - [ ] Unit tests pass (`just unit`)
 - [ ] Linter passes (`just lint`)
