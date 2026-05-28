@@ -77,3 +77,11 @@ func TipRegisterGitHubApp(owner string) string {
 
 // TipDockerServiceAccount nudges users away from personal Docker passwords.
 const TipDockerServiceAccount = "Use a service account / robot user, not a personal password"
+
+// TipInstallSkillFor formats the promotion shown when an AI agent runtime is detected but the teamcity-cli skill isn't installed for it.
+func TipInstallSkillFor(agentDisplayName string) string {
+	return fmt.Sprintf("Install the TeamCity skill for %s — run %s",
+		Cyan(agentDisplayName),
+		Cyan(`"teamcity skill install"`),
+	)
+}
