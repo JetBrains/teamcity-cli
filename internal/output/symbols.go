@@ -1,11 +1,16 @@
 package output
 
-import "runtime"
+import (
+	"os"
+	"runtime"
+)
 
 // Status symbols used throughout the CLI output.
-// On Windows (non-Terminal), Unicode glyphs like ✓/✗ may render as □ because
-// legacy console fonts (Consolas, Lucida Console) lack those code-points.
-// ASCII fallbacks keep the output readable everywhere.
+// On Windows with legacy console (cmd.exe, PowerShell without Windows Terminal),
+// Unicode glyphs like ✓/✗ may render as □ because console fonts (Consolas,
+// Lucida Console) lack those code-points. Windows Terminal sets the WT_SESSION
+// environment variable and ships with Cascadia Code which has full Unicode
+// support, so we only fall back to ASCII on legacy consoles.
 var (
 	// Success is rendered after a completed check (green).
 	Success = "✓"
@@ -28,7 +33,7 @@ var (
 )
 
 func init() {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && os.Getenv("WT_SESSION") == "" {
 		Success = "[ok]"
 		Failure = "[x]"
 		Arrow = "->"
