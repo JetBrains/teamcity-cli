@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/JetBrains/teamcity-cli/main/schemas/teamcity.toml.json",
+  "title": "teamcity.toml",
+  "description": "Repository-level binding to one or more TeamCity servers. Each [[server]] entry pins a TeamCity instance and a default project/job, with optional per-subdirectory scopes for monorepos. Consumed by the `teamcity` CLI and IDE integrations.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "server": {
+      "type": "array",
+      "description": "List of [[server]] entries binding this repo to TeamCity instances.",
+      "items": { "$ref": "#/$defs/server" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "description": "TeamCity external ID (project or build configuration). Letters, digits, and underscores only.",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "object",
+      "description": "Project/job binding for a server or for a per-path override.",
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "description": "Default TeamCity project external ID for this scope.",
+          "$ref": "#/$defs/id"
+        },
+        "job": {
+          "description": "Default build configuration (`job`) external ID for this scope.",
+          "$ref": "#/$defs/id"
+        },
+        "jobs": {
+          "type": "array",
+          "description": "Additional build configuration external IDs exposed in this scope.",
+          "items": { "$ref": "#/$defs/id" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "description": "One TeamCity instance binding. `url` is required; everything else is optional and may also live under `paths` for monorepo subdirectory overrides.",
+      "required": ["url"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Base URL of the TeamCity server, e.g. https://teamcity.example.com.",
+          "format": "uri",
+          "pattern": "^https?://",
+          "minLength": 1
+        },
+        "project": {
+          "description": "Default TeamCity project external ID for this server entry.",
+          "$ref": "#/$defs/id"
+        },
+        "job": {
+          "description": "Default build configuration (`job`) external ID for this server entry.",
+          "$ref": "#/$defs/id"
+        },
+        "jobs": {
+          "type": "array",
+          "description": "Additional build configuration external IDs exposed by this server entry.",
+          "items": { "$ref": "#/$defs/id" },
+          "uniqueItems": true
+        },
+        "paths": {
+          "type": "object",
+          "description": "Per-subdirectory scope overrides keyed by repo-relative path (forward slashes; no leading slash). The deepest matching path wins when resolving the active scope for the cwd.",
+          "additionalProperties": { "$ref": "#/$defs/scope" },
+          "propertyNames": {
+            "pattern": "^[^/]+(/[^/]+)*$"
+          }
+        }
+      }
+    }
+  }
+}
