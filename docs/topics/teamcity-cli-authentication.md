@@ -19,8 +19,8 @@ teamcity auth login
 This starts an interactive flow:
 
 1. Enter your TeamCity server URL (for example, `https://teamcity.example.com`).
-2. If browser-based login (PKCE) is available on the server, the CLI opens your browser to approve access directly — no token copying needed.
-3. Otherwise, the CLI guides you to the TeamCity __Access Tokens__ page so you can create and paste a token manually.
+2. The CLI opens your browser to approve access directly using the OAuth PKCE flow — no token copying needed.
+3. If your server runs a TeamCity version older than 2026.1, it does not support the PKCE flow. In this case, the CLI guides you to the TeamCity __Access Tokens__ page so you can create and paste a token manually.
 4. The CLI validates the token and stores it securely.
 
 To authenticate with a specific server URL:
@@ -44,14 +44,13 @@ teamcity auth login --server https://teamcity.example.com --token <token>
 ### Browser-based login (PKCE)
 {id="pkce"}
 
-When browser-based login is available on the server, `teamcity auth login` authenticates via the browser automatically with PKCE:
+TeamCity 2026.1 and newer servers support the streamlined authorization flow that does not require issuing access tokens manually: [OAuth 2.0 PKCE standard (RFC 7636)](https://datatracker.ietf.org/doc/html/rfc7636). When you run the `teamcity auth login` command, the following chain of events occurs:
 
 1. The CLI starts a temporary local server on your machine.
 2. Your browser opens a TeamCity authorization page.
-3. After you approve, the browser redirects back to the CLI with an authorization code.
+3. After you approve issuing a new access token, the browser redirects back to the CLI with an authorization code.
 4. The CLI exchanges the code for an access token.
 
-This flow follows the [OAuth 2.0 PKCE standard (RFC 7636)](https://datatracker.ietf.org/doc/html/rfc7636) and does not require you to copy or paste any tokens.
 
 PKCE tokens have an expiry date. The CLI tracks this and shows a warning when the token is about to expire or has expired:
 

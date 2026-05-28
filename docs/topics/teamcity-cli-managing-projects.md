@@ -430,7 +430,7 @@ teamcity project connection create github-app -p Backend --no-manifest \
     --private-key-file ./key.pem --stdin <<<"$CLIENT_SECRET"
 ```
 
-After creation the CLI prompts to run [`authorize`](#authorizing-a-connection) so the current user gets a token bound to the App. Skip the prompt with `--no-authorize`.
+After creation the CLI prompts to run [`authorize`](#Authorizing+a+connection) so the current user gets a token bound to the App. Skip the prompt with `--no-authorize`.
 
 ### Creating a Docker registry connection
 
@@ -453,7 +453,7 @@ echo "$DOCKER_TOKEN" | teamcity project connection create docker -p Backend \
 
 ### Authorizing a connection
 
-OAuth-style connections (GitHub App, Bitbucket, GitLab, …) need a per-user authorization step before TeamCity can call upstream as that user. This is required, for example, before [`vcs create --auth token`](#creating-a-vcs-root) can verify a repository over the connection.
+OAuth-style connections (GitHub App, Bitbucket, GitLab, …) need a per-user authorization step before TeamCity can call upstream as that user. This is required, for example, before [`vcs create --auth token`](#Creating+a+VCS+root) can verify a repository over the connection.
 
 ```Shell
 teamcity project connection authorize PROJECT_EXT_42 -p Backend
