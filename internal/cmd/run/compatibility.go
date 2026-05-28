@@ -172,7 +172,7 @@ func renderIncompatibilityReasons(w io.Writer, client api.ClientInterface, build
 		}
 		_, _ = fmt.Fprintf(w, "  %s\n", r.agent.Name)
 		for _, reason := range r.reasons {
-			_, _ = fmt.Fprintf(w, "    %s %s\n", output.Red("•"), reason)
+			_, _ = fmt.Fprintf(w, "    %s %s\n", output.Red(output.Bullet), reason)
 		}
 	}
 }

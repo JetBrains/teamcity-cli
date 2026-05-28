@@ -144,15 +144,15 @@ func promptTheme() *huh.Theme {
 		t.Focused.ErrorIndicator = plain.Foreground(red).SetString(" ✗")
 		t.Focused.ErrorMessage = plain.Foreground(red)
 
-		t.Focused.SelectSelector = plain.Foreground(yellow).SetString("→ ")
-		t.Focused.NextIndicator = plain.Foreground(yellow).MarginLeft(1).SetString("→")
-		t.Focused.PrevIndicator = plain.Foreground(yellow).MarginRight(1).SetString("←")
+		t.Focused.SelectSelector = plain.Foreground(yellow).SetString(output.Arrow + " ")
+		t.Focused.NextIndicator = plain.Foreground(yellow).MarginLeft(1).SetString(output.Arrow)
+		t.Focused.PrevIndicator = plain.Foreground(yellow).MarginRight(1).SetString(output.ArrowLeft)
 		t.Focused.Option = plain
 		t.Focused.SelectedOption = plain
 
-		t.Focused.MultiSelectSelector = plain.Foreground(yellow).SetString("→ ")
-		t.Focused.SelectedPrefix = plain.Foreground(green).SetString("✓ ")
-		t.Focused.UnselectedPrefix = plain.Foreground(faint).SetString("• ")
+		t.Focused.MultiSelectSelector = plain.Foreground(yellow).SetString(output.Arrow + " ")
+		t.Focused.SelectedPrefix = plain.Foreground(green).SetString(output.Success + " ")
+		t.Focused.UnselectedPrefix = plain.Foreground(faint).SetString(output.Bullet + " ")
 		t.Focused.UnselectedOption = plain
 
 		t.Focused.FocusedButton = plain.Bold(true).Foreground(cyan).MarginLeft(3)

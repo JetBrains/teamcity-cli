@@ -218,7 +218,7 @@ func renderAuthStatusHuman(f *cmdutil.Factory, results []authStatus) error {
 	_, _ = fmt.Fprintln(p.Out)
 
 	if len(results) == 0 {
-		_, _ = fmt.Fprintln(p.Out, output.Red("✗"), "Not logged in to any TeamCity server")
+		_, _ = fmt.Fprintln(p.Out, output.Red(output.Failure), "Not logged in to any TeamCity server")
 		_, _ = fmt.Fprintln(p.Out, "\nRun", output.Cyan("teamcity auth login"), "to authenticate")
 		if config.IsBuildEnvironment() {
 			_, _ = fmt.Fprintln(p.Out, "\n"+output.Yellow("!")+" Build environment detected but credentials not found in properties file")
@@ -256,28 +256,28 @@ func renderOneStatus(f *cmdutil.Factory, p *output.Printer, s authStatus) {
 
 	switch {
 	case s.Status == "guest":
-		_, _ = fmt.Fprintf(p.Out, "%s Guest access to %s%s\n", output.Green("✓"), output.Cyan(s.Server), suffix)
+		_, _ = fmt.Fprintf(p.Out, "%s Guest access to %s%s\n", output.Green(output.Success), output.Cyan(s.Server), suffix)
 		renderServerInfo(p, s)
 
 	case s.Status == "authenticated" && s.AuthMethod == "build":
-		_, _ = fmt.Fprintf(p.Out, "%s Connected to %s\n", output.Green("✓"), output.Cyan(s.Server))
+		_, _ = fmt.Fprintf(p.Out, "%s Connected to %s\n", output.Green(output.Success), output.Cyan(s.Server))
 		_, _ = fmt.Fprintf(p.Out, "  Auth: %s\n", output.Faint("Build-level credentials"))
 		_, _ = fmt.Fprintf(p.Out, "  Scope: %s\n", output.Faint("Build-level access"))
 		renderServerInfo(p, s)
 
 	case s.Status == "authenticated":
-		_, _ = fmt.Fprintf(p.Out, "%s Logged in to %s%s\n", output.Green("✓"), output.Cyan(s.Server), suffix)
+		_, _ = fmt.Fprintf(p.Out, "%s Logged in to %s%s\n", output.Green(output.Success), output.Cyan(s.Server), suffix)
 		_, _ = fmt.Fprintf(p.Out, "  %s %s (%s) %s %s\n",
 			output.Faint("User:"), s.User.Name, s.User.Username, output.Faint("·"), output.Faint(tokenSourceLabel(s.TokenSource)))
 		renderTokenExpiry(p, s.TokenExpiry)
 		renderServerInfo(p, s)
 
 	case s.Status == "error" && s.AuthMethod == "":
-		_, _ = fmt.Fprintf(p.Out, "%s %s%s\n", output.Red("✗"), s.Server, suffix)
+		_, _ = fmt.Fprintf(p.Out, "%s %s%s\n", output.Red(output.Failure), s.Server, suffix)
 		renderCredentialsDiagnostic(f.Context(), p, s)
 
 	case s.Status == "error":
-		_, _ = fmt.Fprintf(p.Out, "%s Server: %s%s\n", output.Red("✗"), s.Server, suffix)
+		_, _ = fmt.Fprintf(p.Out, "%s Server: %s%s\n", output.Red(output.Failure), s.Server, suffix)
 		_, _ = fmt.Fprintf(p.Out, "  %s\n", s.Error)
 	}
 }
@@ -292,7 +292,7 @@ func renderServerInfo(p *output.Printer, s authStatus) {
 	if s.versionCheckErr != "" {
 		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Yellow("!"), s.versionCheckErr)
 	} else {
-		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Green("✓"), output.Faint("API compatible"))
+		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Green(output.Success), output.Faint("API compatible"))
 	}
 }
 
@@ -307,7 +307,7 @@ func renderTokenExpiry(p *output.Printer, expiry string) {
 	remaining := time.Until(t)
 	switch {
 	case remaining <= 0:
-		_, _ = fmt.Fprintf(p.Out, "  %s Token expired on %s\n", output.Red("✗"), t.Local().Format("Jan 2, 2006"))
+		_, _ = fmt.Fprintf(p.Out, "  %s Token expired on %s\n", output.Red(output.Failure), t.Local().Format("Jan 2, 2006"))
 		_, _ = fmt.Fprintf(p.Out, "  Run %s to re-authenticate\n", output.Cyan("teamcity auth login"))
 	case remaining <= 3*24*time.Hour:
 		_, _ = fmt.Fprintf(p.Out, "  %s Token expires %s (on %s)\n",

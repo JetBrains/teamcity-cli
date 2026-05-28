@@ -14,7 +14,7 @@ import (
 const maxFailedTestsToShow = 10
 
 func PrintFailureSummary(ctx context.Context, p *output.Printer, client api.ClientInterface, buildID, buildNumber, webURL, statusText string) {
-	header := fmt.Sprintf("%s %s  #%s failed", output.Red("✗"), buildID, buildNumber)
+	header := fmt.Sprintf("%s %s  #%s failed", output.Red(output.Failure), buildID, buildNumber)
 	if statusText != "" {
 		header += ": " + statusText
 	}
@@ -43,14 +43,14 @@ func PrintFailureSummary(ctx context.Context, p *output.Printer, client api.Clie
 			if detail == "" {
 				detail = prob.Identity
 			}
-			_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Red("•"), detail)
+			_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Red(output.Bullet), detail)
 		}
 	}
 
 	if testsErr == nil && tests != nil && tests.Failed > 0 {
 		_, _ = fmt.Fprintf(p.Out, "\nFailed tests (%d):\n", tests.Failed)
 		for _, t := range tests.TestOccurrence {
-			line := fmt.Sprintf("  %s %s", output.Red("•"), t.Name)
+			line := fmt.Sprintf("  %s %s", output.Red(output.Bullet), t.Name)
 			if t.Duration > 0 {
 				dur := time.Duration(t.Duration) * time.Millisecond
 				line += " " + output.Faint("("+output.FormatDuration(dur)+")")
@@ -85,7 +85,7 @@ func BuildResultError(ctx context.Context, p *output.Printer, client api.ClientI
 
 	switch build.Status {
 	case "SUCCESS":
-		_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s succeeded\n", output.Green("✓"), output.Cyan(jobName), build.ID, build.Number)
+		_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s succeeded\n", output.Green(output.Success), output.Cyan(jobName), build.ID, build.Number)
 		if showDetails {
 			_, _ = fmt.Fprintf(p.Out, "\nView details: %s\n", build.WebURL)
 		}
@@ -94,7 +94,7 @@ func BuildResultError(ctx context.Context, p *output.Printer, client api.ClientI
 		PrintFailureSummary(ctx, p, client, strconv.Itoa(build.ID), build.Number, build.WebURL, build.StatusText)
 		return &ExitError{Code: ExitFailure}
 	default:
-		_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s canceled\n", output.Yellow("○"), output.Cyan(jobName), build.ID, build.Number)
+		_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s canceled\n", output.Yellow(output.DefaultIcon), output.Cyan(jobName), build.ID, build.Number)
 		return &ExitError{Code: ExitCancelled}
 	}
 }

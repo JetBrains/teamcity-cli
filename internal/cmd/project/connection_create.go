@@ -140,7 +140,7 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 		stepNum++
 		printWizardStep(f.Printer, stepNum, totalSteps, "Register a GitHub App",
 			"You'll be taken to GitHub to confirm the App registration.")
-		_, _ = fmt.Fprintf(f.Printer.Out, "  %s On GitHub, click %q.\n", output.Yellow("→"), "Create GitHub App for "+target)
+		_, _ = fmt.Fprintf(f.Printer.Out, "  %s On GitHub, click %q.\n", output.Yellow(output.Arrow), "Create GitHub App for "+target)
 		ok := true
 		if err := cmdutil.Confirm("Open a browser to register the App?", &ok); err != nil {
 			return err

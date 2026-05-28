@@ -165,7 +165,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				if !opts.json {
-					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
+					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red(output.Failure))
 				}
 				return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
 			}
@@ -267,7 +267,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				if !opts.json {
-					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
+					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red(output.Failure))
 				}
 				return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
 			}

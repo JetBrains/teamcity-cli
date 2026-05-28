@@ -122,10 +122,10 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 		return nil
 	}
 
-	statusIcon := output.Green("✓")
+	statusIcon := output.Green(output.Success)
 	statusLabel := "synchronized"
 	if statusErr != nil {
-		statusIcon = output.Red("✗")
+		statusIcon = output.Red(output.Failure)
 		statusLabel = "unavailable"
 	} else {
 		if syncingStatus := getSyncingStatus(status.Message); syncingStatus != "" {
@@ -137,7 +137,7 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 				statusIcon = output.Yellow("!")
 				statusLabel = "warning"
 			case "error":
-				statusIcon = output.Red("✗")
+				statusIcon = output.Red(output.Failure)
 				statusLabel = "error"
 			}
 		}
@@ -413,7 +413,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 		}
 		errs := parseKotlinErrors(combinedOutput)
 
-		_, _ = fmt.Fprintf(p.Out, "%s Configuration invalid\n", output.Red("✗"))
+		_, _ = fmt.Fprintf(p.Out, "%s Configuration invalid\n", output.Red(output.Failure))
 		if len(errs) > 0 {
 			_, _ = fmt.Fprintln(p.Out)
 			for _, e := range errs {
@@ -432,7 +432,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 		return f.Printer.PrintJSON(validateResultJSON{Valid: true, Path: dslDir})
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "%s Configuration valid\n", output.Green("✓"))
+	_, _ = fmt.Fprintf(p.Out, "%s Configuration valid\n", output.Green(output.Success))
 
 	if serverURL := config.DetectServerFromDSL(); serverURL != "" {
 		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Faint("Server:"), serverURL)

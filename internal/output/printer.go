@@ -38,7 +38,7 @@ func (p *Printer) Success(format string, args ...any) {
 	if p.Quiet {
 		return
 	}
-	p.write(p.Out, fmt.Sprintf("%s %s\n", Green("✓"), fmt.Sprintf(format, args...)))
+	p.write(p.Out, fmt.Sprintf("%s %s\n", Green(Success), fmt.Sprintf(format, args...)))
 }
 
 func (p *Printer) Info(format string, args ...any) {

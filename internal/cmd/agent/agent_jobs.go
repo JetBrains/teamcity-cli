@@ -137,7 +137,7 @@ func showIncompatibleJobs(p *output.Printer, client api.ClientInterface, agentID
 		if c.Reasons != nil && len(c.Reasons.Reasons) > 0 {
 			_, _ = fmt.Fprintf(p.Out, "  Reasons:\n")
 			for _, reason := range c.Reasons.Reasons {
-				_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Red("•"), reason)
+				_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Red(output.Bullet), reason)
 			}
 		}
 		_, _ = fmt.Fprintln(p.Out)

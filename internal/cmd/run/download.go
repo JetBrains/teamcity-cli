@@ -131,7 +131,7 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 		downloaded++
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "\n%s %s downloaded\n", output.Green("✓"), english.Plural(downloaded, "artifact", ""))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s downloaded\n", output.Green(output.Success), english.Plural(downloaded, "artifact", ""))
 	return nil
 }
 

@@ -104,7 +104,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client,
 		opening = fmt.Sprintf("Opening browser to authenticate with %d of %d permissions...", len(scopes), total)
 	}
 	p.Info("%s", opening)
-	_, _ = fmt.Fprintf(p.Out, "  %s Approve access in TeamCity\n", output.Yellow("→"))
+	_, _ = fmt.Fprintf(p.Out, "  %s Approve access in TeamCity\n", output.Yellow(output.Arrow))
 
 	result, err := browserflow.Run(parent, browserflow.Options{
 		Listener:     listener,

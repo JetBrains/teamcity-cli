@@ -9,25 +9,25 @@ func isCanceled(status, statusText string) bool {
 // StatusIcon returns a colored status icon.
 func StatusIcon(status, state string, statusText ...string) string {
 	if state == "running" {
-		return Yellow("●")
+		return Yellow(RunningIcon)
 	}
 	if state == "queued" {
-		return Faint("◦")
+		return Faint(QueuedIcon)
 	}
 
 	if len(statusText) > 0 && isCanceled(status, statusText[0]) {
-		return Faint("⊘")
+		return Faint(CanceledIcon)
 	}
 
 	switch strings.ToUpper(status) {
 	case "SUCCESS":
-		return Green("✓")
+		return Green(Success)
 	case "FAILURE", "ERROR":
-		return Red("✗")
+		return Red(Failure)
 	case "UNKNOWN":
 		return Yellow("?")
 	default:
-		return Faint("○")
+		return Faint(DefaultIcon)
 	}
 }
 

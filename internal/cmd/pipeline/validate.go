@@ -94,7 +94,7 @@ func runPipelineValidate(f *cmdutil.Factory, file string, opts *validateOptions)
 	}
 
 	_, _ = fmt.Fprintf(f.Printer.ErrOut, "%s %s has %d error(s)\n\n",
-		output.Red("✗"), file, len(validationErrs))
+		output.Red(output.Failure), file, len(validationErrs))
 
 	for _, ve := range validationErrs {
 		line := findLineNumber(&rootNode, ve.path)

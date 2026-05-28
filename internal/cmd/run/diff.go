@@ -552,7 +552,7 @@ func renderTestsDiff(p *output.Printer, t1, t2, s1, s2 *api.TestOccurrences) boo
 	if len(newFailures) > 0 {
 		_, _ = fmt.Fprintf(p.Out, "  %s\n", output.Red("New failures:"))
 		for _, t := range newFailures {
-			_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Red("✗"), t.Name)
+			_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Red(output.Failure), t.Name)
 			if t.Details != "" {
 				_, _ = fmt.Fprintf(p.Out, "      %s\n", output.Faint(truncate(t.Details, 120)))
 			}
@@ -562,7 +562,7 @@ func renderTestsDiff(p *output.Printer, t1, t2, s1, s2 *api.TestOccurrences) boo
 	if len(fixed) > 0 {
 		_, _ = fmt.Fprintf(p.Out, "  %s\n", output.Green("Fixed:"))
 		for _, name := range fixed {
-			_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Green("✓"), name)
+			_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Green(output.Success), name)
 		}
 	}
 

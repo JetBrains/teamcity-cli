@@ -245,14 +245,14 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		switch t.Status {
 		case "FAILURE":
 			if t.Muted {
-				_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint("⊘"), t.Name)
+				_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint(output.CanceledIcon), t.Name)
 			} else {
-				_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Red("✗"), t.Name)
+				_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Red(output.Failure), t.Name)
 			}
 		case "SUCCESS":
-			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Green("✓"), t.Name)
+			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Green(output.Success), t.Name)
 		default:
-			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint("○"), t.Name)
+			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint(output.DefaultIcon), t.Name)
 		}
 	}
 
