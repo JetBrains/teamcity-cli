@@ -2,7 +2,6 @@ package pipeline
 
 import (
 	"crypto/sha256"
-	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -11,13 +10,11 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/schemas"
 	"github.com/spf13/cobra"
 )
 
 const schemaTTL = 24 * time.Hour
-
-//go:embed schema_embedded.json
-var embeddedSchema []byte
 
 func schemaDir() (string, error) {
 	home, err := os.UserHomeDir()
@@ -86,7 +83,7 @@ func fetchOrCacheSchema(client *api.Client, refresh bool) ([]byte, bool, bool, e
 	}
 
 	if !refresh && errors.Is(err, api.ErrPipelineSchemaUnsupported) {
-		return embeddedSchema, false, true, nil
+		return schemas.Pipeline, false, true, nil
 	}
 	return nil, false, false, fmt.Errorf("failed to fetch pipeline schema from server: %w", err)
 }
