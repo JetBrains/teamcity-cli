@@ -29,11 +29,11 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "link",
 		Short: "Bind this repository to a TeamCity project",
-		Long: `Upsert a [[server]] entry in teamcity.toml binding this repo to a TeamCity
-instance. Per-path scopes (monorepo) are upserted under [server.paths."<path>"].
-
-Resolution cascade (highest to lowest):
-  --flag → TEAMCITY_* env → matching [[server]] entry, deepest matching path scope`,
+		Long: "Upsert a [[server]] entry in teamcity.toml binding this repo to a TeamCity\n" +
+			"instance. Per-path scopes (monorepo) are upserted under [server.paths.\"<path>\"].\n" +
+			"\n" +
+			"Resolution cascade (highest to lowest):\n" +
+			"  --flag " + output.Arrow + " TEAMCITY_* env " + output.Arrow + " matching [[server]] entry, deepest matching path scope",
 		Example: `  # Bind the repo (uses active server, top-level scope)
   teamcity link --project Acme_Backend --job Acme_Backend_Build
 
