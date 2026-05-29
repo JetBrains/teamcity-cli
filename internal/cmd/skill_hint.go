@@ -16,6 +16,9 @@ func maybePromoteSkillInstall(f *cmdutil.Factory, cmd *cobra.Command, runErr err
 	if f == nil || cmd == nil || runErr != nil || f.Quiet || f.JSONOutput || f.NoInput {
 		return
 	}
+	if os.Getenv("TEAMCITY_NO_SKILL_HINT") != "" {
+		return
+	}
 	if p := cmd.Parent(); p != nil && p.Name() == "skill" {
 		return
 	}
