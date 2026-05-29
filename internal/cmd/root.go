@@ -45,7 +45,9 @@ Report issues:  https://jb.gg/tc/issues`,
 		Version: version.String(),
 		Run: func(cmd *cobra.Command, args []string) {
 			out := f.Printer.Out
-			output.PrintLogo(out)
+			if os.Getenv("TEAMCITY_NO_BANNER") == "" && !f.Quiet && output.IsTerminal() {
+				output.PrintLogo(out)
+			}
 			_, _ = fmt.Fprintln(out)
 			_, _ = fmt.Fprintln(out, "TeamCity CLI "+output.Faint("v"+version.String())+" - "+output.Faint("https://jb.gg/tc/docs"))
 			_, _ = fmt.Fprintln(out)
