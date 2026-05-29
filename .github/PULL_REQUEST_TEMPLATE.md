@@ -35,3 +35,4 @@ teamcity <command>
 - [ ] If adding a data-producing command: includes `--json` support
 - [ ] If modifying `--json` output: no field removals/renames (additive only)
 - [ ] If changing docs-visible behavior: updated `docs/`, `skills/`, and `README.md`
+- [ ] External contributors: links a `status:finalized` issue (or trivial/docs/deps change)

@@ -344,9 +344,23 @@ The command still runs — users are warned but not broken. Remove it in the tar
 
 Currently deprecated flags: none.
 
+## Before you open a pull request
+
+Issues come first — we agree on scope and approach there, before any code.
+
+AI makes it trivial to generate a plausible PR against any issue in seconds, and reviewing that slop costs us more than generating it costs you. So we gate on the issue, not the PR.
+
+**External contributors:** your PR must reference an issue labeled `status:finalized` — a maintainer has agreed the problem is real and the approach is wanted. No finalized issue, no PR; we'll close it and point you here.
+
+- **Bugs** get finalized fast — comment with a clear repro and ask for the label.
+- **Features** need scope agreement first. Discussion isn't approval — wait for the label.
+- **Trivial changes** (typos, doc fixes, dependency bumps) — skip the issue, just open the PR.
+
+**JetBrains members** can open PRs without a finalized issue, but link related issues where they exist.
+
 ## Submit a pull request
 
-Push your branch and open a PR against `main`. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) will guide you through describing the change — fill in every section it defines.
+Push your branch and open a PR against `main`. Link the issue with `Fixes #123`. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) will guide you through describing the change — fill in every section it defines.
 
 ## AI-assisted contributions
 
