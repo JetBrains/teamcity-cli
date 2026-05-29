@@ -8,6 +8,7 @@ import (
 	"time"
 
 	fus "github.com/JetBrains/fus-reporting-api-go"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
 // SchemeFinding is a single client-side-validation diagnostic against a sample event.
@@ -23,7 +24,7 @@ func (f SchemeFinding) String() string {
 	if f.Field != "" {
 		loc += "." + f.Field
 	}
-	return loc + " → " + f.Got
+	return loc + " " + output.Arrow + " " + f.Got
 }
 
 // SampleEvents returns one canonical event per (group, event_id) covering every declared field.
