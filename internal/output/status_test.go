@@ -16,21 +16,21 @@ func TestStatusIcon(T *testing.T) {
 		statusText   string
 		wantContains string
 	}{
-		{"SUCCESS", "", "", "✓"},
-		{"FAILURE", "", "", "✗"},
-		{"ERROR", "", "", "✗"},
+		{"SUCCESS", "", "", Success},
+		{"FAILURE", "", "", Failure},
+		{"ERROR", "", "", Failure},
 		{"UNKNOWN", "", "", "?"},
-		{"UNKNOWN", "", "Canceled (user)", "⊘"},
-		{"OTHER", "", "", "○"},
-		{"", "running", "", "●"},
-		{"", "queued", "", "◦"},
-		{"success", "", "", "✓"},
-		{"failure", "", "", "✗"},
-		{"Success", "", "", "✓"},
-		{"Failure", "", "", "✗"},
-		{"", "", "", "○"},
-		{" ", "", "", "○"},
-		{"SUCCESS", "", "Canceled", "✓"},
+		{"UNKNOWN", "", "Canceled (user)", CanceledIcon},
+		{"OTHER", "", "", DefaultIcon},
+		{"", "running", "", RunningIcon},
+		{"", "queued", "", QueuedIcon},
+		{"success", "", "", Success},
+		{"failure", "", "", Failure},
+		{"Success", "", "", Success},
+		{"Failure", "", "", Failure},
+		{"", "", "", DefaultIcon},
+		{" ", "", "", DefaultIcon},
+		{"SUCCESS", "", "Canceled", Success},
 	}
 
 	for _, tc := range tests {
