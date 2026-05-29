@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -43,6 +44,9 @@ func tipFor(err error) string {
 	}
 	switch ue.Category() {
 	case api.CatAuth:
+		if os.Getenv("TEAMCITY_TOKEN") != "" {
+			return "Your TEAMCITY_TOKEN may be invalid or expired; reissue it in your TeamCity user profile"
+		}
 		return "Run 'teamcity auth login' to re-authenticate"
 	case api.CatPermission:
 		pe, ok := errors.AsType[*api.PermissionError](ue)
