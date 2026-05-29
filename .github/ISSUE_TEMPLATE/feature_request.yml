@@ -53,5 +53,7 @@ body:
     id: contribution
     attributes:
       label: Contribution
+      description: |
+        External contributors: wait for the `status:finalized` label before opening a PR — discussion here isn't approval.
       options:
-        - label: I'd be willing to submit a PR for this feature
+        - label: I'd be willing to submit a PR (once it's `status:finalized`)
