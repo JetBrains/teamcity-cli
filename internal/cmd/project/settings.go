@@ -129,7 +129,7 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 		statusLabel = "unavailable"
 	} else {
 		if syncingStatus := getSyncingStatus(status.Message); syncingStatus != "" {
-			statusIcon = output.Cyan("⟳")
+			statusIcon = output.Cyan(output.SyncingIcon)
 			statusLabel = syncingStatus
 		} else {
 			switch status.Type {

@@ -433,7 +433,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	}
 
 	if build.UsedByOtherBuilds {
-		_, _ = fmt.Fprintf(p.Out, "\n%s Results shared in build chain\n", output.Yellow("⟳"))
+		_, _ = fmt.Fprintf(p.Out, "\n%s Results shared in build chain\n", output.Yellow(output.SyncingIcon))
 	}
 
 	if build.StatusText != "" && build.StatusText != build.Status {

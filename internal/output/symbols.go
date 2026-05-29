@@ -30,6 +30,8 @@ var (
 	DefaultIcon = "○"
 	// Bullet is used for list items.
 	Bullet = "•"
+	// SyncingIcon indicates a versioned-settings sync in progress (cyan).
+	SyncingIcon = "⟳"
 )
 
 func init() {
@@ -43,5 +45,6 @@ func init() {
 		CanceledIcon = "/"
 		DefaultIcon = "-"
 		Bullet = "*"
+		SyncingIcon = "~"
 	}
 }
