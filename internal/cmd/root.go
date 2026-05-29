@@ -131,7 +131,6 @@ func Execute(ctx context.Context) error {
 	if !f.JSONOutput && executedCmd != nil && jsonOutputEnabled(executedCmd) {
 		f.JSONOutput = true
 	}
-	maybePromoteSkillInstall(f, executedCmd, err)
 	if err != nil && isCategory(err, api.CatAuth) && !f.JSONOutput {
 		tryAutoReauth(f)
 	}
