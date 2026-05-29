@@ -141,7 +141,7 @@ func promptTheme() *huh.Theme {
 		t.Focused.Title = plain.Bold(true)
 		t.Focused.NoteTitle = plain.Bold(true)
 		t.Focused.Description = plain.Foreground(faint)
-		t.Focused.ErrorIndicator = plain.Foreground(red).SetString(" ✗")
+		t.Focused.ErrorIndicator = plain.Foreground(red).SetString(" " + output.Failure)
 		t.Focused.ErrorMessage = plain.Foreground(red)
 
 		t.Focused.SelectSelector = plain.Foreground(yellow).SetString(output.Arrow + " ")

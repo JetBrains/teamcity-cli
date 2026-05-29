@@ -394,14 +394,14 @@ func renderDiffHeader(p *output.Printer, b1, b2 *api.Build) {
 		jobName = b1.BuildType.Name
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "COMPARING  %s %d  #%s  →  %s %d  #%s\n",
-		icon1, b1.ID, b1.Number, icon2, b2.ID, b2.Number)
+	_, _ = fmt.Fprintf(p.Out, "COMPARING  %s %d  #%s  %s  %s %d  #%s\n",
+		icon1, b1.ID, b1.Number, output.Arrow, icon2, b2.ID, b2.Number)
 
 	meta := output.Faint("Job: ") + output.Cyan(jobName)
 	if b1.BranchName != "" || b2.BranchName != "" {
 		branch := b1.BranchName
 		if b2.BranchName != "" && b2.BranchName != b1.BranchName {
-			branch = b1.BranchName + " → " + b2.BranchName
+			branch = b1.BranchName + " " + output.Arrow + " " + b2.BranchName
 		}
 		if branch != "" {
 			meta += output.Faint("  ·  Branch: ") + branch
@@ -502,8 +502,8 @@ func renderParamsDiff(p *output.Printer, params1, params2 *api.ParameterList) bo
 	for _, c := range diffs {
 		switch c.kind {
 		case "changed":
-			_, _ = fmt.Fprintf(p.Out, "  %s %s: %s → %s\n",
-				output.Yellow("~"), c.name, output.Red(c.old), output.Green(c.new))
+			_, _ = fmt.Fprintf(p.Out, "  %s %s: %s %s %s\n",
+				output.Yellow("~"), c.name, output.Red(c.old), output.Arrow, output.Green(c.new))
 		case "added":
 			_, _ = fmt.Fprintf(p.Out, "  %s %s: %s\n",
 				output.Green("+"), c.name, output.Green(c.new))

@@ -51,8 +51,9 @@ func runUpdate(f *cmdutil.Factory) error {
 	}
 
 	method := update.DetectInstallMethod()
-	_, _ = fmt.Fprintf(p.Out, "%s → %s: %s\n%s\n",
+	_, _ = fmt.Fprintf(p.Out, "%s %s %s: %s\n%s\n",
 		output.Faint("v"+version.Version),
+		output.Arrow,
 		output.Green("v"+release.Version),
 		output.Bold(method.UpdateCommand()),
 		output.Faint(release.URL),

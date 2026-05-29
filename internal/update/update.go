@@ -140,9 +140,10 @@ func CheckInBackground(ctx context.Context, w io.Writer, quiet bool) func() {
 }
 
 func PrintNotice(w io.Writer, currentVersion string, r *ReleaseInfo) {
-	_, _ = fmt.Fprintf(w, "\n%s A new version is available: %s → %s — run %s to see how to upgrade\n",
+	_, _ = fmt.Fprintf(w, "\n%s A new version is available: %s %s %s — run %s to see how to upgrade\n",
 		output.Yellow("!"),
 		output.Faint("v"+currentVersion),
+		output.Arrow,
 		output.Green("v"+r.Version),
 		output.Cyan(`"teamcity update"`),
 	)

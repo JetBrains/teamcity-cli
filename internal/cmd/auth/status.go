@@ -329,12 +329,12 @@ func renderCredentialsDiagnostic(ctx context.Context, p *output.Printer, s authS
 	}
 
 	_, _ = fmt.Fprintf(p.Out, "  %s To authenticate in this environment:\n", output.Yellow("!"))
-	_, _ = fmt.Fprintf(p.Out, "    • Set %s and %s environment variables\n",
-		output.Cyan("TEAMCITY_URL"), output.Cyan("TEAMCITY_TOKEN"))
-	_, _ = fmt.Fprintf(p.Out, "    • Or run %s\n",
-		output.Cyan("teamcity auth login --server "+s.Server+" --insecure-storage"))
+	_, _ = fmt.Fprintf(p.Out, "    %s Set %s and %s environment variables\n",
+		output.Bullet, output.Cyan("TEAMCITY_URL"), output.Cyan("TEAMCITY_TOKEN"))
+	_, _ = fmt.Fprintf(p.Out, "    %s Or run %s\n",
+		output.Bullet, output.Cyan("teamcity auth login --server "+s.Server+" --insecure-storage"))
 	if cmdutil.ProbeGuestAccess(ctx, s.Server) {
-		_, _ = fmt.Fprintf(p.Out, "    • Or set %s for read-only guest access\n", output.Cyan("TEAMCITY_GUEST=1"))
+		_, _ = fmt.Fprintf(p.Out, "    %s Or set %s for read-only guest access\n", output.Bullet, output.Cyan("TEAMCITY_GUEST=1"))
 	}
 }
 
