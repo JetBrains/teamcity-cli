@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -52,7 +53,9 @@ Report issues:  https://jb.gg/tc/issues`,
 			_, _ = fmt.Fprintln(out, "Usage: teamcity <command> [flags]")
 			_, _ = fmt.Fprintln(out)
 			_, _ = fmt.Fprintln(out, "Common commands:")
-			_, _ = fmt.Fprintln(out, "  auth login              Authenticate with TeamCity")
+			if os.Getenv(config.EnvToken) == "" {
+				_, _ = fmt.Fprintln(out, "  auth login              Authenticate with TeamCity")
+			}
 			_, _ = fmt.Fprintln(out, "  run list                List recent runs")
 			_, _ = fmt.Fprintln(out, "  run start <job>         Trigger a new run")
 			_, _ = fmt.Fprintln(out, "  run view <id>           View run details")
