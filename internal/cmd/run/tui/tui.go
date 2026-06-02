@@ -196,7 +196,7 @@ func (m watchModel) View() string {
 	}
 	footer := output.Faint("q quit")
 	if m.build != nil && m.build.Agent != nil {
-		footer += output.Faint("  ·  ") + output.Cyan(fmt.Sprintf("teamcity agent term %d", m.build.Agent.ID))
+		footer += output.Faint("  "+output.Sym().Sep+"  ") + output.Cyan(fmt.Sprintf("teamcity agent term %d", m.build.Agent.ID))
 	}
 	b.WriteString(footer + output.Faint(spinnerView))
 
@@ -216,7 +216,7 @@ func (m watchModel) renderHeader() string {
 	icon := output.StatusIcon(m.build.Status, m.build.State, m.build.StatusText)
 	status := output.StatusText(m.build.Status, m.build.State, m.build.StatusText)
 
-	header := fmt.Sprintf("%s %s %d  #%s %s · %s", icon, output.Bold(jobName), m.build.ID, m.build.Number, output.Faint(m.build.WebURL), status)
+	header := fmt.Sprintf("%s %s %d  #%s %s "+output.Sym().Sep+" %s", icon, output.Bold(jobName), m.build.ID, m.build.Number, output.Faint(m.build.WebURL), status)
 	if m.build.PercentageComplete > 0 && m.build.State != "finished" {
 		header += fmt.Sprintf(" (%d%%)", m.build.PercentageComplete)
 	}

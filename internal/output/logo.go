@@ -17,7 +17,18 @@ const Logo = `████████╗ ██████╗
    ██║   ╚██████╗
    ╚═╝    ╚═════╝`
 
+// LogoASCII is the 7-bit fallback wordmark for terminals that can't render Logo.
+const LogoASCII = `######## ######
+   ##    ##
+   ##    ##
+   ##    ##
+   ##    ######`
+
 func PrintLogo(w io.Writer) {
+	if ASCII {
+		_, _ = fmt.Fprintln(w, Cyan("\n"+LogoASCII))
+		return
+	}
 	if !IsTerminal() {
 		_, _ = fmt.Fprintln(w, Cyan("\n"+Logo))
 		return

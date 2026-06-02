@@ -8,6 +8,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/tiulpin/instill"
 )
@@ -201,9 +202,9 @@ func runSkillInstall(f *cmdutil.Factory, opts *skillOptions, args []string, chec
 		case !r.Existed:
 			p.Success("Installed %s for %s (%s)", r.Skill, r.Agent, bundled)
 		case r.PriorVersion != "" && r.PriorVersion != bundled:
-			p.Success("Updated %s for %s (%s → %s)", r.Skill, r.Agent, r.PriorVersion, bundled)
+			p.Success("Updated %s for %s (%s "+output.Sym().Arrow+" %s)", r.Skill, r.Agent, r.PriorVersion, bundled)
 		case r.PriorVersion == "":
-			p.Success("Updated %s for %s (unversioned → %s)", r.Skill, r.Agent, bundled)
+			p.Success("Updated %s for %s (unversioned "+output.Sym().Arrow+" %s)", r.Skill, r.Agent, bundled)
 		default:
 			p.Success("Reinstalled %s for %s (%s)", r.Skill, r.Agent, bundled)
 		}

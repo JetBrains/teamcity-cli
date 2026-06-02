@@ -394,17 +394,17 @@ func renderDiffHeader(p *output.Printer, b1, b2 *api.Build) {
 		jobName = b1.BuildType.Name
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "COMPARING  %s %d  #%s  →  %s %d  #%s\n",
+	_, _ = fmt.Fprintf(p.Out, "COMPARING  %s %d  #%s  "+output.Sym().Arrow+"  %s %d  #%s\n",
 		icon1, b1.ID, b1.Number, icon2, b2.ID, b2.Number)
 
 	meta := output.Faint("Job: ") + output.Cyan(jobName)
 	if b1.BranchName != "" || b2.BranchName != "" {
 		branch := b1.BranchName
 		if b2.BranchName != "" && b2.BranchName != b1.BranchName {
-			branch = b1.BranchName + " → " + b2.BranchName
+			branch = b1.BranchName + " " + output.Sym().Arrow + " " + b2.BranchName
 		}
 		if branch != "" {
-			meta += output.Faint("  ·  Branch: ") + branch
+			meta += output.Faint("  "+output.Sym().Sep+"  Branch: ") + branch
 		}
 	}
 	_, _ = fmt.Fprintln(p.Out, meta)
@@ -502,7 +502,7 @@ func renderParamsDiff(p *output.Printer, params1, params2 *api.ParameterList) bo
 	for _, c := range diffs {
 		switch c.kind {
 		case "changed":
-			_, _ = fmt.Fprintf(p.Out, "  %s %s: %s → %s\n",
+			_, _ = fmt.Fprintf(p.Out, "  %s %s: %s "+output.Sym().Arrow+" %s\n",
 				output.Yellow("~"), c.name, output.Red(c.old), output.Green(c.new))
 		case "added":
 			_, _ = fmt.Fprintf(p.Out, "  %s %s: %s\n",
@@ -552,7 +552,7 @@ func renderTestsDiff(p *output.Printer, t1, t2, s1, s2 *api.TestOccurrences) boo
 	if len(newFailures) > 0 {
 		_, _ = fmt.Fprintf(p.Out, "  %s\n", output.Red("New failures:"))
 		for _, t := range newFailures {
-			_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Red("✗"), t.Name)
+			_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Red(output.Sym().Cross), t.Name)
 			if t.Details != "" {
 				_, _ = fmt.Fprintf(p.Out, "      %s\n", output.Faint(truncate(t.Details, 120)))
 			}
@@ -562,7 +562,7 @@ func renderTestsDiff(p *output.Printer, t1, t2, s1, s2 *api.TestOccurrences) boo
 	if len(fixed) > 0 {
 		_, _ = fmt.Fprintf(p.Out, "  %s\n", output.Green("Fixed:"))
 		for _, name := range fixed {
-			_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Green("✓"), name)
+			_, _ = fmt.Fprintf(p.Out, "    %s %s\n", output.Green(output.Sym().Check), name)
 		}
 	}
 

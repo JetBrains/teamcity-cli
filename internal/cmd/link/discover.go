@@ -6,6 +6,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/git"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
 // projectMatch groups all build types in a single TC project that match a repo's remotes.
@@ -174,10 +175,10 @@ func discoverProjects(client api.ClientInterface, remoteURLs []string) (*discove
 func jobLabel(o jobOption) string {
 	prefix := o.ProjectName
 	if prefix != "" {
-		prefix += " · "
+		prefix += " " + output.Sym().Sep + " "
 	}
 	if o.Pipeline {
-		return prefix + o.Name + "  ⬡ pipeline"
+		return prefix + o.Name + "  " + output.Sym().Pipeline + " pipeline"
 	}
 	return prefix + o.Name
 }

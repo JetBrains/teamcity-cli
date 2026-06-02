@@ -324,6 +324,18 @@ App-specific alternative to `NO_COLOR` for disabling colored output.
 <tr>
 <td>
 
+`TEAMCITY_ASCII`
+
+</td>
+<td>
+
+Restrict output to ASCII characters, replacing Unicode glyphs (status icons, arrows, tree connectors) with ASCII equivalents. Detected automatically on Windows consoles whose code page is not UTF-8; set this to force it elsewhere.
+
+</td>
+</tr>
+<tr>
+<td>
+
 `TEAMCITY_NO_UPDATE`
 
 </td>

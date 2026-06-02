@@ -130,7 +130,7 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 				switch {
 				case detected != "":
 					_, _ = fmt.Fprintf(p.Out, "%s Detected server from %s/pom.xml\n",
-						output.Green("✓"), config.DetectTeamCityDir())
+						output.Green(output.Sym().Check), config.DetectTeamCityDir())
 					serverURL = detected
 					detected = ""
 				case savedDefault != "":
@@ -152,7 +152,7 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 		p.Progress("Checking %s... ", output.Cyan(serverURL))
 		probeClient := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
 		if err := probeClient.Probe(ctx); err != nil {
-			p.Info("%s", output.Red("✗"))
+			p.Info("%s", output.Red(output.Sym().Cross))
 			if errors.Is(err, context.Canceled) {
 				return "", err
 			}
@@ -164,7 +164,7 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 			serverURL = ""
 			continue
 		}
-		p.Info("%s", output.Green("✓"))
+		p.Info("%s", output.Green(output.Sym().Check))
 		return serverURL, nil
 	}
 }
@@ -179,13 +179,13 @@ func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string)
 	).WithContext(ctx)
 	server, err := client.GetServer()
 	if err != nil {
-		p.Info("%s", output.Red("✗"))
+		p.Info("%s", output.Red(output.Sym().Cross))
 		return api.Validation(
 			"Guest access validation failed",
 			"Verify the server URL and that guest access is enabled on the server",
 		)
 	}
-	p.Info("%s", output.Green("✓"))
+	p.Info("%s", output.Green(output.Sym().Check))
 
 	if err := config.SetGuestServer(serverURL); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
@@ -268,7 +268,7 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 		).WithContext(ctx)
 		user, err := client.GetCurrentUser()
 		if err != nil {
-			p.Info("%s", output.Red("✗"))
+			p.Info("%s", output.Red(output.Sym().Cross))
 			if errors.Is(err, context.Canceled) {
 				return "", nil, err
 			}
@@ -279,7 +279,7 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 			token = ""
 			continue
 		}
-		p.Info("%s", output.Green("✓"))
+		p.Info("%s", output.Green(output.Sym().Check))
 		return token, user, nil
 	}
 }
@@ -306,7 +306,7 @@ func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool)
 	if err := browser.OpenURL(tokenURL); err != nil {
 		_, _ = fmt.Fprintf(p.Out, "  Could not open browser. Please visit: %s\n", tokenURL)
 	} else {
-		_, _ = fmt.Fprintln(p.Out, output.Green("  ✓"), "Opened browser")
+		_, _ = fmt.Fprintln(p.Out, output.Green("  "+output.Sym().Check), "Opened browser")
 	}
 	_, _ = fmt.Fprintln(p.Out)
 	return nil

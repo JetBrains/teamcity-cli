@@ -91,6 +91,10 @@ func (f *Factory) InitOutput() {
 	output.NoColor = !forceColor &&
 		(explicitDisable || os.Getenv("TERM") == "dumb" || !term.IsTerminal(int(os.Stdout.Fd())))
 
+	output.ASCII = os.Getenv("TEAMCITY_ASCII") != "" ||
+		os.Getenv("TERM") == "dumb" ||
+		!output.ConsoleSupportsUTF8()
+
 	f.Printer.Quiet = f.Quiet
 	f.Printer.Verbose = f.Verbose
 }

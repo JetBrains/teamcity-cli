@@ -117,21 +117,21 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 	for _, artifact := range flatList {
 		rel, err := filepath.Rel(absOutput, filepath.Join(absOutput, artifact.Name))
 		if err != nil || !filepath.IsLocal(rel) {
-			_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s path escapes output directory\n", nameWidth, artifact.Name, "", output.Red("   ✗"))
+			_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s path escapes output directory\n", nameWidth, artifact.Name, "", output.Red("   "+output.Sym().Cross))
 			continue
 		}
 		outputPath := filepath.Join(absOutput, rel)
 		size := humanize.IBytes(uint64(artifact.Size))
 
 		if err := downloadArtifact(ctx, client, runID, artifact, outputPath, nameWidth, p.Quiet, p.Out); err != nil {
-			_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s %v\n", nameWidth, artifact.Name, size, output.Red("   ✗"), err)
+			_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s %v\n", nameWidth, artifact.Name, size, output.Red("   "+output.Sym().Cross), err)
 			continue
 		}
-		_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s\n", nameWidth, artifact.Name, size, output.Green("   ✓"))
+		_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s\n", nameWidth, artifact.Name, size, output.Green("   "+output.Sym().Check))
 		downloaded++
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "\n%s %s downloaded\n", output.Green("✓"), english.Plural(downloaded, "artifact", ""))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s downloaded\n", output.Green(output.Sym().Check), english.Plural(downloaded, "artifact", ""))
 	return nil
 }
 

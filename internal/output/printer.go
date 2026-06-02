@@ -38,7 +38,7 @@ func (p *Printer) Success(format string, args ...any) {
 	if p.Quiet {
 		return
 	}
-	p.write(p.Out, fmt.Sprintf("%s %s\n", Green("✓"), fmt.Sprintf(format, args...)))
+	p.write(p.Out, fmt.Sprintf("%s %s\n", Green(Sym().Check), fmt.Sprintf(format, args...)))
 }
 
 func (p *Printer) Info(format string, args ...any) {
@@ -128,10 +128,11 @@ func (p *Printer) PrintTree(root TreeNode) {
 }
 
 func writeTreeNodes(w io.Writer, nodes []TreeNode, prefix string) {
+	s := Sym()
 	for i, n := range nodes {
-		conn, next := "├── ", "│   "
+		conn, next := s.TreeMid, s.TreePipe
 		if i == len(nodes)-1 {
-			conn, next = "└── ", "    "
+			conn, next = s.TreeEnd, s.TreeGap
 		}
 		_, _ = fmt.Fprintf(w, "%s%s%s\n", prefix, conn, n.Label)
 		writeTreeNodes(w, n.Children, prefix+next)

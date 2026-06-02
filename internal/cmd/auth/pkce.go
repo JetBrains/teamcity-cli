@@ -64,7 +64,7 @@ func selectPkceScopes() []string {
 
 	if err := cmdutil.Prompt(huh.NewMultiSelect[string]().
 		Title("Select permissions to request").
-		Description(fmt.Sprintf("%d total · your server role limits the final permission set", len(all))).
+		Description(fmt.Sprintf("%d total "+output.Sym().Sep+" your server role limits the final permission set", len(all))).
 		Options(options...).
 		Value(&selected).
 		Height(7).
@@ -104,7 +104,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client,
 		opening = fmt.Sprintf("Opening browser to authenticate with %d of %d permissions...", len(scopes), total)
 	}
 	p.Info("%s", opening)
-	_, _ = fmt.Fprintf(p.Out, "  %s Approve access in TeamCity\n", output.Yellow("→"))
+	_, _ = fmt.Fprintf(p.Out, "  %s Approve access in TeamCity\n", output.Yellow(output.Sym().Arrow))
 
 	result, err := browserflow.Run(parent, browserflow.Options{
 		Listener:     listener,
