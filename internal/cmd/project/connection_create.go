@@ -62,7 +62,7 @@ choice for CI workflows that don't need user-context OAuth.
 In interactive mode, the CLI registers a new App for you via GitHub's manifest
 flow: it opens a browser, you click "Create", and the credentials are captured
 automatically. Use --no-manifest to enter existing credentials manually.`,
-		Example: `  # Interactive — registers a new App via the manifest flow
+		Example: `  # Interactive - registers a new App via the manifest flow
   teamcity project connection create github-app -p Backend
   teamcity project connection create github-app -p Backend --owner my-org
 
@@ -240,7 +240,7 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 	if interactive && installSlug != "" {
 		stepNum++
 		printWizardStep(f.Printer, stepNum, totalSteps, "Install on a repository",
-			"GitHub Apps grant access per repo — install on the ones TeamCity should clone.")
+			"GitHub Apps grant access per repo - install on the ones TeamCity should clone.")
 		ok := true
 		if err := cmdutil.Confirm("Open a browser to install the App?", &ok); err != nil {
 			return err
@@ -349,7 +349,7 @@ func newConnectionCreateDockerCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "Create a Docker registry connection",
 		Long: `Register Docker registry credentials in a TeamCity project.
 
-Stores a long-lived password — prefer a service account / robot user
+Stores a long-lived password - prefer a service account / robot user
 over a personal account.`,
 		Example: `  # Interactive
   teamcity project connection create docker -p Backend

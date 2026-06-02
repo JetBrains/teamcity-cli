@@ -15,7 +15,7 @@ func MarkExperimental(f *Factory, cmd *cobra.Command) {
 		return
 	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		f.Printer.Warn("%q is experimental: flags, output, and JSON schema may change or the command may be removed without notice. It is intentionally undocumented — do not rely on it in scripts.", cmd.CommandPath())
+		f.Printer.Warn("%q is experimental: flags, output, and JSON schema may change or the command may be removed without notice. It is intentionally undocumented - do not rely on it in scripts.", cmd.CommandPath())
 		return inner(cmd, args)
 	}
 }

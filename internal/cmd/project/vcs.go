@@ -456,7 +456,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 				return nil, testReq, fmt.Errorf("failed to list SSH keys: %w", err)
 			}
 			if len(names) == 0 {
-				return nil, testReq, fmt.Errorf("no SSH keys uploaded to project %s — upload one with: teamcity project ssh upload", projectID)
+				return nil, testReq, fmt.Errorf("no SSH keys uploaded to project %s - upload one with: teamcity project ssh upload", projectID)
 			}
 			options := make([]huh.Option[string], len(names))
 			for i, n := range names {

@@ -125,7 +125,7 @@ Resolution cascade (highest to lowest):
 			if label == "" {
 				label = "(top-level)"
 			}
-			f.Printer.Success("Linked %s — %s", output.Cyan(serverURL), label)
+			f.Printer.Success("Linked %s - %s", output.Cyan(serverURL), label)
 			if project != "" {
 				f.Printer.Info("  Project: %s", project)
 			}
