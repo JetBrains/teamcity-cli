@@ -560,7 +560,7 @@ func projectPickerOptions(f *cmdutil.Factory, permission string) []huh.Option[st
 	for i, p := range roots {
 		label := p.ID
 		if p.Name != "" && p.Name != p.ID {
-			label = p.ID + " — " + p.Name
+			label = p.ID + " - " + p.Name
 		}
 		options[i] = huh.Option[string]{Key: label, Value: p.ID}
 	}

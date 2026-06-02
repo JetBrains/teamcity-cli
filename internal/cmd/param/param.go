@@ -64,7 +64,7 @@ build behavior, can reference other parameters, and may be marked
 as password (secure) so their values never appear in logs.
 
 The <%s-id> positional is optional when teamcity.toml binds this
-repo via 'teamcity link' — the linked %s is used automatically.
+repo via 'teamcity link' - the linked %s is used automatically.
 
 See: https://www.jetbrains.com/help/teamcity/configuring-build-parameters.html`, resource, resource, resource, resource),
 		Args: cobra.NoArgs,

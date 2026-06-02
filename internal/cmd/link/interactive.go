@@ -226,7 +226,7 @@ func pickerClient(f *cmdutil.Factory, serverURL string) (api.ClientInterface, er
 	}
 	token, _, _ := config.GetTokenForServer(serverURL)
 	if token == "" {
-		return nil, fmt.Errorf("no saved credentials for %s — run 'teamcity auth login -s %s'", serverURL, serverURL)
+		return nil, fmt.Errorf("no saved credentials for %s - run 'teamcity auth login -s %s'", serverURL, serverURL)
 	}
 	return api.NewClient(serverURL, token, api.WithVersion(version.String())).WithContext(f.Context()), nil
 }
@@ -325,7 +325,7 @@ func buildGroups(hits []serverResult, hitByURL map[string]*discovery, cfg *link.
 						return []huh.Option[string]{huh.NewOption(output.Faint("(no jobs in this project)"), "")}
 					}
 					out := make([]huh.Option[string], 0, len(jobs)+1)
-					out = append(out, huh.NewOption(output.Faint("(skip — set later)"), ""))
+					out = append(out, huh.NewOption(output.Faint("(skip - set later)"), ""))
 					for _, j := range jobs {
 						out = append(out, huh.NewOption(j.Label, j.ID))
 					}

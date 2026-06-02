@@ -158,7 +158,7 @@ func connectionOptions(client api.ClientInterface, projectID string) (ids, label
 			continue
 		}
 		ids = append(ids, feat.ID)
-		labels = append(labels, feat.ID+" — "+name+" ("+ptype+")")
+		labels = append(labels, feat.ID+" - "+name+" ("+ptype+")")
 	}
 	return ids, labels, nil
 }
