@@ -316,6 +316,18 @@ Description
 <tr>
 <td>
 
+`teamcity job create`
+
+</td>
+<td>
+
+Create a job
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity job list`
 
 </td>

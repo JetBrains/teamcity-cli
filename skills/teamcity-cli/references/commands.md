@@ -175,6 +175,7 @@ Shows all branches and all build states (including canceled, personal, composite
 
 | Command                              | Description               |
 |--------------------------------------|---------------------------|
+| `teamcity job create <name>`               | Create a job                   |
 | `teamcity job list`                        | List build configurations      |
 | `teamcity job view <id>`                   | View job details               |
 | `teamcity job tree <id>`                   | Show snapshot dependency tree  |
@@ -184,6 +185,14 @@ Shows all branches and all build states (including canceled, personal, composite
 | `teamcity job param get <id> <name>`       | Get parameter                  |
 | `teamcity job param set <id> <name> <val>` | Set parameter                  |
 | `teamcity job param delete <id> <name>`    | Delete parameter               |
+
+### Flags for `teamcity job create`
+
+- `-p, --project <id>` - Parent project ID (or `TEAMCITY_PROJECT` / linked project)
+- `--id <id>` - Explicit job ID (default: auto-generated from name)
+- `--template <id>` - Create from an existing template ID
+- `--json` - Output as JSON
+- `-w, --web` - Open in browser after creation
 
 ### Flags for `teamcity job list`
 

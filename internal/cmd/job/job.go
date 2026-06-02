@@ -23,6 +23,7 @@ See: https://www.jetbrains.com/help/teamcity/creating-and-editing-build-configur
 		RunE: cmdutil.SubcommandRequired,
 	}
 
+	cmd.AddCommand(newJobCreateCmd(f))
 	cmd.AddCommand(newJobListCmd(f))
 	cmd.AddCommand(newJobViewCmd(f))
 	cmd.AddCommand(newJobTreeCmd(f))

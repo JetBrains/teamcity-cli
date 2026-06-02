@@ -81,23 +81,27 @@ func (c *Client) SetBuildTypePaused(id string, paused bool) error {
 	return nil
 }
 
-// CreateBuildTypeRequest represents a request to create a build configuration
+// CreateBuildTypeRequest represents a request to create a build configuration; set Templates to create it from a template.
 type CreateBuildTypeRequest struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name"`
+	ID        string         `json:"id,omitempty"`
+	Name      string         `json:"name"`
+	Project   *ProjectRef    `json:"project,omitempty"`
+	Templates *BuildTypeList `json:"templates,omitempty"`
 }
 
-// CreateBuildType creates a new build configuration in a project
+// CreateBuildType creates a new build configuration in a project. It posts a full
+// BuildType to /app/rest/buildTypes (not the project-scoped NewBuildTypeDescription
+// endpoint, which silently ignores the templates field).
 func (c *Client) CreateBuildType(projectID string, req CreateBuildTypeRequest) (*BuildType, error) {
+	req.Project = &ProjectRef{ID: projectID}
+
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	path := fmt.Sprintf("/app/rest/projects/id:%s/buildTypes", projectID)
-
 	var buildType BuildType
-	if err := c.post(c.ctx(), path, bytes.NewReader(body), &buildType); err != nil {
+	if err := c.post(c.ctx(), "/app/rest/buildTypes", bytes.NewReader(body), &buildType); err != nil {
 		return nil, err
 	}
 

@@ -93,7 +93,11 @@ func TestCreateBuildType(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
-		assert.Contains(t, r.URL.Path, "/app/rest/projects/id:P1/buildTypes")
+		assert.Equal(t, "/app/rest/buildTypes", r.URL.Path)
+		var req CreateBuildTypeRequest
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NotNil(t, req.Project)
+		assert.Equal(t, "P1", req.Project.ID)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(BuildType{ID: "P1_NewBuild", Name: "NewBuild"})
 	})
