@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -45,10 +46,12 @@ Report issues:  https://jb.gg/tc/issues`,
 		Version: version.String(),
 		Run: func(cmd *cobra.Command, args []string) {
 			out := f.Printer.Out
-			output.PrintLogo(out)
-			_, _ = fmt.Fprintln(out)
-			_, _ = fmt.Fprintln(out, "TeamCity CLI "+output.Faint("v"+version.String())+" - "+output.Faint("https://jb.gg/tc/docs"))
-			_, _ = fmt.Fprintln(out)
+			if !f.Quiet && os.Getenv("TERM") != "dumb" {
+				output.PrintLogo(out)
+				_, _ = fmt.Fprintln(out)
+				_, _ = fmt.Fprintln(out, "TeamCity CLI "+output.Faint("v"+version.String())+" - "+output.Faint("https://jb.gg/tc/docs"))
+				_, _ = fmt.Fprintln(out)
+			}
 			_, _ = fmt.Fprintln(out, "Usage: teamcity <command> [flags]")
 			_, _ = fmt.Fprintln(out)
 			_, _ = fmt.Fprintln(out, "Common commands:")
