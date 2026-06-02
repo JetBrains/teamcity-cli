@@ -35,7 +35,10 @@ type ClientInterface interface {
 	SetBuildTypePaused(id string, paused bool) error
 	CreateBuildType(projectID string, req CreateBuildTypeRequest) (*BuildType, error)
 	BuildTypeExists(id string) bool
-	CreateBuildStep(buildTypeID string, step BuildStep) error
+	GetBuildSteps(buildTypeID string) (*BuildStepList, error)
+	GetBuildStep(buildTypeID, stepID string) (*BuildStep, error)
+	CreateBuildStep(buildTypeID string, step BuildStep) (*BuildStep, error)
+	DeleteBuildStep(buildTypeID, stepID string) error
 	GetSnapshotDependencies(buildTypeID string) (*SnapshotDependencyList, error)
 	GetDependentBuildTypes(buildTypeID string) (*BuildTypeList, error)
 	GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error)

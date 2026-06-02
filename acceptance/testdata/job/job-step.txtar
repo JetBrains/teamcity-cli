@@ -1,0 +1,59 @@
+# Test job step subcommands (list/view/add/delete).
+[!has_token] skip 'requires authentication token'
+
+# Single-quoted strings disable env-var expansion in testscript, so $RANDOM_STRING
+# is left unquoted (it has no spaces). Sandbox is the sandbox project used by other tests.
+
+# Create a throwaway job to attach steps to
+exec teamcity job create cli-step-$RANDOM_STRING --project Sandbox --id cli_step_$RANDOM_STRING --no-input
+! stderr 'Error'
+
+# Listing steps on a fresh job is empty
+exec teamcity job step list cli_step_$RANDOM_STRING --no-input
+stdout 'No build steps found'
+! stderr 'Error'
+
+# Add a command-line step
+exec teamcity job step add cli_step_$RANDOM_STRING --type simpleRunner --name 'Run Tests' --param script.content='echo hi' --param use.custom.script=true --no-input
+stdout 'Added step'
+! stderr 'Error'
+
+# Add with --json returns the created step object
+exec teamcity job step add cli_step_$RANDOM_STRING --type simpleRunner --name Compile --param script.content='make' --json --no-input
+stdout '"id"'
+stdout '"type"'
+! stderr 'Error'
+
+# List now shows the steps
+exec teamcity job step list cli_step_$RANDOM_STRING --no-input
+stdout 'Run Tests'
+stdout 'simpleRunner'
+stdout 'enabled'
+! stderr 'Error'
+
+# Capture the first step id for view/delete
+exec teamcity job step list cli_step_$RANDOM_STRING --json --no-input
+extract '"id":"([^"]+)"' STEP_ID
+
+# View a single step
+exec teamcity job step view cli_step_$RANDOM_STRING $STEP_ID --no-input
+stdout 'ID:'
+stdout 'Type:'
+! stderr 'Error'
+
+exec teamcity job step view cli_step_$RANDOM_STRING $STEP_ID --json --no-input
+stdout '"name"'
+! stderr 'Error'
+
+# Delete the step (remove alias resolves to the same command)
+exec teamcity job step remove cli_step_$RANDOM_STRING $STEP_ID --no-input
+stdout 'Deleted step'
+! stderr 'Error'
+
+# Missing job is an error
+! exec teamcity job step add --type simpleRunner --no-input
+stderr 'job id is required'
+
+# Cleanup
+exec teamcity api /app/rest/buildTypes/id:cli_step_$RANDOM_STRING -X DELETE --no-input
+! stderr 'Error'

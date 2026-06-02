@@ -183,6 +183,18 @@ func SetupMockClient(t *testing.T) *TestServer {
 			return
 		}
 
+		if strings.Contains(r.URL.Path, "/steps/") {
+			JSON(w, api.BuildStep{ID: ExtractID(r.URL.Path, "/steps/"), Name: "Compile", Type: "gradle"})
+			return
+		}
+		if strings.Contains(r.URL.Path, "/steps") {
+			JSON(w, api.BuildStepList{Count: 2, Step: []api.BuildStep{
+				{ID: "RUNNER_1", Name: "Compile", Type: "gradle"},
+				{ID: "RUNNER_2", Name: "Run Tests", Type: "simpleRunner", Disabled: true},
+			}})
+			return
+		}
+
 		JSON(w, api.BuildType{
 			ID:        id,
 			Name:      "Build",
@@ -196,6 +208,10 @@ func SetupMockClient(t *testing.T) *TestServer {
 	})
 
 	ts.Handle("POST /app/rest/buildTypes/id:", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/steps") {
+			JSON(w, api.BuildStep{ID: "RUNNER_1", Name: "Run Tests", Type: "commandLine"})
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 	})
 

@@ -15,6 +15,7 @@ func allCommands() []string {
 		"run.analysis", "run.metadata", "run.git",
 		"job.create", "job.list", "job.view", "job.tree", "job.pause", "job.resume",
 		"job.param.list", "job.param.get", "job.param.set", "job.param.delete",
+		"job.step.list", "job.step.view", "job.step.add", "job.step.delete",
 		"project.list", "project.view", "project.tree", "project.create",
 		"project.vcs.list", "project.vcs.view", "project.vcs.create", "project.vcs.test", "project.vcs.delete",
 		"project.ssh.list", "project.ssh.upload", "project.ssh.generate", "project.ssh.delete",

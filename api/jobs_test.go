@@ -112,10 +112,58 @@ func TestCreateBuildStep(t *testing.T) {
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Contains(t, r.URL.Path, "/app/rest/buildTypes/id:bt1/steps")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(BuildStep{ID: "RUNNER_1", Name: "test step", Type: "simpleRunner"})
+	})
+
+	step, err := client.CreateBuildStep("bt1", BuildStep{Name: "test step", Type: "simpleRunner"})
+	require.NoError(t, err)
+	assert.Equal(t, "RUNNER_1", step.ID)
+}
+
+func TestGetBuildSteps(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Contains(t, r.URL.Path, "/app/rest/buildTypes/id:bt1/steps")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(BuildStepList{Count: 2, Step: []BuildStep{
+			{ID: "RUNNER_1", Name: "Compile", Type: "gradle"},
+			{ID: "RUNNER_2", Name: "Run Tests", Type: "simpleRunner", Disabled: true},
+		}})
+	})
+
+	steps, err := client.GetBuildSteps("bt1")
+	require.NoError(t, err)
+	assert.Equal(t, 2, steps.Count)
+	assert.Equal(t, "Compile", steps.Step[0].Name)
+	assert.True(t, steps.Step[1].Disabled)
+}
+
+func TestGetBuildStep(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Contains(t, r.URL.Path, "/app/rest/buildTypes/id:bt1/steps/RUNNER_1")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(BuildStep{ID: "RUNNER_1", Name: "Compile", Type: "gradle"})
+	})
+
+	step, err := client.GetBuildStep("bt1", "RUNNER_1")
+	require.NoError(t, err)
+	assert.Equal(t, "Compile", step.Name)
+	assert.Equal(t, "gradle", step.Type)
+}
+
+func TestDeleteBuildStep(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "DELETE", r.Method)
+		assert.Contains(t, r.URL.Path, "/app/rest/buildTypes/id:bt1/steps/RUNNER_1")
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.CreateBuildStep("bt1", BuildStep{Name: "test step", Type: "simpleRunner"})
+	err := client.DeleteBuildStep("bt1", "RUNNER_1")
 	require.NoError(t, err)
 }
 
