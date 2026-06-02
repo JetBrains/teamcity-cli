@@ -185,6 +185,10 @@ Shows all branches and all build states (including canceled, personal, composite
 | `teamcity job param get <id> <name>`       | Get parameter                  |
 | `teamcity job param set <id> <name> <val>` | Set parameter                  |
 | `teamcity job param delete <id> <name>`    | Delete parameter               |
+| `teamcity job step list <id>`              | List build steps               |
+| `teamcity job step view <id> <step-id>`    | View build step details        |
+| `teamcity job step add <id> --type <r>`    | Add a build step               |
+| `teamcity job step delete <id> <step-id>`  | Delete a build step            |
 
 ### Flags for `teamcity job create`
 
@@ -217,6 +221,15 @@ Shows all branches and all build states (including canceled, personal, composite
 ### Flags for `teamcity job param set`
 
 - `--secure` - Mark as secure/password parameter
+
+### Flags for `teamcity job step add`
+
+- `--type <runner-id>` - Runner type ID as used by the REST API: `simpleRunner` (Command Line), `gradle-runner` (Gradle), `Maven2` (Maven), ... (required). Find IDs via `teamcity job step view`.
+- `--name <name>` - Step name
+- `--param <key=value>` - Step parameter (repeatable)
+- `--json` - Output as JSON
+
+The `<id>` (job) positional is optional when the repo is linked; `delete` accepts `remove`/`rm` aliases.
 
 ## Projects (`teamcity project`)
 

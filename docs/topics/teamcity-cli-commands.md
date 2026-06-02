@@ -412,6 +412,54 @@ Resume a paused job
 <tr>
 <td>
 
+`teamcity job step add`
+
+</td>
+<td>
+
+Add a build step to a job
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity job step delete`
+
+</td>
+<td>
+
+Delete a build step
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity job step list`
+
+</td>
+<td>
+
+List job build steps
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity job step view`
+
+</td>
+<td>
+
+View build step details
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity job tree`
 
 </td>

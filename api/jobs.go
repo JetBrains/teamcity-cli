@@ -119,18 +119,63 @@ type BuildStep struct {
 	ID         string       `json:"id,omitempty"`
 	Name       string       `json:"name"`
 	Type       string       `json:"type"`
+	Disabled   bool         `json:"disabled,omitempty"`
 	Properties PropertyList `json:"properties"`
 }
 
-// CreateBuildStep adds a build step to a build configuration
-func (c *Client) CreateBuildStep(buildTypeID string, step BuildStep) error {
+// BuildStepList represents the build steps of a build configuration
+type BuildStepList struct {
+	Count int         `json:"count"`
+	Step  []BuildStep `json:"step"`
+}
+
+const buildStepFields = "count,step(id,name,type,disabled,properties(property(name,value)))"
+
+// GetBuildSteps returns the build steps of a build configuration
+func (c *Client) GetBuildSteps(buildTypeID string) (*BuildStepList, error) {
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps?fields=%s", buildTypeID, url.QueryEscape(buildStepFields))
+
+	var result BuildStepList
+	if err := c.get(c.ctx(), path, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetBuildStep returns a single build step by ID
+func (c *Client) GetBuildStep(buildTypeID, stepID string) (*BuildStep, error) {
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps/%s", buildTypeID, stepID)
+
+	var step BuildStep
+	if err := c.get(c.ctx(), path, &step); err != nil {
+		return nil, err
+	}
+
+	return &step, nil
+}
+
+// CreateBuildStep adds a build step to a build configuration and returns the created step
+func (c *Client) CreateBuildStep(buildTypeID string, step BuildStep) (*BuildStep, error) {
 	body, err := json.Marshal(step)
 	if err != nil {
-		return fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps", buildTypeID)
-	return c.doNoContent(c.ctx(), "POST", path, bytes.NewReader(body), "")
+
+	var created BuildStep
+	if err := c.post(c.ctx(), path, bytes.NewReader(body), &created); err != nil {
+		return nil, err
+	}
+
+	return &created, nil
+}
+
+// DeleteBuildStep removes a build step from a build configuration
+func (c *Client) DeleteBuildStep(buildTypeID, stepID string) error {
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps/%s", buildTypeID, stepID)
+	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
 }
 
 // GetSnapshotDependencies returns the snapshot dependencies for a build configuration

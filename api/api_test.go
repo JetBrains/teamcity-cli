@@ -849,7 +849,7 @@ teamcity auth status
 		})
 		require.NoError(T, err)
 
-		err = client.CreateBuildStep(configID, api.BuildStep{
+		_, err = client.CreateBuildStep(configID, api.BuildStep{
 			Name: "Test Build Auth",
 			Type: "simpleRunner",
 			Properties: api.PropertyList{
