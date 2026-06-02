@@ -13,7 +13,7 @@ func allCommands() []string {
 		"run.log", "run.download", "run.artifacts", "run.tests", "run.pin", "run.unpin",
 		"run.tag", "run.untag", "run.comment", "run.changes", "run.tree", "run.diff",
 		"run.analysis", "run.metadata", "run.git",
-		"job.list", "job.view", "job.tree", "job.pause", "job.resume",
+		"job.create", "job.list", "job.view", "job.tree", "job.pause", "job.resume",
 		"job.param.list", "job.param.get", "job.param.set", "job.param.delete",
 		"project.list", "project.view", "project.tree", "project.create",
 		"project.vcs.list", "project.vcs.view", "project.vcs.create", "project.vcs.test", "project.vcs.delete",

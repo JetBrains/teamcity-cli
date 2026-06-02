@@ -1,0 +1,52 @@
+# Test job create subcommand.
+[!has_token] skip 'requires authentication token'
+
+# Single-quoted strings disable env-var expansion in testscript, so $RANDOM_STRING
+# is left unquoted (it has no spaces). Sandbox is the sandbox project used by other tests.
+
+# Create a job under Sandbox with an explicit ID
+exec teamcity job create cli-job-$RANDOM_STRING --project Sandbox --id cli_job_$RANDOM_STRING --no-input
+stdout 'Created job'
+stdout 'cli_job_'
+! stderr 'Error'
+
+# Cleanup
+exec teamcity api /app/rest/buildTypes/id:cli_job_$RANDOM_STRING -X DELETE --no-input
+! stderr 'Error'
+
+# Create with --json outputs the build configuration object
+exec teamcity job create cli-job-json-$RANDOM_STRING --project Sandbox --id cli_job_json_$RANDOM_STRING --json --no-input
+stdout '"id"'
+stdout '"name"'
+! stderr 'Error'
+
+# Cleanup
+exec teamcity api /app/rest/buildTypes/id:cli_job_json_$RANDOM_STRING -X DELETE --no-input
+! stderr 'Error'
+
+# Create from a template and verify the template is actually attached.
+# First make a throwaway template under Sandbox, capturing its derived ID.
+exec teamcity api /app/rest/buildTypes?fields=id -X POST -f name=cli-tmpl-$RANDOM_STRING -f project=id:Sandbox -f templateFlag=true --raw --no-input
+extract '"id":"([^"]+)"' TEMPLATE_ID
+! stderr 'Error'
+
+exec teamcity job create cli-from-tmpl-$RANDOM_STRING --project Sandbox --id cli_from_tmpl_$RANDOM_STRING --template $TEMPLATE_ID --no-input
+stdout 'Created job'
+! stderr 'Error'
+
+# The created job must reference the template, not report a hollow success.
+exec teamcity api /app/rest/buildTypes/id:cli_from_tmpl_$RANDOM_STRING?fields=templates(buildType(id)) --raw --no-input
+stdout $TEMPLATE_ID
+
+# Cleanup (job first, then template)
+exec teamcity api /app/rest/buildTypes/id:cli_from_tmpl_$RANDOM_STRING -X DELETE --no-input
+exec teamcity api /app/rest/buildTypes/id:$TEMPLATE_ID -X DELETE --no-input
+! stderr 'Error'
+
+# Missing project is an error
+! exec teamcity job create cli-job-noproject-$RANDOM_STRING --no-input
+stderr 'project id is required'
+
+# Missing name is an error
+! exec teamcity job create --project Sandbox --no-input
+stderr '.'
