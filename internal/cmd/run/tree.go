@@ -96,9 +96,9 @@ func runRunTree(f *cmdutil.Factory, runID string, depth int, jsonOut bool) error
 
 func printPipelineTree(p *output.Printer, build *api.Build, pr *api.PipelineRun, node RunTreeNode) {
 	icon := output.StatusIcon(build.Status, build.State, build.StatusText)
-	header := fmt.Sprintf("%s %s ⬡  %d  #%s", icon, output.Cyan(pr.Pipeline.Name), build.ID, build.Number)
+	header := fmt.Sprintf("%s %s "+output.Sym().Pipeline+"  %d  #%s", icon, output.Cyan(pr.Pipeline.Name), build.ID, build.Number)
 	if build.BranchName != "" {
-		header += "  · " + build.BranchName
+		header += "  " + output.Sym().Sep + " " + build.BranchName
 	}
 	_, _ = fmt.Fprintln(p.Out, header)
 
@@ -151,7 +151,7 @@ func buildStatusSummary(deps []RunTreeNode) string {
 	if queued > 0 {
 		parts = append(parts, output.Faint(fmt.Sprintf("%d queued", queued)))
 	}
-	return strings.Join(parts, " · ")
+	return strings.Join(parts, " "+output.Sym().Sep+" ")
 }
 
 func buildRunTree(client api.ClientInterface, b api.Build, depth int, path map[string]bool) (RunTreeNode, error) {

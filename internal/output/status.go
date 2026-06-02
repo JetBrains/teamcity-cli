@@ -6,28 +6,36 @@ func isCanceled(status, statusText string) bool {
 	return strings.EqualFold(status, "UNKNOWN") && strings.HasPrefix(strings.ToLower(statusText), "canceled")
 }
 
-// StatusIcon returns a colored status icon.
+// StatusIcon returns a colored status icon. In ASCII mode the glyph degrades to
+// its PlainStatusIcon equivalent while keeping the color.
 func StatusIcon(status, state string, statusText ...string) string {
-	if state == "running" {
-		return Yellow("●")
+	glyph, color := statusGlyph(status, state, statusText...)
+	if ASCII {
+		glyph = PlainStatusIcon(status, state, statusText...)
 	}
-	if state == "queued" {
-		return Faint("◦")
-	}
+	return color(glyph)
+}
 
-	if len(statusText) > 0 && isCanceled(status, statusText[0]) {
-		return Faint("⊘")
+// statusGlyph returns the Unicode icon and its color function for a status.
+func statusGlyph(status, state string, statusText ...string) (string, func(...any) string) {
+	switch {
+	case state == "running":
+		return "●", Yellow
+	case state == "queued":
+		return "◦", Faint
+	case len(statusText) > 0 && isCanceled(status, statusText[0]):
+		return "⊘", Faint
 	}
 
 	switch strings.ToUpper(status) {
 	case "SUCCESS":
-		return Green("✓")
+		return "✓", Green
 	case "FAILURE", "ERROR":
-		return Red("✗")
+		return "✗", Red
 	case "UNKNOWN":
-		return Yellow("?")
+		return "?", Yellow
 	default:
-		return Faint("○")
+		return "○", Faint
 	}
 }
 

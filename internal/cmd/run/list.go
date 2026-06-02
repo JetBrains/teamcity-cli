@@ -401,14 +401,14 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	icon := output.StatusIcon(build.Status, build.State, build.StatusText)
 	jobName := build.BuildTypeID
 	if pipelineRun != nil && pipelineRun.Pipeline != nil && pipelineRun.Pipeline.Name != "" {
-		jobName = pipelineRun.Pipeline.Name + " ⬡"
+		jobName = pipelineRun.Pipeline.Name + " " + output.Sym().Pipeline
 	} else if build.BuildType != nil {
 		jobName = build.BuildType.Name
 	}
 
 	_, _ = fmt.Fprintf(p.Out, "%s %s %d  #%s", icon, output.Cyan(jobName), build.ID, build.Number)
 	if build.BranchName != "" {
-		_, _ = fmt.Fprintf(p.Out, " · %s", build.BranchName)
+		_, _ = fmt.Fprintf(p.Out, " "+output.Sym().Sep+" %s", build.BranchName)
 	}
 	_, _ = fmt.Fprintln(p.Out)
 
@@ -421,19 +421,19 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 
 		if build.StartDate != "" {
 			startTime, _ := api.ParseTeamCityTime(build.StartDate)
-			_, _ = fmt.Fprintf(p.Out, " · %s", output.RelativeTime(startTime))
+			_, _ = fmt.Fprintf(p.Out, " "+output.Sym().Sep+" %s", output.RelativeTime(startTime))
 
 			if build.FinishDate != "" {
 				finishTime, _ := api.ParseTeamCityTime(build.FinishDate)
 				duration := finishTime.Sub(startTime)
-				_, _ = fmt.Fprintf(p.Out, " · Took %s", output.FormatDuration(duration))
+				_, _ = fmt.Fprintf(p.Out, " "+output.Sym().Sep+" Took %s", output.FormatDuration(duration))
 			}
 		}
 		_, _ = fmt.Fprintln(p.Out)
 	}
 
 	if build.UsedByOtherBuilds {
-		_, _ = fmt.Fprintf(p.Out, "\n%s Results shared in build chain\n", output.Yellow("⟳"))
+		_, _ = fmt.Fprintf(p.Out, "\n%s Results shared in build chain\n", output.Yellow(output.Sym().Recycle))
 	}
 
 	if build.StatusText != "" && build.StatusText != build.Status {
@@ -454,13 +454,13 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	if build.Agent != nil {
 		_, _ = fmt.Fprintf(p.Out, "\nAgent: %s", output.Faint(build.Agent.Name))
 		if build.State == "running" {
-			_, _ = fmt.Fprintf(p.Out, "  %s teamcity agent term %d", output.Faint("·"), build.Agent.ID)
+			_, _ = fmt.Fprintf(p.Out, "  %s teamcity agent term %d", output.Faint(output.Sym().Sep), build.Agent.ID)
 		}
 		_, _ = fmt.Fprintln(p.Out)
 	}
 
 	if build.Pinned {
-		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Yellow("📌 Pinned"))
+		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Yellow(output.Sym().Pinned+" Pinned"))
 	}
 
 	if build.Tags != nil && len(build.Tags.Tag) > 0 {

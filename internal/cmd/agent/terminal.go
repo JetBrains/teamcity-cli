@@ -166,7 +166,7 @@ func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, sh
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(f.Printer.Out, "%s %s\n", output.Green("✓"), agentURL)
+	_, _ = fmt.Fprintf(f.Printer.Out, "%s %s\n", output.Green(output.Sym().Check), agentURL)
 
 	return conn, nil
 }

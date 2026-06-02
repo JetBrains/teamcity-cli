@@ -469,9 +469,9 @@ func (n ProjectTreeNode) toDisplayNode() output.TreeNode {
 		node.Children = append(node.Children, child.toDisplayNode())
 	}
 	for _, p := range n.Pipelines {
-		label := output.Cyan(p.Name) + " " + output.Faint(p.ID) + " " + output.Faint("⬡ pipeline")
+		label := output.Cyan(p.Name) + " " + output.Faint(p.ID) + " " + output.Faint(output.Sym().Pipeline+" pipeline")
 		if p.JobCount > 0 {
-			label += output.Faint(fmt.Sprintf(" · %d jobs", p.JobCount))
+			label += output.Faint(fmt.Sprintf(" "+output.Sym().Sep+" %d jobs", p.JobCount))
 		}
 		node.Children = append(node.Children, output.TreeNode{Label: label})
 	}
@@ -586,7 +586,7 @@ func permissionRoots(projects []api.Project) []api.Project {
 func pickerDescription(total int) string {
 	desc := fmt.Sprintf("%s %s", humanize.Comma(int64(total)), english.PluralWord(total, "project", ""))
 	if total > pickerVisibleRows {
-		desc += " · type to filter"
+		desc += " " + output.Sym().Sep + " type to filter"
 	}
 	return desc
 }

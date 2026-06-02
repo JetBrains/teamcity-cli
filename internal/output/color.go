@@ -15,6 +15,12 @@ import (
 // tests flip it directly for deterministic golden output.
 var NoColor bool
 
+// ASCII restricts output to 7-bit ASCII glyphs when true. Factory.InitOutput
+// writes it from TEAMCITY_ASCII / TERM=dumb / console-codepage detection;
+// tests flip it directly for deterministic golden output. Orthogonal to
+// NoColor: color and glyph repertoire are independent terminal capabilities.
+var ASCII bool
+
 // ansiRenderer emits 16-color ANSI SGR sequences regardless of the detected
 // terminal profile, so output bytes are stable across TTY / piped / CI contexts.
 var ansiRenderer = lipgloss.NewRenderer(os.Stdout)

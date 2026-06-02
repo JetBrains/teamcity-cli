@@ -635,11 +635,11 @@ func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.T
 	_, _ = fmt.Fprint(f.Printer.ErrOut, "Testing connection... ")
 	result, err := client.TestVcsConnection(req, projectID)
 	if err != nil {
-		_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Red("✗"))
+		_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Red(output.Sym().Cross))
 		return fmt.Errorf("connection test failed: %w", err)
 	}
 	if result.Status != "OK" {
-		_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Red("✗"))
+		_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Red(output.Sym().Cross))
 		msg := "connection test failed"
 		if len(result.Errors) > 0 {
 			msg = result.Errors[0].Message
@@ -650,7 +650,7 @@ func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.T
 		}
 		return fmt.Errorf("%s", msg)
 	}
-	_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Green("✓"))
+	_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Green(output.Sym().Check))
 	return nil
 }
 

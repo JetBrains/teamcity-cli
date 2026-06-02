@@ -141,18 +141,18 @@ func promptTheme() *huh.Theme {
 		t.Focused.Title = plain.Bold(true)
 		t.Focused.NoteTitle = plain.Bold(true)
 		t.Focused.Description = plain.Foreground(faint)
-		t.Focused.ErrorIndicator = plain.Foreground(red).SetString(" ✗")
+		t.Focused.ErrorIndicator = plain.Foreground(red).SetString(" " + output.Sym().Cross)
 		t.Focused.ErrorMessage = plain.Foreground(red)
 
-		t.Focused.SelectSelector = plain.Foreground(yellow).SetString("→ ")
-		t.Focused.NextIndicator = plain.Foreground(yellow).MarginLeft(1).SetString("→")
-		t.Focused.PrevIndicator = plain.Foreground(yellow).MarginRight(1).SetString("←")
+		t.Focused.SelectSelector = plain.Foreground(yellow).SetString(output.Sym().Arrow + " ")
+		t.Focused.NextIndicator = plain.Foreground(yellow).MarginLeft(1).SetString(output.Sym().Arrow)
+		t.Focused.PrevIndicator = plain.Foreground(yellow).MarginRight(1).SetString(output.Sym().ArrowLeft)
 		t.Focused.Option = plain
 		t.Focused.SelectedOption = plain
 
-		t.Focused.MultiSelectSelector = plain.Foreground(yellow).SetString("→ ")
-		t.Focused.SelectedPrefix = plain.Foreground(green).SetString("✓ ")
-		t.Focused.UnselectedPrefix = plain.Foreground(faint).SetString("• ")
+		t.Focused.MultiSelectSelector = plain.Foreground(yellow).SetString(output.Sym().Arrow + " ")
+		t.Focused.SelectedPrefix = plain.Foreground(green).SetString(output.Sym().Check + " ")
+		t.Focused.UnselectedPrefix = plain.Foreground(faint).SetString(output.Sym().Bullet + " ")
 		t.Focused.UnselectedOption = plain
 
 		t.Focused.FocusedButton = plain.Bold(true).Foreground(cyan).MarginLeft(3)

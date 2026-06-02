@@ -88,7 +88,7 @@ func renderAgentGroup(w io.Writer, title string, total int, agents []api.Agent, 
 			_, _ = fmt.Fprintf(w, "  %s %d\n", output.Faint("["+pool.name+"]"), len(pool.agents))
 		}
 		if total > len(agents) {
-			_, _ = fmt.Fprintf(w, "  %s %d more not shown\n", output.Faint("…"), total-len(agents))
+			_, _ = fmt.Fprintf(w, "  %s %d more not shown\n", output.Faint(output.Sym().Ellipsis), total-len(agents))
 		}
 	}
 }
@@ -172,7 +172,7 @@ func renderIncompatibilityReasons(w io.Writer, client api.ClientInterface, build
 		}
 		_, _ = fmt.Fprintf(w, "  %s\n", r.agent.Name)
 		for _, reason := range r.reasons {
-			_, _ = fmt.Fprintf(w, "    %s %s\n", output.Red("•"), reason)
+			_, _ = fmt.Fprintf(w, "    %s %s\n", output.Red(output.Sym().Bullet), reason)
 		}
 	}
 }

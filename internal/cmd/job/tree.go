@@ -137,8 +137,8 @@ func runJobTree(f *cmdutil.Factory, jobID string, depth int, only string, jsonOu
 	p.PrintTree(output.TreeNode{
 		Label: output.Cyan(bt.Name),
 		Children: []output.TreeNode{
-			section("▲ Dependents", upNodes),
-			section("▼ Dependencies", downNodes),
+			section(output.Sym().DeltaUp+" Dependents", upNodes),
+			section(output.Sym().DeltaDown+" Dependencies", downNodes),
 		},
 	})
 	return nil

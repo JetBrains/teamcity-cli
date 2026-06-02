@@ -117,19 +117,19 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 
 	p := f.Printer
 	if configErr != nil {
-		_, _ = fmt.Fprintf(p.Out, "%s %s %s %s\n", output.Yellow("!"), output.Cyan(project.Name), output.Faint("·"), "not configured")
+		_, _ = fmt.Fprintf(p.Out, "%s %s %s %s\n", output.Yellow("!"), output.Cyan(project.Name), output.Faint(output.Sym().Sep), "not configured")
 		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint(configErr.Error()))
 		return nil
 	}
 
-	statusIcon := output.Green("✓")
+	statusIcon := output.Green(output.Sym().Check)
 	statusLabel := "synchronized"
 	if statusErr != nil {
-		statusIcon = output.Red("✗")
+		statusIcon = output.Red(output.Sym().Cross)
 		statusLabel = "unavailable"
 	} else {
 		if syncingStatus := getSyncingStatus(status.Message); syncingStatus != "" {
-			statusIcon = output.Cyan("⟳")
+			statusIcon = output.Cyan(output.Sym().Recycle)
 			statusLabel = syncingStatus
 		} else {
 			switch status.Type {
@@ -137,7 +137,7 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 				statusIcon = output.Yellow("!")
 				statusLabel = "warning"
 			case "error":
-				statusIcon = output.Red("✗")
+				statusIcon = output.Red(output.Sym().Cross)
 				statusLabel = "error"
 			}
 		}
@@ -147,7 +147,7 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 	if project.ID != project.Name {
 		header += " " + output.Faint("("+project.ID+")")
 	}
-	_, _ = fmt.Fprintf(p.Out, "%s %s %s %s\n", statusIcon, header, output.Faint("·"), statusLabel)
+	_, _ = fmt.Fprintf(p.Out, "%s %s %s %s\n", statusIcon, header, output.Faint(output.Sym().Sep), statusLabel)
 
 	_, _ = fmt.Fprintln(p.Out)
 	_, _ = fmt.Fprintf(p.Out, "%-12s %s\n", output.Faint("Format"), formatSettingsFormat(cfg.Format))
@@ -413,7 +413,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 		}
 		errs := parseKotlinErrors(combinedOutput)
 
-		_, _ = fmt.Fprintf(p.Out, "%s Configuration invalid\n", output.Red("✗"))
+		_, _ = fmt.Fprintf(p.Out, "%s Configuration invalid\n", output.Red(output.Sym().Cross))
 		if len(errs) > 0 {
 			_, _ = fmt.Fprintln(p.Out)
 			for _, e := range errs {
@@ -432,7 +432,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 		return f.Printer.PrintJSON(validateResultJSON{Valid: true, Path: dslDir})
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "%s Configuration valid\n", output.Green("✓"))
+	_, _ = fmt.Fprintf(p.Out, "%s Configuration valid\n", output.Green(output.Sym().Check))
 
 	if serverURL := config.DetectServerFromDSL(); serverURL != "" {
 		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Faint("Server:"), serverURL)

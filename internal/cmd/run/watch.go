@@ -165,7 +165,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				if !opts.json {
-					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
+					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red(output.Sym().Cross))
 				}
 				return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
 			}
@@ -223,14 +223,14 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 			if build.State == "queued" {
 				status = output.Faint("Queued")
 				if build.WaitReason != "" {
-					status = output.Faint("Queued · " + build.WaitReason)
+					status = output.Faint("Queued " + output.Sym().Sep + " " + build.WaitReason)
 				}
 			}
 			progress := ""
 			if build.PercentageComplete > 0 {
 				progress = fmt.Sprintf(" (%d%%)", build.PercentageComplete)
 			}
-			_, _ = fmt.Fprintf(p.Out, "\r%s %s %d  #%s %s · %s%s    ",
+			_, _ = fmt.Fprintf(p.Out, "\r%s %s %d  #%s %s "+output.Sym().Sep+" %s%s    ",
 				output.StatusIcon(build.Status, build.State, build.StatusText),
 				output.Cyan(jobName),
 				build.ID,
@@ -267,7 +267,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				if !opts.json {
-					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red("✗"))
+					_, _ = fmt.Fprintf(p.Out, "\n%s Timeout exceeded\n", output.Red(output.Sym().Cross))
 				}
 				return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
 			}

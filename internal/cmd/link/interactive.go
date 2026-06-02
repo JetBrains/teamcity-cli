@@ -336,7 +336,7 @@ func buildGroups(hits []serverResult, hitByURL map[string]*discovery, cfg *link.
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Select additional jobs").
-				Description("Surfaced in TAB completion alongside the default · saved to teamcity.toml").
+				Description("Surfaced in TAB completion alongside the default "+output.Sym().Sep+" saved to teamcity.toml").
 				OptionsFunc(func() []huh.Option[string] {
 					all := allJobsOnServer(hitByURL[in.server])
 					out := make([]huh.Option[string], 0, len(all))
