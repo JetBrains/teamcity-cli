@@ -1,6 +1,7 @@
 package param_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
@@ -63,6 +64,33 @@ func TestParamDeleteJob(t *testing.T) {
 	f := ts.Factory
 
 	cmdtest.RunCmdWithFactory(t, f, "job", "param", "delete", "TestProject_Build", "myParam")
+}
+
+func TestParamListProjectWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "project", "param", "list", "TestProject", "--web")
+	want := ts.URL + "/admin/editProject.html?projectId=TestProject&tab=projectParams"
+	if !strings.Contains(out, want) {
+		t.Fatalf("--web output = %q, want it to contain %q", out, want)
+	}
+}
+
+func TestParamListJobWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "job", "param", "list", "TestProject_Build", "--web")
+	want := ts.URL + "/admin/editBuildParams.html?id=buildType:TestProject_Build"
+	if !strings.Contains(out, want) {
+		t.Fatalf("--web output = %q, want it to contain %q", out, want)
+	}
+}
+
+// --web must validate the owner exists before emitting its params URL (not exit 0 on a bad id).
+func TestParamListWebValidatesOwner(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "", "project", "param", "list", "NonExistentProject123456", "--web")
 }
 
 func TestParamRequiresSubcommand(t *testing.T) {

@@ -43,6 +43,22 @@ func TestRunListBackwardsDateRange(T *testing.T) {
 	cmdtest.RunCmdWithFactoryExpectErr(T, ts.Factory, "is more recent than", "run", "list", "--since", "2020-01-01", "--until", "2019-01-01")
 }
 
+func TestRunListWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "run", "list", "--web")
+	assert.Contains(t, out, ts.URL+"/builds")
+
+	fav := cmdtest.CaptureOutput(t, ts.Factory, "run", "list", "--favorites", "--web")
+	assert.Contains(t, fav, ts.URL+"/favorite/builds")
+}
+
+func TestRunListWebValidatesFlags(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "invalid status", "run", "list", "--status", "bogus", "--web")
+}
+
 func TestRunView(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory

@@ -209,3 +209,26 @@ teamcity.serverUrl=https://tc.example.com
 		assert.Contains(t, auth.Password, "ss")
 	})
 }
+
+func TestResolveServerURL(t *testing.T) {
+	t.Run("falls back to build-auth when no TEAMCITY_URL or default", func(t *testing.T) {
+		origCfg := cfg
+		ResetForTest()
+		t.Cleanup(func() { cfg = origCfg })
+
+		propsFile := filepath.Join(t.TempDir(), "build.properties")
+		content := "teamcity.auth.userId=u\nteamcity.auth.password=p\nteamcity.serverUrl=https://build.example.com\n"
+		require.NoError(t, os.WriteFile(propsFile, []byte(content), 0600))
+
+		t.Setenv(EnvBuildPropertiesFile, propsFile)
+		t.Setenv(EnvServerURL, "")
+		t.Setenv(EnvBuildURL, "")
+
+		assert.Equal(t, "https://build.example.com", ResolveServerURL())
+	})
+
+	t.Run("prefers TEAMCITY_URL", func(t *testing.T) {
+		t.Setenv(EnvServerURL, "https://env.example.com")
+		assert.Equal(t, "https://env.example.com", ResolveServerURL())
+	})
+}

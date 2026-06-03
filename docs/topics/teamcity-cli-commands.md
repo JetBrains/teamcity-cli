@@ -587,6 +587,18 @@ List project connections
 <tr>
 <td>
 
+`teamcity project connection view`
+
+</td>
+<td>
+
+View a project connection
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project create`
 
 </td>

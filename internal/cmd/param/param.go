@@ -99,6 +99,7 @@ type paramListOptions struct {
 	json     bool
 	plain    bool
 	noHeader bool
+	cmdutil.ViewOptions
 }
 
 func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
@@ -112,32 +113,47 @@ func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, res
 		Example: fmt.Sprintf(`  teamcity %s param list MyID
   teamcity %s param list                # uses linked %s (see 'teamcity link')
   teamcity %s param list MyID --json
-  teamcity %s param list MyID --plain`, resource, resource, resource, resource, resource),
+  teamcity %s param list MyID --plain
+  teamcity %s param list MyID --web`, resource, resource, resource, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, _, err := resolveResourceID(resource, args, 0, resolveID)
 			if err != nil {
 				return err
 			}
-			return runParamList(f, id, opts, paramAPI)
+			return runParamList(f, resource, id, opts, paramAPI)
 		},
 	}
 
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
 	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
+	cmdutil.AddWebFlags(cmd, &opts.ViewOptions)
 	cmd.MarkFlagsMutuallyExclusive("json", "plain")
 
 	return cmd
 }
 
-func runParamList(f *cmdutil.Factory, id string, opts *paramListOptions, paramAPI ParamAPI) error {
+// paramListURL returns the TeamCity admin URL for a resource's parameters page.
+func paramListURL(serverURL, resource, id string) string {
+	if resource == "job" {
+		return serverURL + "/admin/editBuildParams.html?id=buildType:" + id
+	}
+	return serverURL + "/admin/editProject.html?projectId=" + id + "&tab=projectParams"
+}
+
+func runParamList(f *cmdutil.Factory, resource, id string, opts *paramListOptions, paramAPI ParamAPI) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
 	}
 
+	// Fetch first so a mistyped owner id is reported, then --web navigates to the owner's params page.
 	params, err := paramAPI.List(client, id)
 	if err != nil {
+		return err
+	}
+
+	if done, err := opts.EmitWebURL(f.Printer, paramListURL(client.ServerURL(), resource, id)); done {
 		return err
 	}
 

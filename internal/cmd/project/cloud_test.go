@@ -33,6 +33,22 @@ func TestCloudProfileView(t *testing.T) {
 	assert.Contains(t, out, "Project: TestProject")
 }
 
+func TestCloudProfileViewWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "project", "cloud", "profile", "view", "aws-prod", "--web")
+	assert.Contains(t, out, ts.URL+"/admin/editProject.html?projectId=TestProject&tab=clouds&profileId=aws-prod")
+}
+
+func TestCloudProfileViewWebNoProject(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/cloud/profiles/", func(w http.ResponseWriter, _ *http.Request) {
+		cmdtest.JSON(w, api.CloudProfile{ID: "aws-prod", Name: "AWS Production", CloudProviderID: "amazon"})
+	})
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "no web URL", "project", "cloud", "profile", "view", "aws-prod", "--web")
+}
+
 func TestCloudProfileViewUsesNestedProject(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 

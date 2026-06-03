@@ -2,6 +2,7 @@ package job_test
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -25,6 +26,16 @@ func TestJobView(T *testing.T) {
 
 	cmdtest.RunCmdWithFactory(T, f, "job", "view", testJob)
 	cmdtest.RunCmdWithFactory(T, f, "job", "view", testJob, "--json")
+}
+
+func TestJobViewWeb(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	out := cmdtest.CaptureOutput(T, ts.Factory, "job", "view", testJob, "--web")
+	want := ts.URL + "/viewType.html?buildTypeId=" + testJob
+	if !strings.Contains(out, want) {
+		T.Fatalf("--web output = %q, want it to contain %q", out, want)
+	}
 }
 
 func TestJobPauseResume(T *testing.T) {

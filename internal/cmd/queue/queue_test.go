@@ -2,6 +2,7 @@ package queue_test
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,6 +52,22 @@ func TestQueueList_waitReason(t *testing.T) {
 	got := cmdtest.CaptureOutput(t, ts.Factory, "queue", "list")
 	assert.Contains(t, got, "Waiting for build #199 in chain")
 	assert.Contains(t, got, "WAIT REASON")
+}
+
+func TestQueueListWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "queue", "list", "--web")
+	want := ts.URL + "/queue.html"
+	if !strings.Contains(out, want) {
+		t.Fatalf("--web output = %q, want it to contain %q", out, want)
+	}
+}
+
+func TestQueueListWebValidatesLimit(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "limit", "queue", "list", "--limit", "-1", "--web")
 }
 
 func TestQueueRemove(T *testing.T) {

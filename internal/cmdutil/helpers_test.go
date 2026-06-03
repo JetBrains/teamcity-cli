@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,6 +63,72 @@ func TestAddViewFlags(t *testing.T) {
 
 	assert.NotNil(t, cmd.Flags().Lookup("json"))
 	assert.NotNil(t, cmd.Flags().Lookup("web"))
+	assert.Nil(t, cmd.Flags().Lookup("print-url"))
+}
+
+func TestEmitWebURL(t *testing.T) {
+	orig := OpenInBrowser
+	t.Cleanup(func() { OpenInBrowser = orig })
+
+	t.Run("web echoes url and opens it", func(t *testing.T) {
+		var opened string
+		OpenInBrowser = func(url string) error { opened = url; return nil }
+		var buf bytes.Buffer
+		p := &output.Printer{Out: &buf, ErrOut: &buf}
+		opts := &ViewOptions{Web: true}
+		done, err := opts.EmitWebURL(p, "https://tc.example.com/foo")
+		require.NoError(t, err)
+		assert.True(t, done)
+		assert.Equal(t, "https://tc.example.com/foo", opened)
+		assert.Contains(t, buf.String(), "https://tc.example.com/foo")
+	})
+
+	t.Run("open failure warns but does not error", func(t *testing.T) {
+		OpenInBrowser = func(string) error { return errors.New("no display") }
+		var buf bytes.Buffer
+		p := &output.Printer{Out: &buf, ErrOut: &buf}
+		opts := &ViewOptions{Web: true}
+		done, err := opts.EmitWebURL(p, "https://tc.example.com/foo")
+		require.NoError(t, err)
+		assert.True(t, done)
+		assert.Contains(t, buf.String(), "https://tc.example.com/foo")
+	})
+
+	t.Run("no flag → not handled, no output", func(t *testing.T) {
+		var buf bytes.Buffer
+		p := &output.Printer{Out: &buf, ErrOut: &buf}
+		opts := &ViewOptions{}
+		done, err := opts.EmitWebURL(p, "https://tc.example.com/foo")
+		require.NoError(t, err)
+		assert.False(t, done)
+		assert.Empty(t, buf.String())
+	})
+}
+
+func TestEmitListWebURL(t *testing.T) {
+	orig := OpenInBrowser
+	t.Cleanup(func() { OpenInBrowser = orig })
+	OpenInBrowser = func(string) error { return nil }
+
+	t.Run("empty server → no-op so caller falls through", func(t *testing.T) {
+		var buf bytes.Buffer
+		p := &output.Printer{Out: &buf, ErrOut: &buf}
+		opts := &ViewOptions{Web: true}
+		done, err := opts.EmitListWebURL(p, "", "/builds")
+		require.NoError(t, err)
+		assert.False(t, done)
+		assert.Empty(t, buf.String())
+	})
+
+	t.Run("server set → emits server+path", func(t *testing.T) {
+		var buf bytes.Buffer
+		p := &output.Printer{Out: &buf, ErrOut: &buf}
+		opts := &ViewOptions{Web: true}
+		done, err := opts.EmitListWebURL(p, "https://tc.example.com", "/builds")
+		require.NoError(t, err)
+		assert.True(t, done)
+		assert.Contains(t, buf.String(), "https://tc.example.com/builds")
+	})
 }
 
 func TestSubcommandRequired(t *testing.T) {

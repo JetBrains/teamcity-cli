@@ -16,7 +16,6 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/dustin/go-humanize"
 	"github.com/dustin/go-humanize/english"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -161,8 +160,8 @@ func runProjectView(f *cmdutil.Factory, projectID string, opts *cmdutil.ViewOpti
 		return err
 	}
 
-	if opts.Web {
-		return browser.OpenURL(project.WebURL)
+	if done, err := opts.EmitWebURL(f.Printer, project.WebURL); done {
+		return err
 	}
 
 	if opts.JSON {

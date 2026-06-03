@@ -13,7 +13,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +33,7 @@ type runListOptions struct {
 	jsonFields string
 	plain      bool
 	noHeader   bool
-	web        bool
+	cmdutil.ViewOptions
 }
 
 func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -56,7 +55,8 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run list --since 24h
   teamcity run list --json
   teamcity run list --json=id,status,webUrl
-  teamcity run list --plain | grep failure`,
+  teamcity run list --plain | grep failure
+  teamcity run list --favorites --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRunList(f, cmd, opts)
 		},
@@ -75,7 +75,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
 	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
 	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
-	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
+	cmdutil.AddWebFlags(cmd, &opts.ViewOptions)
 
 	cmd.MarkFlagsMutuallyExclusive("json", "plain")
 
@@ -92,6 +92,18 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) error {
 	if err := cmdutil.ValidateLimit(opts.limit); err != nil {
 		return err
+	}
+	// --web validates the same query flags before navigating, so a bad value is reported rather than masked.
+	if opts.Web {
+		if _, _, err := resolveRunListStatus(opts.status); err != nil {
+			return err
+		}
+		if _, _, err := resolveRunListDateRange(opts); err != nil {
+			return err
+		}
+		if done, err := opts.EmitListWebURL(f.Printer, config.ResolveServerURL(), resolveRunListWebPath(opts)); done {
+			return err
+		}
 	}
 	jsonResult, showHelp, err := cmdutil.ParseJSONFields(cmd, opts.jsonFields, &api.BuildFields, f.Printer.Out)
 	if err != nil {
@@ -121,11 +133,6 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	request, err := resolveRunListRequest(client, opts, jsonResult.Fields)
 	if err != nil {
 		return err
-	}
-
-	if opts.web {
-		url := config.GetServerURL() + request.webPath
-		return browser.OpenURL(url)
 	}
 
 	runs, err := client.GetBuilds(f.Context(), request.builds)
@@ -213,7 +220,6 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 
 type runListRequest struct {
 	builds   api.BuildsOptions
-	webPath  string
 	emptyMsg string
 	emptyTip string
 }
@@ -259,7 +265,6 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 			UntilDate:   untilDate,
 			Fields:      fields,
 		},
-		webPath:  resolveRunListWebPath(opts),
 		emptyMsg: resolveRunListEmptyMessage(opts),
 		emptyTip: resolveRunListEmptyTip(opts),
 	}, nil
@@ -383,8 +388,8 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 		return err
 	}
 
-	if opts.Web {
-		return browser.OpenURL(build.WebURL)
+	if done, err := opts.EmitWebURL(p, build.WebURL); done {
+		return err
 	}
 
 	if opts.JSON {

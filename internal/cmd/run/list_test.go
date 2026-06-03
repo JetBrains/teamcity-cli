@@ -16,7 +16,7 @@ func TestResolveRunListRequestFavorites(T *testing.T) {
 	require.NoError(T, err)
 
 	assert.True(T, req.builds.Favorites)
-	assert.Equal(T, "/favorite/builds", req.webPath)
+	assert.Equal(T, "/favorite/builds", resolveRunListWebPath(&runListOptions{favorites: true}))
 	assert.Equal(T, "No favorite runs found", req.emptyMsg)
 	assert.Equal(T, 30, req.builds.Limit)
 }

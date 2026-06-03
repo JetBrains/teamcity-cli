@@ -104,12 +104,8 @@ func (opts *cloudProfileListOptions) fetch(client api.ClientInterface, fields []
 	}, nil
 }
 
-type cloudProfileViewOptions struct {
-	json bool
-}
-
 func newCloudProfileViewCmd(f *cmdutil.Factory) *cobra.Command {
-	opts := &cloudProfileViewOptions{}
+	opts := &cmdutil.ViewOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "view <profile>",
@@ -117,18 +113,19 @@ func newCloudProfileViewCmd(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"show"},
 		Args:    cobra.ExactArgs(1),
 		Example: `  teamcity project cloud profile view aws-prod
-  teamcity project cloud profile view aws-prod --json`,
+  teamcity project cloud profile view aws-prod --json
+  teamcity project cloud profile view aws-prod --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCloudProfileView(f, args[0], opts)
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
+	cmdutil.AddViewFlags(cmd, opts)
 
 	return cmd
 }
 
-func runCloudProfileView(f *cmdutil.Factory, locator string, opts *cloudProfileViewOptions) error {
+func runCloudProfileView(f *cmdutil.Factory, locator string, opts *cmdutil.ViewOptions) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -139,7 +136,17 @@ func runCloudProfileView(f *cmdutil.Factory, locator string, opts *cloudProfileV
 		return err
 	}
 
-	if opts.json {
+	if opts.Web {
+		if profile.Project == nil || profile.Project.ID == "" {
+			return fmt.Errorf("no web URL available for cloud profile %s", locator)
+		}
+		url := fmt.Sprintf("%s/admin/editProject.html?projectId=%s&tab=clouds&profileId=%s", client.ServerURL(), profile.Project.ID, profile.ID)
+		if done, err := opts.EmitWebURL(f.Printer, url); done {
+			return err
+		}
+	}
+
+	if opts.JSON {
 		return f.Printer.PrintJSON(profile)
 	}
 

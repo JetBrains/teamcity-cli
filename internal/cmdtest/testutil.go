@@ -19,6 +19,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Stub browser opening so command tests never launch a real browser.
+func init() { cmdutil.OpenInBrowser = func(string) error { return nil } }
+
 // TestServer wraps httptest.Server for easy API testing.
 type TestServer struct {
 	*httptest.Server

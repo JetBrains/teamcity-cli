@@ -6,7 +6,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -42,11 +41,12 @@ func runPipelineView(f *cmdutil.Factory, id string, opts *cmdutil.ViewOptions) e
 		return err
 	}
 
-	if opts.Web {
-		if pipeline.WebURL == "" {
-			return fmt.Errorf("no web URL available for pipeline %s", id)
-		}
-		return browser.OpenURL(pipeline.WebURL)
+	if opts.Web && pipeline.WebURL == "" {
+		return fmt.Errorf("no web URL available for pipeline %s", id)
+	}
+
+	if done, err := opts.EmitWebURL(f.Printer, pipeline.WebURL); done {
+		return err
 	}
 
 	if opts.JSON {

@@ -9,6 +9,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +39,7 @@ See: https://www.jetbrains.com/help/teamcity/ssh-keys-management.html`,
 type sshListOptions struct {
 	project string
 	cmdutil.ListFlags
+	cmdutil.ViewOptions
 }
 
 func newSSHListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -50,14 +52,25 @@ func newSSHListCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity project ssh list
   teamcity project ssh list --project MyProject
   teamcity project ssh list --project MyProject --json
-  teamcity project ssh list --plain`,
+  teamcity project ssh list --plain
+  teamcity project ssh list --project MyProject --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Web {
+				if err := cmdutil.ValidateLimit(opts.Limit); err != nil {
+					return err
+				}
+			}
+			path := "/admin/editProject.html?projectId=" + cmp.Or(opts.project, "_Root") + "&tab=ssh-manager"
+			if done, err := opts.EmitListWebURL(f.Printer, config.ResolveServerURL(), path); done {
+				return err
+			}
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.SSHKeyFields, opts.fetch)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddWebFlags(cmd, &opts.ViewOptions)
 
 	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 

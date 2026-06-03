@@ -34,6 +34,13 @@ func TestJobStepView(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, ts.Factory, "job", "step", "view", testJob, "RUNNER_1", "--json")
 }
 
+func TestJobStepViewWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "job", "step", "view", testJob, "RUNNER_1", "--web")
+	assert.Contains(t, out, ts.URL+"/admin/editBuildRunners.html?id=buildType:"+testJob)
+}
+
 func TestJobStepAdd(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
