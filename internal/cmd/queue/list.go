@@ -6,6 +6,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -13,6 +14,7 @@ import (
 type queueListOptions struct {
 	job string
 	cmdutil.ListFlags
+	cmdutil.ViewOptions
 }
 
 func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -27,14 +29,24 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity queue list --json
   teamcity queue list --json=id,state,webUrl
   teamcity queue list --plain
-  teamcity queue list --plain --no-header`,
+  teamcity queue list --plain --no-header
+  teamcity queue list --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Web {
+				if err := cmdutil.ValidateLimit(opts.Limit); err != nil {
+					return err
+				}
+			}
+			if done, err := opts.EmitListWebURL(f.Printer, config.ResolveServerURL(), "/queue.html"); done {
+				return err
+			}
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.QueuedBuildFields, opts.fetch)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Filter by job ID")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 30)
+	cmdutil.AddWebFlags(cmd, &opts.ViewOptions)
 
 	_ = cmd.RegisterFlagCompletionFunc("job", completion.LinkedJobs())
 

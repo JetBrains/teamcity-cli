@@ -17,6 +17,19 @@ func TestVcsList(T *testing.T) {
 	assert.Contains(T, out, "Git")
 }
 
+func TestVcsListWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "project", "vcs", "list", "--project", "TestProject", "--web")
+	assert.Contains(t, out, ts.URL+"/admin/editProject.html?projectId=TestProject&tab=projectVcsRoots")
+}
+
+func TestVcsListWebValidatesLimit(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "limit", "project", "vcs", "list", "--limit", "-1", "--web")
+}
+
 func TestVcsListJSON(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory

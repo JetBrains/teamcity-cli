@@ -8,12 +8,12 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
 func newPoolListCmd(f *cmdutil.Factory) *cobra.Command {
 	flags := &cmdutil.ListFlags{}
+	view := &cmdutil.ViewOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -22,14 +22,19 @@ func newPoolListCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity pool list
   teamcity pool list --json
   teamcity pool list --json=id,name,maxAgents
-  teamcity pool list --plain`,
+  teamcity pool list --plain
+  teamcity pool list --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if done, err := view.EmitListWebURL(f.Printer, config.ResolveServerURL(), "/agents.html?tab=agentPools"); done {
+				return err
+			}
 			return cmdutil.RunList(f, cmd, flags, &api.PoolFields, fetchPools)
 		},
 	}
 
 	cmdutil.AddJSONFieldsFlag(cmd, &flags.JSONFields)
 	cmdutil.AddPlainFlags(cmd, flags)
+	cmdutil.AddWebFlags(cmd, view)
 
 	return cmd
 }
@@ -90,11 +95,6 @@ func newPoolViewCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runPoolView(f *cmdutil.Factory, poolID int, opts *cmdutil.ViewOptions) error {
-	if opts.Web {
-		url := fmt.Sprintf("%s/agents.html?tab=agentPools&poolId=%d", config.GetServerURL(), poolID)
-		return browser.OpenURL(url)
-	}
-
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -102,6 +102,11 @@ func runPoolView(f *cmdutil.Factory, poolID int, opts *cmdutil.ViewOptions) erro
 
 	pool, err := client.GetAgentPool(poolID)
 	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/agents.html?tab=agentPools&poolId=%d", client.ServerURL(), poolID)
+	if done, err := opts.EmitWebURL(f.Printer, url); done {
 		return err
 	}
 
@@ -138,8 +143,7 @@ func runPoolView(f *cmdutil.Factory, poolID int, opts *cmdutil.ViewOptions) erro
 		_, _ = fmt.Fprintf(p.Out, "\n%s\n", output.Faint("No projects assigned to this pool"))
 	}
 
-	webURL := fmt.Sprintf("%s/agents.html?tab=agentPools&poolId=%d", config.GetServerURL(), poolID)
-	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), output.Green(webURL))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), output.Green(url))
 
 	return nil
 }

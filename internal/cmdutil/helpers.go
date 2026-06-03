@@ -18,10 +18,41 @@ type ViewOptions struct {
 	Web  bool
 }
 
+// OpenInBrowser opens url in the default browser; overridable in tests.
+var OpenInBrowser = browser.OpenURL
+
+// AddWebFlags adds the --web flag, mutually exclusive with --json when present.
+func AddWebFlags(cmd *cobra.Command, opts *ViewOptions) {
+	cmd.Flags().BoolVarP(&opts.Web, "web", "w", false, "Open in browser")
+	if cmd.Flags().Lookup("json") != nil {
+		cmd.MarkFlagsMutuallyExclusive("json", "web")
+	}
+}
+
 // AddViewFlags adds --json and --web flags to a command.
 func AddViewFlags(cmd *cobra.Command, opts *ViewOptions) {
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output as JSON")
-	cmd.Flags().BoolVarP(&opts.Web, "web", "w", false, "Open in browser")
+	AddWebFlags(cmd, opts)
+}
+
+// EmitWebURL handles --web: echoes url and best-effort opens it in the browser. Returns whether it acted.
+func (o *ViewOptions) EmitWebURL(p *output.Printer, url string) (bool, error) {
+	if !o.Web {
+		return false, nil
+	}
+	_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint("Opening in browser:"), output.Green(url))
+	if err := OpenInBrowser(url); err != nil {
+		p.Warn("could not open browser: %v", err)
+	}
+	return true, nil
+}
+
+// EmitListWebURL handles --web for list pages, whose URL is built before any client exists; it no-ops on an empty server so the caller falls through to the normal not-configured error.
+func (o *ViewOptions) EmitListWebURL(p *output.Printer, serverURL, path string) (bool, error) {
+	if serverURL == "" {
+		return false, nil
+	}
+	return o.EmitWebURL(p, serverURL+path)
 }
 
 // OpenURLOrWarn opens url in the browser, warning on failure. Never returns an error — safe to call after a mutation.
@@ -29,7 +60,7 @@ func OpenURLOrWarn(p *output.Printer, url string) {
 	if url == "" {
 		return
 	}
-	if err := browser.OpenURL(url); err != nil {
+	if err := OpenInBrowser(url); err != nil {
 		p.Warn("could not open browser: %v", err)
 	}
 }

@@ -6,8 +6,8 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -66,6 +66,7 @@ type agentListOptions struct {
 	enabled    bool
 	authorized bool
 	cmdutil.ListFlags
+	cmdutil.ViewOptions
 }
 
 func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -81,8 +82,17 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity agent list --json
   teamcity agent list --json=id,name,connected,enabled
   teamcity agent list --plain
-  teamcity agent list --plain --no-header`,
+  teamcity agent list --plain --no-header
+  teamcity agent list --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Web {
+				if err := cmdutil.ValidateLimit(opts.Limit); err != nil {
+					return err
+				}
+			}
+			if done, err := opts.EmitListWebURL(f.Printer, config.ResolveServerURL(), "/agents.html"); done {
+				return err
+			}
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.AgentFields, opts.fetch)
 		},
 	}
@@ -92,6 +102,7 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.enabled, "enabled", false, "Show only enabled agents")
 	cmd.Flags().BoolVar(&opts.authorized, "authorized", false, "Show only authorized agents")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddWebFlags(cmd, &opts.ViewOptions)
 
 	return cmd
 }
@@ -165,8 +176,8 @@ func runAgentView(f *cmdutil.Factory, nameOrID string, opts *cmdutil.ViewOptions
 		return err
 	}
 
-	if opts.Web {
-		return browser.OpenURL(agent.WebURL)
+	if done, err := opts.EmitWebURL(f.Printer, agent.WebURL); done {
+		return err
 	}
 
 	if opts.JSON {

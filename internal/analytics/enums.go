@@ -22,7 +22,7 @@ func allCommands() []string {
 		"project.cloud.profile.list", "project.cloud.profile.view",
 		"project.cloud.image.list", "project.cloud.image.view", "project.cloud.image.start",
 		"project.cloud.instance.list", "project.cloud.instance.view", "project.cloud.instance.stop",
-		"project.connection.list", "project.connection.authorize", "project.connection.delete",
+		"project.connection.list", "project.connection.view", "project.connection.authorize", "project.connection.delete",
 		"project.connection.create.docker", "project.connection.create.github-app",
 		"project.token.put", "project.token.get",
 		"project.settings.status", "project.settings.export", "project.settings.validate",

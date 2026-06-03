@@ -24,6 +24,19 @@ func TestAgentList(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, f, "agent", "list", "--limit", "10")
 }
 
+func TestAgentListWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "agent", "list", "--web")
+	assert.Contains(t, out, ts.URL+"/agents.html")
+}
+
+func TestAgentListWebValidatesLimit(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "limit", "agent", "list", "--limit", "-1", "--web")
+}
+
 func TestAgentList_plain(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	got := cmdtest.CaptureOutput(t, ts.Factory, "agent", "list", "--plain")

@@ -151,7 +151,7 @@ func runJobStepList(f *cmdutil.Factory, jobID string, opts *jobStepListOptions) 
 }
 
 func newJobStepViewCmd(f *cmdutil.Factory) *cobra.Command {
-	var jsonOutput bool
+	opts := &cmdutil.ViewOptions{}
 
 	cmd := &cobra.Command{
 		Use:               "view [job-id] <step-id>",
@@ -161,21 +161,22 @@ func newJobStepViewCmd(f *cmdutil.Factory) *cobra.Command {
 		ValidArgsFunction: stepJobComplete(),
 		Example: `  teamcity job step view MyBuild RUNNER_1
   teamcity job step view RUNNER_1        # uses linked job
-  teamcity job step view MyBuild RUNNER_1 --json`,
+  teamcity job step view MyBuild RUNNER_1 --json
+  teamcity job step view MyBuild RUNNER_1 --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobID, rest, err := resolveStepArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
-			return runJobStepView(f, jobID, rest[0], jsonOutput)
+			return runJobStepView(f, jobID, rest[0], opts)
 		},
 	}
 
-	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output as JSON")
+	cmdutil.AddViewFlags(cmd, opts)
 	return cmd
 }
 
-func runJobStepView(f *cmdutil.Factory, jobID, stepID string, jsonOutput bool) error {
+func runJobStepView(f *cmdutil.Factory, jobID, stepID string, opts *cmdutil.ViewOptions) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -186,7 +187,12 @@ func runJobStepView(f *cmdutil.Factory, jobID, stepID string, jsonOutput bool) e
 		return err
 	}
 
-	if jsonOutput {
+	url := client.ServerURL() + "/admin/editBuildRunners.html?id=buildType:" + jobID
+	if done, err := opts.EmitWebURL(f.Printer, url); done {
+		return err
+	}
+
+	if opts.JSON {
 		return f.Printer.PrintJSON(step)
 	}
 

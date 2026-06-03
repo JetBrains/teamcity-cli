@@ -159,6 +159,17 @@ func GetServerURL() string {
 	return cfg.DefaultServer
 }
 
+// ResolveServerURL is GetServerURL with a build-level auth fallback (BUILD_URL), matching the client; use it for UI URLs built before a client exists.
+func ResolveServerURL() string {
+	if serverURL := GetServerURL(); serverURL != "" {
+		return serverURL
+	}
+	if buildAuth, ok := GetBuildAuth(); ok {
+		return buildAuth.ServerURL
+	}
+	return ""
+}
+
 func GetToken() string {
 	token, _, _ := GetTokenWithSource()
 	return token

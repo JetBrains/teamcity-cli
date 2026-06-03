@@ -15,7 +15,7 @@ TeamCity CLI (`teamcity`) is an open-source command-line interface for [TeamCity
 - **Stay in your terminal** – Start builds, view logs, manage queues – no browser needed
 - **Remote agent access** – Shell into any build agent with `teamcity agent term`, or run commands with `teamcity agent exec`
 - **Real-time logs** – Stream build output as it happens with `teamcity run watch --logs`
-- **Scriptable** – `--json` and `--plain` output for pipelines, plus direct REST API access via `teamcity api`
+- **Scriptable** – `--json` and `--plain` output for pipelines, `--web` to open the TeamCity UI page for any view, plus direct REST API access via `teamcity api`
 - **Multi-server support** – Authenticate with and switch between multiple TeamCity instances
 - **AI agent ready** – Built-in [skill](https://agentskills.io) for Claude Code, Cursor, and other AI coding agents – just run `teamcity skill install`
 
@@ -124,7 +124,7 @@ teamcity queue list
 | **auth**     | `login`, `logout`, `status`                                                                                                                                                                                                           |
 | **run**      | `list`, `start`, `view`, `watch`, `log`, `tree`, `changes`, `tests`, `diff`, `cancel`, `download`, `artifacts`, `restart`, `pin`/`unpin`, `tag`/`untag`, `comment`                                                                    |
 | **job**      | `list`, `view`, `create`, `tree`, `pause`/`resume`, `step list`/`view`/`add`/`delete`, `param list`/`get`/`set`/`delete`                                                                                                              |
-| **project**  | `list`, `view`, `create`, `tree`, `vcs list`/`view`/`create`/`test`/`delete`, `ssh list`/`generate`/`upload`/`delete`, `cloud profile`/`image`/`instance`, `connection list`/`create github-app`/`create docker`/`authorize`/`delete`, `param`, `token get`/`put`, `settings export`/`status`/`validate` |
+| **project**  | `list`, `view`, `create`, `tree`, `vcs list`/`view`/`create`/`test`/`delete`, `ssh list`/`generate`/`upload`/`delete`, `cloud profile`/`image`/`instance`, `connection list`/`view`/`create github-app`/`create docker`/`authorize`/`delete`, `param`, `token get`/`put`, `settings export`/`status`/`validate` |
 | **pipeline** | `list`, `view`, `create`, `validate`, `pull`, `push`, `schema`, `delete`                                                                                                                                                              |
 | **queue**    | `list`, `approve`, `remove`, `top`                                                                                                                                                                                                    |
 | **agent**    | `list`, `view`, `term`, `exec`, `jobs`, `authorize`/`deauthorize`, `enable`/`disable`, `move`, `reboot`                                                                                                                               |

@@ -2,6 +2,7 @@ package project
 
 import (
 	"cmp"
+	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -26,6 +27,7 @@ See: https://www.jetbrains.com/help/teamcity/configuring-connections.html`,
 	}
 
 	cmd.AddCommand(newConnectionListCmd(f))
+	cmd.AddCommand(newConnectionViewCmd(f))
 	cmd.AddCommand(newConnectionCreateCmd(f))
 	cmd.AddCommand(newConnectionAuthorizeCmd(f))
 	cmd.AddCommand(newConnectionDeleteCmd(f))
@@ -94,9 +96,21 @@ func connectionToMap(feat api.ProjectFeature) map[string]any {
 		"type": feat.Type,
 	}
 	if feat.Properties != nil {
-		m["properties"] = feat.Properties
+		masked := make([]api.Property, len(feat.Properties.Property))
+		for i, p := range feat.Properties.Property {
+			masked[i] = api.Property{Name: p.Name, Value: maskSecure(p.Name, p.Value)}
+		}
+		m["properties"] = &api.PropertyList{Property: masked}
 	}
 	return m
+}
+
+// maskSecure hides the values of secure: properties, which hold connection secrets.
+func maskSecure(name, value string) string {
+	if strings.HasPrefix(name, "secure:") {
+		return "********"
+	}
+	return value
 }
 
 func filterJSONList[T any](items []T, fields []string, toMap func(T) map[string]any) any {

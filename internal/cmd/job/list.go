@@ -8,7 +8,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -161,8 +160,8 @@ func runJobView(f *cmdutil.Factory, jobID string, opts *cmdutil.ViewOptions) err
 		return err
 	}
 
-	if opts.Web {
-		return browser.OpenURL(buildType.WebURL)
+	if done, err := opts.EmitWebURL(f.Printer, buildType.WebURL); done {
+		return err
 	}
 
 	if opts.JSON {

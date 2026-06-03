@@ -2,6 +2,7 @@ package project_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,6 +21,61 @@ func TestConnectionList(t *testing.T) {
 	out := cmdtest.CaptureOutput(t, f, "project", "connection", "list", "--project", "TestProject")
 	assert.Contains(t, out, "PROJECT_EXT_1")
 	assert.Contains(t, out, "GitHub App")
+}
+
+func TestConnectionListJSONMasksSecrets(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	f := ts.Factory
+
+	out := cmdtest.CaptureOutput(t, f, "project", "connection", "list", "--project", "TestProject", "--json")
+	assert.Contains(t, out, "********", "secure: properties should be masked")
+	assert.NotContains(t, out, "supersecret", "secure: value must not appear in JSON output")
+}
+
+func TestConnectionViewJSONMasksSecrets(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	f := ts.Factory
+
+	out := cmdtest.CaptureOutput(t, f, "project", "connection", "view", "PROJECT_EXT_1", "--project", "TestProject", "--json")
+	assert.Contains(t, out, "********", "secure: properties should be masked")
+	assert.NotContains(t, out, "supersecret", "secure: value must not appear in JSON output")
+}
+
+func TestConnectionView(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	f := ts.Factory
+
+	out := cmdtest.CaptureOutput(t, f, "project", "connection", "view", "PROJECT_EXT_1", "--project", "TestProject")
+	assert.Contains(t, out, "PROJECT_EXT_1")
+	assert.Contains(t, out, "GitHub App")
+	assert.Contains(t, out, "GitHubApp")
+	assert.Contains(t, out, "********", "secure: properties should be masked")
+	assert.NotContains(t, out, "supersecret", "secure: value must not appear in plaintext")
+}
+
+func TestConnectionViewWeb(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	f := ts.Factory
+
+	out := cmdtest.CaptureOutput(t, f, "project", "connection", "view", "PROJECT_EXT_1", "--project", "TestProject", "--web")
+	assert.Contains(t, out, "/admin/editProject.html?projectId=TestProject&tab=oauthConnections")
+}
+
+func TestConnectionViewNotFound(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	f := ts.Factory
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, f, "not found", "project", "connection", "view", "PROJECT_EXT_999", "--project", "TestProject")
+}
+
+// A missing connection must be a typed user error so --json reports a user category, not internal_error.
+func TestConnectionViewNotFoundIsUserError(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+
+	err := cmdtest.CaptureErr(t, ts.Factory, "project", "connection", "view", "PROJECT_EXT_999", "--project", "TestProject", "--json")
+	ue, ok := errors.AsType[api.UserError](err)
+	require.True(t, ok, "want a typed api.UserError, got %T", err)
+	assert.Equal(t, api.CatValidation, ue.Category())
 }
 
 func TestConnectionCreateGitHubApp(t *testing.T) {

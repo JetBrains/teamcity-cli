@@ -772,6 +772,7 @@ func SetupMockClient(t *testing.T) *TestServer {
 						Property: []api.Property{
 							{Name: "displayName", Value: "GitHub App"},
 							{Name: "providerType", Value: "GitHubApp"},
+							{Name: "secure:clientSecret", Value: "supersecret"},
 						},
 					},
 				},

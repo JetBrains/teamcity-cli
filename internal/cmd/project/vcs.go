@@ -14,7 +14,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/git"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/charmbracelet/huh"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
 
@@ -45,6 +44,7 @@ See: https://www.jetbrains.com/help/teamcity/vcs-root.html`,
 type vcsListOptions struct {
 	project string
 	cmdutil.ListFlags
+	cmdutil.ViewOptions
 }
 
 func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
@@ -58,14 +58,25 @@ func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
 		Example: `  teamcity project vcs list
   teamcity project vcs list --project MyProject
   teamcity project vcs list --project MyProject --json
-  teamcity project vcs list --plain`,
+  teamcity project vcs list --plain
+  teamcity project vcs list --project MyProject --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Web {
+				if err := cmdutil.ValidateLimit(opts.Limit); err != nil {
+					return err
+				}
+			}
+			path := "/admin/editProject.html?projectId=" + cmp.Or(opts.project, "_Root") + "&tab=projectVcsRoots"
+			if done, err := opts.EmitListWebURL(f.Printer, config.ResolveServerURL(), path); done {
+				return err
+			}
 			return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.VcsRootFields, opts.fetch)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Project ID (default: _Root)")
 	cmdutil.AddListFlags(cmd, &opts.ListFlags, 100)
+	cmdutil.AddWebFlags(cmd, &opts.ViewOptions)
 
 	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 
@@ -173,9 +184,8 @@ func runVcsView(f *cmdutil.Factory, id string, opts *cmdutil.ViewOptions) error 
 		return err
 	}
 
-	if opts.Web {
-		webURL := vcsRootEditURL(root.ID)
-		return browser.OpenURL(webURL)
+	if done, err := opts.EmitWebURL(f.Printer, vcsRootEditURL(root.ID)); done {
+		return err
 	}
 
 	if opts.JSON {
@@ -212,7 +222,7 @@ func vcsPropertyLabel(name string) string {
 }
 
 func vcsRootEditURL(id string) string {
-	return fmt.Sprintf("%s/admin/editVcsRoot.html?vcsRootId=%s", config.GetServerURL(), id)
+	return fmt.Sprintf("%s/admin/editVcsRoot.html?vcsRootId=%s", config.ResolveServerURL(), id)
 }
 
 const (
