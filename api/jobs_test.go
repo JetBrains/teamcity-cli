@@ -21,7 +21,7 @@ func TestGetBuildTypes(t *testing.T) {
 		})
 	})
 
-	result, err := client.GetBuildTypes(BuildTypesOptions{Project: "MyProject"})
+	result, _, err := client.GetBuildTypes(BuildTypesOptions{Project: "MyProject"})
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Count)
 }
@@ -35,7 +35,7 @@ func TestGetBuildTypesVcsRootURLFilter(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(BuildTypeList{Count: 0})
 	})
 
-	_, err := client.GetBuildTypes(BuildTypesOptions{VcsRootURL: "acme/repo"})
+	_, _, err := client.GetBuildTypes(BuildTypesOptions{VcsRootURL: "acme/repo"})
 	require.NoError(t, err)
 	assert.Contains(t, seenLocator, "vcsRoot:(property:(name:url,value:acme/repo,matchType:contains))")
 }

@@ -21,11 +21,11 @@ type ProjectsOptions struct {
 	ExcludeArchived bool
 }
 
-// GetProjects returns a list of projects, automatically following pagination.
-func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
+// GetProjects returns a list of projects, following pagination; the bool is true when a finite limit capped the result.
+func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, bool, error) {
 	locator := NewLocator().
 		Add("parentProject", opts.Parent).
-		AddIntDefault("count", opts.Limit, 30)
+		AddInt("count", pageCount(opts.Limit))
 	if opts.Permission != "" {
 		locator.AddLocator("userPermission", NewLocator().
 			Add("permission", opts.Permission).
@@ -42,7 +42,7 @@ func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
 	fieldsParam := fmt.Sprintf("count,nextHref,project(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/projects?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	projects, err := collectPages(c, path, opts.Limit, func(p string) ([]Project, string, error) {
+	projects, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]Project, string, error) {
 		var page ProjectList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -50,10 +50,10 @@ func (c *Client) GetProjects(opts ProjectsOptions) (*ProjectList, error) {
 		return page.Projects, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return &ProjectList{Count: len(projects), Projects: projects}, nil
+	return &ProjectList{Count: len(projects), Projects: projects}, truncated, nil
 }
 
 // GetProject returns a single project by ID

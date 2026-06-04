@@ -137,7 +137,7 @@ func resolveDiffBuildIDs(ctx context.Context, client api.ClientInterface, args [
 		return "", "", fmt.Errorf("could not resolve: %w", err)
 	}
 
-	builds, err := client.GetBuilds(ctx, api.BuildsOptions{
+	builds, _, err := client.GetBuilds(ctx, api.BuildsOptions{
 		BuildTypeID: build.BuildTypeID,
 		Limit:       1,
 		State:       "finished",

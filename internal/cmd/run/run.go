@@ -77,7 +77,7 @@ See: https://www.jetbrains.com/help/teamcity/build-results-page.html`,
 // otherwise we return a Validation error pointing at the link path.
 func resolveRunID(ctx context.Context, client api.ClientInterface, runID, jobID, state string) (string, *api.Build, error) {
 	if jobID != "" {
-		runs, err := client.GetBuilds(ctx, api.BuildsOptions{
+		runs, _, err := client.GetBuilds(ctx, api.BuildsOptions{
 			BuildTypeID: jobID,
 			State:       state,
 			Limit:       1,

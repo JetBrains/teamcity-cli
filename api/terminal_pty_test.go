@@ -78,7 +78,7 @@ func pickAgentByOS(t *testing.T, osFamily string) (id, skip string) {
 		return "", "guest auth lacks CONNECT_TO_AGENT permission"
 	}
 
-	agents, err := testEnvRef.Client.GetAgents(api.AgentsOptions{})
+	agents, _, err := testEnvRef.Client.GetAgents(api.AgentsOptions{})
 	if err != nil {
 		return "", fmt.Sprintf("could not list agents: %v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -41,6 +42,81 @@ func TestRunListBackwardsDateRange(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
 	cmdtest.RunCmdWithFactoryExpectErr(T, ts.Factory, "is more recent than", "run", "list", "--since", "2020-01-01", "--until", "2019-01-01")
+}
+
+func runListSplit(t *testing.T, ts *cmdtest.TestServer, args ...string) (stdout, stderr string) {
+	t.Helper()
+	var out, errBuf bytes.Buffer
+	f := ts.CloneFactory()
+	// NewCommand strips PersistentPreRun (and thus InitOutput), so mirror the
+	// --quiet → Printer.Quiet wiring that production does at runtime.
+	f.Printer = &output.Printer{Out: &out, ErrOut: &errBuf, Quiet: slices.Contains(args, "--quiet") || slices.Contains(args, "-q")}
+	rootCmd := cmd.NewCommand(f)
+	rootCmd.SetArgs(args)
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&errBuf)
+	require.NoError(t, rootCmd.Execute())
+	return out.String(), errBuf.String()
+}
+
+func handleTruncatedBuilds(ts *cmdtest.TestServer) {
+	ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Query().Get("locator"), "count:1000") {
+			cmdtest.JSON(w, map[string]any{"count": 3, "build": []map[string]any{
+				{"id": 1, "buildTypeId": "B"}, {"id": 2, "buildTypeId": "B"}, {"id": 3, "buildTypeId": "B"},
+			}})
+			return
+		}
+		cmdtest.JSON(w, map[string]any{
+			"count":    2,
+			"nextHref": "/app/rest/builds?locator=count:2,start:2",
+			"build":    []map[string]any{{"id": 1, "buildTypeId": "B"}, {"id": 2, "buildTypeId": "B"}},
+		})
+	})
+}
+
+const runTruncationHint = "use --limit 0 to fetch all"
+
+func TestRunListTruncationHint(T *testing.T) {
+	T.Run("finite limit emits hint on stderr only", func(t *testing.T) {
+		ts := cmdtest.NewTestServer(t)
+		handleTruncatedBuilds(ts)
+
+		stdout, stderr := runListSplit(t, ts, "run", "list", "--limit", "2")
+		assert.NotContains(t, stdout, runTruncationHint)
+		assert.Contains(t, stderr, "Showing only the first 2 results")
+		assert.Contains(t, stderr, runTruncationHint)
+	})
+
+	T.Run("limit 0 fetches all without a hint", func(t *testing.T) {
+		ts := cmdtest.NewTestServer(t)
+		handleTruncatedBuilds(ts)
+
+		stdout, stderr := runListSplit(t, ts, "run", "list", "--limit", "0", "--json")
+		var list api.BuildList
+		require.NoError(t, json.Unmarshal([]byte(stdout), &list))
+		assert.Equal(t, 3, list.Count)
+		assert.NotContains(t, stderr, runTruncationHint)
+	})
+
+	T.Run("json output stays clean while hint goes to stderr", func(t *testing.T) {
+		ts := cmdtest.NewTestServer(t)
+		handleTruncatedBuilds(ts)
+
+		stdout, stderr := runListSplit(t, ts, "run", "list", "--limit", "2", "--json")
+		var list api.BuildList
+		require.NoError(t, json.Unmarshal([]byte(stdout), &list))
+		assert.Equal(t, 2, list.Count)
+		assert.Contains(t, stderr, runTruncationHint)
+	})
+
+	T.Run("quiet suppresses the hint", func(t *testing.T) {
+		ts := cmdtest.NewTestServer(t)
+		handleTruncatedBuilds(ts)
+
+		_, stderr := runListSplit(t, ts, "run", "list", "--limit", "2", "--quiet")
+		assert.NotContains(t, stderr, runTruncationHint)
+	})
 }
 
 func TestRunListWeb(t *testing.T) {
@@ -726,6 +802,6 @@ func TestRunList_invalid_status(t *testing.T) {
 
 func TestRunList_invalid_limit(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
-	err := cmdtest.CaptureErr(t, ts.Factory, "run", "list", "--limit", "0")
-	assert.Equal(t, "--limit must be a positive number, got 0", err.Error())
+	err := cmdtest.CaptureErr(t, ts.Factory, "run", "list", "--limit", "-1")
+	assert.Equal(t, "--limit must not be negative, got -1", err.Error())
 }

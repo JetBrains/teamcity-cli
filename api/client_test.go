@@ -107,7 +107,7 @@ func TestBasicAuthWorksForAPIRequests(T *testing.T) {
 	T.Cleanup(server.Close)
 
 	client := NewClientWithBasicAuth(server.URL, "testuser", "testpass")
-	projects, err := client.GetProjects(ProjectsOptions{})
+	projects, _, err := client.GetProjects(ProjectsOptions{})
 
 	require.NoError(T, err)
 	assert.Equal(T, 1, projects.Count)

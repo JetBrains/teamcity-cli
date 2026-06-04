@@ -9,11 +9,11 @@ import (
 	"net/url"
 )
 
-// GetVcsRoots returns a list of VCS roots, automatically following pagination.
-func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
+// GetVcsRoots returns a list of VCS roots, following pagination; the bool is true when a finite limit capped the result.
+func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, bool, error) {
 	locator := NewLocator().
 		Add("affectedProject", opts.Project).
-		AddIntDefault("count", opts.Limit, 100)
+		AddInt("count", pageCount(opts.Limit))
 
 	fields := opts.Fields
 	if len(fields) == 0 {
@@ -22,7 +22,7 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 	fieldsParam := fmt.Sprintf("count,nextHref,vcs-root(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/vcs-roots?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	roots, err := collectPages(c, path, opts.Limit, func(p string) ([]VcsRoot, string, error) {
+	roots, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]VcsRoot, string, error) {
 		var page VcsRootList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -30,9 +30,9 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error) {
 		return page.VcsRoot, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return &VcsRootList{Count: len(roots), VcsRoot: roots}, nil
+	return &VcsRootList{Count: len(roots), VcsRoot: roots}, truncated, nil
 }
 
 // GetVcsRoot returns a VCS root by ID

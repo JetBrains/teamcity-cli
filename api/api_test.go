@@ -48,15 +48,15 @@ func requireIdleAgent(t *testing.T) api.Agent {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Minute)
 	for time.Until(deadline) > 0 {
-		agents, err := client.GetAgents(api.AgentsOptions{
+		agents, _, err := client.GetAgents(api.AgentsOptions{
 			Authorized: true, Connected: true, Enabled: true, Limit: 1,
 		})
 		if err != nil || len(agents.Agents) == 0 {
 			time.Sleep(2 * time.Second)
 			continue
 		}
-		running, _ := client.GetBuilds(t.Context(), api.BuildsOptions{State: "running", Limit: 10})
-		queued, _ := client.GetBuildQueue(api.QueueOptions{Limit: 10})
+		running, _, _ := client.GetBuilds(t.Context(), api.BuildsOptions{State: "running", Limit: 10})
+		queued, _, _ := client.GetBuildQueue(api.QueueOptions{Limit: 10})
 		if running != nil {
 			for _, b := range running.Builds {
 				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "test cleanup")
@@ -133,7 +133,7 @@ func waitForOwnedAgentsReleased(t *testing.T) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Minute)
 	for time.Until(deadline) > 0 {
-		agents, err := client.GetAgents(api.AgentsOptions{
+		agents, _, err := client.GetAgents(api.AgentsOptions{
 			Authorized: true, Connected: true, Enabled: true, Limit: 10,
 		})
 		if err != nil || len(agents.Agents) == 0 {
@@ -195,7 +195,7 @@ func TestGetProjects(T *testing.T) {
 	T.Run("basic list", func(t *testing.T) {
 		t.Parallel()
 
-		projects, err := client.GetProjects(api.ProjectsOptions{Limit: 5})
+		projects, _, err := client.GetProjects(api.ProjectsOptions{Limit: 5})
 		require.NoError(t, err)
 		assert.Greater(t, projects.Count, 0)
 	})
@@ -203,7 +203,7 @@ func TestGetProjects(T *testing.T) {
 	T.Run("with parent filter", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.GetProjects(api.ProjectsOptions{Parent: "_Root", Limit: 3})
+		_, _, err := client.GetProjects(api.ProjectsOptions{Parent: "_Root", Limit: 3})
 		require.NoError(t, err)
 	})
 }
@@ -222,7 +222,7 @@ func TestGetBuildTypes(T *testing.T) {
 	T.Run("with project filter", func(t *testing.T) {
 		t.Parallel()
 
-		configs, err := client.GetBuildTypes(api.BuildTypesOptions{Project: testProject, Limit: 10})
+		configs, _, err := client.GetBuildTypes(api.BuildTypesOptions{Project: testProject, Limit: 10})
 		require.NoError(t, err)
 		assert.Greater(t, configs.Count, 0)
 	})
@@ -230,7 +230,7 @@ func TestGetBuildTypes(T *testing.T) {
 	T.Run("without project filter", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.GetBuildTypes(api.BuildTypesOptions{Limit: 5})
+		_, _, err := client.GetBuildTypes(api.BuildTypesOptions{Limit: 5})
 		require.NoError(t, err)
 	})
 }
@@ -249,7 +249,7 @@ func TestGetBuilds(T *testing.T) {
 	T.Run("basic list", func(t *testing.T) {
 		t.Parallel()
 
-		builds, err := client.GetBuilds(t.Context(), api.BuildsOptions{BuildTypeID: testConfig, Limit: 5})
+		builds, _, err := client.GetBuilds(t.Context(), api.BuildsOptions{BuildTypeID: testConfig, Limit: 5})
 		require.NoError(t, err)
 		t.Logf("Found %d builds", builds.Count)
 	})
@@ -257,7 +257,7 @@ func TestGetBuilds(T *testing.T) {
 	T.Run("with filters", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.GetBuilds(t.Context(), api.BuildsOptions{
+		_, _, err := client.GetBuilds(t.Context(), api.BuildsOptions{
 			BuildTypeID: testConfig,
 			Status:      "success",
 			State:       "finished",
@@ -270,7 +270,7 @@ func TestGetBuilds(T *testing.T) {
 	T.Run("by project", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.GetBuilds(t.Context(), api.BuildsOptions{Project: testProject, Limit: 3})
+		_, _, err := client.GetBuilds(t.Context(), api.BuildsOptions{Project: testProject, Limit: 3})
 		require.NoError(t, err)
 	})
 }
@@ -332,7 +332,7 @@ func TestGetBuildQueue(T *testing.T) {
 	T.Run("basic list", func(t *testing.T) {
 		t.Parallel()
 
-		queue, err := client.GetBuildQueue(api.QueueOptions{Limit: 10})
+		queue, _, err := client.GetBuildQueue(api.QueueOptions{Limit: 10})
 		require.NoError(t, err)
 		t.Logf("Queue has %d builds", queue.Count)
 	})
@@ -340,7 +340,7 @@ func TestGetBuildQueue(T *testing.T) {
 	T.Run("with config filter", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.GetBuildQueue(api.QueueOptions{BuildTypeID: testConfig, Limit: 5})
+		_, _, err := client.GetBuildQueue(api.QueueOptions{BuildTypeID: testConfig, Limit: 5})
 		require.NoError(t, err)
 	})
 }
@@ -1010,7 +1010,7 @@ func TestPoolOperations(T *testing.T) {
 	})
 
 	T.Run("move agent to pool and back", func(t *testing.T) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
+		agents, _, err := client.GetAgents(api.AgentsOptions{})
 		require.NoError(t, err)
 		if len(agents.Agents) == 0 {
 			t.Skip("no agents available")
@@ -1047,7 +1047,7 @@ func TestGetAgentIncompatibleBuildTypes(T *testing.T) {
 	skipIfGuest(T)
 	T.Parallel()
 
-	agents, err := client.GetAgents(api.AgentsOptions{})
+	agents, _, err := client.GetAgents(api.AgentsOptions{})
 	require.NoError(T, err)
 	require.Greater(T, len(agents.Agents), 0)
 
@@ -1093,7 +1093,7 @@ func TestRunBuildAdvancedOptions(T *testing.T) {
 	})
 
 	T.Run("with agent ID", func(t *testing.T) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
+		agents, _, err := client.GetAgents(api.AgentsOptions{})
 		require.NoError(t, err)
 		if len(agents.Agents) == 0 {
 			t.Skip("no agents available")
@@ -1132,7 +1132,7 @@ func TestGetAgentsPoolFilter(T *testing.T) {
 		pool, err := client.GetAgentPool(0)
 		require.NoError(t, err)
 
-		agents, err := client.GetAgents(api.AgentsOptions{Pool: pool.Name})
+		agents, _, err := client.GetAgents(api.AgentsOptions{Pool: pool.Name})
 		require.NoError(t, err)
 		t.Logf("Found %d agents in pool '%s'", agents.Count, pool.Name)
 	})
@@ -1140,7 +1140,7 @@ func TestGetAgentsPoolFilter(T *testing.T) {
 	T.Run("filter by pool numeric ID", func(t *testing.T) {
 		t.Parallel()
 
-		agents, err := client.GetAgents(api.AgentsOptions{Pool: "0"})
+		agents, _, err := client.GetAgents(api.AgentsOptions{Pool: "0"})
 		require.NoError(t, err)
 		t.Logf("Found %d agents in pool ID 0", agents.Count)
 	})
@@ -1191,7 +1191,7 @@ func TestRebootAgentCancelledContext(T *testing.T) {
 	skipIfGuest(T)
 	T.Parallel()
 
-	agents, err := client.GetAgents(api.AgentsOptions{})
+	agents, _, err := client.GetAgents(api.AgentsOptions{})
 	require.NoError(T, err)
 	if len(agents.Agents) == 0 {
 		T.Skip("no agents available")
@@ -1207,7 +1207,7 @@ func TestRebootAgentCancelledContext(T *testing.T) {
 func TestGetBuildQueueWithFilter(T *testing.T) {
 	T.Parallel()
 
-	queue, err := client.GetBuildQueue(api.QueueOptions{BuildTypeID: testConfig, Limit: 5})
+	queue, _, err := client.GetBuildQueue(api.QueueOptions{BuildTypeID: testConfig, Limit: 5})
 	require.NoError(T, err)
 	T.Logf("Queue has %d builds for config %s", queue.Count, testConfig)
 }
@@ -1219,14 +1219,14 @@ func TestAgentOperations(T *testing.T) {
 	// Not parallel - modifies agent state
 
 	T.Run("list agents", func(t *testing.T) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
+		agents, _, err := client.GetAgents(api.AgentsOptions{})
 		require.NoError(t, err)
 		assert.Greater(t, agents.Count, 0, "should have at least one agent")
 		t.Logf("Found %d agents", agents.Count)
 	})
 
 	T.Run("get agent by id", func(t *testing.T) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
+		agents, _, err := client.GetAgents(api.AgentsOptions{})
 		require.NoError(t, err)
 		require.Greater(t, len(agents.Agents), 0)
 
@@ -1238,7 +1238,7 @@ func TestAgentOperations(T *testing.T) {
 	})
 
 	T.Run("get agent by name", func(t *testing.T) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
+		agents, _, err := client.GetAgents(api.AgentsOptions{})
 		require.NoError(t, err)
 		require.Greater(t, len(agents.Agents), 0)
 
@@ -1250,7 +1250,7 @@ func TestAgentOperations(T *testing.T) {
 	})
 
 	T.Run("get compatible build types", func(t *testing.T) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
+		agents, _, err := client.GetAgents(api.AgentsOptions{})
 		require.NoError(t, err)
 		require.Greater(t, len(agents.Agents), 0)
 
@@ -1260,7 +1260,7 @@ func TestAgentOperations(T *testing.T) {
 	})
 
 	T.Run("enable and disable", func(t *testing.T) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
+		agents, _, err := client.GetAgents(api.AgentsOptions{})
 		require.NoError(t, err)
 		require.Greater(t, len(agents.Agents), 0)
 

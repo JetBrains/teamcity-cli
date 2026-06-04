@@ -325,7 +325,7 @@ func TestAPIDriftEndpoints(t *testing.T) {
 		{"GetCurrentUser", func() (any, error) { return client.GetCurrentUser() }},
 
 		// Project graph
-		{"GetProjects", func() (any, error) { return client.GetProjects(api.ProjectsOptions{}) }},
+		{"GetProjects", func() (any, error) { r, _, err := client.GetProjects(api.ProjectsOptions{}); return r, err }},
 		{"GetProject", func() (any, error) { return client.GetProject(testProject) }},
 		{"GetVersionedSettingsConfig", func() (any, error) { return client.GetVersionedSettingsConfig(testProject) }},
 		{"GetVersionedSettingsStatus", func() (any, error) { return client.GetVersionedSettingsStatus(testProject) }},
@@ -333,7 +333,7 @@ func TestAPIDriftEndpoints(t *testing.T) {
 		{"GetProjectConnections", func() (any, error) { return client.GetProjectConnections(testProject) }},
 
 		// Build configurations
-		{"GetBuildTypes", func() (any, error) { return client.GetBuildTypes(api.BuildTypesOptions{}) }},
+		{"GetBuildTypes", func() (any, error) { r, _, err := client.GetBuildTypes(api.BuildTypesOptions{}); return r, err }},
 		{"GetBuildType", func() (any, error) { return client.GetBuildType(testConfig) }},
 		{"GetBuildTypeParameters", func() (any, error) { return client.GetBuildTypeParameters(testConfig) }},
 		{"GetSnapshotDependencies", func() (any, error) { return client.GetSnapshotDependencies(testConfig) }},
@@ -341,7 +341,10 @@ func TestAPIDriftEndpoints(t *testing.T) {
 		{"GetVcsRootEntries", func() (any, error) { return client.GetVcsRootEntries(testConfig) }},
 
 		// Builds (read)
-		{"GetBuilds", func() (any, error) { return client.GetBuilds(t.Context(), api.BuildsOptions{Limit: 5}) }},
+		{"GetBuilds", func() (any, error) {
+			r, _, err := client.GetBuilds(t.Context(), api.BuildsOptions{Limit: 5})
+			return r, err
+		}},
 		{"GetBuild", func() (any, error) { return client.GetBuild(t.Context(), buildID) }},
 		{"GetBuildChanges", func() (any, error) { return client.GetBuildChanges(t.Context(), buildID) }},
 		{"GetBuildTags", func() (any, error) { return client.GetBuildTags(buildID) }},
@@ -357,22 +360,22 @@ func TestAPIDriftEndpoints(t *testing.T) {
 		{"GetArtifacts", func() (any, error) { return client.GetArtifacts(t.Context(), buildID, "") }},
 
 		// Queue
-		{"GetBuildQueue", func() (any, error) { return client.GetBuildQueue(api.QueueOptions{}) }},
+		{"GetBuildQueue", func() (any, error) { r, _, err := client.GetBuildQueue(api.QueueOptions{}); return r, err }},
 
 		// Agents and pools
-		{"GetAgents", func() (any, error) { return client.GetAgents(api.AgentsOptions{}) }},
+		{"GetAgents", func() (any, error) { r, _, err := client.GetAgents(api.AgentsOptions{}); return r, err }},
 		{"GetAgentPools", func() (any, error) { return client.GetAgentPools(nil) }},
 
 		// VCS
-		{"GetVcsRoots", func() (any, error) { return client.GetVcsRoots(api.VcsRootsOptions{}) }},
+		{"GetVcsRoots", func() (any, error) { r, _, err := client.GetVcsRoots(api.VcsRootsOptions{}); return r, err }},
 
 		// Cloud
-		{"GetCloudProfiles", func() (any, error) { return client.GetCloudProfiles(api.CloudProfilesOptions{}) }},
-		{"GetCloudImages", func() (any, error) { return client.GetCloudImages(api.CloudImagesOptions{}) }},
-		{"GetCloudInstances", func() (any, error) { return client.GetCloudInstances(api.CloudInstancesOptions{}) }},
+		{"GetCloudProfiles", func() (any, error) { r, _, err := client.GetCloudProfiles(api.CloudProfilesOptions{}); return r, err }},
+		{"GetCloudImages", func() (any, error) { r, _, err := client.GetCloudImages(api.CloudImagesOptions{}); return r, err }},
+		{"GetCloudInstances", func() (any, error) { r, _, err := client.GetCloudInstances(api.CloudInstancesOptions{}); return r, err }},
 
 		// Pipelines (TeamCity 2026.1+; skips cleanly on older servers)
-		{"GetPipelines", func() (any, error) { return client.GetPipelines(api.PipelinesOptions{}) }},
+		{"GetPipelines", func() (any, error) { r, _, err := client.GetPipelines(api.PipelinesOptions{}); return r, err }},
 		{"GetPipelineSchema", func() (any, error) { return client.GetPipelineSchema() }},
 	}
 
@@ -397,7 +400,7 @@ func TestAPIDriftAgentEndpoints(t *testing.T) {
 	if client == nil {
 		t.Skip("no TeamCity client configured")
 	}
-	agents, err := client.GetAgents(api.AgentsOptions{})
+	agents, _, err := client.GetAgents(api.AgentsOptions{})
 	if err != nil {
 		t.Skipf("could not list agents: %v", err)
 	}

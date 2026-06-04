@@ -23,8 +23,8 @@ stdout '"name"'
 stdout '"projectId"'
 ! stderr 'Error'
 
-! exec teamcity job list --limit 0 --no-input
-stderr 'must be a positive number'
+! exec teamcity job list --limit -1 --no-input
+stderr 'must not be negative'
 
 exec teamcity job list --all --plain --no-input
 stdout '.'

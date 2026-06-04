@@ -74,7 +74,7 @@ func TestGetCloudInstancesBareImageSelectorUsesNameLocator(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(CloudInstanceList{})
 	})
 
-	_, err := client.GetCloudInstances(CloudInstancesOptions{
+	_, _, err := client.GetCloudInstances(CloudInstancesOptions{
 		ProjectID: "TestProject",
 		Image:     "ubuntu-22-large",
 	})
@@ -90,7 +90,7 @@ func TestGetCloudInstancesColonInImageNameUsesWrappedNameLocator(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(CloudInstanceList{})
 	})
 
-	_, err := client.GetCloudInstances(CloudInstancesOptions{
+	_, _, err := client.GetCloudInstances(CloudInstancesOptions{
 		ProjectID: "TestProject",
 		Image:     "ubuntu:22.04",
 	})
@@ -106,7 +106,7 @@ func TestGetCloudInstancesPreservesExplicitCompoundImageLocator(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(CloudInstanceList{})
 	})
 
-	_, err := client.GetCloudInstances(CloudInstancesOptions{
+	_, _, err := client.GetCloudInstances(CloudInstancesOptions{
 		ProjectID: "TestProject",
 		Image:     "id:img-1,profileId:aws-prod",
 	})

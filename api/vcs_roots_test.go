@@ -24,7 +24,7 @@ func TestGetVcsRoots(t *testing.T) {
 		})
 	})
 
-	result, err := client.GetVcsRoots(VcsRootsOptions{Project: "MyProject"})
+	result, _, err := client.GetVcsRoots(VcsRootsOptions{Project: "MyProject"})
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Count)
 	assert.Equal(t, "vcs1", result.VcsRoot[0].ID)

@@ -23,7 +23,7 @@ func TestGetProjectsLocator(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(ProjectList{Count: 0})
 	})
 
-	_, err := client.GetProjects(ProjectsOptions{
+	_, _, err := client.GetProjects(ProjectsOptions{
 		Permission:      PermissionEditProject,
 		ExcludeArchived: true,
 		Limit:           100,

@@ -66,10 +66,10 @@ func currentUserFavoriteBuildsTagLocator() *Locator {
 			Add("ignoreCase", "false"))
 }
 
-// GetBuilds returns a list of builds, automatically following pagination.
-func (c *Client) GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList, error) {
+// GetBuilds returns a list of builds, following pagination; the bool is true when a finite limit capped the result.
+func (c *Client) GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList, bool, error) {
 	locator := opts.Locator().
-		AddIntDefault("count", opts.Limit, 30)
+		AddInt("count", pageCount(opts.Limit))
 
 	buildFields := opts.Fields
 	if len(buildFields) == 0 {
@@ -78,7 +78,7 @@ func (c *Client) GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList,
 	fields := fmt.Sprintf("count,nextHref,build(%s)", ToAPIFields(buildFields))
 	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
 
-	builds, err := collectPages(c, path, opts.Limit, func(p string) ([]Build, string, error) {
+	builds, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]Build, string, error) {
 		var page BuildList
 		if err := c.get(ctx, p, &page); err != nil {
 			return nil, "", err
@@ -86,14 +86,14 @@ func (c *Client) GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList,
 		return page.Builds, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	for i := range builds {
 		cleanupBuildTriggered(&builds[i])
 	}
 
-	return &BuildList{Count: len(builds), Builds: builds}, nil
+	return &BuildList{Count: len(builds), Builds: builds}, truncated, nil
 }
 
 // cleanupBuildTriggered removes empty User objects from build trigger info
@@ -115,7 +115,7 @@ func (c *Client) ResolveBuildID(ctx context.Context, ref string) (string, error)
 	}
 
 	number := strings.TrimPrefix(ref, "#")
-	builds, err := c.GetBuilds(ctx, BuildsOptions{Limit: 1, Number: number})
+	builds, _, err := c.GetBuilds(ctx, BuildsOptions{Limit: 1, Number: number})
 	if err != nil {
 		return "", err
 	}
@@ -404,11 +404,11 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 
 // GetBuildSnapshotDependencies returns all immediate dependency builds in a snapshot dependency chain.
 func (c *Client) GetBuildSnapshotDependencies(buildID string) (*BuildList, error) {
-	locator := fmt.Sprintf("snapshotDependency:(to:(id:%s),recursive:false),defaultFilter:false", buildID)
+	locator := fmt.Sprintf("snapshotDependency:(to:(id:%s),recursive:false),defaultFilter:false,count:%d", buildID, pageCount(0))
 	fields := "count,nextHref,build(id,number,status,statusText,state,buildTypeId,buildType(id,name))"
 	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", url.QueryEscape(locator), url.QueryEscape(fields))
 
-	builds, err := collectPages(c, path, 0, func(p string) ([]Build, string, error) {
+	builds, _, err := collectPages(c, path, 0, func(p string) ([]Build, string, error) {
 		var page BuildList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err

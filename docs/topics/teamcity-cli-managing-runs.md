@@ -107,7 +107,12 @@ teamcity run list --since 2026-01-15 --until 2026-01-20
 
 ```Shell
 teamcity run list --limit 20
+teamcity run list --limit 0
 ```
+
+Use `--limit 0` to fetch every matching run. When a finite `--limit` hides
+additional results, the CLI prints a hint on stderr (stdout and `--json` stay
+unchanged).
 
 ### Output options
 
@@ -252,7 +257,7 @@ Show builds finished before this time
 </td>
 <td>
 
-Maximum number of runs to display
+Maximum number of runs to display (use 0 for all)
 
 </td>
 </tr>

@@ -62,7 +62,7 @@ Filter by project ID
 </td>
 <td>
 
-Maximum number of profiles to display
+Maximum number of profiles to display (use 0 for all)
 
 </td>
 </tr>
@@ -152,7 +152,7 @@ Filter images by cloud profile ID
 </td>
 <td>
 
-Maximum number of images to display
+Maximum number of images to display (use 0 for all)
 
 </td>
 </tr>
@@ -251,7 +251,7 @@ Filter instances by cloud image name or explicit ID locator
 </td>
 <td>
 
-Maximum number of instances to display
+Maximum number of instances to display (use 0 for all)
 
 </td>
 </tr>

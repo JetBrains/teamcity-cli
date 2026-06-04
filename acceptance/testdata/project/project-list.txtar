@@ -27,11 +27,8 @@ exec teamcity project list --plain --no-header --no-input
 exec teamcity project list --limit 1 --no-input
 ! stderr 'Error'
 
-! exec teamcity project list --limit 0 --no-input
-stderr 'must be a positive number'
-
 ! exec teamcity project list --limit -1 --no-input
-stderr 'must be a positive number'
+stderr 'must not be negative'
 
 exec teamcity project list --parent _Root --limit 5 --no-input
 ! stderr 'Error'

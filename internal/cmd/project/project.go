@@ -85,7 +85,7 @@ func newProjectListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *projectListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	projects, err := client.GetProjects(api.ProjectsOptions{
+	projects, truncated, err := client.GetProjects(api.ProjectsOptions{
 		Parent: opts.parent,
 		Limit:  opts.Limit,
 		Fields: fields,
@@ -111,10 +111,11 @@ func (opts *projectListOptions) fetch(client api.ClientInterface, fields []strin
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     projects,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg: "No projects found",
-		EmptyTip: output.TipNoProjects,
+		JSON:      projects,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg:  "No projects found",
+		EmptyTip:  output.TipNoProjects,
+		Truncated: truncated,
 	}, nil
 }
 
@@ -391,7 +392,7 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int, j
 		return err
 	}
 
-	projects, err := client.GetProjects(api.ProjectsOptions{Limit: 10000})
+	projects, _, err := client.GetProjects(api.ProjectsOptions{Limit: 10000})
 	if err != nil {
 		return err
 	}
@@ -420,7 +421,7 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int, j
 	pipelineProjectIDs := map[string]bool{}
 	pipelineHeadJobIDs := map[string]bool{}
 
-	pipelines, pipelineErr := client.GetPipelines(api.PipelinesOptions{Limit: 10000})
+	pipelines, _, pipelineErr := client.GetPipelines(api.PipelinesOptions{Limit: 10000})
 	if pipelineErr == nil && len(pipelines.Pipelines) > 0 {
 		pipelinesByProject = map[string][]api.Pipeline{}
 		for _, p := range pipelines.Pipelines {
@@ -439,7 +440,7 @@ func runProjectTree(f *cmdutil.Factory, rootID string, noJobs bool, depth int, j
 	}
 
 	if !noJobs {
-		buildTypes, err := client.GetBuildTypes(api.BuildTypesOptions{Limit: 10000})
+		buildTypes, _, err := client.GetBuildTypes(api.BuildTypesOptions{Limit: 10000})
 		if err != nil {
 			return err
 		}
@@ -545,7 +546,7 @@ func projectPickerOptions(f *cmdutil.Factory, permission string) []huh.Option[st
 	if err != nil {
 		return nil
 	}
-	list, err := client.GetProjects(api.ProjectsOptions{
+	list, _, err := client.GetProjects(api.ProjectsOptions{
 		Limit:           10000,
 		Fields:          []string{"id", "name", "parentProjectId"},
 		Permission:      permission,

@@ -60,7 +60,7 @@ Filter by project ID
 </td>
 <td>
 
-Maximum number of pipelines to display (default 30)
+Maximum number of pipelines to display (default 30, use 0 for all)
 
 </td>
 </tr>

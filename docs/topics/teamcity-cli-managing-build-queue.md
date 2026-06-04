@@ -61,7 +61,7 @@ Filter by job (build configuration) ID
 </td>
 <td>
 
-Maximum number of queued runs to display
+Maximum number of queued runs to display (use 0 for all)
 
 </td>
 </tr>

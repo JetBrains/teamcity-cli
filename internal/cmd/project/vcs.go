@@ -84,7 +84,7 @@ func newVcsListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *vcsListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	roots, err := client.GetVcsRoots(api.VcsRootsOptions{
+	roots, truncated, err := client.GetVcsRoots(api.VcsRootsOptions{
 		Project: cmp.Or(opts.project, "_Root"),
 		Limit:   opts.Limit,
 		Fields:  fields,
@@ -111,9 +111,10 @@ func (opts *vcsListOptions) fetch(client api.ClientInterface, fields []string) (
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     roots,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2, 3}},
-		EmptyMsg: "No VCS roots found",
+		JSON:      roots,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2, 3}},
+		EmptyMsg:  "No VCS roots found",
+		Truncated: truncated,
 	}, nil
 }
 

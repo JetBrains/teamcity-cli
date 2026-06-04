@@ -22,7 +22,7 @@ func TestGetAgents(t *testing.T) {
 		})
 	})
 
-	result, err := client.GetAgents(AgentsOptions{})
+	result, _, err := client.GetAgents(AgentsOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Count)
 	assert.Equal(t, "Agent-1", result.Agents[0].Name)
@@ -39,7 +39,7 @@ func TestGetAgentsWithFilters(t *testing.T) {
 		json.NewEncoder(w).Encode(AgentList{Count: 0})
 	})
 
-	_, err := client.GetAgents(AgentsOptions{Authorized: true, Connected: true, Enabled: true})
+	_, _, err := client.GetAgents(AgentsOptions{Authorized: true, Connected: true, Enabled: true})
 	require.NoError(t, err)
 }
 
@@ -53,7 +53,7 @@ func TestGetAgentsWithPoolFilter(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(AgentList{Count: 0})
 		})
-		_, err := client.GetAgents(AgentsOptions{Pool: "Default"})
+		_, _, err := client.GetAgents(AgentsOptions{Pool: "Default"})
 		require.NoError(t, err)
 	})
 
@@ -64,7 +64,7 @@ func TestGetAgentsWithPoolFilter(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(AgentList{Count: 0})
 		})
-		_, err := client.GetAgents(AgentsOptions{Pool: "5"})
+		_, _, err := client.GetAgents(AgentsOptions{Pool: "5"})
 		require.NoError(t, err)
 	})
 }

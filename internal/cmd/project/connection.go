@@ -71,7 +71,8 @@ func (opts *connectionListOptions) fetch(client api.ClientInterface, fields []st
 	}
 
 	items := features.ProjectFeature
-	if opts.Limit > 0 && opts.Limit < len(items) {
+	truncated := opts.Limit > 0 && opts.Limit < len(items)
+	if truncated {
 		items = items[:opts.Limit]
 	}
 
@@ -83,10 +84,11 @@ func (opts *connectionListOptions) fetch(client api.ClientInterface, fields []st
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     filterJSONList(items, fields, connectionToMap),
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg: "No connections found",
-		EmptyTip: output.TipNoConnections,
+		JSON:      filterJSONList(items, fields, connectionToMap),
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg:  "No connections found",
+		EmptyTip:  output.TipNoConnections,
+		Truncated: truncated,
 	}, nil
 }
 

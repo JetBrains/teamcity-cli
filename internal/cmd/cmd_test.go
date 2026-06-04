@@ -23,10 +23,10 @@ func TestListLimitValidation(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	f := ts.Factory
 
-	cmdtest.RunCmdWithFactoryExpectErr(T, f, "--limit must be a positive number", "project", "list", "--limit", "0")
-	cmdtest.RunCmdWithFactoryExpectErr(T, f, "--limit must be a positive number", "run", "list", "--limit", "-1")
-	cmdtest.RunCmdWithFactoryExpectErr(T, f, "--limit must be a positive number", "job", "list", "--limit", "0")
-	cmdtest.RunCmdWithFactoryExpectErr(T, f, "--limit must be a positive number", "agent", "list", "--limit", "-5")
+	cmdtest.RunCmdWithFactoryExpectErr(T, f, "--limit must not be negative", "project", "list", "--limit", "-1")
+	cmdtest.RunCmdWithFactoryExpectErr(T, f, "--limit must not be negative", "run", "list", "--limit", "-1")
+	cmdtest.RunCmdWithFactoryExpectErr(T, f, "--limit must not be negative", "job", "list", "--limit", "-2")
+	cmdtest.RunCmdWithFactoryExpectErr(T, f, "--limit must not be negative", "agent", "list", "--limit", "-5")
 }
 
 func TestHelpCommands(T *testing.T) {

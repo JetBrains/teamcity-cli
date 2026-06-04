@@ -94,7 +94,7 @@ func discoverProjects(client api.ClientInterface, remoteURLs []string) (*discove
 
 	pipelineMetaByHead := map[string]pipelineMeta{}
 	if client.SupportsFeature("pipelines") {
-		pipelines, err := client.GetPipelines(api.PipelinesOptions{Limit: 0})
+		pipelines, _, err := client.GetPipelines(api.PipelinesOptions{Limit: 0})
 		if err == nil && pipelines != nil {
 			for _, p := range pipelines.Pipelines {
 				if p.HeadBuildType == nil || p.HeadBuildType.ID == "" {
@@ -113,7 +113,7 @@ func discoverProjects(client api.ClientInterface, remoteURLs []string) (*discove
 	seenBuildTypes := map[string]bool{}
 	var matched []api.BuildType
 	for _, frag := range fragments {
-		page, err := client.GetBuildTypes(api.BuildTypesOptions{
+		page, _, err := client.GetBuildTypes(api.BuildTypesOptions{
 			VcsRootURL: frag,
 			Limit:      0,
 			Fields:     discoveryBuildTypeFields,

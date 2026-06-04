@@ -2,7 +2,10 @@ package project_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
+	"slices"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -10,6 +13,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -206,4 +210,80 @@ func TestProjectTreeNotFound(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 
 	cmdtest.RunCmdWithFactoryExpectErr(T, ts.Factory, "not found", "project", "tree", "NonExistentProject123456")
+}
+
+// runListSplit executes a command with separate stdout/stderr buffers so the truncation hint can be distinguished from list output.
+func runListSplit(t *testing.T, ts *cmdtest.TestServer, args ...string) (stdout, stderr string) {
+	t.Helper()
+	var out, errBuf bytes.Buffer
+	f := ts.CloneFactory()
+	// NewCommand strips PersistentPreRun (and thus InitOutput), so mirror the
+	// --quiet → Printer.Quiet wiring that production does at runtime.
+	f.Printer = &output.Printer{Out: &out, ErrOut: &errBuf, Quiet: slices.Contains(args, "--quiet") || slices.Contains(args, "-q")}
+	rootCmd := cmd.NewCommand(f)
+	rootCmd.SetArgs(args)
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&errBuf)
+	require.NoError(t, rootCmd.Execute())
+	return out.String(), errBuf.String()
+}
+
+func handleTruncatedProjects(ts *cmdtest.TestServer) {
+	ts.Handle("GET /app/rest/projects", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Query().Get("locator"), "count:1000") {
+			cmdtest.JSON(w, map[string]any{"count": 3, "project": []map[string]string{
+				{"id": "P1", "name": "P1"}, {"id": "P2", "name": "P2"}, {"id": "P3", "name": "P3"},
+			}})
+			return
+		}
+		cmdtest.JSON(w, map[string]any{
+			"count":    2,
+			"nextHref": "/app/rest/projects?locator=count:2,start:2",
+			"project":  []map[string]string{{"id": "P1", "name": "P1"}, {"id": "P2", "name": "P2"}},
+		})
+	})
+}
+
+const truncationHint = "use --limit 0 to fetch all"
+
+func TestProjectListTruncationHint(T *testing.T) {
+	T.Run("finite limit emits hint on stderr only", func(t *testing.T) {
+		ts := cmdtest.NewTestServer(t)
+		handleTruncatedProjects(ts)
+
+		stdout, stderr := runListSplit(t, ts, "project", "list", "--limit", "2")
+		assert.Contains(t, stdout, "P1")
+		assert.Contains(t, stdout, "P2")
+		assert.NotContains(t, stdout, truncationHint)
+		assert.Contains(t, stderr, "Showing only the first 2 results")
+		assert.Contains(t, stderr, truncationHint)
+	})
+
+	T.Run("limit 0 fetches all without a hint", func(t *testing.T) {
+		ts := cmdtest.NewTestServer(t)
+		handleTruncatedProjects(ts)
+
+		stdout, stderr := runListSplit(t, ts, "project", "list", "--limit", "0")
+		assert.Contains(t, stdout, "P3")
+		assert.NotContains(t, stderr, truncationHint)
+	})
+
+	T.Run("json output stays clean while hint goes to stderr", func(t *testing.T) {
+		ts := cmdtest.NewTestServer(t)
+		handleTruncatedProjects(ts)
+
+		stdout, stderr := runListSplit(t, ts, "project", "list", "--limit", "2", "--json")
+		var list api.ProjectList
+		require.NoError(t, json.Unmarshal([]byte(stdout), &list))
+		assert.Equal(t, 2, list.Count)
+		assert.Contains(t, stderr, truncationHint)
+	})
+
+	T.Run("quiet suppresses the hint", func(t *testing.T) {
+		ts := cmdtest.NewTestServer(t)
+		handleTruncatedProjects(ts)
+
+		_, stderr := runListSplit(t, ts, "project", "list", "--limit", "2", "--quiet")
+		assert.NotContains(t, stderr, truncationHint)
+	})
 }

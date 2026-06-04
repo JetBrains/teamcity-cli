@@ -18,11 +18,11 @@ type BuildTypesOptions struct {
 	Fields     []string
 }
 
-// GetBuildTypes returns a list of build configurations, automatically following pagination.
-func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
+// GetBuildTypes returns a list of build configurations, following pagination; the bool is true when a finite limit capped the result.
+func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, bool, error) {
 	locator := NewLocator().
 		Add("affectedProject", opts.Project).
-		AddIntDefault("count", opts.Limit, 30)
+		AddInt("count", pageCount(opts.Limit))
 	if opts.VcsRootURL != "" {
 		locator.AddLocator("vcsRoot", NewLocator().
 			AddLocator("property", NewLocator().
@@ -38,7 +38,7 @@ func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 	fieldsParam := fmt.Sprintf("count,nextHref,buildType(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/buildTypes?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	buildTypes, err := collectPages(c, path, opts.Limit, func(p string) ([]BuildType, string, error) {
+	buildTypes, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]BuildType, string, error) {
 		var page BuildTypeList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -46,10 +46,10 @@ func (c *Client) GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error) {
 		return page.BuildTypes, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return &BuildTypeList{Count: len(buildTypes), BuildTypes: buildTypes}, nil
+	return &BuildTypeList{Count: len(buildTypes), BuildTypes: buildTypes}, truncated, nil
 }
 
 // GetBuildType returns a single build configuration by ID

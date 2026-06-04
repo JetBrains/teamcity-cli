@@ -14,11 +14,11 @@ type QueueOptions struct {
 	Fields      []string
 }
 
-// GetBuildQueue returns the build queue, automatically following pagination.
-func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
+// GetBuildQueue returns the build queue, following pagination; the bool is true when a finite limit capped the result.
+func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, bool, error) {
 	locator := NewLocator().
 		Add("buildType", opts.BuildTypeID).
-		AddInt("count", opts.Limit)
+		AddInt("count", pageCount(opts.Limit))
 
 	fields := opts.Fields
 	if len(fields) == 0 {
@@ -33,7 +33,7 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 		path = fmt.Sprintf("%s?fields=%s", path, url.QueryEscape(fieldsParam))
 	}
 
-	builds, err := collectPages(c, path, opts.Limit, func(p string) ([]QueuedBuild, string, error) {
+	builds, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]QueuedBuild, string, error) {
 		var page BuildQueue
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -41,9 +41,9 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, error) {
 		return page.Builds, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return &BuildQueue{Count: len(builds), Builds: builds}, nil
+	return &BuildQueue{Count: len(builds), Builds: builds}, truncated, nil
 }
 
 // RemoveFromQueue removes a build from the queue

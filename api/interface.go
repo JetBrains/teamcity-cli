@@ -20,7 +20,7 @@ type ClientInterface interface {
 	CreateAPIToken(name string) (*Token, error)
 	DeleteAPIToken(name string) error
 
-	GetProjects(opts ProjectsOptions) (*ProjectList, error)
+	GetProjects(opts ProjectsOptions) (*ProjectList, bool, error)
 	GetProject(id string) (*Project, error)
 	CreateProject(req CreateProjectRequest) (*Project, error)
 	ProjectExists(id string) bool
@@ -30,7 +30,7 @@ type ClientInterface interface {
 	GetVersionedSettingsConfig(projectID string) (*VersionedSettingsConfig, error)
 	ExportProjectSettings(projectID, format string, useRelativeIds bool) ([]byte, error)
 
-	GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, error)
+	GetBuildTypes(opts BuildTypesOptions) (*BuildTypeList, bool, error)
 	GetBuildType(id string) (*BuildType, error)
 	SetBuildTypePaused(id string, paused bool) error
 	CreateBuildType(projectID string, req CreateBuildTypeRequest) (*BuildType, error)
@@ -44,7 +44,7 @@ type ClientInterface interface {
 	GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error)
 	SetBuildTypeSetting(buildTypeID, setting, value string) error
 
-	GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList, error)
+	GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList, bool, error)
 	GetBuild(ctx context.Context, ref string) (*Build, error)
 	GetBuildUsedByOtherBuilds(id string) (bool, error)
 	WaitForBuild(ctx context.Context, buildID string, opts WaitForBuildOptions) (*Build, error)
@@ -74,7 +74,7 @@ type ClientInterface interface {
 	DownloadArtifact(ctx context.Context, buildID, artifactPath string) ([]byte, error)
 	DownloadArtifactTo(ctx context.Context, buildID, artifactPath string, w io.Writer) (int64, error)
 
-	GetBuildQueue(opts QueueOptions) (*BuildQueue, error)
+	GetBuildQueue(opts QueueOptions) (*BuildQueue, bool, error)
 	RemoveFromQueue(id string) error
 	SetQueuedBuildPosition(buildID string, position int) error
 	MoveQueuedBuildToTop(buildID string) error
@@ -91,7 +91,7 @@ type ClientInterface interface {
 	DeleteBuildTypeParameter(buildTypeID, name string) error
 	GetParameterValue(path string) (string, error)
 
-	GetAgents(opts AgentsOptions) (*AgentList, error)
+	GetAgents(opts AgentsOptions) (*AgentList, bool, error)
 	GetAgent(id int) (*Agent, error)
 	GetAgentByName(name string) (*Agent, error)
 	AuthorizeAgent(id int, authorized bool) error
@@ -109,17 +109,17 @@ type ClientInterface interface {
 	RemoveProjectFromPool(poolID int, projectID string) error
 	SetAgentPool(agentID int, poolID int) error
 
-	GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList, error)
+	GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList, bool, error)
 	GetCloudProfile(locator string) (*CloudProfile, error)
-	GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error)
+	GetCloudImages(opts CloudImagesOptions) (*CloudImageList, bool, error)
 	GetCloudImage(locator string) (*CloudImage, error)
-	GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceList, error)
+	GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceList, bool, error)
 	GetCloudInstance(locator string) (*CloudInstance, error)
 	StartCloudInstance(imageID string) (*CloudInstance, error)
 	StopCloudInstance(locator string, force bool) error
 
 	GetBuildPipelineRun(buildID string) (*PipelineRun, error)
-	GetPipelines(opts PipelinesOptions) (*PipelineList, error)
+	GetPipelines(opts PipelinesOptions) (*PipelineList, bool, error)
 	GetPipeline(id string) (*Pipeline, error)
 	GetPipelineYAML(id string) (string, error)
 	CreatePipeline(parentProjectID, name, yaml, vcsRootID string) (*Pipeline, error)
@@ -127,7 +127,7 @@ type ClientInterface interface {
 	DeletePipeline(id string) error
 	GetPipelineSchema() ([]byte, error)
 
-	GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, error)
+	GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, bool, error)
 	GetVcsRoot(id string) (*VcsRoot, error)
 	CreateVcsRoot(root VcsRoot) (*VcsRoot, error)
 	DeleteVcsRoot(id string) error

@@ -108,7 +108,7 @@ func newAgentListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *agentListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	agents, err := client.GetAgents(api.AgentsOptions{
+	agents, truncated, err := client.GetAgents(api.AgentsOptions{
 		Pool:       opts.pool,
 		Connected:  opts.connected,
 		Enabled:    opts.enabled,
@@ -139,10 +139,11 @@ func (opts *agentListOptions) fetch(client api.ClientInterface, fields []string)
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     agents,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
-		EmptyMsg: "No agents found",
-		EmptyTip: output.TipNoAgents,
+		JSON:      agents,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
+		EmptyMsg:  "No agents found",
+		EmptyTip:  output.TipNoAgents,
+		Truncated: truncated,
 	}, nil
 }
 

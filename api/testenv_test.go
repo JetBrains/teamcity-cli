@@ -52,7 +52,7 @@ func (e *testEnv) Cleanup() {
 		return
 	}
 	if e.Client != nil {
-		agents, err := e.Client.GetAgents(api.AgentsOptions{})
+		agents, _, err := e.Client.GetAgents(api.AgentsOptions{})
 		if err == nil && len(agents.Agents) > 0 {
 			_ = e.Client.RebootAgent(e.ctx, agents.Agents[0].ID, true)
 		}
@@ -116,7 +116,7 @@ func setupTestEnv() (*testEnv, error) {
 }
 
 func (e *testEnv) discoverTestData() error {
-	projects, err := e.Client.GetProjects(api.ProjectsOptions{Parent: "_Root", Limit: 5})
+	projects, _, err := e.Client.GetProjects(api.ProjectsOptions{Parent: "_Root", Limit: 5})
 	if err != nil {
 		return fmt.Errorf("list projects: %w", err)
 	}
@@ -128,7 +128,7 @@ func (e *testEnv) discoverTestData() error {
 	}
 
 	if e.ProjectID != "" {
-		configs, err := e.Client.GetBuildTypes(api.BuildTypesOptions{Project: e.ProjectID, Limit: 5})
+		configs, _, err := e.Client.GetBuildTypes(api.BuildTypesOptions{Project: e.ProjectID, Limit: 5})
 		if err == nil && len(configs.BuildTypes) > 0 {
 			e.ConfigID = configs.BuildTypes[0].ID
 		}
@@ -314,7 +314,7 @@ func (e *testEnv) ensureBuild() error {
 		return fmt.Errorf("config ID not set")
 	}
 
-	builds, err := e.Client.GetBuilds(context.Background(), api.BuildsOptions{BuildTypeID: e.ConfigID, State: "finished", Limit: 1})
+	builds, _, err := e.Client.GetBuilds(context.Background(), api.BuildsOptions{BuildTypeID: e.ConfigID, State: "finished", Limit: 1})
 	if err != nil {
 		return err
 	}
@@ -437,7 +437,7 @@ func waitForAgents(client *api.Client, count int) error {
 	authorized := map[int]bool{}
 	deadline := time.Now().Add(3 * time.Minute)
 	for time.Now().Before(deadline) {
-		agents, err := client.GetAgents(api.AgentsOptions{})
+		agents, _, err := client.GetAgents(api.AgentsOptions{})
 		if err != nil {
 			time.Sleep(5 * time.Second)
 			continue

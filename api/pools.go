@@ -14,9 +14,10 @@ func (c *Client) GetAgentPools(requestedFields []string) (*PoolList, error) {
 		fields = PoolFields.Default
 	}
 	fieldsParam := fmt.Sprintf("count,nextHref,agentPool(%s)", ToAPIFields(fields))
-	path := "/app/rest/agentPools?fields=" + url.QueryEscape(fieldsParam)
+	locator := NewLocator().AddInt("count", pageCount(0))
+	path := fmt.Sprintf("/app/rest/agentPools?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	pools, err := collectPages(c, path, 0, func(p string) ([]Pool, string, error) {
+	pools, _, err := collectPages(c, path, 0, func(p string) ([]Pool, string, error) {
 		var page PoolList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
