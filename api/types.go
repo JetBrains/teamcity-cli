@@ -360,6 +360,79 @@ type TestOccurrences struct {
 	TestOccurrence []TestOccurrence `json:"testOccurrence"`
 }
 
+// TestRef is a minimal test reference used inside mute/investigation targets.
+type TestRef struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+// TestRefs wraps the tests targeted by a mute or investigation.
+type TestRefs struct {
+	Count int       `json:"count,omitempty"`
+	Test  []TestRef `json:"test"`
+}
+
+// BuildTypeRefs wraps build configurations referenced by a mute/investigation scope.
+type BuildTypeRefs struct {
+	Count     int         `json:"count,omitempty"`
+	BuildType []BuildType `json:"buildType"`
+}
+
+// ProblemScope is the project or build-configuration scope of a mute/investigation.
+type ProblemScope struct {
+	Project    *Project       `json:"project,omitempty"`
+	BuildTypes *BuildTypeRefs `json:"buildTypes,omitempty"`
+}
+
+// ProblemTarget identifies the tests a mute/investigation applies to.
+type ProblemTarget struct {
+	Tests *TestRefs `json:"tests,omitempty"`
+}
+
+// Resolution describes how a mute/investigation is resolved (manually or whenFixed).
+type Resolution struct {
+	Type string `json:"type,omitempty"` // manually, whenFixed
+}
+
+// MuteAssignment carries the reason text and metadata recorded when a mute is created.
+type MuteAssignment struct {
+	Text      string `json:"text,omitempty"`
+	Timestamp string `json:"timestamp,omitempty"`
+	User      *User  `json:"user,omitempty"`
+}
+
+// Mute represents a test mute (/app/rest/mutes).
+type Mute struct {
+	ID         int             `json:"id,omitempty"`
+	Scope      *ProblemScope   `json:"scope,omitempty"`
+	Target     *ProblemTarget  `json:"target,omitempty"`
+	Resolution *Resolution     `json:"resolution,omitempty"`
+	Assignment *MuteAssignment `json:"assignment,omitempty"`
+	MutedTime  string          `json:"mutedTime,omitempty"`
+}
+
+// Mutes represents a list of mutes.
+type Mutes struct {
+	Count int    `json:"count"`
+	Mute  []Mute `json:"mute"`
+}
+
+// Investigation represents a test investigation (/app/rest/investigations).
+type Investigation struct {
+	ID         string         `json:"id,omitempty"`
+	State      string         `json:"state,omitempty"` // TAKEN, FIXED, GIVEN_UP
+	Scope      *ProblemScope  `json:"scope,omitempty"`
+	Target     *ProblemTarget `json:"target,omitempty"`
+	Assignee   *User          `json:"assignee,omitempty"`
+	Resolution *Resolution    `json:"resolution,omitempty"`
+}
+
+// Investigations represents a list of investigations.
+type Investigations struct {
+	Count         int             `json:"count"`
+	Investigation []Investigation `json:"investigation"`
+}
+
 type ProblemOccurrence struct {
 	ID       string `json:"id"`
 	Type     string `json:"type"`
