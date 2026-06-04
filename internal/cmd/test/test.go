@@ -26,6 +26,8 @@ See: https://www.jetbrains.com/help/teamcity/investigating-and-muting-build-fail
 	cmd.AddCommand(newHistoryCmd(f))
 	cmd.AddCommand(newMuteCmd(f))
 	cmd.AddCommand(newUnmuteCmd(f))
+	cmd.AddCommand(newInvestigateCmd(f))
+	cmd.AddCommand(newResolveCmd(f))
 
 	return cmd
 }
