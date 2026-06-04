@@ -86,6 +86,7 @@ Report issues:  https://jb.gg/tc/issues`,
 
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		f.InitOutput()
+		output.StartSpinner(f.Quiet)
 		if jsonOutputEnabled(cmd) {
 			f.JSONOutput = true
 		}
@@ -124,6 +125,7 @@ func Execute(ctx context.Context) error {
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
 	executedCmd, err := rootCmd.ExecuteC()
+	output.StopSpinner()
 	if f.UpdateNotice != nil {
 		f.UpdateNotice()
 	}

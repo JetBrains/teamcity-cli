@@ -182,6 +182,8 @@ func (tc *Conn) RunInteractive(ctx context.Context) error {
 		return errors.New("terminal command requires an interactive terminal")
 	}
 
+	output.StopSpinner() // hand the terminal to raw-mode PTY I/O
+
 	defer tc.Close()
 
 	oldState, err := term.MakeRaw(fd)
