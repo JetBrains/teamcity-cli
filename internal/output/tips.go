@@ -45,6 +45,12 @@ func TipNoParametersFor(scope string) string {
 	return fmt.Sprintf("Add one with 'teamcity param set %s <name> <value>'", scope)
 }
 
+// TipNoSettingsFor returns the tip for an empty settings list, pre-filling
+// the scope (job ID).
+func TipNoSettingsFor(scope string) string {
+	return fmt.Sprintf("Set one with 'teamcity job settings set %s <setting> <value>'", scope)
+}
+
 // TipEnableReadOnly returns a tip suggesting how to switch the CLI into read-only mode.
 func TipEnableReadOnly() string {
 	return fmt.Sprintf("To enable read-only mode, set %s or run %s",

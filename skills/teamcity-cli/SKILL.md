@@ -35,7 +35,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 | Builds    | `run list`, `view`, `start`, `watch`, `log`, `cancel`, `restart`, `tests`, `changes`, `tree`      |
 | Artifacts | `run artifacts`, `run download`                                                                   |
 | Metadata  | `run pin/unpin`, `run tag/untag`, `run comment`                                                   |
-| Jobs      | `job list`, `view`, `create`, `tree`, `pause/resume`, `step list/view/add/delete`, `param list/get/set/delete` |
+| Jobs      | `job list`, `view`, `create`, `tree`, `pause/resume`, `step list/view/add/delete`, `param list/get/set/delete`, `settings list/get/set` |
 | Projects  | `project list`, `view`, `create`, `tree`, `param`, `token put/get`, `settings export/status`      |
 | VCS/Conn  | `project vcs list/view/create/delete`, `project connection list/create/authorize/delete`          |
 | Queue     | `queue list`, `approve`, `remove`, `top`                                                          |

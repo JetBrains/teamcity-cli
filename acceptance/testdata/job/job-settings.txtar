@@ -1,0 +1,48 @@
+# Test job settings subcommands (list/get/set).
+[!has_token] skip 'requires authentication token'
+
+# Single-quoted strings disable env-var expansion in testscript, so $RANDOM_STRING
+# is left unquoted (it has no spaces). Sandbox is the sandbox project used by other tests.
+
+# Create a throwaway job to mutate settings on
+exec teamcity job create cli-settings-$RANDOM_STRING --project Sandbox --id cli_settings_$RANDOM_STRING --no-input
+! stderr 'Error'
+
+# Settings always have server defaults, so the table renders SETTING/VALUE rows
+exec teamcity job settings list cli_settings_$RANDOM_STRING --no-input
+stdout 'SETTING'
+stdout 'VALUE'
+! stderr 'Error'
+
+# JSON list exposes the count field
+exec teamcity job settings list cli_settings_$RANDOM_STRING --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# Set the build number pattern, then read it back
+exec teamcity job settings set cli_settings_$RANDOM_STRING buildNumberPattern 2.0.%build.counter% --no-input
+stdout 'Set setting buildNumberPattern'
+! stderr 'Error'
+
+exec teamcity job settings get cli_settings_$RANDOM_STRING buildNumberPattern --no-input
+stdout '2.0.%build.counter%'
+! stderr 'Error'
+
+# get --json returns a name/value object
+exec teamcity job settings get cli_settings_$RANDOM_STRING buildNumberPattern --json --no-input
+stdout '"name"'
+stdout '"value"'
+! stderr 'Error'
+
+# A value with spaces and => (artifact rules) round-trips through set
+exec teamcity job settings set cli_settings_$RANDOM_STRING artifactRules 'build/** => artifacts' --no-input
+stdout 'Set setting artifactRules'
+! stderr 'Error'
+
+# Unknown setting name is an error
+! exec teamcity job settings get cli_settings_$RANDOM_STRING nonExistentSetting123 --no-input
+stderr '.'
+
+# Cleanup
+exec teamcity api /app/rest/buildTypes/id:cli_settings_$RANDOM_STRING -X DELETE --no-input
+! stderr 'Error'

@@ -183,6 +183,25 @@ func SetupMockClient(t *testing.T) *TestServer {
 			return
 		}
 
+		if strings.Contains(r.URL.Path, "/settings/") {
+			Text(w, "10")
+			return
+		}
+		if strings.Contains(r.URL.Path, "/settings") {
+			if id == "EmptySettingsJob" {
+				JSON(w, api.SettingsList{Count: 0, Property: []api.Setting{}})
+				return
+			}
+			JSON(w, api.SettingsList{
+				Count: 2,
+				Property: []api.Setting{
+					{Name: "buildNumberPattern", Value: "%build.counter%"},
+					{Name: "executionTimeoutMin", Value: "10"},
+				},
+			})
+			return
+		}
+
 		if strings.Contains(r.URL.Path, "/steps/") {
 			JSON(w, api.BuildStep{ID: ExtractID(r.URL.Path, "/steps/"), Name: "Compile", Type: "gradle"})
 			return
