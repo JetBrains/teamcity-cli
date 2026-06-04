@@ -52,7 +52,7 @@ them alongside classic build configurations.`,
 func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 	pipelineProjectIDs := map[string]bool{}
 	if !opts.all && client.SupportsFeature("pipelines") {
-		if pipelines, err := client.GetPipelines(api.PipelinesOptions{Limit: 10000}); err == nil {
+		if pipelines, _, err := client.GetPipelines(api.PipelinesOptions{Limit: 10000}); err == nil {
 			for _, p := range pipelines.Pipelines {
 				pipelineProjectIDs[p.ID] = true
 			}
@@ -69,7 +69,7 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 		fetchFields = append(slices.Clone(fields), "projectId")
 	}
 
-	jobs, err := client.GetBuildTypes(api.BuildTypesOptions{
+	jobs, truncated, err := client.GetBuildTypes(api.BuildTypesOptions{
 		Project: opts.project,
 		Limit:   limit,
 		Fields:  fetchFields,
@@ -88,9 +88,10 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 		jobs.BuildTypes = filtered
 		jobs.Count = len(filtered)
 	}
-	if len(jobs.BuildTypes) > opts.Limit {
+	if opts.Limit > 0 && len(jobs.BuildTypes) > opts.Limit {
 		jobs.BuildTypes = jobs.BuildTypes[:opts.Limit]
 		jobs.Count = opts.Limit
+		truncated = true
 	}
 
 	headers := []string{"ID", "NAME", "PROJECT", "STATUS"}
@@ -111,10 +112,11 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     jobs,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg: "No jobs found",
-		EmptyTip: output.TipNoJobs,
+		JSON:      jobs,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg:  "No jobs found",
+		EmptyTip:  output.TipNoJobs,
+		Truncated: truncated,
 	}, nil
 }
 

@@ -84,7 +84,8 @@ func (opts *sshListOptions) fetch(client api.ClientInterface, fields []string) (
 	}
 
 	items := keys.SSHKey
-	if opts.Limit > 0 && opts.Limit < len(items) {
+	truncated := opts.Limit > 0 && opts.Limit < len(items)
+	if truncated {
 		items = items[:opts.Limit]
 	}
 
@@ -99,9 +100,10 @@ func (opts *sshListOptions) fetch(client api.ClientInterface, fields []string) (
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     filterJSONList(items, fields, sshKeyToMap),
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2}},
-		EmptyMsg: "No SSH keys found",
+		JSON:      filterJSONList(items, fields, sshKeyToMap),
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2}},
+		EmptyMsg:  "No SSH keys found",
+		Truncated: truncated,
 	}, nil
 }
 

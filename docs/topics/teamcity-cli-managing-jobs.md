@@ -22,10 +22,11 @@ Filter by project:
 teamcity job list --project MyProject
 ```
 
-Limit the number of results:
+Limit the number of results (use `--limit 0` to fetch all):
 
 ```Shell
 teamcity job list --limit 20
+teamcity job list --limit 0
 ```
 
 Output as JSON:
@@ -70,7 +71,7 @@ Filter by project ID
 </td>
 <td>
 
-Maximum number of jobs to display
+Maximum number of jobs to display (use 0 for all)
 
 </td>
 </tr>

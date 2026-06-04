@@ -19,8 +19,8 @@ type AgentsOptions struct {
 	Fields     []string // Fields to return (uses AgentFields.Default if empty)
 }
 
-// GetAgents returns a list of agents, automatically following pagination.
-func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
+// GetAgents returns a list of agents, following pagination; the bool is true when a finite limit capped the result.
+func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, bool, error) {
 	locator := NewLocator()
 
 	if opts.Authorized {
@@ -42,7 +42,7 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 			locator.AddRaw("pool", "(name:"+opts.Pool+")")
 		}
 	}
-	locator.AddIntDefault("count", opts.Limit, 100)
+	locator.AddInt("count", pageCount(opts.Limit))
 
 	fields := opts.Fields
 	if len(fields) == 0 {
@@ -51,7 +51,7 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 	fieldsParam := fmt.Sprintf("count,nextHref,agent(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/agents?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	agents, err := collectPages(c, path, opts.Limit, func(p string) ([]Agent, string, error) {
+	agents, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]Agent, string, error) {
 		var page AgentList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -59,10 +59,10 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, error) {
 		return page.Agents, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return &AgentList{Count: len(agents), Agents: agents}, nil
+	return &AgentList{Count: len(agents), Agents: agents}, truncated, nil
 }
 
 // AuthorizeAgent sets the authorized status of an agent

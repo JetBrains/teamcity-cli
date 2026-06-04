@@ -63,7 +63,7 @@ Filter by parent project ID
 </td>
 <td>
 
-Maximum number of projects to display
+Maximum number of projects to display (use 0 for all)
 
 </td>
 </tr>

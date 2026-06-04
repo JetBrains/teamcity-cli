@@ -7,11 +7,8 @@ stderr 'job id is required'
 ! exec teamcity run cancel --no-input
 stderr 'accepts 1 arg'
 
-! exec teamcity run list --limit 0 --no-input
-stderr 'must be a positive number'
-
 ! exec teamcity run list --limit -1 --no-input
-stderr 'must be a positive number'
+stderr 'must not be negative'
 
 ! exec teamcity run list --status bogus --no-input
 stderr 'invalid status'

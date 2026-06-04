@@ -77,7 +77,7 @@ func newCloudProfileListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *cloudProfileListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	profiles, err := client.GetCloudProfiles(api.CloudProfilesOptions{
+	profiles, truncated, err := client.GetCloudProfiles(api.CloudProfilesOptions{
 		ProjectID: opts.project,
 		Limit:     opts.Limit,
 		Fields:    fields,
@@ -98,9 +98,10 @@ func (opts *cloudProfileListOptions) fetch(client api.ClientInterface, fields []
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     profiles,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1}},
-		EmptyMsg: "No cloud profiles found",
+		JSON:      profiles,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1}},
+		EmptyMsg:  "No cloud profiles found",
+		Truncated: truncated,
 	}, nil
 }
 
@@ -210,7 +211,7 @@ func newCloudImageListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *cloudImageListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	images, err := client.GetCloudImages(api.CloudImagesOptions{
+	images, truncated, err := client.GetCloudImages(api.CloudImagesOptions{
 		ProjectID: opts.project,
 		Profile:   opts.profile,
 		Limit:     opts.Limit,
@@ -237,9 +238,10 @@ func (opts *cloudImageListOptions) fetch(client api.ClientInterface, fields []st
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     images,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2}},
-		EmptyMsg: "No cloud images found",
+		JSON:      images,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2}},
+		EmptyMsg:  "No cloud images found",
+		Truncated: truncated,
 	}, nil
 }
 
@@ -386,7 +388,7 @@ func newCloudInstanceListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *cloudInstanceListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	instances, err := client.GetCloudInstances(api.CloudInstancesOptions{
+	instances, truncated, err := client.GetCloudInstances(api.CloudInstancesOptions{
 		ProjectID: opts.project,
 		Image:     opts.image,
 		Limit:     opts.Limit,
@@ -426,9 +428,10 @@ func (opts *cloudInstanceListOptions) fetch(client api.ClientInterface, fields [
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     instances,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2, 3, 5}},
-		EmptyMsg: "No cloud instances found",
+		JSON:      instances,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2, 3, 5}},
+		EmptyMsg:  "No cloud instances found",
+		Truncated: truncated,
 	}, nil
 }
 

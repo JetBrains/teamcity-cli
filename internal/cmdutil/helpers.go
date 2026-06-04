@@ -65,10 +65,10 @@ func OpenURLOrWarn(p *output.Printer, url string) {
 	}
 }
 
-// ValidateLimit returns an error if limit is not positive.
+// ValidateLimit returns an error if limit is negative. Zero means "fetch all".
 func ValidateLimit(limit int) error {
-	if limit <= 0 {
-		return fmt.Errorf("--limit must be a positive number, got %d", limit)
+	if limit < 0 {
+		return fmt.Errorf("--limit must not be negative, got %d", limit)
 	}
 	return nil
 }

@@ -112,7 +112,7 @@ Filter by agent pool name
 </td>
 <td>
 
-Maximum number of agents to display
+Maximum number of agents to display (use 0 for all)
 
 </td>
 </tr>

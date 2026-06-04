@@ -81,10 +81,10 @@ func isCloudIDLikeLocator(value string) bool {
 		strings.HasPrefix(value, "projectId:")
 }
 
-func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList, error) {
+func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList, bool, error) {
 	locator := NewLocator().
 		Add("project", opts.ProjectID).
-		AddIntDefault("count", opts.Limit, 100)
+		AddInt("count", pageCount(opts.Limit))
 
 	fields := opts.Fields
 	if len(fields) == 0 {
@@ -93,7 +93,7 @@ func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList,
 	fieldsParam := fmt.Sprintf("count,nextHref,cloudProfile(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/cloud/profiles?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	profiles, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudProfile, string, error) {
+	profiles, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudProfile, string, error) {
 		var page CloudProfileList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -101,9 +101,9 @@ func (c *Client) GetCloudProfiles(opts CloudProfilesOptions) (*CloudProfileList,
 		return page.Profiles, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return &CloudProfileList{Count: len(profiles), Profiles: profiles}, nil
+	return &CloudProfileList{Count: len(profiles), Profiles: profiles}, truncated, nil
 }
 
 func (c *Client) GetCloudProfile(locator string) (*CloudProfile, error) {
@@ -116,13 +116,13 @@ func (c *Client) GetCloudProfile(locator string) (*CloudProfile, error) {
 	return &result, nil
 }
 
-func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error) {
+func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, bool, error) {
 	locator := NewLocator().
 		Add("project", opts.ProjectID)
 	if opts.Profile != "" {
 		locator.AddRaw("profile", "("+cloudLocator(opts.Profile, "id")+")")
 	}
-	locator.AddIntDefault("count", opts.Limit, 100)
+	locator.AddInt("count", pageCount(opts.Limit))
 
 	fields := opts.Fields
 	if len(fields) == 0 {
@@ -131,7 +131,7 @@ func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error
 	fieldsParam := fmt.Sprintf("count,nextHref,cloudImage(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/cloud/images?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	images, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudImage, string, error) {
+	images, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudImage, string, error) {
 		var page CloudImageList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -139,9 +139,9 @@ func (c *Client) GetCloudImages(opts CloudImagesOptions) (*CloudImageList, error
 		return page.Images, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return &CloudImageList{Count: len(images), Images: images}, nil
+	return &CloudImageList{Count: len(images), Images: images}, truncated, nil
 }
 
 func (c *Client) GetCloudImage(locator string) (*CloudImage, error) {
@@ -154,13 +154,13 @@ func (c *Client) GetCloudImage(locator string) (*CloudImage, error) {
 	return &result, nil
 }
 
-func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceList, error) {
+func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceList, bool, error) {
 	locator := NewLocator().
 		Add("project", opts.ProjectID)
 	if opts.Image != "" {
 		locator.AddRaw("image", "("+cloudLocator(opts.Image, "name")+")")
 	}
-	locator.AddIntDefault("count", opts.Limit, 100)
+	locator.AddInt("count", pageCount(opts.Limit))
 
 	fields := opts.Fields
 	if len(fields) == 0 {
@@ -169,7 +169,7 @@ func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceLi
 	fieldsParam := fmt.Sprintf("count,nextHref,cloudInstance(%s)", ToAPIFields(fields))
 	path := fmt.Sprintf("/app/rest/cloud/instances?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fieldsParam))
 
-	instances, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudInstance, string, error) {
+	instances, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]CloudInstance, string, error) {
 		var page CloudInstanceList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -177,9 +177,9 @@ func (c *Client) GetCloudInstances(opts CloudInstancesOptions) (*CloudInstanceLi
 		return page.Instances, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return &CloudInstanceList{Count: len(instances), Instances: instances}, nil
+	return &CloudInstanceList{Count: len(instances), Instances: instances}, truncated, nil
 }
 
 func (c *Client) GetCloudInstance(locator string) (*CloudInstance, error) {

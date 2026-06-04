@@ -69,7 +69,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&opts.revision, "revision", "", "Filter by VCS revision/commit SHA (or '@head' for current HEAD)")
 	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorites for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
-	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of items")
+	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of items (0 for all)")
 	cmd.Flags().StringVar(&opts.since, "since", "", "Finished after this time (e.g., 24h, 7d, 2026-01-21)")
 	cmd.Flags().StringVar(&opts.until, "until", "", "Finished before this time (e.g., 12h, 7d, 2026-01-22)")
 	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
@@ -135,13 +135,17 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		return err
 	}
 
-	runs, err := client.GetBuilds(f.Context(), request.builds)
+	runs, truncated, err := client.GetBuilds(f.Context(), request.builds)
 	if err != nil {
 		return err
 	}
 
 	if jsonResult.Enabled {
-		return f.Printer.PrintJSON(runs)
+		if err := f.Printer.PrintJSON(runs); err != nil {
+			return err
+		}
+		cmdutil.WarnListTruncated(f, truncated, opts.limit)
+		return nil
 	}
 
 	if runs.Count == 0 {
@@ -215,6 +219,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		output.AutoSizeColumns(headers, rows, 2, 2, 3, 4)
 		p.PrintTable(headers, rows)
 	}
+	cmdutil.WarnListTruncated(f, truncated, opts.limit)
 	return nil
 }
 

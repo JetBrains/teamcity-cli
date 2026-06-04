@@ -1,9 +1,13 @@
 package job_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
@@ -18,6 +22,26 @@ func TestJobList(T *testing.T) {
 	cmdtest.RunCmdWithFactory(T, f, "job", "list", "--limit", "5")
 	cmdtest.RunCmdWithFactory(T, f, "job", "list", "--project", "TestProject")
 	cmdtest.RunCmdWithFactory(T, f, "job", "list", "--json", "--limit", "2")
+}
+
+// TestJobListLimitZero guards the post-filter bug where `--limit 0` sliced the result to [:0] instead of fetching all.
+func TestJobListLimitZero(T *testing.T) {
+	ts := cmdtest.NewTestServer(T)
+	ts.Handle("GET /app/rest/buildTypes", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.BuildTypeList{
+			Count: 3,
+			BuildTypes: []api.BuildType{
+				{ID: "P_A", Name: "A", ProjectID: "P"},
+				{ID: "P_B", Name: "B", ProjectID: "P"},
+				{ID: "P_C", Name: "C", ProjectID: "P"},
+			},
+		})
+	})
+
+	out := cmdtest.CaptureOutput(T, ts.Factory, "job", "list", "--limit", "0", "--json")
+	var list api.BuildTypeList
+	require.NoError(T, json.Unmarshal([]byte(out), &list))
+	assert.Equal(T, 3, list.Count)
 }
 
 func TestJobView(T *testing.T) {

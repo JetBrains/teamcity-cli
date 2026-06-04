@@ -18,9 +18,9 @@ import (
 func TestValidateLimit(t *testing.T) {
 	assert.NoError(t, ValidateLimit(1))
 	assert.NoError(t, ValidateLimit(100))
-	assert.Error(t, ValidateLimit(0))
+	assert.NoError(t, ValidateLimit(0))
 	assert.Error(t, ValidateLimit(-1))
-	assert.Contains(t, ValidateLimit(-5).Error(), "--limit must be a positive number")
+	assert.Contains(t, ValidateLimit(-5).Error(), "--limit must not be negative")
 }
 
 func TestParseID(t *testing.T) {

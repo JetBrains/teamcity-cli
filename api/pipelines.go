@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-// GetPipelines lists pipelines, optionally filtered by project. Automatically follows pagination.
-func (c *Client) GetPipelines(opts PipelinesOptions) (*PipelineList, error) {
+// GetPipelines lists pipelines, optionally filtered by project, following pagination; the bool is true when a finite limit capped the result.
+func (c *Client) GetPipelines(opts PipelinesOptions) (*PipelineList, bool, error) {
 	locator := NewLocator().
-		AddIntDefault("count", opts.Limit, 100)
+		AddInt("count", pageCount(opts.Limit))
 	if opts.Project != "" {
 		locator.AddLocator("parentProject", NewLocator().Add("id", opts.Project))
 	}
@@ -27,7 +27,7 @@ func (c *Client) GetPipelines(opts PipelinesOptions) (*PipelineList, error) {
 	path := fmt.Sprintf("/app/rest/pipelines?locator=%s&fields=%s",
 		locator.Encode(), url.QueryEscape(fieldsParam))
 
-	pipelines, err := collectPages(c, path, opts.Limit, func(p string) ([]Pipeline, string, error) {
+	pipelines, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]Pipeline, string, error) {
 		var page PipelineList
 		if err := c.get(c.ctx(), p, &page); err != nil {
 			return nil, "", err
@@ -35,9 +35,9 @@ func (c *Client) GetPipelines(opts PipelinesOptions) (*PipelineList, error) {
 		return page.Pipelines, page.NextHref, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return &PipelineList{Count: len(pipelines), Pipelines: pipelines}, nil
+	return &PipelineList{Count: len(pipelines), Pipelines: pipelines}, truncated, nil
 }
 
 // GetPipeline retrieves a single pipeline by ID via the REST API.

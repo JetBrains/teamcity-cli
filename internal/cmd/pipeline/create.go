@@ -84,7 +84,7 @@ func selectVcsRoot(f *cmdutil.Factory, client api.ClientInterface, projectID str
 		return "", errors.New("--vcs-root is required (or use interactive mode)")
 	}
 
-	roots, err := client.GetVcsRoots(api.VcsRootsOptions{Project: projectID, Limit: 100})
+	roots, _, err := client.GetVcsRoots(api.VcsRootsOptions{Project: projectID, Limit: 100})
 	if err != nil {
 		return "", fmt.Errorf("failed to list VCS roots: %w", err)
 	}

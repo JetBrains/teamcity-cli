@@ -41,7 +41,7 @@ func newPipelineListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *pipelineListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	pipelines, err := client.GetPipelines(api.PipelinesOptions{
+	pipelines, truncated, err := client.GetPipelines(api.PipelinesOptions{
 		Project: opts.project,
 		Limit:   opts.Limit,
 		Fields:  fields,
@@ -72,9 +72,10 @@ func (opts *pipelineListOptions) fetch(client api.ClientInterface, fields []stri
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     pipelines,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
-		EmptyMsg: "No pipelines found",
-		EmptyTip: output.TipNoPipelines,
+		JSON:      pipelines,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
+		EmptyMsg:  "No pipelines found",
+		EmptyTip:  output.TipNoPipelines,
+		Truncated: truncated,
 	}, nil
 }

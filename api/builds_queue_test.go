@@ -21,7 +21,7 @@ func TestGetBuildQueue(t *testing.T) {
 		})
 	})
 
-	result, err := client.GetBuildQueue(QueueOptions{})
+	result, _, err := client.GetBuildQueue(QueueOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Count)
 }
@@ -34,7 +34,7 @@ func TestGetBuildQueueWithFilter(t *testing.T) {
 		json.NewEncoder(w).Encode(BuildQueue{Count: 0})
 	})
 
-	_, err := client.GetBuildQueue(QueueOptions{BuildTypeID: "bt1"})
+	_, _, err := client.GetBuildQueue(QueueOptions{BuildTypeID: "bt1"})
 	require.NoError(t, err)
 }
 

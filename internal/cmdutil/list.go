@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"cmp"
+	"fmt"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -18,7 +19,7 @@ type ListFlags struct {
 
 // AddListFlags registers --limit, --json, --plain, and --no-header flags on a command.
 func AddListFlags(cmd *cobra.Command, flags *ListFlags, defaultLimit int) {
-	cmd.Flags().IntVarP(&flags.Limit, "limit", "n", defaultLimit, "Maximum number of items")
+	cmd.Flags().IntVarP(&flags.Limit, "limit", "n", defaultLimit, "Maximum number of items (0 for all)")
 	AddJSONFieldsFlag(cmd, &flags.JSONFields)
 	AddPlainFlags(cmd, flags)
 }
@@ -41,11 +42,13 @@ type ListTable struct {
 // ListResult is returned by a list command's fetch function.
 // Set either JSON (for JSON output) or Table (for table output).
 // EmptyTip is shown alongside EmptyMsg when the table is empty.
+// Truncated reports that a finite --limit capped the result; RunList turns it into a stderr hint.
 type ListResult struct {
-	JSON     any
-	Table    ListTable
-	EmptyMsg string
-	EmptyTip string
+	JSON      any
+	Table     ListTable
+	EmptyMsg  string
+	EmptyTip  string
+	Truncated bool
 }
 
 // RunList handles the shared boilerplate for list commands:
@@ -82,11 +85,19 @@ func RunList(
 	}
 
 	if jsonResult.Enabled {
-		return f.Printer.PrintJSON(result.JSON)
+		if err := f.Printer.PrintJSON(result.JSON); err != nil {
+			return err
+		}
+		WarnListTruncated(f, result.Truncated, flags.Limit)
+		return nil
 	}
 
 	if len(result.Table.Rows) == 0 {
-		f.Printer.Empty(cmp.Or(result.EmptyMsg, "No items found"), result.EmptyTip)
+		tip := result.EmptyTip
+		if result.Truncated && flags.Limit > 0 {
+			tip = fmt.Sprintf("Searched only the first %d results - use --limit 0 to fetch all", flags.Limit)
+		}
+		f.Printer.Empty(cmp.Or(result.EmptyMsg, "No items found"), tip)
 		return nil
 	}
 
@@ -98,5 +109,15 @@ func RunList(
 		}
 		f.Printer.PrintTable(result.Table.Headers, result.Table.Rows)
 	}
+	WarnListTruncated(f, result.Truncated, flags.Limit)
 	return nil
+}
+
+// WarnListTruncated emits a stderr hint, set off by a blank line, when a finite --limit capped the result; no-op for --limit <= 0 or under --quiet.
+func WarnListTruncated(f *Factory, truncated bool, limit int) {
+	if !truncated || limit <= 0 || f.Printer.Quiet {
+		return
+	}
+	_, _ = fmt.Fprintln(f.Printer.ErrOut)
+	f.Printer.Warn("Showing only the first %d results - use --limit 0 to fetch all", limit)
 }

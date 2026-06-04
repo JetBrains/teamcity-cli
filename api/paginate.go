@@ -5,22 +5,33 @@ import (
 	"strings"
 )
 
-// collectPages follows NextHref links to accumulate items up to the limit.
-// If limit is 0, all pages are collected.
-func collectPages[T any](c *Client, path string, limit int, fetch func(string) ([]T, string, error)) ([]T, error) {
+// allPageSize is the per-page count requested for an unbounded fetch; the server caps it and collectPages follows nextHref for the remainder, so a large value just trims round-trips.
+const allPageSize = 1000
+
+// pageCount returns the per-page item count to request: allPageSize when limit is unbounded (0), otherwise the limit.
+func pageCount(limit int) int {
+	if limit == 0 {
+		return allPageSize
+	}
+	return limit
+}
+
+// collectPages follows NextHref links to accumulate items up to the limit (0 collects all); the bool is true when a finite limit capped the result and more exist.
+func collectPages[T any](c *Client, path string, limit int, fetch func(string) ([]T, string, error)) ([]T, bool, error) {
 	var all []T
 	for path != "" {
 		items, nextHref, err := fetch(path)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		all = append(all, items...)
 		if limit > 0 && len(all) >= limit {
-			return all[:limit], nil
+			truncated := len(all) > limit || c.normalizePaginationPath(nextHref) != ""
+			return all[:limit], truncated, nil
 		}
 		path = c.normalizePaginationPath(nextHref)
 	}
-	return all, nil
+	return all, false, nil
 }
 
 // normalizePaginationPath converts a TeamCity NextHref value into a path

@@ -21,17 +21,17 @@ func (f *fakeClient) SupportsFeature(name string) bool {
 	return name == "pipelines" && f.pipelinesSupported
 }
 
-func (f *fakeClient) GetPipelines(api.PipelinesOptions) (*api.PipelineList, error) {
+func (f *fakeClient) GetPipelines(api.PipelinesOptions) (*api.PipelineList, bool, error) {
 	if f.pipelines == nil {
-		return &api.PipelineList{}, nil
+		return &api.PipelineList{}, false, nil
 	}
-	return f.pipelines, nil
+	return f.pipelines, false, nil
 }
 
-func (f *fakeClient) GetBuildTypes(opts api.BuildTypesOptions) (*api.BuildTypeList, error) {
+func (f *fakeClient) GetBuildTypes(opts api.BuildTypesOptions) (*api.BuildTypeList, bool, error) {
 	f.gotFragments = append(f.gotFragments, opts.VcsRootURL)
 	bts := f.buildTypesByFrag[opts.VcsRootURL]
-	return &api.BuildTypeList{Count: len(bts), BuildTypes: bts}, nil
+	return &api.BuildTypeList{Count: len(bts), BuildTypes: bts}, false, nil
 }
 
 func vcsEntries(urls ...string) *api.VcsRootEntries {

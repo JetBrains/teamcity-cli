@@ -54,7 +54,7 @@ func newQueueListCmd(f *cmdutil.Factory) *cobra.Command {
 }
 
 func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
-	queue, err := client.GetBuildQueue(api.QueueOptions{
+	queue, truncated, err := client.GetBuildQueue(api.QueueOptions{
 		BuildTypeID: opts.job,
 		Limit:       opts.Limit,
 		Fields:      fields,
@@ -87,9 +87,10 @@ func (opts *queueListOptions) fetch(client api.ClientInterface, fields []string)
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     queue,
-		Table:    cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2, 4}},
-		EmptyMsg: "No runs in queue",
-		EmptyTip: output.TipNoQueue,
+		JSON:      queue,
+		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2, 4}},
+		EmptyMsg:  "No runs in queue",
+		EmptyTip:  output.TipNoQueue,
+		Truncated: truncated,
 	}, nil
 }
