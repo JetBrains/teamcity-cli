@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/JetBrains/teamcity-cli/internal/cmd/param"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -13,7 +12,7 @@ import (
 )
 
 // NewCmd builds the settings command group for a resource, using resolveID as the linked default.
-func NewCmd(f *cmdutil.Factory, resource string, resolveID param.IDResolver) *cobra.Command {
+func NewCmd(f *cmdutil.Factory, resource string, resolveID cmdutil.IDResolver) *cobra.Command {
 	idComplete := completion.LinkedJobs()
 	cmd := &cobra.Command{
 		Use:   "settings",
@@ -40,31 +39,9 @@ See: https://www.jetbrains.com/help/teamcity/configuring-general-settings.html`,
 	return cmd
 }
 
-// resolveResourceID returns args[0] when the positional id is present, else the linked default.
-func resolveResourceID(resource string, args []string, want int, resolveID param.IDResolver) (string, []string, error) {
-	if len(args) == want+1 {
-		return args[0], args[1:], nil
-	}
-	id := resolveID("")
-	if id == "" {
-		return "", nil, api.Validation(
-			resource+" id is required",
-			"Pass <"+resource+"-id> or run 'teamcity link' to bind this repository",
-		)
-	}
-	return id, args, nil
-}
-
-type settingListOptions struct {
-	json     bool
-	plain    bool
-	noHeader bool
-	cmdutil.ViewOptions
-}
-
 // newSettingListCmd builds the `settings list` subcommand.
-func newSettingListCmd(f *cmdutil.Factory, resource string, resolveID param.IDResolver, idComplete completion.CompFunc) *cobra.Command {
-	opts := &settingListOptions{}
+func newSettingListCmd(f *cmdutil.Factory, resource string, resolveID cmdutil.IDResolver, idComplete completion.CompFunc) *cobra.Command {
+	opts := &cmdutil.ListOptions{}
 
 	cmd := &cobra.Command{
 		Use:               fmt.Sprintf("list [%s-id]", resource),
@@ -77,7 +54,7 @@ func newSettingListCmd(f *cmdutil.Factory, resource string, resolveID param.IDRe
   teamcity %s settings list MyID --plain
   teamcity %s settings list MyID --web`, resource, resource, resource, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, _, err := resolveResourceID(resource, args, 0, resolveID)
+			id, _, err := cmdutil.ResolveOwnerID(resource, args, 0, resolveID)
 			if err != nil {
 				return err
 			}
@@ -85,11 +62,7 @@ func newSettingListCmd(f *cmdutil.Factory, resource string, resolveID param.IDRe
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
-	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
-	cmdutil.AddWebFlags(cmd, &opts.ViewOptions)
-	cmd.MarkFlagsMutuallyExclusive("json", "plain")
+	opts.AddFlags(cmd, true)
 
 	return cmd
 }
@@ -100,7 +73,7 @@ func settingsListURL(serverURL, id string) string {
 }
 
 // runSettingList fetches and renders a job's settings as a table, JSON, or plain text.
-func runSettingList(f *cmdutil.Factory, id string, opts *settingListOptions) error {
+func runSettingList(f *cmdutil.Factory, id string, opts *cmdutil.ListOptions) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -116,7 +89,7 @@ func runSettingList(f *cmdutil.Factory, id string, opts *settingListOptions) err
 		return err
 	}
 
-	if opts.json {
+	if opts.JSON {
 		return f.Printer.PrintJSON(settings)
 	}
 
@@ -132,8 +105,8 @@ func runSettingList(f *cmdutil.Factory, id string, opts *settingListOptions) err
 		rows = append(rows, []string{s.Name, s.Value})
 	}
 
-	if opts.plain {
-		p.PrintPlainTable(headers, rows, opts.noHeader)
+	if opts.Plain {
+		p.PrintPlainTable(headers, rows, opts.NoHeader)
 	} else {
 		output.AutoSizeColumns(headers, rows, 2, 0, 1)
 		p.PrintTable(headers, rows)
@@ -142,19 +115,19 @@ func runSettingList(f *cmdutil.Factory, id string, opts *settingListOptions) err
 }
 
 // newSettingGetCmd builds the `settings get` subcommand.
-func newSettingGetCmd(f *cmdutil.Factory, resource string, resolveID param.IDResolver, idComplete completion.CompFunc) *cobra.Command {
+func newSettingGetCmd(f *cmdutil.Factory, resource string, resolveID cmdutil.IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	var jsonOutput bool
 
 	cmd := &cobra.Command{
 		Use:               fmt.Sprintf("get [%s-id] <setting>", resource),
 		Short:             fmt.Sprintf("Get a %s setting value", resource),
 		Args:              cobra.RangeArgs(1, 2),
-		ValidArgsFunction: settingFirstArgComplete(idComplete),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(idComplete),
 		Example: fmt.Sprintf(`  teamcity %s settings get MyID buildNumberPattern
   teamcity %s settings get executionTimeoutMin   # uses linked %s
   teamcity %s settings get MyID artifactRules`, resource, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, rest, err := resolveResourceID(resource, args, 1, resolveID)
+			id, rest, err := cmdutil.ResolveOwnerID(resource, args, 1, resolveID)
 			if err != nil {
 				return err
 			}
@@ -187,7 +160,7 @@ func runSettingGet(f *cmdutil.Factory, id, name string, jsonOutput bool) error {
 }
 
 // newSettingSetCmd builds the `settings set` subcommand.
-func newSettingSetCmd(f *cmdutil.Factory, resource string, resolveID param.IDResolver, idComplete completion.CompFunc) *cobra.Command {
+func newSettingSetCmd(f *cmdutil.Factory, resource string, resolveID cmdutil.IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("set [%s-id] <setting> <value>", resource),
 		Short: fmt.Sprintf("Set a %s setting value", resource),
@@ -195,12 +168,12 @@ func newSettingSetCmd(f *cmdutil.Factory, resource string, resolveID param.IDRes
 
 Omit the <%s-id> when this repo is linked via 'teamcity link'.`, resource, resource),
 		Args:              cobra.RangeArgs(2, 3),
-		ValidArgsFunction: settingFirstArgComplete(idComplete),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(idComplete),
 		Example: fmt.Sprintf(`  teamcity %s settings set MyID buildNumberPattern "2.0.%%build.counter%%"
   teamcity %s settings set executionTimeoutMin 30        # uses linked %s
   teamcity %s settings set MyID artifactRules "build/** => artifacts"`, resource, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, rest, err := resolveResourceID(resource, args, 2, resolveID)
+			id, rest, err := cmdutil.ResolveOwnerID(resource, args, 2, resolveID)
 			if err != nil {
 				return err
 			}
@@ -224,14 +197,4 @@ func runSettingSet(f *cmdutil.Factory, id, name, value string) error {
 
 	f.Printer.Success("Set setting %s", name)
 	return nil
-}
-
-// settingFirstArgComplete applies idComplete only to the resource-id slot (args[0]).
-func settingFirstArgComplete(idComplete completion.CompFunc) completion.CompFunc {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		if len(args) == 0 {
-			return idComplete(cmd, args, toComplete)
-		}
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
 }

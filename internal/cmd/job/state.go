@@ -3,7 +3,6 @@ package job
 import (
 	"fmt"
 
-	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/spf13/cobra"
@@ -32,16 +31,9 @@ func newJobStateCmd(f *cmdutil.Factory, a jobStateAction) *cobra.Command {
 		Example: fmt.Sprintf(`  teamcity job %s Falcon_Build
   teamcity job %s                # uses linked default job (see 'teamcity link')`, a.use, a.use),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			explicit := ""
-			if len(args) > 0 {
-				explicit = args[0]
-			}
-			jobID := f.ResolveDefaultJob(explicit)
-			if jobID == "" {
-				return api.Validation(
-					"job id is required",
-					"Pass <job-id> or run 'teamcity link' to bind a default job to this repository",
-				)
+			jobID, _, err := cmdutil.ResolveOwnerID("job", args, 0, f.ResolveDefaultJob)
+			if err != nil {
+				return err
 			}
 			client, err := f.Client()
 			if err != nil {

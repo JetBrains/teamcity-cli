@@ -20,9 +20,6 @@ type ParamAPI struct {
 	Delete func(client api.ClientInterface, id, name string) error
 }
 
-// IDResolver returns a resource ID, falling back from explicit → env → linked teamcity.toml.
-type IDResolver func(explicit string) string
-
 var ProjectParamAPI = ParamAPI{
 	List: func(c api.ClientInterface, id string) (*api.ParameterList, error) { return c.GetProjectParameters(id) },
 	Get: func(c api.ClientInterface, id, name string) (*api.Parameter, error) {
@@ -47,9 +44,8 @@ var JobParamAPI = ParamAPI{
 	Delete: func(c api.ClientInterface, id, name string) error { return c.DeleteBuildTypeParameter(id, name) },
 }
 
-// NewCmd creates a param subcommand for a resource (project or job). resolveID supplies the
-// linked default when the user omits the resource-id positional.
-func NewCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver) *cobra.Command {
+// NewCmd creates the param command group for a resource (project or job), using resolveID as the linked default.
+func NewCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID cmdutil.IDResolver) *cobra.Command {
 	idComplete := completion.LinkedProjects()
 	if resource == "job" {
 		idComplete = completion.LinkedJobs()
@@ -79,31 +75,8 @@ See: https://www.jetbrains.com/help/teamcity/configuring-build-parameters.html`,
 	return cmd
 }
 
-// resolveResourceID picks args[0] when present, else falls back to resolveID. Returns the chosen
-// ID and the trimmed args (with the id consumed if it came from a positional).
-func resolveResourceID(resource string, args []string, want int, resolveID IDResolver) (string, []string, error) {
-	if len(args) == want+1 {
-		return args[0], args[1:], nil
-	}
-	id := resolveID("")
-	if id == "" {
-		return "", nil, api.Validation(
-			resource+" id is required",
-			"Pass <"+resource+"-id> or run 'teamcity link' to bind this repository",
-		)
-	}
-	return id, args, nil
-}
-
-type paramListOptions struct {
-	json     bool
-	plain    bool
-	noHeader bool
-	cmdutil.ViewOptions
-}
-
-func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
-	opts := &paramListOptions{}
+func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID cmdutil.IDResolver, idComplete completion.CompFunc) *cobra.Command {
+	opts := &cmdutil.ListOptions{}
 
 	cmd := &cobra.Command{
 		Use:               fmt.Sprintf("list [%s-id]", resource),
@@ -116,7 +89,7 @@ func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, res
   teamcity %s param list MyID --plain
   teamcity %s param list MyID --web`, resource, resource, resource, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, _, err := resolveResourceID(resource, args, 0, resolveID)
+			id, _, err := cmdutil.ResolveOwnerID(resource, args, 0, resolveID)
 			if err != nil {
 				return err
 			}
@@ -124,11 +97,7 @@ func newParamListCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, res
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
-	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
-	cmdutil.AddWebFlags(cmd, &opts.ViewOptions)
-	cmd.MarkFlagsMutuallyExclusive("json", "plain")
+	opts.AddFlags(cmd, true)
 
 	return cmd
 }
@@ -141,7 +110,7 @@ func paramListURL(serverURL, resource, id string) string {
 	return serverURL + "/admin/editProject.html?projectId=" + id + "&tab=projectParams"
 }
 
-func runParamList(f *cmdutil.Factory, resource, id string, opts *paramListOptions, paramAPI ParamAPI) error {
+func runParamList(f *cmdutil.Factory, resource, id string, opts *cmdutil.ListOptions, paramAPI ParamAPI) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -157,7 +126,7 @@ func runParamList(f *cmdutil.Factory, resource, id string, opts *paramListOption
 		return err
 	}
 
-	if opts.json {
+	if opts.JSON {
 		return f.Printer.PrintJSON(params)
 	}
 
@@ -182,8 +151,8 @@ func runParamList(f *cmdutil.Factory, resource, id string, opts *paramListOption
 		})
 	}
 
-	if opts.plain {
-		p.PrintPlainTable(headers, rows, opts.noHeader)
+	if opts.Plain {
+		p.PrintPlainTable(headers, rows, opts.NoHeader)
 	} else {
 		output.AutoSizeColumns(headers, rows, 2, 0, 1)
 		p.PrintTable(headers, rows)
@@ -191,19 +160,19 @@ func runParamList(f *cmdutil.Factory, resource, id string, opts *paramListOption
 	return nil
 }
 
-func newParamGetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
+func newParamGetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID cmdutil.IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	var jsonOutput bool
 
 	cmd := &cobra.Command{
 		Use:               fmt.Sprintf("get [%s-id] <name>", resource),
 		Short:             fmt.Sprintf("Get a %s parameter value", resource),
 		Args:              cobra.RangeArgs(1, 2),
-		ValidArgsFunction: paramFirstArgComplete(idComplete),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(idComplete),
 		Example: fmt.Sprintf(`  teamcity %s param get MyID MY_PARAM
   teamcity %s param get MY_PARAM         # uses linked %s
   teamcity %s param get MyID VERSION`, resource, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, rest, err := resolveResourceID(resource, args, 1, resolveID)
+			id, rest, err := cmdutil.ResolveOwnerID(resource, args, 1, resolveID)
 			if err != nil {
 				return err
 			}
@@ -243,7 +212,7 @@ type paramSetOptions struct {
 	secure bool
 }
 
-func newParamSetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
+func newParamSetCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID cmdutil.IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	opts := &paramSetOptions{}
 
 	cmd := &cobra.Command{
@@ -256,12 +225,12 @@ stored encrypted server-side and masked in logs and UI output.
 
 Omit the <%s-id> when this repo is linked via 'teamcity link'.`, resource, resource),
 		Args:              cobra.RangeArgs(2, 3),
-		ValidArgsFunction: paramFirstArgComplete(idComplete),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(idComplete),
 		Example: fmt.Sprintf(`  teamcity %s param set MyID MY_PARAM "my value"
   teamcity %s param set MY_PARAM "my value"           # uses linked %s
   teamcity %s param set MyID SECRET_KEY "****" --secure`, resource, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, rest, err := resolveResourceID(resource, args, 2, resolveID)
+			id, rest, err := cmdutil.ResolveOwnerID(resource, args, 2, resolveID)
 			if err != nil {
 				return err
 			}
@@ -288,16 +257,16 @@ func runParamSet(f *cmdutil.Factory, id, name, value string, opts *paramSetOptio
 	return nil
 }
 
-func newParamDeleteCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID IDResolver, idComplete completion.CompFunc) *cobra.Command {
+func newParamDeleteCmd(f *cmdutil.Factory, resource string, paramAPI ParamAPI, resolveID cmdutil.IDResolver, idComplete completion.CompFunc) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               fmt.Sprintf("delete [%s-id] <name>", resource),
 		Short:             fmt.Sprintf("Delete a %s parameter", resource),
 		Args:              cobra.RangeArgs(1, 2),
-		ValidArgsFunction: paramFirstArgComplete(idComplete),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(idComplete),
 		Example: fmt.Sprintf(`  teamcity %s param delete MyID MY_PARAM
   teamcity %s param delete MY_PARAM      # uses linked %s`, resource, resource, resource),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, rest, err := resolveResourceID(resource, args, 1, resolveID)
+			id, rest, err := cmdutil.ResolveOwnerID(resource, args, 1, resolveID)
 			if err != nil {
 				return err
 			}
@@ -320,14 +289,4 @@ func runParamDelete(f *cmdutil.Factory, id, name string, paramAPI ParamAPI) erro
 
 	f.Printer.Success("Deleted parameter %s", name)
 	return nil
-}
-
-// paramFirstArgComplete applies idComplete only to the resource-id slot (args[0]).
-func paramFirstArgComplete(idComplete completion.CompFunc) completion.CompFunc {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		if len(args) == 0 {
-			return idComplete(cmd, args, toComplete)
-		}
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
 }

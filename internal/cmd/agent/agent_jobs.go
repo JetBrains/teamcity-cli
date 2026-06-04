@@ -12,9 +12,7 @@ import (
 
 type agentJobsOptions struct {
 	incompatible bool
-	json         bool
-	plain        bool
-	noHeader     bool
+	cmdutil.ListOptions
 }
 
 func newAgentJobsCmd(f *cmdutil.Factory) *cobra.Command {
@@ -40,10 +38,7 @@ versions, pool restrictions, etc.).`,
 	}
 
 	cmd.Flags().BoolVar(&opts.incompatible, "incompatible", false, "Show incompatible jobs with reasons")
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
-	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
-	cmd.MarkFlagsMutuallyExclusive("json", "plain")
+	opts.AddFlags(cmd, false)
 
 	return cmd
 }
@@ -72,7 +67,7 @@ func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID i
 		return err
 	}
 
-	if opts.json {
+	if opts.JSON {
 		return p.PrintJSON(jobs)
 	}
 
@@ -81,7 +76,7 @@ func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID i
 		return nil
 	}
 
-	if !opts.plain {
+	if !opts.Plain {
 		_, _ = fmt.Fprintf(p.Out, "%s (%d)\n\n", output.Green("Compatible Jobs"), jobs.Count)
 	}
 
@@ -96,8 +91,8 @@ func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID i
 		})
 	}
 
-	if opts.plain {
-		p.PrintPlainTable(headers, rows, opts.noHeader)
+	if opts.Plain {
+		p.PrintPlainTable(headers, rows, opts.NoHeader)
 	} else {
 		output.AutoSizeColumns(headers, rows, 2, 0, 1, 2)
 		p.PrintTable(headers, rows)
@@ -111,7 +106,7 @@ func showIncompatibleJobs(p *output.Printer, client api.ClientInterface, agentID
 		return err
 	}
 
-	if opts.json {
+	if opts.JSON {
 		return p.PrintJSON(compat)
 	}
 
@@ -120,8 +115,8 @@ func showIncompatibleJobs(p *output.Printer, client api.ClientInterface, agentID
 		return nil
 	}
 
-	if opts.plain {
-		return showIncompatibleJobsPlain(p, compat, opts.noHeader)
+	if opts.Plain {
+		return showIncompatibleJobsPlain(p, compat, opts.NoHeader)
 	}
 
 	_, _ = fmt.Fprintf(p.Out, "%s (%d)\n\n", output.Yellow("Incompatible Jobs"), compat.Count)

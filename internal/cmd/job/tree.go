@@ -54,16 +54,9 @@ func newJobTreeCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity job tree MyProject_Build --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			explicit := ""
-			if len(args) > 0 {
-				explicit = args[0]
-			}
-			jobID := f.ResolveDefaultJob(explicit)
-			if jobID == "" {
-				return api.Validation(
-					"job id is required",
-					"Pass <job-id> or run 'teamcity link' to bind a default job to this repository",
-				)
+			jobID, _, err := cmdutil.ResolveOwnerID("job", args, 0, f.ResolveDefaultJob)
+			if err != nil {
+				return err
 			}
 			return runJobTree(f, jobID, depth, only, jsonOut)
 		},

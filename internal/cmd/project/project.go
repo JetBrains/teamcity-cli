@@ -132,16 +132,9 @@ func newProjectViewCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity project view Falcon --web
   teamcity project view              # uses linked project (see 'teamcity link')`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			explicit := ""
-			if len(args) > 0 {
-				explicit = args[0]
-			}
-			projectID := f.ResolveProject(explicit)
-			if projectID == "" {
-				return api.Validation(
-					"project id is required",
-					"Pass <project-id> or run 'teamcity link' to bind this repository to a project",
-				)
+			projectID, _, err := cmdutil.ResolveOwnerID("project", args, 0, f.ResolveProject)
+			if err != nil {
+				return err
 			}
 			return runProjectView(f, projectID, opts)
 		},
@@ -297,7 +290,7 @@ func newProjectTokenGetCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "get <project-id> <token>",
 		Short:             "Get the value of a secure token",
-		ValidArgsFunction: firstArgComplete(completion.LinkedProjects()),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(completion.LinkedProjects()),
 		Long: `Retrieve the original value for a secure token.
 
 This operation requires CHANGE_SERVER_SETTINGS permission,
@@ -679,14 +672,4 @@ func runInteractiveForm(f *cmdutil.Factory, project *string, permission string, 
 		_, _ = fmt.Fprintf(f.Printer.Out, "%s: %s\n", fld.title, output.Cyan(*fld.value))
 	}
 	return nil
-}
-
-// firstArgComplete applies fn only to args[0]; later positionals get no completions.
-func firstArgComplete(fn completion.CompFunc) completion.CompFunc {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		if len(args) == 0 {
-			return fn(cmd, args, toComplete)
-		}
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
 }

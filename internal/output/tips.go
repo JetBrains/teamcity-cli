@@ -45,8 +45,7 @@ func TipNoParametersFor(scope string) string {
 	return fmt.Sprintf("Add one with 'teamcity param set %s <name> <value>'", scope)
 }
 
-// TipNoSettingsFor returns the tip for an empty settings list, pre-filling
-// the scope (job ID).
+// TipNoSettingsFor returns the tip for an empty settings list, pre-filling the scope (job ID).
 func TipNoSettingsFor(scope string) string {
 	return fmt.Sprintf("Set one with 'teamcity job settings set %s <setting> <value>'", scope)
 }
