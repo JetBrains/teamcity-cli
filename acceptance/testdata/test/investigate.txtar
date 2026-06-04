@@ -1,0 +1,25 @@
+# `tc test investigate` round-trip (requires a token; writes to the Sandbox project).
+[!has_token] skip 'requires authentication token'
+
+# Scope is required.
+! exec teamcity test investigate some.test --no-input
+stderr 'scope is required'
+
+# An unknown test name resolves to nothing → not found, no action.
+! exec teamcity test investigate tc.acceptance.no.such.test.$RANDOM_STRING --project Sandbox --no-input
+stderr 'not found'
+
+# Discover the current user and a real Sandbox test, open then close an investigation.
+exec teamcity api '/app/rest/users/current?fields=username' --raw --no-input
+extract '"username":"([^"]+)"' USERNAME
+
+exec teamcity api '/app/rest/tests?locator=affectedProject:(id:Sandbox),count:50&fields=test(name)' --raw --no-input
+extract '"name":"([^" ]+)"' TEST_NAME
+
+exec teamcity test investigate $TEST_NAME --project Sandbox --assignee $USERNAME --no-input
+stdout 'Investigating'
+! stderr 'Error'
+
+exec teamcity test resolve $TEST_NAME --project Sandbox --no-input
+stdout 'Resolved'
+! stderr 'Error'

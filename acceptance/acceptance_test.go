@@ -92,6 +92,7 @@ func TestAcceptance(t *testing.T) {
 		"config",
 		"project",
 		"run",
+		"test",
 		"job",
 		"agent",
 		"pool",

@@ -1,0 +1,22 @@
+# `tc test mute` round-trip (requires a token; writes to the Sandbox project).
+[!has_token] skip 'requires authentication token'
+
+# --until is validated before any API call.
+! exec teamcity test mute some.test --project Sandbox --until not-a-date --no-input
+stderr 'invalid --until'
+
+# An unknown test name resolves to nothing → not found, no action.
+! exec teamcity test mute tc.acceptance.no.such.test.$RANDOM_STRING --project Sandbox --no-input
+stderr 'not found'
+
+# Discover a real test in Sandbox, mute it (whenFixed), then remove the mute.
+exec teamcity api '/app/rest/tests?locator=affectedProject:(id:Sandbox),count:50&fields=test(name)' --raw --no-input
+extract '"name":"([^" ]+)"' TEST_NAME
+
+exec teamcity test mute $TEST_NAME --project Sandbox --reason 'acceptance $RANDOM_STRING' --until fixed --no-input
+stdout 'Muted'
+! stderr 'Error'
+
+exec teamcity test unmute $TEST_NAME --project Sandbox --no-input
+stdout 'Unmuted'
+! stderr 'Error'

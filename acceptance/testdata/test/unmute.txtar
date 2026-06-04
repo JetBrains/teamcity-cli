@@ -1,0 +1,10 @@
+# `tc test unmute` validation and not-found path (requires a token).
+[!has_token] skip 'requires authentication token'
+
+# Scope is required.
+! exec teamcity test unmute some.test --no-input
+stderr 'scope is required'
+
+# Unmuting an unknown test name reports not found, takes no action.
+! exec teamcity test unmute tc.acceptance.no.such.test.$RANDOM_STRING --project Sandbox --no-input
+stderr 'not found'

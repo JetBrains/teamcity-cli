@@ -20,6 +20,44 @@ exec teamcity run tests $BUILD_ID --muted --no-input
 exec teamcity run tests $BUILD_ID --limit 5 --no-input
 ! stderr 'Error'
 
+# --status filters.
+exec teamcity run tests $BUILD_ID --status passed --no-input
+! stderr 'Error'
+
+exec teamcity run tests $BUILD_ID --status failed --no-input
+! stderr 'Error'
+
+exec teamcity run tests $BUILD_ID --status ignored --no-input
+! stderr 'Error'
+
+exec teamcity run tests $BUILD_ID --status new --no-input
+! stderr 'Error'
+
+# --new-failures is an alias of --status new.
+exec teamcity run tests $BUILD_ID --new-failures --no-input
+! stderr 'Error'
+
+# --group-by groups the output.
+exec teamcity run tests $BUILD_ID --group-by suite --no-input
+! stderr 'Error'
+
+exec teamcity run tests $BUILD_ID --group-by package --no-input
+! stderr 'Error'
+
+exec teamcity run tests $BUILD_ID --group-by class --no-input
+! stderr 'Error'
+
+# Invalid values are rejected.
+! exec teamcity run tests $BUILD_ID --status bogus --no-input
+stderr 'invalid status'
+
+! exec teamcity run tests $BUILD_ID --group-by bogus --no-input
+stderr 'invalid group-by'
+
+# --status and the deprecated --failed cannot be combined.
+! exec teamcity run tests $BUILD_ID --status failed --failed --no-input
+stderr 'none of the others'
+
 exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
 extract '"id":"([^"]+)"' JOB_ID
 

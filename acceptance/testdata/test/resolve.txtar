@@ -1,0 +1,10 @@
+# `tc test resolve` validation and not-found path (requires a token).
+[!has_token] skip 'requires authentication token'
+
+# --state is validated before any API call.
+! exec teamcity test resolve some.test --project Sandbox --state bogus --no-input
+stderr 'invalid --state'
+
+# Resolving a test with no open investigation reports not found, takes no action.
+! exec teamcity test resolve tc.acceptance.no.such.test.$RANDOM_STRING --project Sandbox --no-input
+stderr 'not found'

@@ -1,0 +1,23 @@
+# `tc test history` pass/fail timeline (guest-readable reads).
+
+# Scope is required.
+! exec teamcity test history com.example.FooTest.shouldWork --no-input
+stderr 'scope is required'
+
+# Discover a project to scope by.
+exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
+extract '"id":"([^"]+)"' PROJECT_ID
+
+# A name that almost certainly has no runs → empty state, not an error.
+exec teamcity test history tc.acceptance.no.such.test.$RANDOM_STRING --project $PROJECT_ID --no-input
+stdout '(BUILD|No runs of)'
+! stderr 'Error'
+
+# JSON path emits the raw occurrence array (count always present).
+exec teamcity test history tc.acceptance.no.such.test.$RANDOM_STRING --project $PROJECT_ID --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --limit is validated.
+! exec teamcity test history com.example.FooTest --project $PROJECT_ID --limit -1 --no-input
+stderr 'must not be negative'

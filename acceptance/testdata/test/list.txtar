@@ -1,0 +1,32 @@
+# `tc test list` cross-build queries (guest-readable reads).
+
+# Scope is required — nothing is linked in this clean HOME.
+! exec teamcity test list --no-input
+stderr 'scope is required'
+
+# Mutually-exclusive filters are rejected before any query.
+! exec teamcity test list --project Sandbox --failing --muted --no-input
+stderr 'none of the others'
+
+# Discover a project to scope by.
+exec teamcity api '/app/rest/projects?locator=count:1&fields=project(id)' --raw --no-input
+extract '"id":"([^"]+)"' PROJECT_ID
+
+# Default filter: currently failing.
+exec teamcity test list --project $PROJECT_ID --limit 10 --no-input
+stdout '(TEST|No failing tests)'
+! stderr 'Error'
+
+# Muted filter.
+exec teamcity test list --project $PROJECT_ID --muted --limit 10 --no-input
+stdout '(TEST|No muted tests)'
+! stderr 'Error'
+
+# NOTE: --investigated is exercised by unit tests and the gated investigate
+# round-trip. The guest _Root project's server build does not expose the
+# currentlyInvestigated testOccurrences dimension, so it is not asserted here.
+
+# JSON path always carries the count.
+exec teamcity test list --project $PROJECT_ID --json --no-input
+stdout '"count"'
+! stderr 'Error'
