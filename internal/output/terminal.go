@@ -71,6 +71,7 @@ var pagerCmdFn = func() (*exec.Cmd, error) {
 // WithPager pipes output through less if it exceeds terminal height.
 // The out writer is used as a fallback when paging is not available.
 func WithPager(out io.Writer, fn func(w io.Writer)) {
+	StopSpinner() // paging writes straight to os.Stdout, bypassing the stopWriter
 	var buf bytes.Buffer
 	fn(&buf)
 

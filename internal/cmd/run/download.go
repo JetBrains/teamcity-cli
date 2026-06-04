@@ -149,16 +149,9 @@ func downloadArtifact(ctx context.Context, client api.ClientInterface, runID str
 
 	var w io.Writer = f
 	if output.IsTerminal() && !quiet && artifact.Size > 0 {
-		pw := &progressWriter{
-			w:         f,
-			out:       out,
-			name:      artifact.Name,
-			size:      humanize.IBytes(uint64(artifact.Size)),
-			total:     artifact.Size,
-			nameWidth: nameWidth,
-		}
+		pw := output.NewProgressWriter(f, out, artifact.Name, humanize.IBytes(uint64(artifact.Size)), artifact.Size, nameWidth)
 		w = pw
-		defer pw.clear()
+		defer pw.Clear()
 	}
 
 	written, err := client.DownloadArtifactTo(ctx, runID, artifact.Name, w)
@@ -175,32 +168,4 @@ func downloadArtifact(ctx context.Context, client api.ClientInterface, runID str
 	}
 
 	return f.Close()
-}
-
-type progressWriter struct {
-	w          io.Writer
-	out        io.Writer
-	name       string
-	size       string
-	total      int64
-	written    int64
-	nameWidth  int
-	lastUpdate time.Time
-}
-
-func (p *progressWriter) Write(b []byte) (int, error) {
-	n, err := p.w.Write(b)
-	p.written += int64(n)
-
-	now := time.Now()
-	if now.Sub(p.lastUpdate) >= 100*time.Millisecond {
-		p.lastUpdate = now
-		pct := int(float64(p.written) / float64(p.total) * 100)
-		_, _ = fmt.Fprintf(p.out, "\r%-*s  %10s  %3d%%", p.nameWidth, p.name, p.size, pct)
-	}
-	return n, err
-}
-
-func (p *progressWriter) clear() {
-	_, _ = fmt.Fprint(p.out, "\r\033[K")
 }

@@ -19,12 +19,20 @@ type Printer struct {
 	mu sync.Mutex
 }
 
-// DefaultPrinter returns a Printer that writes to os.Stdout/os.Stderr.
+// DefaultPrinter returns a Printer writing to os.Stdout/os.Stderr, wrapped so the activity spinner clears on the first byte of output.
 func DefaultPrinter() *Printer {
 	return &Printer{
-		Out:    os.Stdout,
-		ErrOut: os.Stderr,
+		Out:    stopWriter{os.Stdout},
+		ErrOut: stopWriter{os.Stderr},
 	}
+}
+
+// stopWriter halts the activity spinner before its first write; the spinner writes to the raw fd, not through this wrapper, so there is no feedback loop.
+type stopWriter struct{ w io.Writer }
+
+func (s stopWriter) Write(b []byte) (int, error) {
+	StopSpinner()
+	return s.w.Write(b)
 }
 
 // write atomically emits s to w, serializing concurrent calls across all Printer methods.

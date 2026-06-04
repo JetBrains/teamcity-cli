@@ -257,6 +257,7 @@ func (m watchModel) renderLogs(height int) string {
 // RunWatchTUI launches the interactive TUI for watching a build.
 func RunWatchTUI(ctx context.Context, client api.ClientInterface, runID string, interval int) error {
 	m := newWatchModel(ctx, client, runID, interval)
+	output.StopSpinner() // hand the terminal to bubbletea's alt screen
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	finalModel, err := p.Run()

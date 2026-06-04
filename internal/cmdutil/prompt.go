@@ -21,6 +21,7 @@ func RequireNonEmpty(s string) error {
 
 // Prompt runs a single huh field with the CLI theme; does not echo — use PromptString / Select / Confirm for that.
 func Prompt(field huh.Field) error {
+	output.StopSpinner() // hand the terminal to huh's prompt UI
 	if in, ok := field.(*huh.Input); ok {
 		in.Prompt("")
 	}
@@ -32,6 +33,7 @@ func Prompt(field huh.Field) error {
 
 // RunForm runs a multi-group huh form with shift+tab navigation; use it instead of chaining Prompt calls so groups can navigate between each other.
 func RunForm(groups ...*huh.Group) error {
+	output.StopSpinner() // hand the terminal to huh's form UI
 	return huh.NewForm(groups...).
 		WithTheme(promptTheme()).
 		WithShowHelp(true).
