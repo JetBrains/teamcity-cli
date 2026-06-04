@@ -142,6 +142,24 @@ func MutuallyExclusive(arg, flag string) *ValidationError {
 	}
 }
 
+// TestMatch is a candidate test surfaced when a name resolves to more than one test.
+type TestMatch struct {
+	ID   string
+	Name string
+}
+
+// AmbiguousTestError is returned when a test name matches more than one test id.
+type AmbiguousTestError struct {
+	Name       string
+	Candidates []TestMatch
+}
+
+func (e *AmbiguousTestError) Error() string {
+	return fmt.Sprintf("test name %q matches %d tests", e.Name, len(e.Candidates))
+}
+
+func (*AmbiguousTestError) Category() Category { return CatValidation }
+
 // readOnlyError is a value-type sentinel so errors.Is matches by equality.
 type readOnlyError struct{}
 

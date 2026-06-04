@@ -366,6 +366,12 @@ type TestRef struct {
 	Name string `json:"name,omitempty"`
 }
 
+// TestList wraps the tests returned by /app/rest/tests (name→id resolution).
+type TestList struct {
+	Count int       `json:"count"`
+	Test  []TestRef `json:"test"`
+}
+
 // TestRefs wraps the tests targeted by a mute or investigation.
 type TestRefs struct {
 	Count int       `json:"count,omitempty"`
