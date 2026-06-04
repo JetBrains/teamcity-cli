@@ -233,6 +233,39 @@ Remove a parameter from a job:
 teamcity job param delete MyProject_Build MY_PARAM
 ```
 
+## Managing job settings
+
+Settings are the build-configuration options that control how a job runs — build
+number format, execution timeout, artifact rules, and similar. Unlike
+parameters, settings always have server defaults and cannot be deleted.
+
+### Listing settings
+
+View all settings defined on a job:
+
+```Shell
+teamcity job settings list MyProject_Build
+teamcity job settings list MyProject_Build --json
+```
+
+### Getting a setting value
+
+Retrieve the value of a specific setting:
+
+```Shell
+teamcity job settings get MyProject_Build buildNumberPattern
+teamcity job settings get MyProject_Build executionTimeoutMin
+```
+
+### Setting a value
+
+Set or update a setting value:
+
+```Shell
+teamcity job settings set MyProject_Build buildNumberPattern "2.0.%build.counter%"
+teamcity job settings set MyProject_Build executionTimeoutMin 30
+```
+
 <seealso>
     <category ref="reference">
         <a href="teamcity-cli-commands.md">Command reference</a>

@@ -2,6 +2,7 @@ package job
 
 import (
 	"github.com/JetBrains/teamcity-cli/internal/cmd/param"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/setting"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,7 @@ See: https://www.jetbrains.com/help/teamcity/creating-and-editing-build-configur
 	cmd.AddCommand(newJobResumeCmd(f))
 	cmd.AddCommand(newJobStepCmd(f))
 	cmd.AddCommand(param.NewCmd(f, "job", param.JobParamAPI, f.ResolveDefaultJob))
+	cmd.AddCommand(setting.NewCmd(f, "job", f.ResolveDefaultJob))
 
 	cmdutil.AliasAwareHelp(cmd, "", "")
 	return cmd

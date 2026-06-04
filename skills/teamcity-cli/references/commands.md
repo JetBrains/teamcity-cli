@@ -189,6 +189,9 @@ Shows all branches and all build states (including canceled, personal, composite
 | `teamcity job step view <id> <step-id>`    | View build step details        |
 | `teamcity job step add <id> --type <r>`    | Add a build step               |
 | `teamcity job step delete <id> <step-id>`  | Delete a build step            |
+| `teamcity job settings list <id>`             | List settings                  |
+| `teamcity job settings get <id> <name>`       | Get a setting value            |
+| `teamcity job settings set <id> <name> <val>` | Set a setting value            |
 
 ### Flags for `teamcity job create`
 

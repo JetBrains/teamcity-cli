@@ -412,6 +412,42 @@ Resume a paused job
 <tr>
 <td>
 
+`teamcity job settings get`
+
+</td>
+<td>
+
+Get a job setting value
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity job settings list`
+
+</td>
+<td>
+
+List job settings
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity job settings set`
+
+</td>
+<td>
+
+Set a job setting value
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity job step add`
 
 </td>
