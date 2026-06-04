@@ -203,12 +203,23 @@ func (c *Client) UploadDiffChanges(patch []byte, description string) (string, er
 type BuildTestsOptions struct {
 	FailedOnly bool
 	MutedOnly  bool
+	Status     string // passed|failed|ignored|new (supersedes FailedOnly when set)
 	Limit      int
 }
 
 func (c *Client) GetBuildTests(ctx context.Context, buildID string, opts BuildTestsOptions) (*TestOccurrences, error) {
 	if opts.FailedOnly && opts.MutedOnly {
 		return nil, Validation("failedOnly and mutedOnly are mutually exclusive", "set only one test result filter")
+	}
+
+	status := opts.Status
+	if status == "" && opts.FailedOnly {
+		status = "failed"
+	}
+	switch status {
+	case "", "passed", "failed", "ignored", "new":
+	default:
+		return nil, Validation(fmt.Sprintf("invalid status %q", status), "use passed, failed, ignored, or new")
 	}
 
 	id, err := c.ResolveBuildID(ctx, buildID)
@@ -218,10 +229,16 @@ func (c *Client) GetBuildTests(ctx context.Context, buildID string, opts BuildTe
 
 	locator := NewLocator().AddLocator("build", NewLocator().Add("id", id))
 	switch {
-	case opts.FailedOnly:
-		locator.AddUpper("status", "FAILURE").Add("muted", "false")
 	case opts.MutedOnly:
 		locator.AddUpper("status", "FAILURE").Add("muted", "true")
+	case status == "failed":
+		locator.AddUpper("status", "FAILURE").Add("muted", "false")
+	case status == "passed":
+		locator.AddUpper("status", "SUCCESS")
+	case status == "ignored":
+		locator.Add("ignored", "true")
+	case status == "new":
+		locator.Add("newFailure", "true")
 	}
 
 	summaryFields := "count,passed,failed,ignored,muted"

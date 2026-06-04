@@ -203,6 +203,88 @@ func TestGetBuildTests(t *testing.T) {
 	}
 }
 
+func TestGetBuildTestsStatusLocators(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		opts        BuildTestsOptions
+		wantLocator string
+	}{
+		{
+			name:        "status_failed",
+			opts:        BuildTestsOptions{Status: "failed", Limit: 10},
+			wantLocator: "build:(id:1),status:FAILURE,muted:false",
+		},
+		{
+			name:        "status_passed",
+			opts:        BuildTestsOptions{Status: "passed", Limit: 10},
+			wantLocator: "build:(id:1),status:SUCCESS",
+		},
+		{
+			name:        "status_ignored",
+			opts:        BuildTestsOptions{Status: "ignored", Limit: 10},
+			wantLocator: "build:(id:1),ignored:true",
+		},
+		{
+			name:        "status_new",
+			opts:        BuildTestsOptions{Status: "new", Limit: 10},
+			wantLocator: "build:(id:1),newFailure:true",
+		},
+		{
+			name:        "failed_only_maps_to_status_failed",
+			opts:        BuildTestsOptions{FailedOnly: true, Limit: 10},
+			wantLocator: "build:(id:1),status:FAILURE,muted:false",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var mu sync.Mutex
+			var firstLocator string
+
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if r.URL.Path != "/app/rest/testOccurrences" {
+					http.NotFound(w, r)
+					return
+				}
+				field := r.URL.Query().Get("fields")
+				mu.Lock()
+				if firstLocator == "" {
+					firstLocator = r.URL.Query().Get("locator")
+				}
+				mu.Unlock()
+				if strings.Contains(field, "testOccurrence(") {
+					json.NewEncoder(w).Encode(TestOccurrences{
+						TestOccurrence: []TestOccurrence{{ID: "1", Name: "TestFoo", Status: "FAILURE"}},
+					})
+					return
+				}
+				json.NewEncoder(w).Encode(TestOccurrences{Count: 1})
+			})
+
+			_, err := client.GetBuildTests(t.Context(), "1", tc.opts)
+			require.NoError(t, err)
+
+			mu.Lock()
+			defer mu.Unlock()
+			assert.Equal(t, tc.wantLocator, firstLocator)
+		})
+	}
+}
+
+func TestGetBuildTestsRejectsInvalidStatus(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+	})
+
+	_, err := client.GetBuildTests(t.Context(), "1", BuildTestsOptions{Status: "bogus"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid status")
+}
+
 func TestGetBuildTestsRejectsConflictingFilters(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {

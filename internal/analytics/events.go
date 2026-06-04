@@ -110,9 +110,12 @@ const (
 )
 
 const (
-	TestsFilterAll    = "all"
-	TestsFilterFailed = "failed"
-	TestsFilterMuted  = "muted"
+	TestsFilterAll     = "all"
+	TestsFilterFailed  = "failed"
+	TestsFilterMuted   = "muted"
+	TestsFilterPassed  = "passed"
+	TestsFilterIgnored = "ignored"
+	TestsFilterNew     = "new"
 )
 
 const (

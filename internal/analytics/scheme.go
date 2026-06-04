@@ -33,7 +33,7 @@ var groupVersion = map[string]int{
 	GroupCommand:   2, // "link" command added (FUS-7820)
 	GroupAPI:       1,
 	GroupAuth:      1,
-	GroupBuild:     2, // "muted" filter value added (FUS-7820)
+	GroupBuild:     3, // "passed"/"ignored"/"new" filter values added
 	GroupAgent:     1,
 	GroupPipeline:  1,
 	GroupSkill:     1,
@@ -197,7 +197,7 @@ func buildGroup() fus.GroupSchema {
 	return fus.GroupSchema{
 		ID:       GroupBuild,
 		Type:     fus.GroupTypeCounter,
-		Versions: []fus.SchemeRange{{From: "2"}}, // bumped per FUS-7820 (added "muted" filter value)
+		Versions: []fus.SchemeRange{{From: "3"}}, // bumped: added "passed"/"ignored"/"new" filter values
 		Rules: &fus.SchemeRules{
 			EventID: []string{
 				fus.EnumExpr(EventStarted, EventWatchFinished, EventLogViewed, EventTestsViewed, EventDiffViewed),
@@ -216,7 +216,7 @@ func buildGroup() fus.GroupSchema {
 				"is_timed_out":      {fus.EnumRefExpr(enumBoolean)},
 				"mode":              {fus.EnumExpr("full", "failed", "raw", "follow")},
 				"is_from_job":       {fus.EnumRefExpr(enumBoolean)},
-				"filter":            {fus.EnumExpr("all", "failed", "muted")},
+				"filter":            {fus.EnumExpr("all", "failed", "muted", "passed", "ignored", "new")},
 				"had_log_diff":      {fus.EnumRefExpr(enumBoolean)},
 			},
 		},

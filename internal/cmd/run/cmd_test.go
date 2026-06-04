@@ -424,6 +424,56 @@ func TestRunTestsFailedAndMutedFilters(T *testing.T) {
 	assert.Contains(T, muted, "buildTab=tests&status=muted")
 }
 
+func TestRunTestsStatusFilters(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	installRunTestsFilterHandler(ts)
+
+	passed := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--status", "passed")
+	assert.Contains(T, passed, "PassingTest")
+	assert.Contains(T, passed, "buildTab=tests&status=success")
+
+	ignored := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--status", "ignored")
+	assert.Contains(T, ignored, "IgnoredTest")
+
+	newFailures := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--status", "new")
+	assert.Contains(T, newFailures, "NewFailure")
+	assert.Contains(T, newFailures, "buildTab=tests&status=failed")
+}
+
+func TestRunTestsNewFailuresAlias(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	installRunTestsFilterHandler(ts)
+
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--new-failures")
+	assert.Contains(T, got, "NewFailure")
+}
+
+func TestRunTestsFailedFlagStillWorks(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	installRunTestsFilterHandler(ts)
+
+	// --failed is deprecated but must still map to --status failed.
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--failed")
+	assert.Contains(T, got, "PlainFailure")
+	assert.NotContains(T, got, "MutedFailure")
+	assert.Contains(T, got, "buildTab=tests&status=failed")
+}
+
+func TestRunTestsInvalidStatus(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "tests", testBuildID, "--status", "bogus")
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "invalid status")
+}
+
+func TestRunTestsStatusAndFailedMutuallyExclusive(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "tests", testBuildID, "--status", "failed", "--new-failures")
+	require.Error(T, err)
+}
+
 func TestRunTestsAllLabelsMutedOccurrences(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	installRunTestsFilterHandler(ts)
@@ -461,6 +511,36 @@ func installRunTestsFilterHandler(ts *cmdtest.TestServer) {
 		detail := strings.Contains(fields, "testOccurrence(")
 
 		switch {
+		case strings.Contains(locator, "newFailure:true"):
+			if detail {
+				cmdtest.JSON(w, api.TestOccurrences{
+					TestOccurrence: []api.TestOccurrence{
+						{ID: "new", Name: "NewFailure", Status: "FAILURE", NewFailure: true},
+					},
+				})
+				return
+			}
+			cmdtest.JSON(w, api.TestOccurrences{Count: 1, Failed: 1})
+		case strings.Contains(locator, "status:SUCCESS"):
+			if detail {
+				cmdtest.JSON(w, api.TestOccurrences{
+					TestOccurrence: []api.TestOccurrence{
+						{ID: "passed", Name: "PassingTest", Status: "SUCCESS"},
+					},
+				})
+				return
+			}
+			cmdtest.JSON(w, api.TestOccurrences{Count: 1, Passed: 1})
+		case strings.Contains(locator, "ignored:true"):
+			if detail {
+				cmdtest.JSON(w, api.TestOccurrences{
+					TestOccurrence: []api.TestOccurrence{
+						{ID: "ignored", Name: "IgnoredTest", Status: "IGNORED", Ignored: true},
+					},
+				})
+				return
+			}
+			cmdtest.JSON(w, api.TestOccurrences{Count: 1, Ignored: 1})
 		case strings.Contains(locator, "muted:false"):
 			if detail {
 				cmdtest.JSON(w, api.TestOccurrences{

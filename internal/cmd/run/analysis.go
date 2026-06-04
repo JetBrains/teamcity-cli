@@ -121,11 +121,28 @@ func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) er
 }
 
 type runTestsOptions struct {
-	failed bool
-	muted  bool
-	json   bool
-	limit  int
-	job    string
+	failed      bool
+	newFailures bool
+	muted       bool
+	status      string
+	json        bool
+	limit       int
+	job         string
+}
+
+// resolveStatus collapses the status-selecting flags into a single value
+// (one of "", "passed", "failed", "ignored", "new").
+func (o *runTestsOptions) resolveStatus() string {
+	switch {
+	case o.status != "":
+		return o.status
+	case o.failed:
+		return "failed"
+	case o.newFailures:
+		return "new"
+	default:
+		return ""
+	}
 }
 
 func newRunTestsCmd(f *cmdutil.Factory) *cobra.Command {
@@ -144,7 +161,8 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
 		Example: `  teamcity run tests 12345
-  teamcity run tests 12345 --failed
+  teamcity run tests 12345 --status failed
+  teamcity run tests 12345 --new-failures
   teamcity run tests 12345 --muted
   teamcity run tests --job Falcon_Build`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -159,12 +177,15 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 		},
 	}
 
+	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status: passed, failed, ignored, new")
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show only failed tests, excluding muted")
+	cmd.Flags().BoolVar(&opts.newFailures, "new-failures", false, "Show only new failing tests")
 	cmd.Flags().BoolVar(&opts.muted, "muted", false, "Show only muted failed tests")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 0, "Maximum number of items")
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Use this job's latest")
-	cmd.MarkFlagsMutuallyExclusive("failed", "muted")
+	cmd.MarkFlagsMutuallyExclusive("status", "failed", "new-failures", "muted")
+	cmdutil.DeprecateFlag(cmd, "failed", "status failed", "v2.0.0")
 
 	return cmd
 }
@@ -187,12 +208,20 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
 
+	status := opts.resolveStatus()
+
 	filter := analytics.TestsFilterAll
 	switch {
-	case opts.failed:
-		filter = analytics.TestsFilterFailed
 	case opts.muted:
 		filter = analytics.TestsFilterMuted
+	case status == "failed":
+		filter = analytics.TestsFilterFailed
+	case status == "passed":
+		filter = analytics.TestsFilterPassed
+	case status == "ignored":
+		filter = analytics.TestsFilterIgnored
+	case status == "new":
+		filter = analytics.TestsFilterNew
 	}
 	f.Analytics.Track(analytics.GroupBuild, analytics.EventTestsViewed, map[string]any{
 		"filter":      filter,
@@ -200,9 +229,9 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	})
 
 	tests, err := client.GetBuildTests(f.Context(), runID, api.BuildTestsOptions{
-		FailedOnly: opts.failed,
-		MutedOnly:  opts.muted,
-		Limit:      opts.limit,
+		MutedOnly: opts.muted,
+		Status:    status,
+		Limit:     opts.limit,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to get tests: %w", err)
@@ -216,15 +245,21 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		switch {
 		case opts.muted:
 			p.Success("No muted failed tests in this run")
-		case opts.failed:
+		case status == "failed":
 			p.Success("No failed tests in this run")
+		case status == "new":
+			p.Success("No new failing tests in this run")
+		case status == "passed":
+			p.Info("No passed tests in this run")
+		case status == "ignored":
+			p.Info("No ignored tests in this run")
 		default:
 			p.Info("No tests in this run")
 		}
 		return nil
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "%s %s\n\n", output.Faint("View in browser:"), runTestsBrowserURL(build.WebURL, opts))
+	_, _ = fmt.Fprintf(p.Out, "%s %s\n\n", output.Faint("View in browser:"), runTestsBrowserURL(build.WebURL, status, opts.muted))
 
 	var parts []string
 	if tests.Passed > 0 {
@@ -259,17 +294,19 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	return nil
 }
 
-func runTestsBrowserURL(webURL string, opts *runTestsOptions) string {
+func runTestsBrowserURL(webURL, status string, muted bool) string {
 	separator := "?"
 	if strings.Contains(webURL, "?") {
 		separator = "&"
 	}
 	link := webURL + separator + "buildTab=tests"
-	if opts.failed {
-		return link + "&status=failed"
-	}
-	if opts.muted {
+	switch {
+	case muted:
 		return link + "&status=muted"
+	case status == "failed", status == "new":
+		return link + "&status=failed"
+	case status == "passed":
+		return link + "&status=success"
 	}
 	return link
 }
