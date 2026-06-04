@@ -12,6 +12,7 @@
         <toc-element topic="teamcity-cli-linking.md"/>
         <toc-element toc-title="User guide">
             <toc-element topic="teamcity-cli-managing-runs.md"/>
+            <toc-element topic="teamcity-cli-managing-tests.md"/>
             <toc-element topic="teamcity-cli-managing-pipelines.md"/>
             <toc-element topic="teamcity-cli-managing-jobs.md"/>
             <toc-element topic="teamcity-cli-managing-projects.md"/>

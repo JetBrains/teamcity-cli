@@ -822,42 +822,73 @@ Loop workflow for watching a build, fixing failures, and retrying. Equivalent to
 
 ## Test Reliability Analysis
 
-Identify flaky tests by cross-referencing failures across builds. Equivalent to CircleCI's `find_flaky_tests`.
+Identify flaky tests across builds, then mute or investigate them. The `teamcity test` command group treats tests as entities with their own history and lifecycle, so you no longer have to cross-reference per-build results by hand. Equivalent to CircleCI's `find_flaky_tests`.
 
-### Identify potentially flaky tests
+> Cross-build test commands **require a scope** — pass `--project` or `--job` (a job takes precedence). Server-wide queries are rejected.
+
+### Is this test flaky?
+
+The fastest path: pull a single test's pass/fail timeline as JSON and look at the pass rate and whether passes and failures interleave without code changes.
 
 ```bash
-# Get failed tests from the current build
-teamcity run tests <run-id> --failed --json > /tmp/failed-tests.json
+# Pass/fail timeline + footer (pass rate, avg duration) for a human
+teamcity test history com.example.FooTest.shouldWork --job <job-id>
 
-# Check if the same tests failed in recent builds
-teamcity run list --job <job-id> --status failure -n 5 --json
-
-# For each recent failed build, get its failed tests
-teamcity run tests <other-run-id> --failed --json
+# Raw occurrence array for programmatic analysis (status, build, branch, agent, muted, newFailure)
+teamcity test history com.example.FooTest.shouldWork --job <job-id> --json > /tmp/history.json
 ```
 
-### Cross-reference with code changes
+A test whose history shows interleaved pass/fail on the same branch with no corresponding code change is flaky. The `--json` output is rich enough for an agent to compute the flip rate, group by agent, or correlate with branches.
+
+### Find currently failing or muted tests
 
 ```bash
-# Check what changed between builds
-teamcity run changes <run-id>
+# All tests currently failing across a project (or scope to a job)
+teamcity test list --project <project-id>
+teamcity test list --job <job-id> --json
+
+# What's already muted / under investigation
+teamcity test list --project <project-id> --muted
+teamcity test list --project <project-id> --investigated
+```
+
+### Cross-reference per-build results (alternative)
+
+When you only have build IDs, the single-build view still works:
+
+```bash
+teamcity run tests <run-id> --status failed --json > /tmp/failed-tests.json
+teamcity run list --job <job-id> --status failure -n 5 --json
+teamcity run changes <run-id>   # what changed between builds
 ```
 
 **Flaky test indicators:**
-- Test fails intermittently across builds without corresponding code changes.
+- Test fails intermittently across builds without corresponding code changes (visible directly in `test history`).
 - Test passes on retry (restart) without any code change.
-- Test fails on one agent but passes on another (environment-dependent).
+- Test fails on one agent but passes on another (environment-dependent — check the `agent` field in `test history --json`).
 
 ### What to do with flaky tests
 
 1. Document the flaky test: name, frequency, suspected cause.
-2. If `teamcity test mute` becomes available, use it to mute the test with a comment explaining why.
-3. Otherwise, flag the test in the codebase (e.g., add a skip annotation with a tracking issue).
-4. Never silently delete a flaky test — it may be catching real intermittent bugs.
+2. Mute it with a reason so its failures stop breaking builds:
+   ```bash
+   teamcity test mute com.example.FooTest.flaky --job <job-id> --reason "flaky, see TC-123"
+   # Auto-unmute once it passes again:
+   teamcity test mute com.example.FooTest.flaky --job <job-id> --until fixed
+   ```
+3. Assign someone to investigate the root cause:
+   ```bash
+   teamcity test investigate com.example.FooTest.flaky --project <project-id> --assignee jdoe
+   # When fixed (or given up on):
+   teamcity test resolve com.example.FooTest.flaky --project <project-id>
+   teamcity test resolve com.example.FooTest.flaky --project <project-id> --state given-up
+   ```
+4. Remove the mute once the test is reliable again: `teamcity test unmute com.example.FooTest.flaky --job <job-id>`.
+5. Never silently delete a flaky test — it may be catching real intermittent bugs.
 
 **Gotchas:**
-- A test that fails only on certain agents may be environment-dependent, not flaky. Check agent properties with `teamcity agent view <id>`.
+- Mutes and investigations target a test by internal ID. If the name you pass matches more than one test, the command prints the candidate list and exits without acting — disambiguate with a more specific name.
+- A test that fails only on certain agents may be environment-dependent, not flaky. Check the `agent` field in `test history --json` or `teamcity agent view <id>`.
 - Some test frameworks report different test names on failure vs success (e.g., parameterized tests). Normalize test names before comparing.
 - Large test suites may need `--json` output piped through `jq` for efficient filtering.
 

@@ -33,6 +33,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 |-----------|---------------------------------------------------------------------------------------------------|
 | Auth      | `auth login`, `logout`, `status`                                                                  |
 | Builds    | `run list`, `view`, `start`, `watch`, `log`, `cancel`, `restart`, `tests`, `changes`, `tree`      |
+| Tests     | `test list`, `history`, `mute/unmute`, `investigate/resolve` — cross-build test management         |
 | Artifacts | `run artifacts`, `run download`                                                                   |
 | Metadata  | `run pin/unpin`, `run tag/untag`, `run comment`                                                   |
 | Jobs      | `job list`, `view`, `create`, `tree`, `pause/resume`, `step list/view/add/delete`, `param list/get/set/delete` |
@@ -49,7 +50,8 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 
 See [Workflows](references/workflows.md) for full details on each.
 
-- **Investigate failure**: `run list --status failure` → `run log <id> --failed --raw` → `run tests <id> --failed`
+- **Investigate failure**: `run list --status failure` → `run log <id> --failed --raw` → `run tests <id> --status failed`
+- **Is this test flaky?**: `test history <name> --job <id> --json` → inspect pass rate / interleaved pass-fail → `test mute <name>` if flaky
 - **Debug build chain**: `run tree <id>` → drill to deepest failed child
 - **Fix and verify**: edit → push → `run start --watch` (use `--local-changes` for personal builds)
 - **Pipeline lifecycle**: `pipeline pull <id>` → edit → `pipeline validate` → `pipeline push <id>`, `pipeline schema` to get the actual schema from the server

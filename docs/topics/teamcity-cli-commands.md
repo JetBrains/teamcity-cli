@@ -296,6 +296,97 @@ Watch a run until it completes
 </tr>
 </table>
 
+## Tests
+
+Inspect and manage tests across builds. See [Managing tests](teamcity-cli-managing-tests.md) for details.
+
+<table>
+<tr>
+<td>
+
+Command
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity test history`
+
+</td>
+<td>
+
+Show a test's pass/fail timeline across builds
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity test investigate`
+
+</td>
+<td>
+
+Assign an investigation for a test in a project or job
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity test list`
+
+</td>
+<td>
+
+List currently failing, muted, or investigated tests across builds
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity test mute`
+
+</td>
+<td>
+
+Mute a test in a project or job
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity test resolve`
+
+</td>
+<td>
+
+Close a test's investigation in a project or job
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity test unmute`
+
+</td>
+<td>
+
+Remove a test's mute in a project or job
+
+</td>
+</tr>
+</table>
+
 ## Jobs
 
 View and configure build configurations. See [Managing jobs](teamcity-cli-managing-jobs.md) for details.

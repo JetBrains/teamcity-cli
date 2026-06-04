@@ -19,7 +19,7 @@ import (
 )
 
 // Preferred ordering (unlisted commands added alphabetically at end).
-var preferredOrder = []string{"auth", "run", "job", "project", "queue", "agent", "pool", "api"}
+var preferredOrder = []string{"auth", "run", "test", "job", "project", "queue", "agent", "pool", "api"}
 
 // Custom display names for commands that need special treatment.
 var displayNames = map[string]string{
@@ -37,6 +37,7 @@ var sectionDescriptions = map[string]struct {
 }{
 	"auth":       {"Manage server authentication.", "teamcity-cli-authentication.md"},
 	"run":        {"Start, monitor, and manage builds.", "teamcity-cli-managing-runs.md"},
+	"test":       {"Inspect and manage tests across builds.", "teamcity-cli-managing-tests.md"},
 	"job":        {"View and configure build configurations.", "teamcity-cli-managing-jobs.md"},
 	"project":    {"Browse projects and manage parameters and settings.", "teamcity-cli-managing-projects.md"},
 	"queue":      {"Manage the build queue.", "teamcity-cli-managing-build-queue.md"},
@@ -200,6 +201,7 @@ func pageLinkText(page string) string {
 	links := map[string]string{
 		"teamcity-cli-authentication.md":                 "Authentication",
 		"teamcity-cli-managing-runs.md":                  "Managing runs",
+		"teamcity-cli-managing-tests.md":                 "Managing tests",
 		"teamcity-cli-managing-jobs.md":                  "Managing jobs",
 		"teamcity-cli-managing-projects.md":              "Managing projects",
 		"teamcity-cli-managing-build-queue.md":           "Managing the build queue",

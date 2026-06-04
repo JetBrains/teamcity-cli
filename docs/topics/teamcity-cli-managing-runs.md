@@ -1003,10 +1003,18 @@ teamcity run tests 12345
 teamcity run tests --job MyProject_Build
 ```
 
-Show only failed tests, excluding muted failures:
+Filter by status with `--status` (`passed`, `failed`, `ignored`, or `new`):
 
 ```Shell
-teamcity run tests 12345 --failed
+teamcity run tests 12345 --status failed
+teamcity run tests 12345 --status passed
+teamcity run tests 12345 --status ignored
+```
+
+`--new-failures` is shorthand for `--status new` (tests that started failing in this run):
+
+```Shell
+teamcity run tests 12345 --new-failures
 ```
 
 Show only muted failed tests:
@@ -1015,7 +1023,18 @@ Show only muted failed tests:
 teamcity run tests 12345 --muted
 ```
 
+> `--failed` still works but is deprecated in favor of `--status failed`, and will be removed in v2.0.0.
+
 <img src="run-tests.gif" alt="Viewing test results" border-effect="rounded"/>
+
+Failing tests carry inline `NEW` and `MUTED` badges so you can tell fresh regressions from known-flaky tests at a glance.
+
+Group the output by `suite`, `package`, or `class`:
+
+```Shell
+teamcity run tests 12345 --group-by package
+teamcity run tests 12345 --group-by class
+```
 
 Limit the number of results:
 
@@ -1023,6 +1042,8 @@ Limit the number of results:
 teamcity run tests 12345 --limit 50
 teamcity run tests 12345 --json
 ```
+
+> For cross-build test management — finding flaky tests, viewing a test's history, and muting or investigating — see [Managing Tests](teamcity-cli-managing-tests.md).
 
 ## VCS changes
 

@@ -4,6 +4,7 @@
 
 - Authentication (`teamcity auth`)
 - Builds/Runs (`teamcity run`)
+- Tests (`teamcity test`)
 - Jobs (`teamcity job`)
 - Projects (`teamcity project`)
 - Queue (`teamcity queue`)
@@ -123,11 +124,16 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ### Flags for `teamcity run tests`
 
-- `--failed` - Show only failed tests, excluding muted failures
+- `--status <s>` - Filter by status: `passed`, `failed`, `ignored`, `new`
+- `--new-failures` - Show only new failing tests (alias for `--status new`)
+- `--group-by <g>` - Group output by `suite`, `package`, or `class`
 - `--muted` - Show only muted failed tests
+- `--failed` - **Deprecated** (use `--status failed`); removed in v2.0.0
 - `-j, --job <id>` - Get tests for latest run of this job
 - `--json` - Output as JSON
 - `-n, --limit <n>` - Maximum number of tests to show
+
+Failing tests show inline `NEW`/`MUTED` badges. `--status`, `--failed`, `--new-failures`, and `--muted` are mutually exclusive.
 
 ### Flags for `teamcity run changes`
 
@@ -170,6 +176,68 @@ Shows all branches and all build states (including canceled, personal, composite
 
 - `-d, --depth <n>` - Limit tree depth (0 = unlimited)
 - `--json` - Output as JSON
+
+## Tests (`teamcity test`)
+
+Cross-build test management — tests as entities with their own lifecycle. Distinct from `teamcity run tests`, which is scoped to a single build. Every cross-build query **requires a scope**: pass `--project` or `--job` (a job takes precedence). The CLI rejects unbounded, server-wide queries.
+
+| Command                                      | Description                                  |
+|----------------------------------------------|----------------------------------------------|
+| `teamcity test list`                         | List failing/muted/investigated tests        |
+| `teamcity test history <test>`               | Pass/fail timeline + pass rate + avg duration |
+| `teamcity test mute <test>`                  | Mute a test in a project or job              |
+| `teamcity test unmute <test>`                | Remove a test's mute                         |
+| `teamcity test investigate <test>`           | Assign an investigation                      |
+| `teamcity test resolve <test>`               | Close an investigation                       |
+
+Mutes and investigations target a test by internal ID; the CLI resolves the name you pass. If a name matches more than one test, the command prints the candidates and exits without acting.
+
+### Flags for `teamcity test list`
+
+- `--project <id>` - Project to query across all its builds
+- `--job <id>` - Job to query (takes precedence over `--project`)
+- `--failing` - Currently failing tests (default)
+- `--muted` - Currently muted tests
+- `--investigated` - Currently investigated tests
+- `--json` - Output as JSON
+- `-n, --limit <n>` - Maximum number of tests to show
+
+`--failing`/`--muted`/`--investigated` are mutually exclusive.
+
+### Flags for `teamcity test history`
+
+- `--project <id>` - Project to query across all its builds
+- `--job <id>` - Job to query (takes precedence over `--project`)
+- `--json` - Output the raw test-occurrence array as JSON
+- `-n, --limit <n>` - Maximum number of runs (default 50, 0 for all)
+
+### Flags for `teamcity test mute`
+
+- `--project <id>` - Project to mute the test in
+- `--job <id>` - Job to mute the test in (takes precedence over `--project`)
+- `--reason <text>` - Reason recorded with the mute
+- `--until <when>` - When the mute lifts: `fixed` | `<date>` | `permanent` (default `permanent`)
+- `--json` - Output the created mute as JSON
+
+### Flags for `teamcity test unmute`
+
+- `--project <id>` - Project the test is muted in
+- `--job <id>` - Job the test is muted in (takes precedence over `--project`)
+- `--json` - Output the removed mutes as JSON
+
+### Flags for `teamcity test investigate`
+
+- `--project <id>` - Project to investigate the test in
+- `--job <id>` - Job to investigate the test in (takes precedence over `--project`)
+- `--assignee <username>` - Username to assign the investigation to
+- `--json` - Output the created investigation as JSON
+
+### Flags for `teamcity test resolve`
+
+- `--project <id>` - Project the test is investigated in
+- `--job <id>` - Job the test is investigated in (takes precedence over `--project`)
+- `--state <s>` - How to close the investigation: `fixed` (default) | `given-up`
+- `--json` - Output the resolution as JSON
 
 ## Jobs (`teamcity job`)
 
