@@ -504,6 +504,60 @@ func TestRunTestsFailedAndMutedAreMutuallyExclusive(T *testing.T) {
 	assert.Contains(T, err.Error(), "muted")
 }
 
+func TestRunTestsRendersBadges(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	installRunTestsFilterHandler(ts)
+
+	newOut := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--status", "new")
+	assert.Contains(T, newOut, "NewFailure")
+	assert.Contains(T, newOut, "NEW")
+
+	all := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID)
+	assert.Contains(T, all, "MutedFailure")
+	assert.Contains(T, all, "MUTED")
+}
+
+func TestRunTestsGroupBy(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /app/rest/testOccurrences", func(w http.ResponseWriter, r *http.Request) {
+		fields := r.URL.Query().Get("fields")
+		if !strings.Contains(fields, "testOccurrence(") {
+			cmdtest.JSON(w, api.TestOccurrences{Count: 3, Passed: 1, Failed: 2})
+			return
+		}
+		cmdtest.JSON(w, api.TestOccurrences{
+			TestOccurrence: []api.TestOccurrence{
+				{ID: "1", Name: "alpha.A.test", Status: "FAILURE",
+					Test: &api.TestDef{ParsedTestName: &api.ParsedTestName{TestSuite: "Beta", TestPackage: "alpha", TestClass: "alpha.A"}}},
+				{ID: "2", Name: "alpha.A.test2", Status: "SUCCESS",
+					Test: &api.TestDef{ParsedTestName: &api.ParsedTestName{TestSuite: "Beta", TestPackage: "alpha", TestClass: "alpha.A"}}},
+				{ID: "3", Name: "zeta.Z.test", Status: "FAILURE",
+					Test: &api.TestDef{ParsedTestName: &api.ParsedTestName{TestSuite: "Alpha", TestPackage: "zeta", TestClass: "zeta.Z"}}},
+			},
+		})
+	})
+
+	out := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--group-by", "suite")
+	// Suites render in alphabetical order: Alpha before Beta.
+	assert.Less(T, strings.Index(out, "Alpha"), strings.Index(out, "Beta"))
+	assert.Contains(T, out, "Beta")
+	assert.Contains(T, out, "(2)") // Beta suite has two members
+	assert.Contains(T, out, "alpha.A.test")
+
+	byPkg := cmdtest.CaptureOutput(T, ts.Factory, "run", "tests", testBuildID, "--group-by", "package")
+	assert.Contains(T, byPkg, "alpha")
+	assert.Contains(T, byPkg, "zeta")
+}
+
+func TestRunTestsInvalidGroupBy(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	installRunTestsFilterHandler(ts)
+
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "tests", testBuildID, "--group-by", "bogus")
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "invalid group-by")
+}
+
 func installRunTestsFilterHandler(ts *cmdtest.TestServer) {
 	ts.Handle("GET /app/rest/testOccurrences", func(w http.ResponseWriter, r *http.Request) {
 		locator := r.URL.Query().Get("locator")

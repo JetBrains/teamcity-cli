@@ -204,6 +204,7 @@ type BuildTestsOptions struct {
 	FailedOnly bool
 	MutedOnly  bool
 	Status     string // passed|failed|ignored|new (supersedes FailedOnly when set)
+	GroupBy    string // suite|package|class — fetches parsedTestName for grouping
 	Limit      int
 }
 
@@ -220,6 +221,12 @@ func (c *Client) GetBuildTests(ctx context.Context, buildID string, opts BuildTe
 	case "", "passed", "failed", "ignored", "new":
 	default:
 		return nil, Validation(fmt.Sprintf("invalid status %q", status), "use passed, failed, ignored, or new")
+	}
+
+	switch opts.GroupBy {
+	case "", "suite", "package", "class":
+	default:
+		return nil, Validation(fmt.Sprintf("invalid group-by %q", opts.GroupBy), "use suite, package, or class")
 	}
 
 	id, err := c.ResolveBuildID(ctx, buildID)
@@ -256,6 +263,9 @@ func (c *Client) GetBuildTests(ctx context.Context, buildID string, opts BuildTe
 	locator.AddInt("count", count)
 
 	detailFields := "testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)))"
+	if opts.GroupBy != "" {
+		detailFields = "testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)),test(parsedTestName(testSuite,testPackage,testClass)))"
+	}
 	detailPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(detailFields))
 
 	var details TestOccurrences

@@ -285,6 +285,59 @@ func TestGetBuildTestsRejectsInvalidStatus(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid status")
 }
 
+func TestGetBuildTestsGroupByFetchesParsedName(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	var detailFields string
+
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path != "/app/rest/testOccurrences" {
+			http.NotFound(w, r)
+			return
+		}
+		field := r.URL.Query().Get("fields")
+		if strings.Contains(field, "testOccurrence(") {
+			mu.Lock()
+			detailFields = field
+			mu.Unlock()
+			json.NewEncoder(w).Encode(TestOccurrences{
+				TestOccurrence: []TestOccurrence{{
+					ID: "1", Name: "Suite: pkg.MyClass.test", Status: "FAILURE",
+					Test: &TestDef{ParsedTestName: &ParsedTestName{
+						TestSuite: "Suite", TestPackage: "pkg", TestClass: "pkg.MyClass",
+					}},
+				}},
+			})
+			return
+		}
+		json.NewEncoder(w).Encode(TestOccurrences{Count: 1, Failed: 1})
+	})
+
+	tests, err := client.GetBuildTests(t.Context(), "1", BuildTestsOptions{GroupBy: "suite"})
+	require.NoError(t, err)
+	require.Len(t, tests.TestOccurrence, 1)
+	require.NotNil(t, tests.TestOccurrence[0].Test)
+	require.NotNil(t, tests.TestOccurrence[0].Test.ParsedTestName)
+	assert.Equal(t, "Suite", tests.TestOccurrence[0].Test.ParsedTestName.TestSuite)
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Contains(t, detailFields, "test(parsedTestName(testSuite,testPackage,testClass))")
+}
+
+func TestGetBuildTestsRejectsInvalidGroupBy(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+	})
+
+	_, err := client.GetBuildTests(t.Context(), "1", BuildTestsOptions{GroupBy: "bogus"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid group-by")
+}
+
 func TestGetBuildTestsRejectsConflictingFilters(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {

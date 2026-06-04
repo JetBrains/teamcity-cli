@@ -2,6 +2,7 @@ package run
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -125,6 +126,7 @@ type runTestsOptions struct {
 	newFailures bool
 	muted       bool
 	status      string
+	groupBy     string
 	json        bool
 	limit       int
 	job         string
@@ -178,6 +180,7 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 	}
 
 	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status: passed, failed, ignored, new")
+	cmd.Flags().StringVar(&opts.groupBy, "group-by", "", "Group output by: suite, package, class")
 	cmd.Flags().BoolVar(&opts.failed, "failed", false, "Show only failed tests, excluding muted")
 	cmd.Flags().BoolVar(&opts.newFailures, "new-failures", false, "Show only new failing tests")
 	cmd.Flags().BoolVar(&opts.muted, "muted", false, "Show only muted failed tests")
@@ -223,14 +226,20 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	case status == "new":
 		filter = analytics.TestsFilterNew
 	}
+	groupBy := opts.groupBy
+	if groupBy == "" {
+		groupBy = "none"
+	}
 	f.Analytics.Track(analytics.GroupBuild, analytics.EventTestsViewed, map[string]any{
 		"filter":      filter,
 		"is_from_job": opts.job != "",
+		"group_by":    groupBy,
 	})
 
 	tests, err := client.GetBuildTests(f.Context(), runID, api.BuildTestsOptions{
 		MutedOnly: opts.muted,
 		Status:    status,
+		GroupBy:   opts.groupBy,
 		Limit:     opts.limit,
 	})
 	if err != nil {
@@ -276,22 +285,90 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	}
 	_, _ = fmt.Fprintf(p.Out, "TESTS: %s\n\n", strings.Join(parts, ", "))
 
-	for _, t := range tests.TestOccurrence {
-		switch t.Status {
-		case "FAILURE":
-			if t.Muted {
-				_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint(output.Sym().Skip), t.Name)
-			} else {
-				_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Red(output.Sym().Cross), t.Name)
-			}
-		case "SUCCESS":
-			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Green(output.Sym().Check), t.Name)
-		default:
-			_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint(output.Sym().Neutral), t.Name)
+	if opts.groupBy != "" {
+		renderGroupedTests(p, tests.TestOccurrence, opts.groupBy)
+	} else {
+		for _, t := range tests.TestOccurrence {
+			_, _ = fmt.Fprintln(p.Out, testLine(t))
 		}
 	}
 
 	return nil
+}
+
+// testLine renders a single occurrence: status symbol, name, and NEW/MUTED badges.
+func testLine(t api.TestOccurrence) string {
+	var symbol string
+	switch t.Status {
+	case "FAILURE":
+		if t.Muted {
+			symbol = output.Faint(output.Sym().Skip)
+		} else {
+			symbol = output.Red(output.Sym().Cross)
+		}
+	case "SUCCESS":
+		symbol = output.Green(output.Sym().Check)
+	default:
+		symbol = output.Faint(output.Sym().Neutral)
+	}
+
+	line := fmt.Sprintf("%s %s", symbol, t.Name)
+	if t.NewFailure {
+		line += " " + output.Yellow("NEW")
+	}
+	if t.Muted {
+		line += " " + output.Faint("MUTED")
+	}
+	return line
+}
+
+// renderGroupedTests prints occurrences bucketed by suite/package/class, each
+// group headed by its key and per-group count, in stable alphabetical order.
+func renderGroupedTests(p *output.Printer, occ []api.TestOccurrence, dimension string) {
+	groups := make(map[string][]api.TestOccurrence)
+	var order []string
+	for _, t := range occ {
+		key := testGroupKey(t, dimension)
+		if _, ok := groups[key]; !ok {
+			order = append(order, key)
+		}
+		groups[key] = append(groups[key], t)
+	}
+	sort.Strings(order)
+
+	for i, key := range order {
+		if i > 0 {
+			_, _ = fmt.Fprintln(p.Out)
+		}
+		members := groups[key]
+		_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Bold(key), output.Faint(fmt.Sprintf("(%d)", len(members))))
+		for _, t := range members {
+			_, _ = fmt.Fprintf(p.Out, "  %s\n", testLine(t))
+		}
+	}
+}
+
+// testGroupKey derives the grouping key from the occurrence's parsed test name,
+// falling back to "(ungrouped)" when the requested dimension is unavailable.
+func testGroupKey(t api.TestOccurrence, dimension string) string {
+	if t.Test != nil && t.Test.ParsedTestName != nil {
+		p := t.Test.ParsedTestName
+		switch dimension {
+		case "suite":
+			if p.TestSuite != "" {
+				return p.TestSuite
+			}
+		case "package":
+			if p.TestPackage != "" {
+				return p.TestPackage
+			}
+		case "class":
+			if p.TestClass != "" {
+				return p.TestClass
+			}
+		}
+	}
+	return "(ungrouped)"
 }
 
 func runTestsBrowserURL(webURL, status string, muted bool) string {

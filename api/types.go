@@ -349,6 +349,22 @@ type TestOccurrence struct {
 
 	FirstFailed *TestOccurrence `json:"firstFailed,omitempty"`
 	Build       *Build          `json:"build,omitempty"`
+	Test        *TestDef        `json:"test,omitempty"`
+}
+
+// TestDef is the test definition referenced by an occurrence; its parsed name
+// exposes the suite/package/class used for grouping.
+type TestDef struct {
+	ID             string          `json:"id,omitempty"`
+	Name           string          `json:"name,omitempty"`
+	ParsedTestName *ParsedTestName `json:"parsedTestName,omitempty"`
+}
+
+// ParsedTestName is TeamCity's structured breakdown of a test's fully-qualified name.
+type ParsedTestName struct {
+	TestSuite   string `json:"testSuite,omitempty"`
+	TestPackage string `json:"testPackage,omitempty"`
+	TestClass   string `json:"testClass,omitempty"`
 }
 
 type TestOccurrences struct {
