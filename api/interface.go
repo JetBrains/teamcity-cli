@@ -68,6 +68,11 @@ type ClientInterface interface {
 	ListTests(ctx context.Context, opts TestQueryOptions) (*TestOccurrences, error)
 	GetTestHistory(ctx context.Context, name string, opts TestQueryOptions) (*TestOccurrences, error)
 	ResolveTestID(ctx context.Context, name, projectID string) (string, error)
+	CreateMute(ctx context.Context, testID string, scope ProblemScopeOptions, opts MuteOptions) (*Mute, error)
+	ListMutes(ctx context.Context, testID string, scope ProblemScopeOptions) (*Mutes, error)
+	DeleteMute(ctx context.Context, muteID int) error
+	CreateInvestigation(ctx context.Context, testID string, scope ProblemScopeOptions, assignee string) (*Investigation, error)
+	ResolveInvestigation(ctx context.Context, testID string, scope ProblemScopeOptions, state string) error
 	GetBuildTestSummary(buildID string) (*TestOccurrences, error)
 	GetBuildProblems(buildID string) (*ProblemOccurrences, error)
 	GetBuildResultingProperties(buildID string) (*ParameterList, error)
