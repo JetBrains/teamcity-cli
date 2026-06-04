@@ -37,8 +37,9 @@ func (s ProblemScopeOptions) appendLocator(loc *Locator) {
 
 // MuteOptions carries the optional reason and resolution policy for a new mute.
 type MuteOptions struct {
-	Reason     string
-	Resolution string // "manually" (default) or "whenFixed"
+	Reason         string
+	Resolution     string // "manually" (default), "whenFixed", or "atTime"
+	ResolutionTime string // TeamCity-formatted timestamp, required when Resolution == "atTime"
 }
 
 // CreateMute mutes a test (by resolved id) within a project or build-config scope.
@@ -50,7 +51,7 @@ func (c *Client) CreateMute(ctx context.Context, testID string, scope ProblemSco
 	mute := Mute{
 		Scope:      scope.scope(),
 		Target:     &ProblemTarget{Tests: &TestRefs{Test: []TestRef{{ID: testID}}}},
-		Resolution: &Resolution{Type: cmp.Or(opts.Resolution, "manually")},
+		Resolution: &Resolution{Type: cmp.Or(opts.Resolution, "manually"), Time: opts.ResolutionTime},
 	}
 	if opts.Reason != "" {
 		mute.Assignment = &MuteAssignment{Text: opts.Reason}

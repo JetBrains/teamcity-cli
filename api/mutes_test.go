@@ -93,6 +93,26 @@ func TestCreateMute(t *testing.T) {
 	}
 }
 
+func TestCreateMute_AtTime(t *testing.T) {
+	t.Parallel()
+
+	var sent Mute
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&sent))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(Mute{ID: 9})
+	})
+
+	_, err := client.CreateMute(t.Context(), "testid_1", ProblemScopeOptions{Project: "Proj"}, MuteOptions{
+		Resolution:     "atTime",
+		ResolutionTime: "20260121T000000+0000",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, sent.Resolution)
+	assert.Equal(t, "atTime", sent.Resolution.Type)
+	assert.Equal(t, "20260121T000000+0000", sent.Resolution.Time)
+}
+
 func TestCreateMute_RequiresScope(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {

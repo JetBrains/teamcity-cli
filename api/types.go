@@ -395,9 +395,10 @@ type ProblemTarget struct {
 	Tests *TestRefs `json:"tests,omitempty"`
 }
 
-// Resolution describes how a mute/investigation is resolved (manually or whenFixed).
+// Resolution describes how a mute/investigation is resolved (manually, whenFixed, or atTime).
 type Resolution struct {
-	Type string `json:"type,omitempty"` // manually, whenFixed
+	Type string `json:"type,omitempty"` // manually, whenFixed, atTime
+	Time string `json:"time,omitempty"` // TeamCity-formatted timestamp when Type == atTime
 }
 
 // MuteAssignment carries the reason text and metadata recorded when a mute is created.
