@@ -21,6 +21,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmd/queue"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/run"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/skill"
+	testcmd "github.com/JetBrains/teamcity-cli/internal/cmd/test"
 	updatecmd "github.com/JetBrains/teamcity-cli/internal/cmd/update"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
@@ -96,7 +97,7 @@ Report issues:  https://jb.gg/tc/issues`,
 		setupAnalytics(f)
 	}
 
-	addGrouped(cmd, "core", run.NewCmd(f), job.NewCmd(f), project.NewCmd(f), pipeline.NewCmd(f))
+	addGrouped(cmd, "core", run.NewCmd(f), job.NewCmd(f), project.NewCmd(f), pipeline.NewCmd(f), testcmd.NewCmd(f))
 	addGrouped(cmd, "infra", queue.NewCmd(f), agent.NewCmd(f), pool.NewCmd(f))
 	addGrouped(cmd, "config",
 		auth.NewCmd(f),

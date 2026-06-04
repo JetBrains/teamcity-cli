@@ -72,7 +72,7 @@ func TestListTests(t *testing.T) {
 			require.Len(t, occ.TestOccurrence, 1)
 			assert.Equal(t, "Build", occ.TestOccurrence[0].Build.BuildType.Name)
 			assert.Equal(t, tc.wantLocator, gotLocator)
-			assert.Equal(t, "count,testOccurrence(id,name,status,duration,muted,newFailure,build(id,number,buildType(id,name)))", gotFields)
+			assert.Equal(t, "count,testOccurrence(id,name,status,duration,muted,newFailure,build(id,number,startDate,buildType(id,name)))", gotFields)
 		})
 	}
 }

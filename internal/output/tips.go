@@ -19,6 +19,7 @@ const (
 	TipNoPools        = "Contact your administrator to create an agent pool"
 	TipNoConnections  = "Create one with 'teamcity project connection create github-app' or 'docker'"
 	TipCancelAnytime  = "Press Ctrl+C at any time to cancel"
+	TipNoTests        = "Try a different filter (--failing/--muted/--investigated) or widen the scope"
 )
 
 // TipNoArtifactsFor returns the tip for a run that has no artifacts, pointing at

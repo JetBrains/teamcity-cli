@@ -48,7 +48,7 @@ func (c *Client) ListTests(ctx context.Context, opts TestQueryOptions) (*TestOcc
 	opts.addScope(locator)
 	locator.AddInt("count", opts.Limit)
 
-	fields := "count,testOccurrence(id,name,status,duration,muted,newFailure,build(id,number,buildType(id,name)))"
+	fields := "count,testOccurrence(id,name,status,duration,muted,newFailure,build(id,number,startDate,buildType(id,name)))"
 	path := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
 
 	var occ TestOccurrences

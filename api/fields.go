@@ -161,3 +161,9 @@ var CloudInstanceFields = FieldSpec{
 	Available: []string{"id", "name", "state", "startDate", "href", "image.id", "image.name", "agent.id", "agent.name"},
 	Default:   []string{"id", "name", "state", "startDate", "href", "image.id", "image.name", "agent.id", "agent.name"},
 }
+
+// TestListFields describes the cross-build test occurrences returned by ListTests.
+var TestListFields = FieldSpec{
+	Available: []string{"id", "name", "status", "duration", "muted", "newFailure", "build.id", "build.number", "build.startDate", "build.buildType.id", "build.buildType.name"},
+	Default:   []string{"id", "name", "status", "duration", "muted", "newFailure", "build.id", "build.number", "build.startDate", "build.buildType.id", "build.buildType.name"},
+}
