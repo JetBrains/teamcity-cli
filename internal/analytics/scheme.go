@@ -29,7 +29,7 @@ const (
 // so AP can distinguish events from old vs new client versions.
 var groupVersion = map[string]int{
 	GroupSession:   1,
-	GroupCommand:   2, // "link" command added (FUS-7820)
+	GroupCommand:   3, // "job.settings.*" commands added
 	GroupAPI:       1,
 	GroupAuth:      1,
 	GroupBuild:     2, // "muted" filter value added (FUS-7820)
@@ -129,7 +129,7 @@ func commandGroup() fus.GroupSchema {
 	return fus.GroupSchema{
 		ID:       GroupCommand,
 		Type:     fus.GroupTypeCounter,
-		Versions: []fus.SchemeRange{{From: "2"}}, // bumped per FUS-7820 (added "link" + others)
+		Versions: []fus.SchemeRange{{From: "3"}}, // bumped for "job.settings.*" commands
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventExecuted)},
 			EventData: map[string][]string{
