@@ -20,7 +20,7 @@ func TestListTests(t *testing.T) {
 	}{
 		{
 			name:        "failing_by_project",
-			opts:        TestQueryOptions{Project: "Proj", Failing: true, Limit: 10},
+			opts:        TestQueryOptions{Project: "Proj", Limit: 10},
 			wantLocator: "currentlyFailing:true,affectedProject:(id:Proj),count:10",
 		},
 		{
@@ -35,7 +35,7 @@ func TestListTests(t *testing.T) {
 		},
 		{
 			name:        "job_takes_precedence_over_project",
-			opts:        TestQueryOptions{Project: "Proj", Job: "Build_Cfg", Failing: true},
+			opts:        TestQueryOptions{Project: "Proj", Job: "Build_Cfg"},
 			wantLocator: "currentlyFailing:true,buildType:(id:Build_Cfg)",
 		},
 		{
@@ -83,7 +83,7 @@ func TestListTests_RequiresScope(t *testing.T) {
 		t.Errorf("unexpected request: %s", r.URL)
 	})
 
-	_, err := client.ListTests(t.Context(), TestQueryOptions{Failing: true})
+	_, err := client.ListTests(t.Context(), TestQueryOptions{})
 	require.Error(t, err)
 	var ve *ValidationError
 	require.True(t, errors.As(err, &ve))
@@ -144,11 +144,79 @@ func TestResolveTestID(t *testing.T) {
 			json.NewEncoder(w).Encode(TestList{Count: 1, Test: []TestRef{{ID: "-99", Name: "com.example.FooTest"}}})
 		})
 
-		id, err := client.ResolveTestID(t.Context(), "com.example.FooTest", "Proj")
+		id, err := client.ResolveTestID(t.Context(), "com.example.FooTest", ProblemScopeOptions{Project: "Proj"})
 		require.NoError(t, err)
 		assert.Equal(t, "-99", id)
 		assert.Equal(t, "name:com.example.FooTest,affectedProject:(id:Proj)", gotLocator)
 		assert.Equal(t, "count,test(id,name)", gotFields)
+	})
+
+	t.Run("job_scope_resolves_via_testOccurrences", func(t *testing.T) {
+		var gotPath, gotLocator string
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if r.URL.Path != "/app/rest/testOccurrences" {
+				http.NotFound(w, r)
+				return
+			}
+			gotPath = r.URL.Path
+			gotLocator = r.URL.Query().Get("locator")
+			// Two occurrences of the same test (e.g. two builds) must dedupe to one id.
+			json.NewEncoder(w).Encode(TestOccurrences{Count: 2, TestOccurrence: []TestOccurrence{
+				{ID: "1", Test: &TestDef{ID: "-7", Name: "com.example.FooTest"}},
+				{ID: "2", Test: &TestDef{ID: "-7", Name: "com.example.FooTest"}},
+			}})
+		})
+
+		id, err := client.ResolveTestID(t.Context(), "com.example.FooTest", ProblemScopeOptions{Job: "Build_Cfg"})
+		require.NoError(t, err)
+		assert.Equal(t, "-7", id)
+		assert.Equal(t, "/app/rest/testOccurrences", gotPath)
+		assert.Equal(t, "test:(name:com.example.FooTest),buildType:(id:Build_Cfg),count:1000", gotLocator)
+	})
+
+	t.Run("job_scope_paginates_to_find_second_id", func(t *testing.T) {
+		var calls int
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			calls++
+			if calls == 1 {
+				// First page is entirely one test id, with more pages to follow.
+				json.NewEncoder(w).Encode(TestOccurrences{Count: 2, NextHref: "/app/rest/testOccurrences?locator=count:1000,start:1000", TestOccurrence: []TestOccurrence{
+					{ID: "1", Test: &TestDef{ID: "-7", Name: "com.example.FooTest"}},
+					{ID: "2", Test: &TestDef{ID: "-7", Name: "com.example.FooTest"}},
+				}})
+				return
+			}
+			// A distinct test id only surfaces on the next page.
+			json.NewEncoder(w).Encode(TestOccurrences{Count: 1, TestOccurrence: []TestOccurrence{
+				{ID: "3", Test: &TestDef{ID: "-8", Name: "com.example.FooTest"}},
+			}})
+		})
+
+		_, err := client.ResolveTestID(t.Context(), "com.example.FooTest", ProblemScopeOptions{Job: "Build_Cfg"})
+		require.Error(t, err)
+		var ambig *AmbiguousTestError
+		require.True(t, errors.As(err, &ambig))
+		require.Len(t, ambig.Candidates, 2)
+		assert.Equal(t, 2, calls, "should follow nextHref to discover the second id")
+	})
+
+	t.Run("job_scope_ambiguous_dedupes_by_id", func(t *testing.T) {
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(TestOccurrences{Count: 3, TestOccurrence: []TestOccurrence{
+				{ID: "1", Test: &TestDef{ID: "-7", Name: "com.example.FooTest"}},
+				{ID: "2", Test: &TestDef{ID: "-8", Name: "com.example.FooTest"}},
+				{ID: "3", Test: &TestDef{ID: "-7", Name: "com.example.FooTest"}},
+			}})
+		})
+
+		_, err := client.ResolveTestID(t.Context(), "com.example.FooTest", ProblemScopeOptions{Job: "Build_Cfg"})
+		require.Error(t, err)
+		var ambig *AmbiguousTestError
+		require.True(t, errors.As(err, &ambig))
+		require.Len(t, ambig.Candidates, 2)
 	})
 
 	t.Run("no_match", func(t *testing.T) {
@@ -157,7 +225,7 @@ func TestResolveTestID(t *testing.T) {
 			json.NewEncoder(w).Encode(TestList{Count: 0})
 		})
 
-		_, err := client.ResolveTestID(t.Context(), "missing", "Proj")
+		_, err := client.ResolveTestID(t.Context(), "missing", ProblemScopeOptions{Project: "Proj"})
 		require.Error(t, err)
 		var nf *NotFoundError
 		require.True(t, errors.As(err, &nf))
@@ -172,7 +240,7 @@ func TestResolveTestID(t *testing.T) {
 			}})
 		})
 
-		_, err := client.ResolveTestID(t.Context(), "com.example.FooTest", "")
+		_, err := client.ResolveTestID(t.Context(), "com.example.FooTest", ProblemScopeOptions{})
 		require.Error(t, err)
 		var ambig *AmbiguousTestError
 		require.True(t, errors.As(err, &ambig))
@@ -189,7 +257,7 @@ func TestResolveTestID(t *testing.T) {
 			json.NewEncoder(w).Encode(TestList{Count: 1, Test: []TestRef{{ID: "-5", Name: "Bar"}}})
 		})
 
-		_, err := client.ResolveTestID(t.Context(), "Bar", "")
+		_, err := client.ResolveTestID(t.Context(), "Bar", ProblemScopeOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, "name:Bar", gotLocator)
 	})

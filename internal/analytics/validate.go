@@ -94,10 +94,22 @@ func SampleEvents() []fus.LogEvent {
 			"mode": LogModeFailed, "is_from_job": false,
 		}),
 		mk(GroupBuild, EventTestsViewed, false, map[string]any{
-			"filter": TestsFilterFailed, "is_from_job": false,
+			"filter": TestsFilterFailed, "is_from_job": false, "group_by": "none",
 		}),
 		mk(GroupBuild, EventTestsViewed, false, map[string]any{
-			"filter": TestsFilterMuted, "is_from_job": false,
+			"filter": TestsFilterMuted, "is_from_job": false, "group_by": "suite",
+		}),
+		mk(GroupBuild, EventTestsViewed, false, map[string]any{
+			"filter": TestsFilterPassed, "is_from_job": false, "group_by": "package",
+		}),
+		mk(GroupBuild, EventTestsViewed, false, map[string]any{
+			"filter": TestsFilterIgnored, "is_from_job": false, "group_by": "class",
+		}),
+		mk(GroupBuild, EventTestsViewed, false, map[string]any{
+			"filter": TestsFilterNew, "is_from_job": false, "group_by": "none",
+		}),
+		mk(GroupBuild, EventTestsViewed, false, map[string]any{
+			"filter": TestsFilterAll, "is_from_job": false, "group_by": "none",
 		}),
 		mk(GroupBuild, EventDiffViewed, false, map[string]any{
 			"had_log_diff": true,

@@ -80,6 +80,18 @@ func TestList_JSON(t *testing.T) {
 	assert.Contains(t, out, `"id": "1"`)
 }
 
+func TestList_JSONFieldSelection(t *testing.T) {
+	ts := cmdtest.NewTestServer(t)
+	var fields string
+	ts.Handle("GET /app/rest/testOccurrences", func(w http.ResponseWriter, r *http.Request) {
+		fields = r.URL.Query().Get("fields")
+		cmdtest.JSON(w, sampleOccurrences())
+	})
+
+	cmdtest.CaptureOutput(t, ts.Factory, "test", "list", "--project", "Falcon", "--json=name")
+	assert.Equal(t, "count,testOccurrence(name)", fields)
+}
+
 func TestList_Empty(t *testing.T) {
 	ts := cmdtest.NewTestServer(t)
 	handleTestOccurrences(ts, nil, api.TestOccurrences{Count: 0})

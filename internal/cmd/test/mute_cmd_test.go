@@ -11,10 +11,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// handleResolveTest registers GET /app/rest/tests returning the given tests.
+// handleResolveTest registers the name→id resolution endpoints returning the given tests.
+// Project-scoped lookups hit GET /app/rest/tests; job-scoped lookups hit
+// GET /app/rest/testOccurrences, so both are served from the same fixture.
 func handleResolveTest(ts *cmdtest.TestServer, tests ...api.TestRef) {
 	ts.Handle("GET /app/rest/tests", func(w http.ResponseWriter, r *http.Request) {
 		cmdtest.JSON(w, api.TestList{Count: len(tests), Test: tests})
+	})
+	ts.Handle("GET /app/rest/testOccurrences", func(w http.ResponseWriter, r *http.Request) {
+		occ := make([]api.TestOccurrence, len(tests))
+		for i, t := range tests {
+			occ[i] = api.TestOccurrence{Test: &api.TestDef{ID: t.ID, Name: t.Name}}
+		}
+		cmdtest.JSON(w, api.TestOccurrences{Count: len(occ), TestOccurrence: occ})
 	})
 }
 

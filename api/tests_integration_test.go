@@ -22,7 +22,7 @@ func TestListTests_Integration(T *testing.T) {
 	T.Run("failing by project", func(t *testing.T) {
 		t.Parallel()
 
-		occ, err := client.ListTests(t.Context(), api.TestQueryOptions{Project: testProject, Failing: true, Limit: 10})
+		occ, err := client.ListTests(t.Context(), api.TestQueryOptions{Project: testProject, Limit: 10})
 		require.NoError(t, err)
 		require.NotNil(t, occ)
 		t.Logf("currently failing in %s: count=%d", testProject, occ.Count)
@@ -46,7 +46,7 @@ func TestListTests_Integration(T *testing.T) {
 		if testConfig == "" {
 			t.Skip("no test config available")
 		}
-		occ, err := client.ListTests(t.Context(), api.TestQueryOptions{Job: testConfig, Failing: true, Limit: 10})
+		occ, err := client.ListTests(t.Context(), api.TestQueryOptions{Job: testConfig, Limit: 10})
 		require.NoError(t, err)
 		require.NotNil(t, occ)
 		t.Logf("currently failing in %s: count=%d", testConfig, occ.Count)
@@ -55,7 +55,7 @@ func TestListTests_Integration(T *testing.T) {
 	T.Run("scope required", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.ListTests(t.Context(), api.TestQueryOptions{Failing: true})
+		_, err := client.ListTests(t.Context(), api.TestQueryOptions{})
 		assert.Error(t, err, "unscoped query must be rejected")
 	})
 }
@@ -102,7 +102,7 @@ func TestResolveTestID_Integration(T *testing.T) {
 		T.Skip("no test occurrences available to resolve")
 	}
 
-	id, err := client.ResolveTestID(T.Context(), name, testProject)
+	id, err := client.ResolveTestID(T.Context(), name, api.ProblemScopeOptions{Project: testProject})
 	if err != nil {
 		var ambiguous *api.AmbiguousTestError
 		if errors.As(err, &ambiguous) {
@@ -118,7 +118,7 @@ func TestResolveTestID_Integration(T *testing.T) {
 	T.Run("not found", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := client.ResolveTestID(t.Context(), "tc.cli.definitely.missing.test.0xDEADBEEF", testProject)
+		_, err := client.ResolveTestID(t.Context(), "tc.cli.definitely.missing.test.0xDEADBEEF", api.ProblemScopeOptions{Project: testProject})
 		assert.Error(t, err, "unknown name should error")
 	})
 }
@@ -210,7 +210,7 @@ func resolveAnyTestID(t *testing.T) string {
 	if name == "" {
 		return ""
 	}
-	id, err := client.ResolveTestID(t.Context(), name, testProject)
+	id, err := client.ResolveTestID(t.Context(), name, api.ProblemScopeOptions{Project: testProject})
 	if err != nil {
 		t.Logf("resolveAnyTestID(%q): %v", name, err)
 		return ""

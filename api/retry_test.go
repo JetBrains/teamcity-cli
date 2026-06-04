@@ -201,8 +201,7 @@ func TestWithRetry_RetriesOnNetworkError(T *testing.T) {
 	var attempts int32
 	cfg := RetryConfig{MaxRetries: 2, Interval: 10 * time.Millisecond}
 
-	//nolint:errcheck // exercising retry behavior, not the return
-	withRetry(T.Context(), cfg, func() (*http.Response, error) {
+	_, _ = withRetry(T.Context(), cfg, func() (*http.Response, error) {
 		atomic.AddInt32(&attempts, 1)
 		return http.Get("http://127.0.0.1:1") // connection refused
 	})

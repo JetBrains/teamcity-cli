@@ -11,9 +11,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// resolveScope turns the --project/--job flags into a mute/investigation scope and the owning
-// project id used for name→id resolution. A scope is required — server-wide writes are rejected.
-func resolveScope(f *cmdutil.Factory, cmd *cobra.Command, project, job string) (api.ProblemScopeOptions, string, error) {
+// resolveScope turns the --project/--job flags into a mute/investigation scope. A scope is
+// required — server-wide writes are rejected. The same scope drives name→id resolution so the
+// test is resolved within the exact job/project the write targets.
+func resolveScope(f *cmdutil.Factory, cmd *cobra.Command, project, job string) (api.ProblemScopeOptions, error) {
 	p := f.ResolveProject(project)
 	j := f.ResolveDefaultJob(job)
 
@@ -23,18 +24,18 @@ func resolveScope(f *cmdutil.Factory, cmd *cobra.Command, project, job string) (
 	}
 
 	if p == "" && j == "" {
-		return api.ProblemScopeOptions{}, "", api.Validation(
+		return api.ProblemScopeOptions{}, api.Validation(
 			"a scope is required",
 			"pass --project or --job (server-wide writes are not allowed)",
 		)
 	}
-	return api.ProblemScopeOptions{Project: p, Job: j}, p, nil
+	return api.ProblemScopeOptions{Project: p, Job: j}, nil
 }
 
-// resolveTestID resolves a test name to its id, printing the candidate list and returning a
-// clean validation error when the name is ambiguous (no action is taken in that case).
-func resolveTestID(ctx context.Context, p *output.Printer, client api.ClientInterface, name, projectID string) (string, error) {
-	id, err := client.ResolveTestID(ctx, name, projectID)
+// resolveTestID resolves a test name to its id within the write scope, printing the candidate
+// list and returning a clean validation error when the name is ambiguous (no action is taken).
+func resolveTestID(ctx context.Context, p *output.Printer, client api.ClientInterface, name string, scope api.ProblemScopeOptions) (string, error) {
+	id, err := client.ResolveTestID(ctx, name, scope)
 	if err == nil {
 		return id, nil
 	}

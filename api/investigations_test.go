@@ -118,7 +118,7 @@ func TestResolveInvestigation(t *testing.T) {
 							Scope: &ProblemScope{Project: &Project{ID: "Proj"}},
 						}},
 					})
-				case r.Method == http.MethodPut && r.URL.Path == "/app/rest/investigations/id:inv1":
+				case r.Method == http.MethodPut && r.URL.Path == "/app/rest/investigations/inv1":
 					putPath = r.URL.Path
 					require.NoError(t, json.NewDecoder(r.Body).Decode(&putBody))
 					w.Header().Set("Content-Type", "application/json")
@@ -130,8 +130,8 @@ func TestResolveInvestigation(t *testing.T) {
 
 			err := client.ResolveInvestigation(t.Context(), "testid_1", ProblemScopeOptions{Project: "Proj"}, tc.state)
 			require.NoError(t, err)
-			assert.Equal(t, "test:(id:testid_1),affectedProject:(id:Proj)", listLocator)
-			assert.Equal(t, "/app/rest/investigations/id:inv1", putPath)
+			assert.Equal(t, "state:taken,test:(id:testid_1),affectedProject:(id:Proj)", listLocator)
+			assert.Equal(t, "/app/rest/investigations/inv1", putPath)
 			assert.Equal(t, tc.wantState, putBody.State)
 		})
 	}

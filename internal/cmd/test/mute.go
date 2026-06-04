@@ -59,7 +59,7 @@ See: https://www.jetbrains.com/help/teamcity/investigating-and-muting-build-fail
 func runMute(f *cmdutil.Factory, cmd *cobra.Command, opts *muteOptions, name string) error {
 	p := f.Printer
 
-	scope, projectID, err := resolveScope(f, cmd, opts.project, opts.job)
+	scope, err := resolveScope(f, cmd, opts.project, opts.job)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func runMute(f *cmdutil.Factory, cmd *cobra.Command, opts *muteOptions, name str
 		return err
 	}
 
-	testID, err := resolveTestID(f.Context(), p, client, name, projectID)
+	testID, err := resolveTestID(f.Context(), p, client, name, scope)
 	if err != nil {
 		return err
 	}

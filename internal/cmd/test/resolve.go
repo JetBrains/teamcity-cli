@@ -55,7 +55,7 @@ func runResolve(f *cmdutil.Factory, cmd *cobra.Command, opts *resolveOptions, na
 		return err
 	}
 
-	scope, projectID, err := resolveScope(f, cmd, opts.project, opts.job)
+	scope, err := resolveScope(f, cmd, opts.project, opts.job)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func runResolve(f *cmdutil.Factory, cmd *cobra.Command, opts *resolveOptions, na
 		return err
 	}
 
-	testID, err := resolveTestID(f.Context(), p, client, name, projectID)
+	testID, err := resolveTestID(f.Context(), p, client, name, scope)
 	if err != nil {
 		return err
 	}

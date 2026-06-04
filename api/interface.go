@@ -67,7 +67,7 @@ type ClientInterface interface {
 	GetBuildTests(ctx context.Context, buildID string, opts BuildTestsOptions) (*TestOccurrences, error)
 	ListTests(ctx context.Context, opts TestQueryOptions) (*TestOccurrences, error)
 	GetTestHistory(ctx context.Context, name string, opts TestQueryOptions) (*TestOccurrences, error)
-	ResolveTestID(ctx context.Context, name, projectID string) (string, error)
+	ResolveTestID(ctx context.Context, name string, scope ProblemScopeOptions) (string, error)
 	CreateMute(ctx context.Context, testID string, scope ProblemScopeOptions, opts MuteOptions) (*Mute, error)
 	ListMutes(ctx context.Context, testID string, scope ProblemScopeOptions) (*Mutes, error)
 	DeleteMute(ctx context.Context, muteID int) error

@@ -72,14 +72,14 @@ func runList(f *cmdutil.Factory, cmd *cobra.Command, opts *listOptions) error {
 		"is_from_job": job != "",
 	})
 
-	return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.TestListFields, func(client api.ClientInterface, _ []string) (*cmdutil.ListResult, error) {
+	return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.TestListFields, func(client api.ClientInterface, fields []string) (*cmdutil.ListResult, error) {
 		occ, err := client.ListTests(f.Context(), api.TestQueryOptions{
 			Project:      project,
 			Job:          job,
-			Failing:      opts.failing,
 			Muted:        opts.muted,
 			Investigated: opts.investigated,
 			Limit:        opts.Limit,
+			Fields:       fields,
 		})
 		if err != nil {
 			return nil, err

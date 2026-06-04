@@ -58,7 +58,9 @@ func (c *Client) ResolveInvestigation(ctx context.Context, testID string, scope 
 		if err != nil {
 			return fmt.Errorf("failed to marshal investigation: %w", err)
 		}
-		path := "/app/rest/investigations/id:" + inv.ID
+		// inv.ID is itself the investigation locator (e.g. "buildType:(id:…),test:(id:…)"),
+		// so it is used as the path segment directly — there is no "id" locator dimension.
+		path := "/app/rest/investigations/" + inv.ID
 		if err := c.doNoContent(ctx, "PUT", path, bytes.NewReader(body), "application/json"); err != nil {
 			return err
 		}
@@ -66,10 +68,10 @@ func (c *Client) ResolveInvestigation(ctx context.Context, testID string, scope 
 	return nil
 }
 
-// listInvestigations returns the investigations targeting a test id within a scope, with
-// full fields so the entity can be round-tripped on a state update.
+// listInvestigations returns the active (state:taken) investigations targeting a test id
+// within a scope, with full fields so the entity can be round-tripped on a state update.
 func (c *Client) listInvestigations(ctx context.Context, testID string, scope ProblemScopeOptions) (*Investigations, error) {
-	locator := NewLocator().AddLocator("test", NewLocator().Add("id", testID))
+	locator := NewLocator().Add("state", "taken").AddLocator("test", NewLocator().Add("id", testID))
 	scope.appendLocator(locator)
 
 	fields := "count,investigation(id,state,assignee(username),scope(project(id),buildTypes(buildType(id))),target(tests(test(id))),resolution(type))"

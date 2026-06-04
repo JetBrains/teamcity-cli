@@ -199,8 +199,8 @@ Mutes and investigations target a test by internal ID; the CLI resolves the name
 - `--failing` - Currently failing tests (default)
 - `--muted` - Currently muted tests
 - `--investigated` - Currently investigated tests
-- `--json` - Output as JSON
-- `-n, --limit <n>` - Maximum number of tests to show
+- `--json` - Output as JSON (use `--json=field1,field2` to select fields)
+- `-n, --limit <n>` - Maximum number of tests to show (default 100, 0 for all)
 
 `--failing`/`--muted`/`--investigated` are mutually exclusive.
 

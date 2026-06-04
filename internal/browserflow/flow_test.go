@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
@@ -73,7 +74,7 @@ func TestRunCapturesCode(t *testing.T) {
 	result, err := Run(t.Context(), Options{
 		Listener:     listener,
 		State:        "expected-state",
-		OpenURL:      "http://127.0.0.1:" + fmt.Sprint(port) + "/__noop", // browser open is best-effort; OK to "fail"
+		OpenURL:      "http://127.0.0.1:" + strconv.Itoa(port) + "/__noop", // browser open is best-effort; OK to "fail"
 		CallbackPath: DefaultCallbackPath,
 		Timeout:      2 * time.Second,
 	})
@@ -93,7 +94,7 @@ func TestRunRejectsStateMismatch(t *testing.T) {
 	_, err = Run(t.Context(), Options{
 		Listener: listener,
 		State:    "expected-state",
-		OpenURL:  "http://127.0.0.1:" + fmt.Sprint(port) + "/__noop",
+		OpenURL:  "http://127.0.0.1:" + strconv.Itoa(port) + "/__noop",
 		Timeout:  2 * time.Second,
 	})
 	require.Error(t, err)
@@ -112,7 +113,7 @@ func TestRunSurfacesUpstreamError(t *testing.T) {
 	_, err = Run(t.Context(), Options{
 		Listener: listener,
 		State:    "expected-state",
-		OpenURL:  "http://127.0.0.1:" + fmt.Sprint(port) + "/__noop",
+		OpenURL:  "http://127.0.0.1:" + strconv.Itoa(port) + "/__noop",
 		Timeout:  2 * time.Second,
 	})
 	require.Error(t, err)
@@ -151,7 +152,7 @@ func TestRunMountsStartHandler(t *testing.T) {
 	result, err := Run(t.Context(), Options{
 		Listener:     listener,
 		State:        "s",
-		OpenURL:      "http://127.0.0.1:" + fmt.Sprint(port) + "/__noop",
+		OpenURL:      "http://127.0.0.1:" + strconv.Itoa(port) + "/__noop",
 		StartHandler: startHandler,
 		CallbackPath: "/cb",
 		Timeout:      2 * time.Second,
