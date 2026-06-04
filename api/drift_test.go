@@ -339,6 +339,8 @@ func TestAPIDriftEndpoints(t *testing.T) {
 		{"GetSnapshotDependencies", func() (any, error) { return client.GetSnapshotDependencies(testConfig) }},
 		{"GetDependentBuildTypes", func() (any, error) { return client.GetDependentBuildTypes(testConfig) }},
 		{"GetVcsRootEntries", func() (any, error) { return client.GetVcsRootEntries(testConfig) }},
+		{"GetBuildTypeSettings", func() (any, error) { return client.GetBuildTypeSettings(testConfig) }},
+		{"GetBuildTypeSetting", func() (any, error) { return client.GetBuildTypeSetting(testConfig, "buildNumberPattern") }},
 
 		// Builds (read)
 		{"GetBuilds", func() (any, error) {

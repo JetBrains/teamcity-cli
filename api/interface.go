@@ -43,6 +43,8 @@ type ClientInterface interface {
 	GetDependentBuildTypes(buildTypeID string) (*BuildTypeList, error)
 	GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error)
 	SetBuildTypeSetting(buildTypeID, setting, value string) error
+	GetBuildTypeSettings(buildTypeID string) (*SettingsList, error)
+	GetBuildTypeSetting(buildTypeID, name string) (string, error)
 
 	GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList, bool, error)
 	GetBuild(ctx context.Context, ref string) (*Build, error)
