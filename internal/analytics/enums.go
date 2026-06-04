@@ -34,7 +34,7 @@ func allCommands() []string {
 		"pool.list", "pool.view", "pool.link", "pool.unlink",
 		"pipeline.list", "pipeline.view", "pipeline.validate", "pipeline.create",
 		"pipeline.delete", "pipeline.pull", "pipeline.push", "pipeline.schema",
-		"test.list",
+		"test.list", "test.history",
 		"api", "link",
 		"alias.list", "alias.set", "alias.delete",
 		"config.list", "config.get", "config.set",

@@ -23,6 +23,7 @@ See: https://www.jetbrains.com/help/teamcity/investigating-and-muting-build-fail
 	}
 
 	cmd.AddCommand(newListCmd(f))
+	cmd.AddCommand(newHistoryCmd(f))
 
 	return cmd
 }
