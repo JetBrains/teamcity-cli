@@ -38,34 +38,6 @@ See: https://www.jetbrains.com/help/teamcity/configuring-build-steps.html`,
 	return cmd
 }
 
-// resolveStepArgs picks the job ID from an optional leading positional (falling back to the
-// linked default) and returns the remaining positionals. want is the number of trailing args
-// the caller expects after the job ID.
-func resolveStepArgs(f *cmdutil.Factory, args []string, want int) (string, []string, error) {
-	if len(args) == want+1 {
-		return f.ResolveDefaultJob(args[0]), args[1:], nil
-	}
-	id := f.ResolveDefaultJob("")
-	if id == "" {
-		return "", nil, api.Validation(
-			"job id is required",
-			"Pass <job-id> or run 'teamcity link' to bind a default job to this repository",
-		)
-	}
-	return id, args, nil
-}
-
-// stepJobComplete completes the job-id slot (args[0]) only.
-func stepJobComplete() completion.CompFunc {
-	jobs := completion.LinkedJobs()
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		if len(args) == 0 {
-			return jobs(cmd, args, toComplete)
-		}
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
-}
-
 func stepStatus(disabled bool) string {
 	if disabled {
 		return output.Faint("disabled")
@@ -73,26 +45,20 @@ func stepStatus(disabled bool) string {
 	return output.Green("enabled")
 }
 
-type jobStepListOptions struct {
-	json     bool
-	plain    bool
-	noHeader bool
-}
-
 func newJobStepListCmd(f *cmdutil.Factory) *cobra.Command {
-	opts := &jobStepListOptions{}
+	opts := &cmdutil.ListOptions{}
 
 	cmd := &cobra.Command{
 		Use:               "list [job-id]",
 		Short:             "List job build steps",
 		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: stepJobComplete(),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(completion.LinkedJobs()),
 		Example: `  teamcity job step list MyBuild
   teamcity job step list                 # uses linked job (see 'teamcity link')
   teamcity job step list MyBuild --json
   teamcity job step list MyBuild --plain`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			jobID, _, err := resolveStepArgs(f, args, 0)
+			jobID, _, err := cmdutil.ResolveOwnerID("job", args, 0, f.ResolveDefaultJob)
 			if err != nil {
 				return err
 			}
@@ -100,15 +66,12 @@ func newJobStepListCmd(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
-	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
-	cmd.Flags().BoolVar(&opts.noHeader, "no-header", false, "Omit header row (use with --plain)")
-	cmd.MarkFlagsMutuallyExclusive("json", "plain")
+	opts.AddFlags(cmd, false)
 
 	return cmd
 }
 
-func runJobStepList(f *cmdutil.Factory, jobID string, opts *jobStepListOptions) error {
+func runJobStepList(f *cmdutil.Factory, jobID string, opts *cmdutil.ListOptions) error {
 	client, err := f.Client()
 	if err != nil {
 		return err
@@ -119,7 +82,7 @@ func runJobStepList(f *cmdutil.Factory, jobID string, opts *jobStepListOptions) 
 		return err
 	}
 
-	if opts.json {
+	if opts.JSON {
 		return f.Printer.PrintJSON(steps)
 	}
 
@@ -141,8 +104,8 @@ func runJobStepList(f *cmdutil.Factory, jobID string, opts *jobStepListOptions) 
 		})
 	}
 
-	if opts.plain {
-		p.PrintPlainTable(headers, rows, opts.noHeader)
+	if opts.Plain {
+		p.PrintPlainTable(headers, rows, opts.NoHeader)
 	} else {
 		output.AutoSizeColumns(headers, rows, 2, 2, 3)
 		p.PrintTable(headers, rows)
@@ -158,13 +121,13 @@ func newJobStepViewCmd(f *cmdutil.Factory) *cobra.Command {
 		Short:             "View build step details",
 		Aliases:           []string{"show"},
 		Args:              cobra.RangeArgs(1, 2),
-		ValidArgsFunction: stepJobComplete(),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(completion.LinkedJobs()),
 		Example: `  teamcity job step view MyBuild RUNNER_1
   teamcity job step view RUNNER_1        # uses linked job
   teamcity job step view MyBuild RUNNER_1 --json
   teamcity job step view MyBuild RUNNER_1 --web`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			jobID, rest, err := resolveStepArgs(f, args, 1)
+			jobID, rest, err := cmdutil.ResolveOwnerID("job", args, 1, f.ResolveDefaultJob)
 			if err != nil {
 				return err
 			}
@@ -237,12 +200,12 @@ inspecting an existing step with 'teamcity job step view', or from the
 TeamCity documentation. Repeat --param key=value for each step setting;
 the available keys depend on the runner type.`,
 		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: stepJobComplete(),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(completion.LinkedJobs()),
 		Example: `  teamcity job step add MyBuild --type simpleRunner --name "Run Tests" --param use.custom.script=true --param script.content="./gradlew test"
   teamcity job step add MyBuild --type gradle-runner --name Build --param gradle.tasks=build
   teamcity job step add --type simpleRunner --param use.custom.script=true --param script.content="make"   # uses linked job`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			jobID, _, err := resolveStepArgs(f, args, 0)
+			jobID, _, err := cmdutil.ResolveOwnerID("job", args, 0, f.ResolveDefaultJob)
 			if err != nil {
 				return err
 			}
@@ -312,11 +275,11 @@ func newJobStepDeleteCmd(f *cmdutil.Factory) *cobra.Command {
 		Short:             "Delete a build step",
 		Aliases:           []string{"remove", "rm"},
 		Args:              cobra.RangeArgs(1, 2),
-		ValidArgsFunction: stepJobComplete(),
+		ValidArgsFunction: cmdutil.CompleteOwnerID(completion.LinkedJobs()),
 		Example: `  teamcity job step delete MyBuild RUNNER_1
   teamcity job step delete RUNNER_1      # uses linked job`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			jobID, rest, err := resolveStepArgs(f, args, 1)
+			jobID, rest, err := cmdutil.ResolveOwnerID("job", args, 1, f.ResolveDefaultJob)
 			if err != nil {
 				return err
 			}
