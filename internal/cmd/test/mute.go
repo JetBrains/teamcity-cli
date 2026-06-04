@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -67,6 +68,12 @@ func runMute(f *cmdutil.Factory, cmd *cobra.Command, opts *muteOptions, name str
 	if err != nil {
 		return err
 	}
+
+	f.Analytics.Track(analytics.GroupTest, analytics.EventTestMuted, map[string]any{
+		"action":      analytics.TestActionMute,
+		"is_from_job": scope.Job != "",
+		"has_reason":  opts.reason != "",
+	})
 
 	client, err := f.Client()
 	if err != nil {

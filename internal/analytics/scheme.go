@@ -22,6 +22,7 @@ const (
 	GroupPipeline  = "teamcity.cli.pipeline"
 	GroupSkill     = "teamcity.cli.skill"
 	GroupWorkspace = "teamcity.cli.workspace"
+	GroupTest      = "teamcity.cli.test"
 )
 
 // groupVersion maps each FUS group to its schema version.
@@ -37,6 +38,7 @@ var groupVersion = map[string]int{
 	GroupPipeline:  1,
 	GroupSkill:     1,
 	GroupWorkspace: 1, // new group, initial version
+	GroupTest:      1, // new group, initial version
 }
 
 const (
@@ -97,6 +99,7 @@ var Scheme = &fus.Scheme{
 		pipelineGroup(),
 		skillGroup(),
 		workspaceGroup(),
+		testGroup(),
 	},
 }
 
@@ -266,6 +269,25 @@ func skillGroup() fus.GroupSchema {
 				"scope":            {fus.EnumExpr("global", "project")},
 				"is_auto_detected": {fus.EnumRefExpr(enumBoolean)},
 				"is_success":       {fus.EnumRefExpr(enumBoolean)},
+			},
+		},
+	}
+}
+
+func testGroup() fus.GroupSchema {
+	return fus.GroupSchema{
+		ID:   GroupTest,
+		Type: fus.GroupTypeCounter,
+		Rules: &fus.SchemeRules{
+			EventID: []string{
+				fus.EnumExpr(EventTestListed, EventTestHistoryViewed, EventTestMuted, EventTestInvestigated),
+			},
+			EventData: map[string][]string{
+				"filter":       {fus.EnumExpr(TestFilterFailing, TestFilterMuted, TestFilterInvestigated)},
+				"action":       {fus.EnumExpr(TestActionMute, TestActionUnmute, TestActionInvestigate, TestActionResolve)},
+				"is_from_job":  {fus.EnumRefExpr(enumBoolean)},
+				"has_reason":   {fus.EnumRefExpr(enumBoolean)},
+				"has_assignee": {fus.EnumRefExpr(enumBoolean)},
 			},
 		},
 	}

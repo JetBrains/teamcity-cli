@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -58,6 +59,11 @@ func runResolve(f *cmdutil.Factory, cmd *cobra.Command, opts *resolveOptions, na
 	if err != nil {
 		return err
 	}
+
+	f.Analytics.Track(analytics.GroupTest, analytics.EventTestInvestigated, map[string]any{
+		"action":      analytics.TestActionResolve,
+		"is_from_job": scope.Job != "",
+	})
 
 	client, err := f.Client()
 	if err != nil {

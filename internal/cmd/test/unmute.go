@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -44,6 +45,11 @@ func runUnmute(f *cmdutil.Factory, cmd *cobra.Command, opts *unmuteOptions, name
 	if err != nil {
 		return err
 	}
+
+	f.Analytics.Track(analytics.GroupTest, analytics.EventTestMuted, map[string]any{
+		"action":      analytics.TestActionUnmute,
+		"is_from_job": scope.Job != "",
+	})
 
 	client, err := f.Client()
 	if err != nil {

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -52,6 +53,12 @@ func runInvestigate(f *cmdutil.Factory, cmd *cobra.Command, opts *investigateOpt
 	if err != nil {
 		return err
 	}
+
+	f.Analytics.Track(analytics.GroupTest, analytics.EventTestInvestigated, map[string]any{
+		"action":       analytics.TestActionInvestigate,
+		"is_from_job":  scope.Job != "",
+		"has_assignee": opts.assignee != "",
+	})
 
 	client, err := f.Client()
 	if err != nil {

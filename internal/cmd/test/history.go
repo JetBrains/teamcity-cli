@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -67,6 +68,10 @@ func runHistory(f *cmdutil.Factory, cmd *cobra.Command, opts *historyOptions, na
 			"pass --project or --job (server-wide queries are not allowed)",
 		)
 	}
+
+	f.Analytics.Track(analytics.GroupTest, analytics.EventTestHistoryViewed, map[string]any{
+		"is_from_job": job != "",
+	})
 
 	client, err := f.Client()
 	if err != nil {

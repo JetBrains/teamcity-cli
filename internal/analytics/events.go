@@ -25,6 +25,11 @@ const (
 	EventManaged = "managed"
 
 	EventLinked = "linked"
+
+	EventTestListed        = "test.listed"
+	EventTestHistoryViewed = "test.history.viewed"
+	EventTestMuted         = "test.muted"
+	EventTestInvestigated  = "test.investigated"
 )
 
 const (
@@ -108,6 +113,19 @@ const (
 	TestsFilterAll    = "all"
 	TestsFilterFailed = "failed"
 	TestsFilterMuted  = "muted"
+)
+
+const (
+	TestFilterFailing      = "failing"
+	TestFilterMuted        = "muted"
+	TestFilterInvestigated = "investigated"
+)
+
+const (
+	TestActionMute        = "mute"
+	TestActionUnmute      = "unmute"
+	TestActionInvestigate = "investigate"
+	TestActionResolve     = "resolve"
 )
 
 const (

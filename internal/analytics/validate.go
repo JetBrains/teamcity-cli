@@ -127,6 +127,18 @@ func SampleEvents() []fus.LogEvent {
 		mk(GroupWorkspace, EventLinked, false, map[string]any{
 			"source": WorkspaceSourceFlag, "is_ambiguous": false, "is_subdir": true,
 		}),
+		mk(GroupTest, EventTestListed, false, map[string]any{
+			"filter": TestFilterFailing, "is_from_job": false,
+		}),
+		mk(GroupTest, EventTestHistoryViewed, false, map[string]any{
+			"is_from_job": true,
+		}),
+		mk(GroupTest, EventTestMuted, false, map[string]any{
+			"action": TestActionMute, "is_from_job": false, "has_reason": true,
+		}),
+		mk(GroupTest, EventTestInvestigated, false, map[string]any{
+			"action": TestActionInvestigate, "is_from_job": true, "has_assignee": true,
+		}),
 	}
 }
 

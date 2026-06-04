@@ -4,6 +4,7 @@ import (
 	"cmp"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -66,6 +67,11 @@ func runList(f *cmdutil.Factory, cmd *cobra.Command, opts *listOptions) error {
 		)
 	}
 
+	f.Analytics.Track(analytics.GroupTest, analytics.EventTestListed, map[string]any{
+		"filter":      listFilter(opts),
+		"is_from_job": job != "",
+	})
+
 	return cmdutil.RunList(f, cmd, &opts.ListFlags, &api.TestListFields, func(client api.ClientInterface, _ []string) (*cmdutil.ListResult, error) {
 		occ, err := client.ListTests(f.Context(), api.TestQueryOptions{
 			Project:      project,
@@ -114,6 +120,17 @@ func occurrenceSince(t api.TestOccurrence) string {
 		}
 	}
 	return num
+}
+
+func listFilter(opts *listOptions) string {
+	switch {
+	case opts.muted:
+		return analytics.TestFilterMuted
+	case opts.investigated:
+		return analytics.TestFilterInvestigated
+	default:
+		return analytics.TestFilterFailing
+	}
 }
 
 func emptyMsg(opts *listOptions) string {
