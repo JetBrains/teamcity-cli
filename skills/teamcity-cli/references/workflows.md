@@ -827,14 +827,16 @@ Identify flaky tests by cross-referencing failures across builds. Equivalent to 
 ### Identify potentially flaky tests
 
 ```bash
-# Get failed tests from the current build
-teamcity run tests <run-id> --failed --json > /tmp/failed-tests.json
+# Start from one build's failures
+teamcity run tests <run-id> --failed --json | jq -r '.testOccurrence[].name'
 
-# Check if the same tests failed in recent builds
-teamcity run list --job <job-id> --status failure -n 5 --json
+# Then follow a suspect test across the job's builds (the flakiness signal) and
+# turn its history into a pass-rate in one line
+teamcity run tests --job <job-id> --test "<name>" --json \
+  | jq -r '.testOccurrence | "pass \(map(select(.status=="SUCCESS"))|length)/\(length)"'
 
-# For each recent failed build, get its failed tests
-teamcity run tests <other-run-id> --failed --json
+# Drop --job for a server-wide history of the same test
+teamcity run tests --test "<name>" --json
 ```
 
 ### Cross-reference with code changes
@@ -851,8 +853,8 @@ teamcity run changes <run-id>
 
 ### What to do with flaky tests
 
-1. Document the flaky test: name, frequency, suspected cause.
-2. If `teamcity test mute` becomes available, use it to mute the test with a comment explaining why.
+1. Document the flaky test: name, frequency, suspected cause. Use `teamcity run tests --job <id> --test <name>` to quantify frequency from its pass/fail history.
+2. If `teamcity test mute` becomes available, use it to mute the test with a comment explaining why (`run tests` is read-only — it does not mute).
 3. Otherwise, flag the test in the codebase (e.g., add a skip annotation with a tracking issue).
 4. Never silently delete a flaky test — it may be catching real intermittent bugs.
 
