@@ -148,11 +148,11 @@ func TestGetBuildTests(t *testing.T) {
 			},
 		},
 		{
-			name: "no_limit_uses_summary_count",
+			name: "no_limit_pages_through_results",
 			opts: BuildTestsOptions{},
 			wantLocators: []string{
 				"build:(id:1)",
-				"build:(id:1),count:2",
+				"build:(id:1),count:1000",
 			},
 		},
 	}
@@ -197,7 +197,7 @@ func TestGetBuildTests(t *testing.T) {
 			assert.Equal(t, tc.wantLocators, locators)
 			assert.Equal(t, []string{
 				"count,passed,failed,ignored,muted",
-				"testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)))",
+				"count,nextHref,testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)))",
 			}, fields)
 		})
 	}

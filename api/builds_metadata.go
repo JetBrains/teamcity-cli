@@ -216,38 +216,19 @@ func (c *Client) GetBuildTests(ctx context.Context, buildID string, opts BuildTe
 		return nil, err
 	}
 
-	locator := NewLocator().AddLocator("build", NewLocator().Add("id", id))
+	q := TestOccurrenceQuery{
+		Build:  id,
+		Limit:  opts.Limit,
+		Fields: []string{"id", "name", "status", "duration", "details", "newFailure", "muted", "firstFailed(build(id,number))"},
+	}
 	switch {
 	case opts.FailedOnly:
-		locator.AddUpper("status", "FAILURE").Add("muted", "false")
+		q.Status, q.Muted = "failed", new(false) // status:FAILURE,muted:false
 	case opts.MutedOnly:
-		locator.AddUpper("status", "FAILURE").Add("muted", "true")
+		q.Status, q.Muted = "failed", new(true) // status:FAILURE,muted:true
 	}
 
-	summaryFields := "count,passed,failed,ignored,muted"
-	summaryPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(summaryFields))
-
-	var summary TestOccurrences
-	if err := c.get(ctx, summaryPath, &summary); err != nil {
-		return nil, err
-	}
-
-	count := opts.Limit
-	if count <= 0 {
-		count = summary.Count
-	}
-	locator.AddInt("count", count)
-
-	detailFields := "testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)))"
-	detailPath := fmt.Sprintf("/app/rest/testOccurrences?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(detailFields))
-
-	var details TestOccurrences
-	if err := c.get(ctx, detailPath, &details); err != nil {
-		return nil, err
-	}
-
-	summary.TestOccurrence = details.TestOccurrence
-	return &summary, nil
+	return c.ListTestOccurrences(ctx, q)
 }
 
 func (c *Client) GetBuildTestSummary(buildID string) (*TestOccurrences, error) {
