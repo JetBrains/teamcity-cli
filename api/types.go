@@ -357,6 +357,7 @@ type TestOccurrences struct {
 	Failed         int              `json:"failed,omitempty"`
 	Ignored        int              `json:"ignored,omitempty"`
 	Muted          int              `json:"muted,omitempty"`
+	NextHref       string           `json:"nextHref,omitempty"`
 	TestOccurrence []TestOccurrence `json:"testOccurrence"`
 }
 
