@@ -66,6 +66,7 @@ type ClientInterface interface {
 	DeleteBuildComment(buildID string) error
 	GetBuildSnapshotDependencies(buildID string) (*BuildList, error)
 	GetBuildChanges(ctx context.Context, buildID string) (*ChangeList, error)
+	ListTestOccurrences(ctx context.Context, q TestOccurrenceQuery) (*TestOccurrences, error)
 	GetBuildTests(ctx context.Context, buildID string, opts BuildTestsOptions) (*TestOccurrences, error)
 	GetBuildTestSummary(buildID string) (*TestOccurrences, error)
 	GetBuildProblems(buildID string) (*ProblemOccurrences, error)
