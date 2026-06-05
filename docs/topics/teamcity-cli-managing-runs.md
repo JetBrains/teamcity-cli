@@ -1024,6 +1024,32 @@ teamcity run tests 12345 --limit 50
 teamcity run tests 12345 --json
 ```
 
+### Test history across builds
+
+Pass `--test NAME` to follow a single test across builds instead of inspecting one
+run — the answer to "is this test flaky?". Scope it to a job, or leave `--job` off
+for a server-wide history:
+
+```Shell
+teamcity run tests --job MyProject_Build --test com.acme.FooTest.bar
+teamcity run tests --test com.acme.FooTest.bar
+```
+
+The test name is shown once as a header and each build becomes a row; the trailing
+`TESTS:` summary doubles as a pass-rate. `--failed`/`--muted` narrow the history, and
+`--json` emits the raw occurrence array for your own flakiness analysis:
+
+```
+TEST: com.acme.FooTest.bar
+
+BUILD   STATUS  DURATION  BRANCH
+#1234   PASS    1s        main
+#1233   FAIL    1s        main
+#1232   PASS    1s        feature/x
+
+TESTS: 60 passed, 40 failed
+```
+
 ## VCS changes
 
 Show the VCS commits included in a run:

@@ -3,6 +3,7 @@ package run
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/analytics"
@@ -126,6 +127,8 @@ type runTestsOptions struct {
 	json   bool
 	limit  int
 	job    string
+	test   string
+	web    bool
 }
 
 func newRunTestsCmd(f *cmdutil.Factory) *cobra.Command {
@@ -136,23 +139,34 @@ func newRunTestsCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "Show test results",
 		Long: `Show test results from a run.
 
-You can specify a run ID directly, or use --job to get the latest run's tests.`,
+You can specify a run ID directly, or use --job to get the latest run's tests.
+
+Pass --test NAME to follow one test across builds instead of a single run:
+  --job X --test NAME    that test's history in job X
+  --test NAME            that test's history server-wide`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.Flags().Changed("job") {
 				return api.MutuallyExclusive("id", "job")
+			}
+			// --test is a cross-build query; a single build has no history.
+			if len(args) > 0 && cmd.Flags().Changed("test") {
+				return api.Validation("a run ID and --test cannot be combined", "use --job JOB --test NAME for a job's history, or --test NAME alone for server-wide")
 			}
 			return cobra.MaximumNArgs(1)(cmd, args)
 		},
 		Example: `  teamcity run tests 12345
   teamcity run tests 12345 --failed
-  teamcity run tests 12345 --muted
-  teamcity run tests --job Falcon_Build`,
+  teamcity run tests --job Falcon_Build
+  teamcity run tests --job Falcon_Build --test com.acme.FooTest.bar`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var runID string
 			if len(args) > 0 {
 				runID = args[0]
 			}
-			if runID == "" && opts.job == "" {
+			// The default-job fallback only supplies a build to inspect; in
+			// history mode (--test) the absence of an explicit --job means
+			// server-wide, so don't let a linked/default job narrow it.
+			if runID == "" && opts.job == "" && opts.test == "" {
 				opts.job = f.ResolveDefaultJob("")
 			}
 			return runRunTests(f, runID, opts)
@@ -164,7 +178,11 @@ You can specify a run ID directly, or use --job to get the latest run's tests.`,
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 0, "Maximum number of items")
 	cmd.Flags().StringVarP(&opts.job, "job", "j", "", "Use this job's latest")
+	cmd.Flags().StringVar(&opts.test, "test", "", "Follow one test across builds (history) instead of a single run")
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open the run's tests in browser")
 	cmd.MarkFlagsMutuallyExclusive("failed", "muted")
+	cmd.MarkFlagsMutuallyExclusive("json", "web")
+	cmd.MarkFlagsMutuallyExclusive("test", "web") // history spans builds — no single page
 
 	return cmd
 }
@@ -174,6 +192,10 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 	client, err := f.Client()
 	if err != nil {
 		return err
+	}
+
+	if opts.test != "" {
+		return runTestHistory(f, client, opts)
 	}
 
 	resolvedID, _, err := resolveRunID(f.Context(), client, runID, opts.job, "")
@@ -187,15 +209,13 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
 
-	filter := analytics.TestsFilterAll
-	switch {
-	case opts.failed:
-		filter = analytics.TestsFilterFailed
-	case opts.muted:
-		filter = analytics.TestsFilterMuted
+	if opts.web {
+		cmdutil.OpenURLOrWarn(p, runTestsBrowserURL(build.WebURL, opts))
+		return nil
 	}
+
 	f.Analytics.Track(analytics.GroupBuild, analytics.EventTestsViewed, map[string]any{
-		"filter":      filter,
+		"filter":      testsFilter(opts),
 		"is_from_job": opts.job != "",
 	})
 
@@ -224,23 +244,6 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		return nil
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "%s %s\n\n", output.Faint("View in browser:"), runTestsBrowserURL(build.WebURL, opts))
-
-	var parts []string
-	if tests.Passed > 0 {
-		parts = append(parts, output.Green(fmt.Sprintf("%d passed", tests.Passed)))
-	}
-	if tests.Failed > 0 {
-		parts = append(parts, output.Red(fmt.Sprintf("%d failed", tests.Failed)))
-	}
-	if tests.Muted > 0 {
-		parts = append(parts, output.Faint(fmt.Sprintf("%d muted", tests.Muted)))
-	}
-	if tests.Ignored > 0 {
-		parts = append(parts, output.Faint(fmt.Sprintf("%d ignored", tests.Ignored)))
-	}
-	_, _ = fmt.Fprintf(p.Out, "TESTS: %s\n\n", strings.Join(parts, ", "))
-
 	for _, t := range tests.TestOccurrence {
 		switch t.Status {
 		case "FAILURE":
@@ -256,7 +259,89 @@ func runRunTests(f *cmdutil.Factory, runID string, opts *runTestsOptions) error 
 		}
 	}
 
+	_, _ = fmt.Fprintf(p.Out, "\nTESTS: %s\n", output.TestCountsSummary(tests))
+	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), runTestsBrowserURL(build.WebURL, opts))
 	return nil
+}
+
+// runTestHistory shows one test across builds: scoped to a job (buildType+test) or server-wide (test alone).
+func runTestHistory(f *cmdutil.Factory, client api.ClientInterface, opts *runTestsOptions) error {
+	p := f.Printer
+
+	q := api.TestOccurrenceQuery{TestName: opts.test, BuildType: opts.job, Limit: opts.limit}
+	switch {
+	case opts.failed:
+		q.Status, q.Muted = "failed", new(false)
+	case opts.muted:
+		q.Status, q.Muted = "failed", new(true)
+	}
+
+	f.Analytics.Track(analytics.GroupBuild, analytics.EventTestsViewed, map[string]any{
+		"filter":      testsFilter(opts),
+		"is_from_job": opts.job != "",
+	})
+
+	tests, err := client.ListTestOccurrences(f.Context(), q)
+	if err != nil {
+		return fmt.Errorf("failed to get test history: %w", err)
+	}
+
+	if opts.json {
+		return p.PrintJSON(tests)
+	}
+
+	if tests.Count == 0 {
+		p.Info("No occurrences found for test %q", opts.test)
+		return nil
+	}
+
+	_, _ = fmt.Fprintf(p.Out, "%s %s\n\n", output.Faint("TEST:"), opts.test)
+	headers := []string{"BUILD", "STATUS", "DURATION", "BRANCH"}
+	rows := make([][]string, 0, len(tests.TestOccurrence))
+	for _, t := range tests.TestOccurrence {
+		build, branch := "", "-"
+		if t.Build != nil {
+			build = "#" + t.Build.Number
+			if t.Build.BranchName != "" {
+				branch = t.Build.BranchName
+			}
+		}
+		rows = append(rows, []string{
+			build,
+			testStatusLabel(t),
+			output.FormatDuration(time.Duration(t.Duration) * time.Millisecond),
+			branch,
+		})
+	}
+	output.AutoSizeColumns(headers, rows, 2, 3)
+	p.PrintTable(headers, rows)
+	_, _ = fmt.Fprintf(p.Out, "\nTESTS: %s\n", output.TestCountsSummary(tests))
+	return nil
+}
+
+func testsFilter(opts *runTestsOptions) string {
+	switch {
+	case opts.failed:
+		return analytics.TestsFilterFailed
+	case opts.muted:
+		return analytics.TestsFilterMuted
+	default:
+		return analytics.TestsFilterAll
+	}
+}
+
+func testStatusLabel(t api.TestOccurrence) string {
+	switch t.Status {
+	case "SUCCESS":
+		return output.Green("PASS")
+	case "FAILURE":
+		if t.Muted {
+			return output.Faint("MUTED")
+		}
+		return output.Red("FAIL")
+	default:
+		return output.Faint("IGNORED")
+	}
 }
 
 func runTestsBrowserURL(webURL string, opts *runTestsOptions) string {

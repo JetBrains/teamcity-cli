@@ -26,3 +26,16 @@ extract '"id":"([^"]+)"' JOB_ID
 exec teamcity run tests --job $JOB_ID --no-input
 stdout '(TESTS:|No tests)'
 ! stderr 'Error'
+
+# --test follows one test across builds (history). Job-scoped uses buildType+test.
+exec teamcity run tests --job $JOB_ID --test SomeTestThatLikelyDoesNotExist --no-input
+! stderr 'Error'
+
+# Server-wide history (test name alone), JSON carries the occurrence array.
+exec teamcity run tests --test SomeTestThatLikelyDoesNotExist --json --no-input
+stdout '"count"'
+! stderr 'Error'
+
+# --test is cross-build: a positional run ID cannot be combined with it.
+! exec teamcity run tests $BUILD_ID --test SomeTestThatLikelyDoesNotExist --no-input
+stderr '(cannot be combined|--test)'

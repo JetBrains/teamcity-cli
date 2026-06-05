@@ -123,9 +123,15 @@ Shows all branches and all build states (including canceled, personal, composite
 
 ### Flags for `teamcity run tests`
 
+Without `--test`, shows one run's results (positional `id` or `--job` latest).
+With `--test NAME`, follows that test across builds (history): `--job X --test NAME`
+for a job's history, or `--test NAME` alone for server-wide. The history view shows
+the name once as a header, one row per build, and a pass-rate footer.
+
 - `--failed` - Show only failed tests, excluding muted failures
 - `--muted` - Show only muted failed tests
-- `-j, --job <id>` - Get tests for latest run of this job
+- `-j, --job <id>` - Latest run of this job (or, with `--test`, that job's history)
+- `--test <name>` - Follow one test across builds instead of a single run
 - `--json` - Output as JSON
 - `-n, --limit <n>` - Maximum number of tests to show
 
