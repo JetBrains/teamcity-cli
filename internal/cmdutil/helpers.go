@@ -40,10 +40,7 @@ func (o *ViewOptions) EmitWebURL(p *output.Printer, url string) (bool, error) {
 	if !o.Web {
 		return false, nil
 	}
-	_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint("Opening in browser:"), output.Green(url))
-	if err := OpenInBrowser(url); err != nil {
-		p.Warn("could not open browser: %v", err)
-	}
+	OpenURLOrWarn(p, url)
 	return true, nil
 }
 
@@ -55,11 +52,12 @@ func (o *ViewOptions) EmitListWebURL(p *output.Printer, serverURL, path string) 
 	return o.EmitWebURL(p, serverURL+path)
 }
 
-// OpenURLOrWarn opens url in the browser, warning on failure. Never returns an error — safe to call after a mutation.
+// OpenURLOrWarn echoes the URL, opens it in the browser, and warns on failure. Never returns an error — safe to call after a mutation.
 func OpenURLOrWarn(p *output.Printer, url string) {
 	if url == "" {
 		return
 	}
+	_, _ = fmt.Fprintf(p.Out, "%s %s\n", output.Faint("Opening in browser:"), output.Green(url))
 	if err := OpenInBrowser(url); err != nil {
 		p.Warn("could not open browser: %v", err)
 	}
