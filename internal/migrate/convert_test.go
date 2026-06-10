@@ -80,6 +80,15 @@ func TestActionTransformers(t *testing.T) {
 			{"docker/build-push-action@v5", true},
 			{"codecov/codecov-action@v3", true},
 			{"my-org/custom-action@v1", false},
+			// Data-table entries (scriptActions, manualActions, unsupportedActions).
+			{"JetBrains/qodana-action@v2025.1", true},
+			{"aws-actions/amazon-ecs-deploy-task-definition@v2", true},
+			{"anothrNick/github-tag-action@v1", true},
+			{"azure/login@v2", true},
+			{"hashicorp/vault-action@v3", true},
+			{"slackapi/slack-github-action@v2", true},
+			{"pypa/gh-action-pypi-publish@release/v1", true},
+			{"dorny/paths-filter@v3", true},
 		}
 		for _, tt := range tests {
 			t.Run(tt.action, func(t *testing.T) {
@@ -111,6 +120,28 @@ func TestActionTransformers(t *testing.T) {
 		assert.Equal(t, migrate.StatusSimplified, r.Status)
 		require.Len(t, r.Artifacts, 1)
 		assert.Equal(t, "dist/**", r.Artifacts[0].Path)
+	})
+
+	t.Run("qodana converts with native-integration script", func(t *testing.T) {
+		t.Parallel()
+		transformer, ok := migrate.LookupActionTransformer("JetBrains/qodana-action@v2025.1")
+		require.True(t, ok)
+		r := transformer("", "JetBrains/qodana-action@v2025.1", nil)
+		assert.Equal(t, migrate.StatusConverted, r.Status)
+		require.Len(t, r.Steps, 1)
+		assert.Equal(t, "Qodana", r.Steps[0].Name)
+		assert.Contains(t, r.Steps[0].ScriptContent, "native Qodana integration")
+	})
+
+	t.Run("missing required inputs emit shell guards", func(t *testing.T) {
+		t.Parallel()
+		transformer, ok := migrate.LookupActionTransformer("azure/k8s-set-context@v4")
+		require.True(t, ok)
+		r := transformer("", "azure/k8s-set-context@v4", map[string]string{})
+		require.Len(t, r.Steps, 1)
+		assert.Contains(t, r.Steps[0].ScriptContent, "${RESOURCE_GROUP:?")
+		assert.Contains(t, r.Steps[0].ScriptContent, "${CLUSTER_NAME:?")
+		assert.NotContains(t, r.Steps[0].ScriptContent, `""`, "no empty-string arguments")
 	})
 
 	t.Run("docker build-push", func(t *testing.T) {
