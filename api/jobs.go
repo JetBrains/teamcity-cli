@@ -145,7 +145,7 @@ func (c *Client) GetBuildSteps(buildTypeID string) (*BuildStepList, error) {
 
 // GetBuildStep returns a single build step by ID
 func (c *Client) GetBuildStep(buildTypeID, stepID string) (*BuildStep, error) {
-	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps/%s", buildTypeID, stepID)
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps/%s", url.PathEscape(buildTypeID), url.PathEscape(stepID))
 
 	var step BuildStep
 	if err := c.get(c.ctx(), path, &step); err != nil {
@@ -174,7 +174,7 @@ func (c *Client) CreateBuildStep(buildTypeID string, step BuildStep) (*BuildStep
 
 // DeleteBuildStep removes a build step from a build configuration
 func (c *Client) DeleteBuildStep(buildTypeID, stepID string) error {
-	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps/%s", buildTypeID, stepID)
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/steps/%s", url.PathEscape(buildTypeID), url.PathEscape(stepID))
 	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
 }
 
@@ -216,6 +216,6 @@ func (c *Client) GetVcsRootEntries(buildTypeID string) (*VcsRootEntries, error) 
 
 // SetBuildTypeSetting sets a build configuration setting
 func (c *Client) SetBuildTypeSetting(buildTypeID, setting, value string) error {
-	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings/%s", buildTypeID, setting)
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings/%s", url.PathEscape(buildTypeID), url.PathEscape(setting))
 	return c.doNoContent(c.ctx(), "PUT", path, strings.NewReader(value), "text/plain")
 }

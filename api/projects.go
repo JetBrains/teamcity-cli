@@ -100,7 +100,7 @@ func (c *Client) ProjectExists(id string) bool {
 // Returns the scrambled token that can be used in configuration files as credentialsJSON:<token>.
 // Requires EDIT_PROJECT permission.
 func (c *Client) CreateSecureToken(projectID, value string) (string, error) {
-	path := fmt.Sprintf("/app/rest/projects/%s/secure/tokens", projectID)
+	path := fmt.Sprintf("/app/rest/projects/%s/secure/tokens", url.PathEscape(projectID))
 
 	resp, err := c.doRequestFull(c.ctx(), "POST", path, strings.NewReader(value), "text/plain", "text/plain")
 	if err != nil {
@@ -123,7 +123,7 @@ func (c *Client) CreateSecureToken(projectID, value string) (string, error) {
 // GetSecureValue retrieves the original value for a secure token.
 // Requires CHANGE_SERVER_SETTINGS permission (System Administrator only).
 func (c *Client) GetSecureValue(projectID, token string) (string, error) {
-	path := fmt.Sprintf("/app/rest/projects/%s/secure/values/%s", projectID, token)
+	path := fmt.Sprintf("/app/rest/projects/%s/secure/values/%s", url.PathEscape(projectID), url.PathEscape(token))
 
 	resp, err := c.doRequestWithAccept(c.ctx(), "GET", path, nil, "text/plain")
 	if err != nil {
@@ -145,7 +145,7 @@ func (c *Client) GetSecureValue(projectID, token string) (string, error) {
 
 // GetVersionedSettingsStatus returns the sync status of versioned settings for a project.
 func (c *Client) GetVersionedSettingsStatus(projectID string) (*VersionedSettingsStatus, error) {
-	path := fmt.Sprintf("/app/rest/projects/%s/versionedSettings/status", projectID)
+	path := fmt.Sprintf("/app/rest/projects/%s/versionedSettings/status", url.PathEscape(projectID))
 
 	var status VersionedSettingsStatus
 	if err := c.get(c.ctx(), path, &status); err != nil {
@@ -157,7 +157,7 @@ func (c *Client) GetVersionedSettingsStatus(projectID string) (*VersionedSetting
 
 // GetVersionedSettingsConfig returns the versioned settings configuration for a project.
 func (c *Client) GetVersionedSettingsConfig(projectID string) (*VersionedSettingsConfig, error) {
-	path := fmt.Sprintf("/app/rest/projects/%s/versionedSettings/config", projectID)
+	path := fmt.Sprintf("/app/rest/projects/%s/versionedSettings/config", url.PathEscape(projectID))
 
 	var config VersionedSettingsConfig
 	if err := c.get(c.ctx(), path, &config); err != nil {

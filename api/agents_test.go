@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -65,6 +66,19 @@ func TestGetAgentsWithPoolFilter(t *testing.T) {
 			json.NewEncoder(w).Encode(AgentList{Count: 0})
 		})
 		_, _, err := client.GetAgents(AgentsOptions{Pool: "5"})
+		require.NoError(t, err)
+	})
+
+	t.Run("by name with special characters is base64-encoded", func(t *testing.T) {
+		t.Parallel()
+		// TeamCity does not honor in-value escaping for ()/,; base64 is the safe form.
+		want := "pool:(name:(value:($base64:" + base64.RawURLEncoding.EncodeToString([]byte("Build (Linux)")) + ")))"
+		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			assert.Contains(t, r.URL.Query().Get("locator"), want)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(AgentList{Count: 0})
+		})
+		_, _, err := client.GetAgents(AgentsOptions{Pool: "Build (Linux)"})
 		require.NoError(t, err)
 	})
 }
