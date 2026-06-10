@@ -89,6 +89,13 @@ func collectAuthStatuses(f *cmdutil.Factory) []authStatus {
 		}
 	}
 
+	// TEAMCITY_TOKEN takes precedence over stored credentials even without TEAMCITY_URL, so report it against the resolved server (matching defaultGetClient).
+	if envToken := os.Getenv(config.EnvToken); envToken != "" && !config.IsGuestAuth() {
+		if serverURL := config.GetServerURL(); serverURL != "" {
+			return []authStatus{collectTokenStatus(f, serverURL, envToken, "env", false)}
+		}
+	}
+
 	if buildAuth, ok := config.GetBuildAuth(); ok {
 		return []authStatus{collectBuildStatus(f, buildAuth)}
 	}
@@ -174,11 +181,14 @@ func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string
 	s.Status = "authenticated"
 	s.User = &authUser{ID: user.ID, Username: user.Username, Name: user.Name}
 
-	cfg := config.Get()
-	if sc, ok := cfg.Servers[serverURL]; ok && sc.TokenExpiry != "" {
-		s.TokenExpiry = sc.TokenExpiry
-	} else if expiry := config.GetTokenExpiry(); expiry != "" {
-		s.TokenExpiry = expiry
+	// Stored expiry belongs to the keyring/config token, not an env-provided one.
+	if tokenSource != "env" {
+		cfg := config.Get()
+		if sc, ok := cfg.Servers[serverURL]; ok && sc.TokenExpiry != "" {
+			s.TokenExpiry = sc.TokenExpiry
+		} else if expiry := config.GetTokenExpiry(); expiry != "" {
+			s.TokenExpiry = expiry
+		}
 	}
 
 	if server, err := client.ServerVersion(); err == nil {
