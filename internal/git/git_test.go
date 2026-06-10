@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -161,6 +162,28 @@ func TestBranchExistsOnRemote(t *testing.T) {
 	runGit(t, dir, "commit", "-m", "initial")
 
 	assert.False(t, BranchExistsOnRemote("master"))
+}
+
+func TestResolveRevision(t *testing.T) {
+	dir := setupRepo(t)
+	t.Chdir(dir)
+	writeFile(t, dir, "test.txt", "content")
+	runGit(t, dir, "add", ".")
+	runGit(t, dir, "commit", "-m", "initial")
+	full := strings.TrimSpace(runGit(t, dir, "rev-parse", "HEAD"))
+
+	t.Run("resolves short SHA to full SHA", func(t *testing.T) {
+		got, err := ResolveRevision(full[:8])
+		require.NoError(t, err)
+		assert.Equal(t, full, got)
+	})
+
+	t.Run("rejects a leading-dash rev instead of passing it through", func(t *testing.T) {
+		// Plain rev-parse echoes an unknown option back, so this would return verbatim as a "SHA".
+		got, err := ResolveRevision("--output=/tmp/teamcity-cli-pwned")
+		assert.Error(t, err)
+		assert.Empty(t, got)
+	})
 }
 
 func TestUntrackedFiles(t *testing.T) {
