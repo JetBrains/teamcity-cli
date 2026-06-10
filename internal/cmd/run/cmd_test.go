@@ -210,6 +210,22 @@ func TestRunStartDryRunNonExistentJob(T *testing.T) {
 	assert.Contains(T, err.Error(), "not found")
 }
 
+func TestRunDownloadFailsWhenArtifactsFail(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /app/rest/builds/id:1/artifacts/children", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Artifacts{Count: 2, File: []api.Artifact{
+			{Name: "a.txt", Size: 10, Content: &api.Content{Href: "/a.txt"}},
+			{Name: "b.txt", Size: 20, Content: &api.Content{Href: "/b.txt"}},
+		}})
+	})
+	ts.Handle("GET /app/rest/builds/id:1/artifacts/content/", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.Error(w, http.StatusInternalServerError, "boom")
+	})
+
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "download", testBuildID, "-o", T.TempDir())
+	assert.Contains(T, err.Error(), "downloaded 0 of 2 artifacts")
+}
+
 func TestRunCancel(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 

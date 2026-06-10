@@ -131,6 +131,12 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 		downloaded++
 	}
 
+	if downloaded < len(flatList) {
+		// Per-file errors were already printed above; return non-zero so automation
+		// (e.g. `teamcity run download ... && deploy`) doesn't proceed on a partial set.
+		return fmt.Errorf("downloaded %d of %d artifacts", downloaded, len(flatList))
+	}
+
 	_, _ = fmt.Fprintf(p.Out, "\n%s %s downloaded\n", output.Green(output.Sym().Check), english.Plural(downloaded, "artifact", ""))
 	return nil
 }
