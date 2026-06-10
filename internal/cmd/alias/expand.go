@@ -103,17 +103,12 @@ func newShellAliasCmd(f *cmdutil.Factory, name, expansion string) *cobra.Command
 }
 
 func expandArgs(expansion string, args []string) ([]string, error) {
-	// Tokenize the template first, then substitute each arg into the token that holds
-	// its placeholder. Substituting into a single token can't re-split or unbalance
-	// quotes, so an arg with spaces/quotes stays one argument whether the placeholder
-	// was written bare ($1) or quoted ("$1").
 	tokens, err := shellwords.Split(expansion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse alias expansion: %w", err)
 	}
 	used := make([]bool, len(args))
 	for i, tok := range tokens {
-		// Replace highest-index first so $1 doesn't shadow $10.
 		for j := len(args) - 1; j >= 0; j-- {
 			placeholder := fmt.Sprintf("$%d", j+1)
 			if strings.Contains(tok, placeholder) {
