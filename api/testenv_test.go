@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -30,6 +31,10 @@ const (
 	serverName  = "tc-test-server"
 	numAgents   = 1
 )
+
+// alwaysPull re-pulls both :latest images on CI agents (TEAMCITY_VERSION is set
+// there) so a stale Docker cache can't produce a server/agent version skew.
+var alwaysPull = os.Getenv("TEAMCITY_VERSION") != ""
 
 type testEnv struct {
 	Client    *api.Client
@@ -191,15 +196,20 @@ func startContainers() (*testEnv, error) {
 	log.Println("Starting TeamCity server...")
 	env.server, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Name:         serverName,
-			Image:        serverImage,
-			ExposedPorts: []string{"8111/tcp"},
-			Networks:     []string{env.network.Name},
+			Name:            serverName,
+			Image:           serverImage,
+			AlwaysPullImage: alwaysPull,
+			ExposedPorts:    []string{"8111/tcp"},
+			Networks:        []string{env.network.Name},
 			NetworkAliases: map[string][]string{
 				env.network.Name: {"teamcity-server"},
 			},
 			Env: map[string]string{
-				"TEAMCITY_SERVER_OPTS": "-Dteamcity.installation.completed=true -Dteamcity.startup.maintenance=false -Dteamcity.licenseAgreement.accepted=true -Dteamcity.internal.server.oauth.pkce.enable=true",
+				// Skip post-boot bundled-tool installs (each changes the agent
+				// distribution signature, triggering an auto-upgrade that restarts the
+				// agent mid-suite and cancels its builds) and widen the 120s inactivity
+				// window that unregisters agents missing polls under -race load.
+				"TEAMCITY_SERVER_OPTS": "-Dteamcity.installation.completed=true -Dteamcity.startup.maintenance=false -Dteamcity.licenseAgreement.accepted=true -Dteamcity.internal.server.oauth.pkce.enable=true -Dteamcity.tools.bundled.installOnStartup=false -Dteamcity.agent.inactive.threshold.secs=600",
 			},
 			WaitingFor: wait.ForHTTP("/app/rest/server/version").
 				WithPort("8111/tcp").
@@ -256,11 +266,12 @@ func startContainers() (*testEnv, error) {
 			name := fmt.Sprintf("tc-test-agent-%d", idx+1)
 			c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 				ContainerRequest: testcontainers.ContainerRequest{
-					Name:       name,
-					Image:      agentImage,
-					Networks:   []string{env.network.Name},
-					Env:        map[string]string{"SERVER_URL": "http://teamcity-server:8111"},
-					Privileged: true,
+					Name:            name,
+					Image:           agentImage,
+					AlwaysPullImage: alwaysPull,
+					Networks:        []string{env.network.Name},
+					Env:             map[string]string{"SERVER_URL": "http://teamcity-server:8111"},
+					Privileged:      true,
 					ConfigModifier: func(cfg *container.Config) {
 						cfg.Tty = true
 						cfg.OpenStdin = true
@@ -451,12 +462,45 @@ func waitForAgents(client *api.Client, count int) error {
 			}
 		}
 		if len(authorized) >= count {
-			log.Printf("All %d agents authorized", count)
-			return nil
+			// A freshly registered agent gets an "upgrade" order when its plugins
+			// differ from the server's distribution; the upgrade restarts the agent
+			// at its next idle moment, so absorb it before tests queue builds.
+			if ok, err := agentsUpToDate(client, count); ok {
+				log.Printf("All %d agents authorized and up-to-date", count)
+				return nil
+			} else if err == nil {
+				log.Printf("Agents authorized, waiting for pending auto-upgrade...")
+			}
 		}
 		time.Sleep(5 * time.Second)
 	}
-	return fmt.Errorf("agent timeout: got %d of %d", len(authorized), count)
+	return fmt.Errorf("agent timeout: got %d of %d authorized and up-to-date", len(authorized), count)
+}
+
+// agentsUpToDate reports whether count authorized agents are connected with no pending auto-upgrade.
+func agentsUpToDate(client *api.Client, count int) (bool, error) {
+	resp, err := client.RawRequest(context.Background(), "GET",
+		"/app/rest/agents?locator=authorized:true&fields=count,agent(id,connected,uptodate)", nil, nil)
+	if err != nil {
+		return false, err
+	}
+	var list struct {
+		Agents []struct {
+			ID        int  `json:"id"`
+			Connected bool `json:"connected"`
+			Uptodate  bool `json:"uptodate"`
+		} `json:"agent"`
+	}
+	if err := json.Unmarshal(resp.Body, &list); err != nil {
+		return false, err
+	}
+	ready := 0
+	for _, a := range list.Agents {
+		if a.Connected && a.Uptodate {
+			ready++
+		}
+	}
+	return ready >= count, nil
 }
 
 func setServerURL(serverURL, superToken, internalURL string) {

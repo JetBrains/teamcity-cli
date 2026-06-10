@@ -57,11 +57,8 @@ func requireIdleAgent(t *testing.T) api.Agent {
 		}
 		running, _, _ := client.GetBuilds(t.Context(), api.BuildsOptions{State: "running", Limit: 10})
 		queued, _, _ := client.GetBuildQueue(api.QueueOptions{Limit: 10})
-		if running != nil {
-			for _, b := range running.Builds {
-				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "test cleanup")
-			}
-		}
+		// Cancel queued strays only; cancelling a running build can get the whole
+		// agent unregistered ("Agent runs unknown build"), dropping other builds.
 		if queued != nil {
 			for _, b := range queued.Builds {
 				_ = client.CancelBuild(fmt.Sprintf("%d", b.ID), "test cleanup")
@@ -80,6 +77,12 @@ func requireIdleAgent(t *testing.T) api.Agent {
 		}
 		if detail.Build != nil {
 			t.Logf("requireIdleAgent: agent %d still has build %d, waiting...", detail.ID, detail.Build.ID)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		// A pending auto-upgrade restarts the agent at its next idle moment — wait it out.
+		if ok, err := agentsUpToDate(client, 1); err == nil && !ok {
+			t.Logf("requireIdleAgent: agent %d has a pending auto-upgrade, waiting...", detail.ID)
 			time.Sleep(2 * time.Second)
 			continue
 		}
@@ -1191,16 +1194,11 @@ func TestRebootAgentCancelledContext(T *testing.T) {
 	skipIfGuest(T)
 	T.Parallel()
 
-	agents, _, err := client.GetAgents(api.AgentsOptions{})
-	require.NoError(T, err)
-	if len(agents.Agents) == 0 {
-		T.Skip("no agents available")
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
-	err = client.RebootAgent(ctx, agents.Agents[0].ID, false)
+	// Bogus ID: the request must never be sent, and must never reboot the real agent.
+	err := client.RebootAgent(ctx, 99999, false)
 	assert.Error(T, err, "should error with cancelled context")
 }
 
@@ -1292,28 +1290,40 @@ func TestAgentOperations(T *testing.T) {
 
 func TestWaitForBuild_Integration(T *testing.T) {
 	skipIfGuest(T)
-	requireIdleAgent(T)
 
-	build, err := client.RunBuild(testConfig, api.RunBuildOptions{
-		Comment: "WaitForBuild integration test",
-	})
-	require.NoError(T, err)
-	buildID := fmt.Sprintf("%d", build.ID)
-	T.Logf("Queued build #%d, waiting for completion...", build.ID)
-
-	ctx, cancel := context.WithTimeout(T.Context(), 5*time.Minute)
-	defer cancel()
-
+	// Retry once: cancellation tests can briefly unregister the only agent
+	// ("Agent runs unknown build"), which cancels in-flight builds (UNKNOWN).
+	var result *api.Build
 	var progressCalls int
-	result, err := client.WaitForBuild(ctx, buildID, api.WaitForBuildOptions{
-		Interval: 3 * time.Second,
-		OnProgress: func(state, status string, percent int) error {
-			progressCalls++
-			T.Logf("  poll #%d: state=%s status=%s percent=%d", progressCalls, state, status, percent)
-			return nil
-		},
-	})
-	require.NoError(T, err)
+	for attempt := range 2 {
+		if attempt > 0 {
+			T.Logf("Build was canceled by the environment, retrying...")
+		}
+		requireIdleAgent(T)
+
+		build, err := client.RunBuild(testConfig, api.RunBuildOptions{
+			Comment: "WaitForBuild integration test",
+		})
+		require.NoError(T, err)
+		buildID := fmt.Sprintf("%d", build.ID)
+		T.Logf("Queued build #%d, waiting for completion...", build.ID)
+
+		ctx, cancel := context.WithTimeout(T.Context(), 5*time.Minute)
+		progressCalls = 0
+		result, err = client.WaitForBuild(ctx, buildID, api.WaitForBuildOptions{
+			Interval: 3 * time.Second,
+			OnProgress: func(state, status string, percent int) error {
+				progressCalls++
+				T.Logf("  poll #%d: state=%s status=%s percent=%d", progressCalls, state, status, percent)
+				return nil
+			},
+		})
+		cancel()
+		require.NoError(T, err)
+		if result.Status != "UNKNOWN" {
+			break
+		}
+	}
 
 	assert.Equal(T, "finished", result.State)
 	assert.Equal(T, "SUCCESS", result.Status)

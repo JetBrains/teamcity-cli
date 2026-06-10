@@ -59,10 +59,12 @@ exec "$@"
 `), 0o755))
 
 	sandboxCmd := func(env []string, args ...string) *exec.Cmd {
-		full := []string{"@anthropic-ai/sandbox-runtime", "-s", settings, wrapper}
+		// Pin the version so CI doesn't float with srt releases; SRT_DEBUG streams
+		// seatbelt violations to stderr so proxy EPERM failures are diagnosable.
+		full := []string{"-y", "@anthropic-ai/sandbox-runtime@0.0.54", "-s", settings, wrapper}
 		full = append(full, args...)
 		cmd := exec.Command(npx, full...)
-		cmd.Env = append(os.Environ(), env...)
+		cmd.Env = append(os.Environ(), append([]string{"SRT_DEBUG=1"}, env...)...)
 		return cmd
 	}
 
