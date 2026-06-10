@@ -57,7 +57,8 @@ func HeadRevision() (string, error) { return ResolveRevision("HEAD") }
 
 // ResolveRevision returns the SHA for rev (full or short).
 func ResolveRevision(rev string) (string, error) {
-	out, err := exec.Command("git", "rev-parse", rev).Output()
+	// --end-of-options stops a leading-dash rev being read as a flag; --verify yields just the SHA.
+	out, err := exec.Command("git", "rev-parse", "--verify", "--end-of-options", rev).Output()
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse %s: %w", rev, err)
 	}
