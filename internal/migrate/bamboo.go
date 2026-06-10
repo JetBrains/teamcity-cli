@@ -499,13 +499,18 @@ func bambooDocker(body map[string]any, result *ConversionResult, jobName string)
 	case "push":
 		return Converted([]Step{{
 			Name:          stringField(body, "description", "Docker push"),
-			ScriptContent: MapBambooExpressions("docker push " + image),
+			ScriptContent: MapBambooExpressions("docker push " + cmp.Or(image, "build:latest")),
 		}})
 	case "run":
 		args, _ := body["arguments"].(string)
+		cmd := "docker run"
+		if args != "" {
+			cmd += " " + args
+		}
+		cmd += " " + cmp.Or(image, "build:latest")
 		return Converted([]Step{{
 			Name:          stringField(body, "description", "Docker run"),
-			ScriptContent: MapBambooExpressions("docker run " + args + " " + image),
+			ScriptContent: MapBambooExpressions(cmd),
 		}})
 	}
 	return Unknown("docker", flattenStringMap(body))

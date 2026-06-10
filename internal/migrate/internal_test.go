@@ -36,6 +36,20 @@ func TestSanitizeJobID(t *testing.T) {
 	assert.Regexp(t, `^[A-Za-z0-9_]+$`, SanitizeJobID("Build & Test"))
 }
 
+func TestBambooDockerDefaultsImage(t *testing.T) {
+	t.Parallel()
+
+	// push/run without an image must fall back like the build branch, not emit "docker push ".
+	push := bambooDocker(map[string]any{"cmd": "push"}, nil, "job")
+	assert.Equal(t, "docker push build:latest", push.Steps[0].ScriptContent)
+
+	run := bambooDocker(map[string]any{"cmd": "run"}, nil, "job")
+	assert.Equal(t, "docker run build:latest", run.Steps[0].ScriptContent)
+
+	run = bambooDocker(map[string]any{"cmd": "run", "arguments": "-e FOO=1", "image": "app:1"}, nil, "job")
+	assert.Equal(t, "docker run -e FOO=1 app:1", run.Steps[0].ScriptContent)
+}
+
 func TestMapRunner(t *testing.T) {
 	t.Parallel()
 
