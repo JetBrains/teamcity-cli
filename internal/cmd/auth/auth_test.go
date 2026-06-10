@@ -137,6 +137,37 @@ teamcity.serverUrl=` + ts.URL + "\n"
 	assert.Equal(T, "bearer", authMethod, "explicit token should take precedence")
 }
 
+func TestAuthStatusEnvTokenWithoutURL(T *testing.T) {
+	ts := cmdtest.NewTestServer(T)
+	T.Setenv("TEAMCITY_GUEST", "")
+	T.Setenv("TEAMCITY_BUILD_PROPERTIES_FILE", "")
+	T.Setenv("TC_INSECURE_SKIP_WARN", "1")
+	config.ResetDSLCache()
+	config.ResetForTest()
+
+	var sawAuth string
+	ts.Handle("GET /app/rest/users/current", func(w http.ResponseWriter, r *http.Request) {
+		sawAuth = r.Header.Get("Authorization")
+		cmdtest.JSON(w, api.User{ID: 1, Username: "admin", Name: "Administrator"})
+	})
+	ts.Handle("GET /app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Server{VersionMajor: 2025, VersionMinor: 7, BuildNumber: "197398"})
+	})
+
+	cfg := config.Get()
+	cfg.DefaultServer = ts.URL
+	cfg.Servers[ts.URL] = config.ServerConfig{Token: "stored-token", User: "admin", TokenExpiry: "2099-01-01T00:00:00Z"}
+
+	// TEAMCITY_TOKEN set without TEAMCITY_URL: status must report the env token, not the stored one.
+	T.Setenv("TEAMCITY_URL", "")
+	T.Setenv("TEAMCITY_TOKEN", "env-token")
+
+	got := cmdtest.CaptureOutput(T, ts.Factory, "auth", "status", "--json")
+	assert.Contains(T, got, `"token_source": "env"`)
+	assert.Equal(T, "Bearer env-token", sawAuth, "status must probe with the env token, not the stored token")
+	assert.NotContains(T, got, "2099", "stored expiry must not be reported for an env token")
+}
+
 func TestIsBuildEnvironment(T *testing.T) {
 	T.Setenv("TEAMCITY_BUILD_PROPERTIES_FILE", "/some/path")
 	assert.True(T, config.IsBuildEnvironment())
