@@ -50,8 +50,14 @@ func TestGenerateState(t *testing.T) {
 // hitCallback simulates the browser bouncing back to the callback path.
 func hitCallback(t *testing.T, port int, path, query string) {
 	t.Helper()
+	hitCallbackAfter(t, port, path, query, 50*time.Millisecond)
+}
+
+// hitCallbackAfter hits the callback path after a fixed delay, used to order requests deterministically.
+func hitCallbackAfter(t *testing.T, port int, path, query string, delay time.Duration) {
+	t.Helper()
 	go func() {
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(delay)
 		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d%s?%s", port, path, query))
 		if err != nil {
 			t.Logf("hit callback: %v", err)
@@ -81,23 +87,45 @@ func TestRunCapturesCode(t *testing.T) {
 	assert.Equal(t, "abc123", result.Code)
 }
 
-func TestRunRejectsStateMismatch(t *testing.T) {
+func TestRunIgnoresStateMismatch(t *testing.T) {
 	t.Parallel()
 
 	listener, err := FindAvailableListener()
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 
+	// A non-matching callback is ignored, so with no valid follow-up Run times out instead of failing fast.
 	hitCallback(t, port, DefaultCallbackPath, "code=abc&state=wrong-state")
 
 	_, err = Run(t.Context(), Options{
 		Listener: listener,
 		State:    "expected-state",
 		OpenURL:  "http://127.0.0.1:" + fmt.Sprint(port) + "/__noop",
-		Timeout:  2 * time.Second,
+		Timeout:  300 * time.Millisecond,
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "state mismatch")
+	assert.Contains(t, err.Error(), "timeout")
+}
+
+func TestRunForgedErrorDoesNotPreemptRealCallback(t *testing.T) {
+	t.Parallel()
+
+	listener, err := FindAvailableListener()
+	require.NoError(t, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+
+	// The forged error callback (no state) provably arrives first but must not claim the slot; the real callback wins.
+	hitCallbackAfter(t, port, DefaultCallbackPath, "error=denied", 30*time.Millisecond)
+	hitCallbackAfter(t, port, DefaultCallbackPath, "code=real-code&state=expected-state", 120*time.Millisecond)
+
+	result, err := Run(t.Context(), Options{
+		Listener: listener,
+		State:    "expected-state",
+		OpenURL:  "http://127.0.0.1:" + fmt.Sprint(port) + "/__noop",
+		Timeout:  2 * time.Second,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "real-code", result.Code)
 }
 
 func TestRunSurfacesUpstreamError(t *testing.T) {
@@ -107,7 +135,8 @@ func TestRunSurfacesUpstreamError(t *testing.T) {
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 
-	hitCallback(t, port, DefaultCallbackPath, "error=access_denied")
+	// A genuine upstream error echoes the state (RFC 6749), so it is honored.
+	hitCallback(t, port, DefaultCallbackPath, "error=access_denied&state=expected-state")
 
 	_, err = Run(t.Context(), Options{
 		Listener: listener,
