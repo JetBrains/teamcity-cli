@@ -1,159 +1,148 @@
 # TeamCity CLI Skill Evals
 
-Evaluation pipeline for the `teamcity-cli` agent skill, based on the
-[LangChain skills-benchmarks](https://blog.langchain.com/evaluating-skills/) pattern.
+A/B evaluation of the `teamcity-cli` agent skill: same model, same tasks, same
+live server — the skill is the only variable.
 
-Measures how well Claude Code performs TeamCity tasks **with** vs **without** the skill.
+| Treatment | What Claude Code gets                   |
+|-----------|------------------------------------------|
+| `CONTROL` | the `teamcity` CLI, no skill — baseline  |
+| `CURRENT` | the CLI **+** `skills/teamcity-cli/`     |
 
-## Quick Start
+The headline metric is the **paired skill lift**: per-task
+`CURRENT − CONTROL` deterministic pass rate, averaged across tasks, with a
+bootstrap 95% CI. Because both arms run in the same session against the same
+server, live-data drift cancels out of the difference.
+
+## Quick start
 
 ```bash
-# Install dependencies
-just eval-setup
+just eval-setup                  # install dependencies
+cp evals/.env.example evals/.env # configure (1Password refs or literals)
 
-# Configure (copy and fill in API keys)
-cp evals/.env.example evals/.env
-
-# Run all evals
-just eval
-
-# Run a specific task
-just eval-task investigate-failure
-
-# Compare CONTROL (no skill) vs CURRENT (with skill)
-just eval-compare investigate-failure
-
-# Multiple runs for confidence
-just eval-bench investigate-failure 3
+just eval --runs=2 -n 8          # full suite, both treatments
+just eval --task=investigate-failure --treatment=CURRENT
+just eval-unit                   # harness unit tests only (no server, no API)
+just eval-diff                   # gate/report the current branch's results
+just eval-diff results/A results/B   # informational A/B diff
 ```
 
 ## Architecture
 
 ```
 evals/
-├── tasks/                 # Benchmark tasks (one dir per task)
-│   ├── investigate-failure/
-│   │   ├── task.toml      # Metadata, default treatments
-│   │   ├── instruction.md # Prompt given to Claude
-│   │   └── validation/    # Check functions
-│   ├── inspect-url/
-│   ├── find-builds/
-│   ├── explore-infrastructure/
-│   └── hallucination-resistance/
-├── treatments/            # Skill configurations
-│   └── common.yaml        # CONTROL (no skill), CURRENT (production skill)
-├── scaffold/              # Framework: runner, events, validation
-├── tests/test_tasks.py    # Pytest runner
-├── conftest.py            # Fixtures, parametrization, Sentry init
-├── Dockerfile             # Claude Code container
-└── results/               # JSON artifacts per run
+├── tasks.json           # Task prompts + per-task check lists + treatments
+├── checks.py            # CHECK_REGISTRY — deterministic check functions
+├── cli_schema.json      # GENERATED command/flag allowlist (gitignored)
+├── conftest.py          # Treatments, parametrization, provenance, schema gen
+├── pipeline.yml         # Versioned source for the SkillEval CI pipeline
+├── scaffold/
+│   ├── claude.py        # Runs Claude Code with an isolated HOME per run
+│   ├── events.py        # stream-json → commands/tools/tokens/skills
+│   ├── runner.py        # EvalRunner: tokenized command matching, results
+│   ├── graders.py       # LLM judge (advisory, fails closed)
+│   └── sentry_log.py    # Observability traces (never used for gating)
+├── scripts/compare.py   # Statistical gate: paired lift ± CI, pass^k
+├── tests/test_tasks.py  # The eval runner (pytest parametrizes task×treatment)
+├── tests/test_checks.py # Unit tests for the harness itself
+└── results/<experiment>/  # Per-run JSON artifacts + gate_summary.json
 ```
 
-## How It Works
+## How a run is scored
 
-1. **Task** = a realistic TeamCity prompt (e.g., "find a recent failure and diagnose it")
-2. **Treatment** = skill configuration (CONTROL = no skill, CURRENT = production skill)
-3. **Execution** = Claude Code runs the task in Docker (or locally with `BENCH_LOCAL=1`)
-4. **Validation** = check functions verify Claude used correct commands and produced useful output
-5. **Tracking** = results logged to Sentry as AI-Agent traces (spans + measurements + tags)
+1. **Deterministic checks** (gate-relevant). Executed commands are tokenized —
+   never substring-matched — and validated against `cli_schema.json`, which is
+   regenerated from the binary's cobra command tree on every session
+   (`go run scripts/generate-cli-schema.go`). An invented flag is a failure;
+   a real flag can never be misflagged, because the allowlist cannot rot.
+2. **LLM judge** (advisory). Sonnet grades subjective dimensions with anchored
+   rubrics. Judge scores are reported separately and **never** blend into the
+   deterministic pass rate. If the judge is unavailable the dimension is
+   recorded as *ungraded* — it fails closed, not open.
+3. **Metadata**, not scores: whether the skill was available (treatment) vs
+   actually invoked (observed), full provenance (git SHA, CLI/claude/skill
+   versions, model, task-set hash).
+
+**Pytest pass/fail means harness health only.** A CONTROL run scoring zero
+checks is a *measurement* — the baseline being weak is the point, not a test
+failure. Only harness breakage (claude crashed, unparseable output) fails
+pytest.
+
+## The gate (`scripts/compare.py`)
+
+Self-contained: computed from the session's own artifacts, no cross-build
+baseline, identical on `main` and branches.
+
+- **BLOCK** if the paired-lift CI lower bound < `GATE_LIFT_FLOOR` (default
+  −5 pts) — the skill stopped helping.
+- **BLOCK** if a guardrail task (single-treatment, e.g. `negative-unrelated`)
+  fails on ≥ half its reps — the skill misfires on unrelated work.
+- `GATE_MODE=warn` (default) reports the verdict but exits 0; flip to
+  `enforce` once thresholds have soaked. Needs ≥ `GATE_MIN_TASKS` (3) paired
+  tasks, so partial local runs just report.
+
+Also reported: per-task `pass^2` (probability both reps pass — reliability,
+not just average), judge means per arm, and `gate_summary.json` for trend
+tooling.
 
 ## Tasks
 
 | Task                       | What It Tests                                       |
 |----------------------------|-----------------------------------------------------|
 | `investigate-failure`      | Full failure workflow: find → log → tests → changes |
+| `daily-loop`               | Branch triage: list, drill into failures, changes   |
+| `composite-failure`        | Dependency-tree drill-down on a composite build     |
 | `inspect-url`              | Parse a TC URL and inspect the build/config         |
 | `find-builds`              | Complex search with filters, JSON output            |
+| `cross-project`            | Multi-project CI health summary                     |
 | `explore-infrastructure`   | Navigate projects, pools, hierarchy                 |
 | `hallucination-resistance` | Resist inventing flags that don't exist             |
-
-## Treatments
-
-| Treatment | Description                       |
-|-----------|-----------------------------------|
-| `CONTROL` | No skill loaded — baseline        |
-| `CURRENT` | Production `skills/teamcity-cli/` |
-
-Add variants in `treatments/common.yaml` to A/B test skill changes.
+| `negative-unrelated`       | Guardrail: skill must NOT fire on unrelated work    |
 
 ## Environment Variables
 
-| Variable             | Required | Description                                                                          |
-|----------------------|----------|--------------------------------------------------------------------------------------|
-| `ANTHROPIC_API_KEY`  | Yes      | Claude API key                                                                       |
-| `TEAMCITY_URL`       | Yes      | TeamCity server URL                                                                  |
-| `TEAMCITY_TOKEN`     | Yes      | TeamCity API token                                                                   |
-| `SENTRY_DSN`         | No       | Ingest-only — sends traces to Sentry. Cannot read back.                              |
-| `SENTRY_ORG`         | No       | Org slug for `scripts/compare.py` (DSN doesn't carry org scope)                      |
-| `SENTRY_AUTH_TOKEN`  | No       | Bearer token with `event:read` + `org:read` for compare                              |
-| `SENTRY_ENVIRONMENT` | No       | Sentry environment tag (default: `eval`)                                             |
-| `BENCH_CC_MODEL`     | No       | Claude model (default: `claude-sonnet-4-5-20250929`)                                 |
-| `BENCH_TIMEOUT`      | No       | Task timeout in seconds (default: 300)                                               |
-| `BENCH_LOCAL`        | No       | Set to `1` to skip Docker and run Claude locally                                     |
+| Variable             | Required | Description                                              |
+|----------------------|----------|----------------------------------------------------------|
+| `ANTHROPIC_API_KEY`  | Yes      | Claude API key (agent + judge)                           |
+| `TEAMCITY_URL`       | Yes      | TeamCity server URL                                      |
+| `TEAMCITY_TOKEN`     | Yes      | TeamCity API token                                       |
+| `SENTRY_DSN`         | No       | Ingest-only — sends observability traces to Sentry       |
+| `SENTRY_ENVIRONMENT` | No       | Sentry environment tag (default: `eval`)                 |
+| `BENCH_CC_MODEL`     | No       | Claude model (default: `claude-sonnet-4-5-20250929`)     |
+| `BENCH_TIMEOUT`      | No       | Task timeout in seconds (default: 300)                   |
+| `BENCH_LOCAL`        | No       | Set to `1` to skip Docker and run Claude locally         |
+| `GATE_MODE`          | No       | `warn` (default) or `enforce`                            |
+| `GATE_LIFT_FLOOR`    | No       | Lift CI lower-bound threshold (default `-0.05`)          |
 
-## Adding a Task
+## CI pipeline
 
-1. Create `tasks/<name>/task.toml`:
-   ```toml
-   [metadata]
-   name = "my-task"
-   description = "What this tests"
-   default_treatments = ["CONTROL", "CURRENT"]
+`TeamCity_TeamCityCLI_SkillEval` on teamcity-nightly, defined by
+`evals/pipeline.yml` (edit → `teamcity pipeline validate` → `teamcity
+pipeline push`). Per run: build the CLI from the commit under test →
+change-gate (skips with an explicit `SKIPPED` build status unless
+`skills/teamcity-cli/`, `evals/`, or the schema generator changed) → pinned
+`@anthropic-ai/claude-code` install → schema generation → `pytest tests/
+--runs=2 -n 8` → gate. Pytest and the gate exit codes both propagate — nothing
+is `|| true`'d away.
 
-   [validation]
-   checks_module = "test_my_task"
-   ```
+Known gaps (deliberate, next phases): no nightly schedule (pipelines YAML has
+no trigger support — add via UI), live server instead of record/replay
+cassettes, judge uncalibrated against human labels.
 
-2. Create `tasks/<name>/instruction.md` with the prompt
+## Sentry
 
-3. Create `tasks/<name>/validation/test_my_task.py`:
-   ```python
-   from scaffold.runner import TestRunner
+When `SENTRY_DSN` is set, each run is pushed as a `gen_ai.invoke_agent`
+transaction (one `gen_ai.execute_tool` child span per tool call) tagged with
+`experiment_id`/`task`/`treatment`/`skill_available`/`skill_invoked` plus full
+provenance. Sentry is dashboards and drill-down only — gating always runs on
+the local `results/` artifacts, which are the authoritative record.
 
-   def check_something(runner: TestRunner) -> None:
-       if runner.has_command("run", "list"):
-           runner.passed("Used correct command")
-       else:
-           runner.failed("Missing expected command")
+## Adding a task
 
-   CHECKS = [check_something]
-   ```
-
-## Adding a Treatment
-
-Add to `treatments/common.yaml`:
-
-```yaml
-MY_VARIANT:
-  description: "Skill with improved failure workflow"
-  skill_dir: "teamcity-cli"  # or a custom skill directory
-```
-
-## Sentry Integration
-
-When `SENTRY_DSN` is set, each eval run is pushed to Sentry as a `gen_ai.invoke_agent`
-transaction with one `gen_ai.execute_tool` child span per Claude tool call.
-
-Per-run signal stored on the transaction:
-- **Tags** (filterable): `experiment_id` (= branch), `task`, `treatment`, `skill_invoked`
-- **Measurements** (aggregatable): `pass_rate`, `duration_sec`, `num_turns`, `total_tokens`
-- **Data**: full instruction, response text, check results, LLM grades, tool inputs/outputs
-
-### DSN vs. auth token
-
-The **DSN is ingest-only** — it can send events to Sentry but cannot query them back.
-To drive `scripts/compare.py` off Sentry you also need:
-
-- `SENTRY_ORG` — your org slug (the DSN encodes an org *ID*, not a slug)
-- `SENTRY_AUTH_TOKEN` — a Bearer token with `event:read` + `org:read` scopes
-  (create at `https://{org}.sentry.io/settings/account/api/auth-tokens/`)
-
-Without those, write still works (traces flow to Sentry for humans to browse in the
-AI Agent Monitoring view); compare falls back to local-directory diff mode.
-
-### Caveats
-
-- Sentry event retention is 30–90d depending on plan. The local `results/<experiment_id>/*.json`
-  dump is the authoritative cold store.
-- Sampling is pinned to `1.0` for eval runs.
-- Each transaction is capped at 10 measurements; we use 4.
+1. Add an entry to `tasks.json`: `id`, `prompt`, `checks` (IDs from
+   `CHECK_REGISTRY`), optional `llm_grade`, optional `treatments` (omit for
+   both arms; `["CURRENT"]` makes it a guardrail).
+2. New check functions go in `checks.py` and the registry. Use
+   `runner.has_subcommand(...)`/`runner.has_flag(...)` — don't substring-match
+   command lines.
+3. Add adversarial coverage in `tests/test_checks.py`: the check must fail on
+   known-bad fixtures, not just pass on good ones.

@@ -11,7 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # Claude binary path. Set CLAUDE_BIN env var in CI if claude isn't on PATH.
-_CLAUDE_BIN = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or "claude"
+CLAUDE_BIN = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or "claude"
+_CLAUDE_BIN = CLAUDE_BIN
+
+# Model under evaluation when BENCH_CC_MODEL is unset. Pinned so the measured
+# agent never drifts with the Claude Code default.
+DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
 
 from typing import Protocol
 
@@ -114,7 +119,7 @@ def run_claude(
     timeout: int = 600,
 ) -> ClaudeResult:
     """Run Claude Code CLI locally in a temp directory with isolated config."""
-    model = model or os.environ.get("BENCH_CC_MODEL", "claude-sonnet-4-5-20250929")
+    model = model or os.environ.get("BENCH_CC_MODEL", DEFAULT_MODEL)
 
     with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
         work_dir = Path(tmp)
@@ -164,7 +169,7 @@ def run_claude_docker(
     image: str = "tc-skill-eval",
 ) -> ClaudeResult:
     """Run Claude Code CLI inside a Docker container (fully isolated)."""
-    model = model or os.environ.get("BENCH_CC_MODEL", "claude-sonnet-4-5-20250929")
+    model = model or os.environ.get("BENCH_CC_MODEL", DEFAULT_MODEL)
 
     with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
         work_dir = Path(tmp)

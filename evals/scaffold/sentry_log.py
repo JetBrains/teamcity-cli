@@ -1,9 +1,9 @@
 """Sentry logger — pushes eval results as AI-Agent traces.
 
 A parent transaction (op=gen_ai.invoke_agent) wraps child spans (op=gen_ai.execute_tool),
-one per Claude tool call. Tags (experiment_id/task/treatment) make results groupable
-in Discover; measurements (pass_rate/duration/tokens/num_turns) are the numeric signal
-compare.py aggregates across branches.
+one per Claude tool call. Tags (experiment_id/task/treatment/provenance) make results
+groupable in Discover. Sentry is observability only — gating runs on local artifacts
+via scripts/compare.py.
 
 Safe to import even when SENTRY_DSN is unset — init becomes a no-op and logging is skipped.
 """
@@ -86,7 +86,10 @@ def log_run(
     check_results: list[dict],
     tool_calls: list[dict],
     tool_results: dict[str, dict],
+    skill_available: bool = False,
     llm_grades: list | None = None,
+    ungraded_dimensions: list[str] | None = None,
+    provenance: dict | None = None,
     run_id: str | None = None,
 ) -> None:
     """Push one eval run to Sentry as a transaction + child spans. No-op if DSN unset."""
@@ -111,7 +114,11 @@ def log_run(
             txn.set_tag("experiment_id", experiment_id)
             txn.set_tag("task", task_name)
             txn.set_tag("treatment", treatment_name)
+            txn.set_tag("skill_available", "true" if skill_available else "false")
             txn.set_tag("skill_invoked", "true" if skill_invoked else "false")
+            for key, value in (provenance or {}).items():
+                if value:
+                    txn.set_tag(key, str(value)[:200])
             # Bucket pass_rate into tags so dashboards (spans dataset) can count by status.
             # Numeric aggregation still requires the deprecated transactions dataset via
             # measurements.pass_rate.
@@ -128,7 +135,7 @@ def log_run(
             if run_id:
                 txn.set_tag("run_id", run_id)
 
-            model = os.environ.get("BENCH_CC_MODEL", "")
+            model = (provenance or {}).get("model") or os.environ.get("BENCH_CC_MODEL", "")
             txn.set_data("gen_ai.system", "anthropic")
             txn.set_data("gen_ai.agent.name", "claude-code")
             txn.set_data("gen_ai.request.model", model)
@@ -141,17 +148,13 @@ def log_run(
             txn.set_data("checks", _truncate(json.dumps(check_results), 8000))
             if llm_grades:
                 txn.set_data("llm_grades", _truncate(json.dumps(llm_grades), 4000))
+            if ungraded_dimensions:
+                txn.set_data("ungraded_dimensions", json.dumps(ungraded_dimensions))
 
-            # Measurements — queryable as `measurements.*` via the events API (what
-            # scripts/compare.py aggregates over). Must be set on `txn` directly: the
-            # module-level `sentry_sdk.set_measurement` targets the scope's current
-            # transaction, and this txn was created with `start_transaction(...)` without
-            # being entered as a context manager, so it's never bound to scope.
-            # Capped at 10 per txn by Sentry.
-            txn.set_measurement("pass_rate", float(pass_rate))
-            txn.set_measurement("duration_sec", float(duration_sec), "second")
-            txn.set_measurement("num_turns", float(num_turns))
-            txn.set_measurement("total_tokens", float(input_tokens + output_tokens))
+            txn.set_data("pass_rate", float(pass_rate))
+            txn.set_data("duration_sec", float(duration_sec))
+            txn.set_data("num_turns", float(num_turns))
+            txn.set_data("total_tokens", float(input_tokens + output_tokens))
 
 
             # Timeline: alternate LLM-call spans and tool-call spans across the parent

@@ -173,12 +173,16 @@ eval *args:
     set -euo pipefail
     cd evals
     if command -v op &>/dev/null && [ -z "${CI:-}" ]; then
-        op run --env-file=.env -- uv run pytest tests/test_tasks.py -v {{args}}
+        op run --env-file=.env -- uv run pytest tests/ -v {{args}}
     else
-        uv run pytest tests/test_tasks.py -v {{args}}
+        uv run pytest tests/ -v {{args}}
     fi
 
-# Compare experiments via Sentry (auto-picks current branch vs main)
+# Harness unit tests only — no server, no API calls
+eval-unit *args:
+    cd evals && uv run pytest tests/test_checks.py -v {{args}}
+
+# Gate/report an experiment: paired lift ± CI (pass two results dirs to diff)
 eval-diff *args:
     #!/usr/bin/env bash
     set -euo pipefail
