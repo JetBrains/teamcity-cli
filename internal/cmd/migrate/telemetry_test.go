@@ -38,6 +38,10 @@ func TestMigrateOutcomeField(t *testing.T) {
 	assert.Equal(t, analytics.MigrateOutcomeFailed, migrateOutcomeField(cfg, nil))
 	assert.Equal(t, analytics.MigrateOutcomePartial, migrateOutcomeField(cfg, []*migrate.ConversionResult{partial}))
 	assert.Equal(t, analytics.MigrateOutcomeClean, migrateOutcomeField(cfg, []*migrate.ConversionResult{clean}))
+
+	// A config that failed to convert (fewer results than configs) makes the outcome partial.
+	cfgTwo := []migrate.CIConfig{{Source: migrate.GitHubActions}, {Source: migrate.Bamboo}}
+	assert.Equal(t, analytics.MigrateOutcomePartial, migrateOutcomeField(cfgTwo, []*migrate.ConversionResult{clean}))
 }
 
 func TestMigrateValidationField(t *testing.T) {
