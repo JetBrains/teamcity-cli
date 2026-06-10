@@ -169,6 +169,25 @@ func TestRunStartDryRun(T *testing.T) {
 	assert.Contains(T, got, testJob)
 }
 
+func TestRunStartDryRunJSON(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "start", testJob,
+		"--branch", "main", "--rebuild-failed-deps", "--dry-run", "--json")
+
+	var plan struct {
+		DryRun            bool   `json:"dry_run"`
+		Job               string `json:"job"`
+		Branch            string `json:"branch"`
+		RebuildFailedDeps bool   `json:"rebuild_failed_deps"`
+	}
+	require.NoError(T, json.Unmarshal([]byte(got), &plan), "dry-run --json must emit valid JSON, got: %s", got)
+	assert.True(T, plan.DryRun)
+	assert.Equal(T, testJob, plan.Job)
+	assert.Equal(T, "main", plan.Branch)
+	assert.True(T, plan.RebuildFailedDeps, "dry-run JSON must reflect --rebuild-failed-deps")
+	assert.NotContains(T, got, "Would trigger", "human preview text must not appear in --json output")
+}
+
 func TestRunStartReuseDepsDryRun(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	ts.Handle("GET /app/rest/builds/id:6946", func(w http.ResponseWriter, r *http.Request) {
