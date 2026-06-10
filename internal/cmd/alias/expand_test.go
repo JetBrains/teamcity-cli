@@ -21,6 +21,10 @@ func TestExpandPositionalArgs(t *testing.T) {
 		{"positional plus extra args", "run list --user=$1", []string{"@me", "--limit=5"}, []string{"run", "list", "--user=@me", "--limit=5"}},
 		{"unused positional placeholder", "run list --user=$1 --branch=$2", []string{"@me"}, []string{"run", "list", "--user=@me", "--branch=$2"}},
 		{"double-digit placeholder not clobbered by single-digit", "$1 $10", []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}, []string{"A", "J", "B", "C", "D", "E", "F", "G", "H", "I"}},
+		{"arg with spaces stays one token", "run view $1", []string{"my build"}, []string{"run", "view", "my build"}},
+		{"arg with spaces embedded in flag", "run list --user=$1", []string{"a b"}, []string{"run", "list", "--user=a b"}},
+		{"arg with single quote does not break parsing", "run view $1", []string{"O'Brien"}, []string{"run", "view", "O'Brien"}},
+		{"quoted placeholder keeps arg as one token", `run view "$1"`, []string{"my build"}, []string{"run", "view", "my build"}},
 	}
 
 	for _, tt := range tests {

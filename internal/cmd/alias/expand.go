@@ -103,21 +103,27 @@ func newShellAliasCmd(f *cmdutil.Factory, name, expansion string) *cobra.Command
 }
 
 func expandArgs(expansion string, args []string) ([]string, error) {
-	var extraArgs []string
-	for i := len(args) - 1; i >= 0; i-- {
-		placeholder := fmt.Sprintf("$%d", i+1)
-		if strings.Contains(expansion, placeholder) {
-			expansion = strings.ReplaceAll(expansion, placeholder, args[i])
-		} else {
-			extraArgs = append(extraArgs, args[i])
-		}
-	}
-	slices.Reverse(extraArgs)
-	parts, err := shellwords.Split(expansion)
+	tokens, err := shellwords.Split(expansion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse alias expansion: %w", err)
 	}
-	return append(parts, extraArgs...), nil
+	used := make([]bool, len(args))
+	for i, tok := range tokens {
+		for j := len(args) - 1; j >= 0; j-- {
+			placeholder := fmt.Sprintf("$%d", j+1)
+			if strings.Contains(tok, placeholder) {
+				tok = strings.ReplaceAll(tok, placeholder, args[j])
+				used[j] = true
+			}
+		}
+		tokens[i] = tok
+	}
+	for j, u := range used {
+		if !u {
+			tokens = append(tokens, args[j])
+		}
+	}
+	return tokens, nil
 }
 
 func expandShellArgs(expansion string, args []string) string {
