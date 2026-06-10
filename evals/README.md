@@ -34,7 +34,6 @@ evals/
 ├── checks.py            # CHECK_REGISTRY — deterministic check functions
 ├── cli_schema.json      # GENERATED command/flag allowlist (gitignored)
 ├── conftest.py          # Treatments, parametrization, provenance, schema gen
-├── pipeline.yml         # Versioned source for the SkillEval CI pipeline
 ├── scaffold/
 │   ├── claude.py        # Runs Claude Code with an isolated HOME per run
 │   ├── events.py        # stream-json → commands/tools/tokens/skills
@@ -115,9 +114,10 @@ tooling.
 
 ## CI pipeline
 
-`TeamCity_TeamCityCLI_SkillEval` on teamcity-nightly, defined by
-`evals/pipeline.yml` (edit → `teamcity pipeline validate` → `teamcity
-pipeline push`). Per run: build the CLI from the commit under test →
+`TeamCity_TeamCityCLI_SkillEval` on teamcity-nightly; the pipeline YAML
+lives server-side (`teamcity pipeline pull` to inspect, edit → `teamcity
+pipeline validate` → `teamcity pipeline push` to change). Per run: build
+the CLI from the commit under test →
 change-gate (skips with an explicit `SKIPPED` build status unless
 `skills/teamcity-cli/`, `evals/`, or the schema generator changed) → pinned
 `@anthropic-ai/claude-code` install → schema generation → `pytest tests/
