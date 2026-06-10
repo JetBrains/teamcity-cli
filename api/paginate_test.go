@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,6 +79,20 @@ func TestCollectPages(t *testing.T) {
 		assert.Equal(t, 2, call)
 		// Exactly at the limit and no more pages -> not truncated.
 		assert.False(t, truncated)
+	})
+
+	t.Run("empty result is non-nil so it serializes as [] not null", func(t *testing.T) {
+		t.Parallel()
+		c := &Client{BaseURL: "http://localhost"}
+		items, truncated, err := collectPages(c, "/app/rest/builds", 0, func(path string) ([]int, string, error) {
+			return nil, "", nil
+		})
+		require.NoError(t, err)
+		assert.False(t, truncated)
+		assert.NotNil(t, items)
+		b, err := json.Marshal(items)
+		require.NoError(t, err)
+		assert.Equal(t, "[]", string(b))
 	})
 
 	t.Run("unbounded fetch uses large page and collects all", func(t *testing.T) {

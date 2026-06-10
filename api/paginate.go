@@ -18,7 +18,7 @@ func pageCount(limit int) int {
 
 // collectPages follows NextHref links to accumulate items up to the limit (0 collects all); the bool is true when a finite limit capped the result and more exist.
 func collectPages[T any](c *Client, path string, limit int, fetch func(string) ([]T, string, error)) ([]T, bool, error) {
-	var all []T
+	all := []T{} // non-nil so an empty result serializes as JSON [] not null
 	for path != "" {
 		items, nextHref, err := fetch(path)
 		if err != nil {

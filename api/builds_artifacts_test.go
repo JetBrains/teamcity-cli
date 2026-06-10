@@ -51,6 +51,27 @@ func TestGetArtifactsWithSubpath(t *testing.T) {
 	assert.Equal(t, 1, artifacts.Count)
 }
 
+func TestGetArtifactsEmptyIsNonNil(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/app/rest/builds" || r.URL.Path == "/httpAuth/app/rest/builds" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
+			return
+		}
+		// Server omits the "file" key for a build with no artifacts.
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"count":0}`))
+	})
+
+	artifacts, err := client.GetArtifacts(t.Context(), "1", "")
+	require.NoError(t, err)
+	assert.NotNil(t, artifacts.File)
+	b, err := json.Marshal(artifacts)
+	require.NoError(t, err)
+	assert.Contains(t, string(b), `"file":[]`)
+}
+
 func TestDownloadArtifact(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {

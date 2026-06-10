@@ -53,6 +53,9 @@ func (c *Client) GetArtifacts(ctx context.Context, buildID string, subpath strin
 	if err := c.get(ctx, p, &artifacts); err != nil {
 		return nil, err
 	}
+	if artifacts.File == nil {
+		artifacts.File = []Artifact{} // non-nil so --json emits [] not null
+	}
 
 	return &artifacts, nil
 }
