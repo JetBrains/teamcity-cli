@@ -50,7 +50,7 @@ type Options struct {
 	ErrorTitle   string        // shown on the callback page when GitHub/upstream returns an error
 }
 
-// Result holds the validated callback code; state is checked inside Run and not exposed.
+// Result holds the validated callback code; state is checked in the callback handler and not exposed.
 type Result struct {
 	Code string
 }
@@ -125,6 +125,15 @@ func Run(ctx context.Context, opts Options) (*Result, error) {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'")
 
+		// Validate state in the handler so a forged or stray request can't claim the result slot; real errors echo state (RFC 6749).
+		if subtle.ConstantTimeCompare([]byte(raw.state), []byte(opts.State)) != 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = callbackTmpl.Execute(w, struct {
+				Error, ErrorTitle, SuccessTitle, SuccessBody string
+			}{Error: "invalid or expired request", ErrorTitle: errorTitle})
+			return
+		}
+
 		data := struct {
 			Error, ErrorTitle, SuccessTitle, SuccessBody string
 		}{ErrorTitle: errorTitle, SuccessTitle: successTitle, SuccessBody: successBody}
@@ -162,11 +171,9 @@ func Run(ctx context.Context, opts Options) (*Result, error) {
 
 	select {
 	case raw := <-resultCh:
+		// state was validated by the handler before raw reached this channel.
 		if raw.errMsg != "" {
 			return nil, fmt.Errorf("authorization denied: %s", raw.errMsg)
-		}
-		if subtle.ConstantTimeCompare([]byte(raw.state), []byte(opts.State)) != 1 {
-			return nil, errors.New("state mismatch: possible CSRF attack")
 		}
 		if raw.code == "" {
 			return nil, errors.New("callback received without code")
