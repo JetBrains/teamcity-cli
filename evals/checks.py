@@ -31,11 +31,18 @@ def cli_schema() -> dict[str, list[str]]:
     return json.loads(SCHEMA_PATH.read_text())["commands"]
 
 
+@cache
+def _group_paths() -> frozenset[str]:
+    """Command paths that have subcommands (including the root '')."""
+    return frozenset(p.rpartition(" ")[0] for p in cli_schema() if p)
+
+
 def resolve_command(argv: list[str]) -> tuple[str | None, list[str]]:
     """Longest schema-known command path for an argv, plus its valid flags.
 
-    Returns (None, []) when the first subcommand token is unknown.
-    Remaining non-flag tokens are positional arguments, not validated.
+    Returns (None, []) when a token is not a known subcommand of a command
+    group — cobra rejects those. Tokens after a leaf command are positional
+    arguments, not validated.
     """
     schema = cli_schema()
     tokens = EvalRunner.subcommand_tokens(argv)
@@ -44,11 +51,12 @@ def resolve_command(argv: list[str]) -> tuple[str | None, list[str]]:
     path = ""
     for tok in tokens:
         candidate = f"{path} {tok}".strip()
-        if candidate not in schema:
+        if candidate in schema:
+            path = candidate
+        elif path in _group_paths():
+            return None, []
+        else:
             break
-        path = candidate
-    if not path:
-        return None, []
     return path, schema[path]
 
 

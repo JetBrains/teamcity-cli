@@ -93,6 +93,16 @@ def test_valid_commands_rejects_unknown():
     assert not run_check(checks.valid_commands, r)
 
 
+def test_valid_commands_rejects_invented_subcommand_of_real_group():
+    for cmd in ("teamcity run frobnicate 12345", "teamcity project madeup"):
+        assert not run_check(checks.valid_commands, runner_for([cmd]))
+
+
+def test_valid_commands_accepts_positionals_after_leaf():
+    r = runner_for(["teamcity run log 12345 --failed"])
+    assert run_check(checks.valid_commands, r)
+
+
 def test_no_hallucinations_accepts_real_flags():
     # --tail/--follow are real `run log` flags the old blocklist punished.
     r = runner_for([
