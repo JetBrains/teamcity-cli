@@ -41,38 +41,17 @@ _PROPAGATE_KEYS = (
 )
 
 
-_REAL_CLAUDE_DIR = Path.home() / ".claude"
-_AUTH_COPY = ("settings.json", "settings.local.json", "plugins")
-
-
-def _copy_auth_config(work_dir: Path) -> None:
-    """Copy auth-related config from real ~/.claude/ into the workspace.
-
-    Claude Code uses the system keychain for OAuth tokens, but needs
-    settings and plugins from ~/.claude/ to initialize properly.
-    Skill dirs are intentionally excluded for treatment isolation.
-    """
-    if not _REAL_CLAUDE_DIR.exists():
-        return
-    dest = work_dir / ".claude"
-    dest.mkdir(parents=True, exist_ok=True)
-    for name in _AUTH_COPY:
-        src = _REAL_CLAUDE_DIR / name
-        if not src.exists():
-            continue
-        dst = dest / name
-        if src.is_dir():
-            shutil.copytree(src, dst, dirs_exist_ok=True)
-        else:
-            shutil.copy2(src, dst)
-
-
 def _setup_workspace(
     work_dir: Path,
     treatment: Treatment,
 ) -> None:
-    """Write skill files and auth config into the workspace."""
-    _copy_auth_config(work_dir)
+    """Create a pristine .claude dir with only the treatment's skill.
+
+    Nothing is copied from the real ~/.claude/ — user settings, plugins,
+    and hooks (or a local API proxy config) would leak into both arms.
+    Auth comes from ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN env vars.
+    """
+    (work_dir / ".claude").mkdir(parents=True, exist_ok=True)
     if treatment.skill_dir and treatment.skill_dir.exists():
         dest = work_dir / ".claude" / "skills" / "teamcity-cli"
         shutil.copytree(treatment.skill_dir, dest)
@@ -81,10 +60,10 @@ def _setup_workspace(
 def _build_isolated_env(work_dir: Path) -> dict[str, str]:
     """Build a clean env that isolates Claude from global config.
 
-    Sets HOME and CLAUDE_CONFIG_DIR to the workspace so Claude Code
-    does NOT pick up ~/.claude/ skills, plugins, or settings.
-    This is critical for CONTROL runs — without isolation, globally
-    installed skills leak into the baseline and invalidate comparisons.
+    Points HOME at the workspace so Claude Code does NOT pick up
+    ~/.claude/ skills, plugins, or settings. This is critical for
+    CONTROL runs — without isolation, globally installed skills leak
+    into the baseline and invalidate comparisons.
     """
     env: dict[str, str] = {}
 
