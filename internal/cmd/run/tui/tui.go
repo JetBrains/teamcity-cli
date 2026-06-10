@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -266,6 +267,16 @@ func RunWatchTUI(ctx context.Context, client api.ClientInterface, runID string, 
 	}
 
 	fm := finalModel.(watchModel)
+
+	// A clean tea.Quit (p.Run err is nil) can still leave fm.err set; surface it instead of reporting success.
+	if fm.err != nil {
+		if errors.Is(fm.err, context.DeadlineExceeded) {
+			// Execute renders ExitError silently, so print the timeout notice first (like the non-TUI path).
+			_, _ = fmt.Fprintf(output.DefaultPrinter().Out, "\n%s Timeout exceeded\n", output.Red(output.Sym().Cross))
+		}
+		return watchErrToExit(fm.err)
+	}
+
 	printer := output.DefaultPrinter()
 	_, _ = fmt.Fprintln(printer.Out)
 
@@ -276,4 +287,18 @@ func RunWatchTUI(ctx context.Context, client api.ClientInterface, runID string, 
 	}
 
 	return cmdutil.BuildResultError(ctx, printer, client, fm.build, true)
+}
+
+// watchErrToExit maps a watch fetch error to a command result: deadline→timeout, cancel→clean exit, else surface.
+func watchErrToExit(err error) error {
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, context.DeadlineExceeded):
+		return &cmdutil.ExitError{Code: cmdutil.ExitTimeout}
+	case errors.Is(err, context.Canceled):
+		return nil
+	default:
+		return err
+	}
 }

@@ -1,13 +1,42 @@
 package tui
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestWatchErrToExit(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil stays nil", func(t *testing.T) {
+		assert.NoError(t, watchErrToExit(nil))
+	})
+
+	t.Run("deadline becomes a timeout exit", func(t *testing.T) {
+		err := watchErrToExit(fmt.Errorf("get build: %w", context.DeadlineExceeded))
+		var ee *cmdutil.ExitError
+		require.ErrorAs(t, err, &ee)
+		assert.Equal(t, cmdutil.ExitTimeout, ee.Code)
+	})
+
+	t.Run("cancel exits cleanly", func(t *testing.T) {
+		assert.NoError(t, watchErrToExit(fmt.Errorf("get build: %w", context.Canceled)))
+	})
+
+	t.Run("other errors surface", func(t *testing.T) {
+		sentinel := errors.New("server returned 503")
+		assert.ErrorIs(t, watchErrToExit(sentinel), sentinel)
+	})
+}
 
 func TestWatchModelRenderHeader(t *testing.T) {
 	t.Parallel()
