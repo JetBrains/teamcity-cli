@@ -238,6 +238,56 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 				"Check the job ID with: teamcity job list",
 			)
 		}
+		f.Analytics.Track(analytics.GroupBuild, analytics.EventStarted, map[string]any{
+			"is_personal":       opts.personal,
+			"has_local_changes": opts.localChanges != "",
+			"has_branch":        opts.branch != "",
+			"has_revision":      opts.revision != "",
+			"param_count":       len(opts.params) + len(opts.systemProps) + len(opts.envVars),
+			"is_watched":        false,
+			"is_dry_run":        true,
+		})
+
+		if opts.json {
+			return p.PrintJSON(struct {
+				DryRun            bool              `json:"dry_run"`
+				Job               string            `json:"job"`
+				Branch            string            `json:"branch,omitempty"`
+				Revision          string            `json:"revision,omitempty"`
+				Personal          bool              `json:"personal"`
+				LocalChanges      string            `json:"local_changes,omitempty"`
+				Params            map[string]string `json:"params,omitempty"`
+				SystemProps       map[string]string `json:"system_properties,omitempty"`
+				EnvVars           map[string]string `json:"environment_variables,omitempty"`
+				Comment           string            `json:"comment,omitempty"`
+				Tags              []string          `json:"tags,omitempty"`
+				CleanSources      bool              `json:"clean_sources,omitempty"`
+				RebuildDeps       bool              `json:"rebuild_deps,omitempty"`
+				RebuildFailedDeps bool              `json:"rebuild_failed_deps,omitempty"`
+				QueueAtTop        bool              `json:"queue_at_top,omitempty"`
+				Agent             int               `json:"agent_id,omitempty"`
+				ReuseDeps         []int             `json:"reuse_deps,omitempty"`
+			}{
+				DryRun:            true,
+				Job:               jobID,
+				Branch:            opts.branch,
+				Revision:          opts.revision,
+				Personal:          opts.personal || opts.localChanges != "",
+				LocalChanges:      opts.localChanges,
+				Params:            opts.params,
+				SystemProps:       opts.systemProps,
+				EnvVars:           opts.envVars,
+				Comment:           opts.comment,
+				Tags:              opts.tags,
+				CleanSources:      opts.cleanSources,
+				RebuildDeps:       opts.rebuildDeps,
+				RebuildFailedDeps: opts.rebuildFailedDeps,
+				QueueAtTop:        opts.queueAtTop,
+				Agent:             opts.agent,
+				ReuseDeps:         opts.reuseDeps,
+			})
+		}
+
 		_, _ = fmt.Fprintf(p.Out, "%s Would trigger run for %s\n", output.Faint("[dry-run]"), output.Cyan(jobID))
 		if opts.branch != "" {
 			_, _ = fmt.Fprintf(p.Out, "  Branch: %s\n", opts.branch)
@@ -281,6 +331,9 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		if opts.rebuildDeps {
 			_, _ = fmt.Fprintln(p.Out, "  Rebuild dependencies: yes")
 		}
+		if opts.rebuildFailedDeps {
+			_, _ = fmt.Fprintln(p.Out, "  Rebuild failed dependencies: yes")
+		}
 		if len(opts.reuseDeps) > 0 {
 			printReuseDeps(p, fetchReuseDeps(f.Context(), client, opts.reuseDeps))
 		}
@@ -290,16 +343,19 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		if opts.agent > 0 {
 			_, _ = fmt.Fprintf(p.Out, "  Agent ID: %d\n", opts.agent)
 		}
-		f.Analytics.Track(analytics.GroupBuild, analytics.EventStarted, map[string]any{
-			"is_personal":       opts.personal,
-			"has_local_changes": opts.localChanges != "",
-			"has_branch":        opts.branch != "",
-			"has_revision":      opts.revision != "",
-			"param_count":       len(opts.params) + len(opts.systemProps) + len(opts.envVars),
-			"is_watched":        false,
-			"is_dry_run":        true,
-		})
 		return nil
+	}
+
+	// Progress lines write to stdout; suppress them in --json mode so they don't corrupt the document.
+	info := func(format string, a ...any) {
+		if !opts.json {
+			p.Info(format, a...)
+		}
+	}
+	success := func(format string, a ...any) {
+		if !opts.json {
+			p.Success(format, a...)
+		}
 	}
 
 	if opts.localChanges != "" && opts.branch == "" {
@@ -314,16 +370,16 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 			return err
 		}
 		opts.branch = branch
-		p.Info("Using current branch: %s", branch)
+		info("Using current branch: %s", branch)
 	}
 
 	if opts.localChanges != "" && !opts.noPush {
 		if !git.BranchExistsOnRemote(opts.branch) {
-			p.Info("Pushing branch to remote...")
+			info("Pushing branch to remote...")
 			if err := pushBranch(opts.branch); err != nil {
 				return err
 			}
-			p.Success("Branch pushed to remote")
+			success("Branch pushed to remote")
 		}
 	}
 
@@ -339,7 +395,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 			return err
 		}
 
-		p.Info("Uploading local changes...")
+		info("Uploading local changes...")
 		description := cmp.Or(opts.comment, "Personal build with local changes")
 
 		changeID, err := client.UploadDiffChanges(patch, description)
@@ -347,7 +403,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 			return fmt.Errorf("failed to upload changes: %w", err)
 		}
 		personalChangeID = changeID
-		p.Success("Uploaded changes (ID: %s)", changeID)
+		success("Uploaded changes (ID: %s)", changeID)
 
 		opts.personal = true
 	}
