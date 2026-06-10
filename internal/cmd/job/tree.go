@@ -156,9 +156,7 @@ func buildJobTreeNodes(client api.ClientInterface, jobID string, depth int, reve
 			nodes = append(nodes, node)
 			continue
 		}
-		// Track only the current ancestor path so a node is "circular" solely when
-		// it is its own ancestor; deleting on backtrack lets a re-convergent
-		// (diamond) dependency expand under each parent instead of being dropped.
+		// Track only the current ancestor path (delete on backtrack) so a diamond dep isn't mislabeled circular.
 		visited[bt.ID] = true
 		kids := buildJobTreeNodes(client, bt.ID, next, reverse, visited)
 		delete(visited, bt.ID)
