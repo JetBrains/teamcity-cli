@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,52 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// closeTracker is an http.Response body that records when it is closed.
+type closeTracker struct {
+	id      int
+	onClose func(int)
+	closed  bool
+}
+
+func (c *closeTracker) Read([]byte) (int, error) { return 0, io.EOF }
+func (c *closeTracker) Close() error {
+	if !c.closed {
+		c.closed = true
+		c.onClose(c.id)
+	}
+	return nil
+}
+
+func TestWithRetry_ClosesRetriedBodies(t *testing.T) {
+	var closed []int
+	id := 0
+	mkResp := func(code int) *http.Response {
+		r := &http.Response{
+			StatusCode: code,
+			Header:     http.Header{},
+			Body:       &closeTracker{id: id, onClose: func(i int) { closed = append(closed, i) }},
+		}
+		id++
+		return r
+	}
+
+	call := 0
+	resp, err := withRetry(t.Context(), fastRetry, func() (*http.Response, error) {
+		call++
+		if call < 3 {
+			return mkResp(http.StatusServiceUnavailable), nil
+		}
+		return mkResp(http.StatusOK), nil
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	assert.Equal(t, 3, call)
+	assert.Equal(t, []int{0, 1}, closed, "the two retried responses must have their bodies closed")
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	_ = resp.Body.Close()
+}
 
 var fastRetry = RetryConfig{MaxRetries: 3, Interval: 10 * time.Millisecond}
 
