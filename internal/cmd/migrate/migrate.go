@@ -127,7 +127,9 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 	for _, cfg := range configs {
 		data, err := os.ReadFile(migrateReadPath(sourceDir, cfg.File))
 		if err != nil {
-			return fmt.Errorf("reading %s: %w", cfg.File, err)
+			f.Printer.Warn("Failed to read %s: %v", cfg.File, err)
+			conversionErrors++
+			continue
 		}
 
 		result, err := migrate.Convert(cfg, data, convertOpts)
@@ -151,6 +153,21 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 	}
 
 	migrate.DeduplicateOutputNames(results)
+
+	// Write before branching on output format so --json changes only the report, not the behavior.
+	writtenFiles := []string{}
+	if !opts.dryRun {
+		for _, result := range results {
+			outPath := filepath.Join(opts.outputDir, result.OutputFile)
+			if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
+				return fmt.Errorf("creating output directory: %w", err)
+			}
+			if err := os.WriteFile(outPath, []byte(result.YAML), 0644); err != nil {
+				return fmt.Errorf("writing %s: %w", outPath, err)
+			}
+			writtenFiles = append(writtenFiles, outPath)
+		}
+	}
 
 	if opts.jsonOutput {
 		out := migrate.MigrateOutput{
@@ -177,20 +194,8 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 		cfgByFile[c.File] = c
 	}
 
-	writtenFiles := []string{}
 	for _, result := range results {
 		printConversionResult(f, cfgByFile[result.SourceFile], result, opts.dryRun)
-
-		if !opts.dryRun {
-			outPath := filepath.Join(opts.outputDir, result.OutputFile)
-			if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
-				return fmt.Errorf("creating output directory: %w", err)
-			}
-			if err := os.WriteFile(outPath, []byte(result.YAML), 0644); err != nil {
-				return fmt.Errorf("writing %s: %w", outPath, err)
-			}
-			writtenFiles = append(writtenFiles, outPath)
-		}
 	}
 
 	if opts.dryRun {
@@ -270,7 +275,8 @@ func migrateOutcomeField(configs []migrate.CIConfig, results []*migrate.Conversi
 	case len(results) == 0:
 		return analytics.MigrateOutcomeFailed
 	}
-	if slices.ContainsFunc(results, func(r *migrate.ConversionResult) bool {
+	// Fewer results than configs means some files failed to read or convert.
+	if len(results) < len(configs) || slices.ContainsFunc(results, func(r *migrate.ConversionResult) bool {
 		return len(r.NeedsReview) > 0 || len(r.ManualSetup) > 0
 	}) {
 		return analytics.MigrateOutcomePartial
@@ -316,10 +322,8 @@ func printConversionStatus(f *cmdutil.Factory, result *migrate.ConversionResult,
 
 // printMigrateTips points at the skill path and issue tracker after a conversion.
 func printMigrateTips(f *cmdutil.Factory) {
-	_, _ = fmt.Fprintf(f.Printer.Out, "\n  %s run the %s skill with an AI agent.\n",
-		output.Faint("Better conversions:"), output.Cyan("migrate-to-teamcity"))
-	_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n",
-		output.Faint("Report issues:"), output.Cyan("https://jb.gg/tc/migrate/issues"))
+	f.Printer.Info("")
+	f.Printer.Tip("run the migrate-to-teamcity skill with an AI agent for better conversions; report issues at https://jb.gg/tc/migrate/issues")
 }
 
 func validationExitError(results []*migrate.ConversionResult, noValidate bool) error {
