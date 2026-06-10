@@ -62,6 +62,52 @@ var scriptActions = []struct{ action, script, name string }{
 	{"ad-m/github-push-action", "git push origin HEAD", "Git push"},
 	{"stefanzweifel/git-auto-commit-action", "git add -A && git diff --cached --quiet || git commit -m \"Auto-commit\" && git push", "Git auto-commit"},
 	{"EndBug/add-and-commit", "git add -A && git diff --cached --quiet || git commit -m \"Auto-commit\" && git push", "Git add and commit"},
+	{"JetBrains/qodana-action", "# TeamCity has native Qodana integration\n# Add Qodana build feature in TeamCity project settings\n# Or run via Docker:\ndocker run --rm -v \"$(pwd)\":/data/project jetbrains/qodana-jvm-community:latest", "Qodana"},
+	{"aws-actions/amazon-ecs-deploy-task-definition", "aws ecs update-service --cluster \"$CLUSTER\" --service \"$SERVICE\" --force-new-deployment", "ECS deploy"},
+	{"anothrNick/github-tag-action", "# TODO: Determine new version tag from commit messages\ngit tag \"$NEW_TAG\" && git push origin \"$NEW_TAG\"", "Auto tag"},
+}
+
+// manualActions convert to a fixed script step plus manual-setup notes (typically credentials to recreate as TC parameters).
+var manualActions = []struct {
+	action, name, script string
+	manual               []string
+}{
+	{"docker/metadata-action", "Docker metadata",
+		"# TODO: docker/metadata-action generates tags/labels from git context\necho 'Set IMAGE tag from TeamCity build parameters'",
+		[]string{"docker/metadata-action → use TeamCity build parameters for image tags (%build.vcs.number%, %build.number%)"}},
+	{"azure/login", "Azure login",
+		"az login --service-principal -u \"$AZURE_CLIENT_ID\" -p \"$AZURE_CLIENT_SECRET\" --tenant \"$AZURE_TENANT_ID\"",
+		[]string{"Azure credentials → create TeamCity parameters: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET (password), AZURE_TENANT_ID"}},
+	{"google-github-actions/auth", "Google Cloud auth",
+		"gcloud auth activate-service-account --key-file=\"$GOOGLE_APPLICATION_CREDENTIALS\"",
+		[]string{"GCP credentials → configure service account key as TeamCity secure parameter"}},
+	{"aws-actions/amazon-ecr-login", "ECR login",
+		"aws ecr get-login-password --region \"$AWS_DEFAULT_REGION\" | docker login --username AWS --password-stdin \"$ECR_REGISTRY\"",
+		[]string{"ECR login → ensure AWS credentials and ECR_REGISTRY parameter are configured"}},
+	{"webfactory/ssh-agent", "SSH agent",
+		"eval \"$(ssh-agent -s)\" && echo \"$SSH_PRIVATE_KEY\" | ssh-add -",
+		[]string{"SSH private key → create TeamCity parameter SSH_PRIVATE_KEY (type: password)"}},
+	{"hashicorp/vault-action", "Vault secrets",
+		"# TODO: Fetch secrets from HashiCorp Vault\nexport VAULT_ADDR=\"$VAULT_ADDR\"\nvault kv get -format=json secret/data/ci",
+		[]string{"Vault → configure VAULT_ADDR and VAULT_TOKEN as TeamCity parameters"}},
+	{"FirebaseExtended/action-hosting-deploy", "Firebase deploy",
+		"firebase deploy --only hosting",
+		[]string{"Firebase → create TeamCity parameter FIREBASE_TOKEN (type: password)"}},
+	{"amondnet/vercel-action", "Vercel deploy",
+		"npx vercel --prod --token \"$VERCEL_TOKEN\"",
+		[]string{"Vercel → create TeamCity parameter VERCEL_TOKEN (type: password)"}},
+	{"tj-actions/changed-files", "Get changed files",
+		"CHANGED_FILES=$(git diff --name-only HEAD~1)\necho \"$CHANGED_FILES\"",
+		[]string{"tj-actions/changed-files → TeamCity provides %teamcity.build.changedFiles.file%"}},
+	{"slackapi/slack-github-action", "Slack notification",
+		"# TeamCity has built-in Slack integration\n# Configure in: Project Settings → Build Features → Slack Notifier",
+		[]string{"Slack notification → configure TeamCity Slack Notifier"}},
+	{"JS-DevTools/npm-publish", "npm publish",
+		"npm publish",
+		[]string{"npm publish token → create TeamCity parameter NPM_TOKEN (type: password)"}},
+	{"pypa/gh-action-pypi-publish", "PyPI publish",
+		"pip install twine && twine upload dist/*",
+		[]string{"PyPI credentials → create TeamCity parameters TWINE_USERNAME, TWINE_PASSWORD (type: password)"}},
 }
 
 var unsupportedActions = []struct {
@@ -80,6 +126,8 @@ var unsupportedActions = []struct {
 	{"hmarr/auto-approve-action", "auto-approve → GitHub PR-specific", nil},
 	{"pascalgn/automerge-action", "automerge → GitHub PR-specific", nil},
 	{"dessant/lock-threads", "lock-threads → GitHub-specific issue management", nil},
+	{"dorny/paths-filter", "paths-filter → use TeamCity VCS trigger rules",
+		[]string{"dorny/paths-filter → configure VCS trigger rules with path patterns in TeamCity"}},
 }
 
 func initActionRegistry() map[string]actionTransformer {
@@ -101,6 +149,14 @@ func initActionRegistry() map[string]actionTransformer {
 		reason, id, manual := a.reason, a.action, a.manual
 		m[a.action] = func(_, _ string, _ map[string]string) StepResult {
 			return StepResult{Status: StatusUnsupported, Identifier: id, Note: reason, ManualTasks: manual}
+		}
+	}
+	for _, a := range manualActions {
+		name, script, manual := a.name, a.script, a.manual
+		m[a.action] = func(stepName, _ string, _ map[string]string) StepResult {
+			return StepResult{Status: StatusConverted,
+				Steps:       []Step{{Name: cmp.Or(stepName, name), ScriptContent: script}},
+				ManualTasks: manual}
 		}
 	}
 
@@ -133,16 +189,6 @@ func initActionRegistry() map[string]actionTransformer {
 			ManualTasks: []string{fmt.Sprintf("Docker registry %s → configure Docker connection in TeamCity project settings", registry)}}
 	}
 	m["docker/build-push-action"] = transformDockerBuild
-	m["docker/metadata-action"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Docker metadata"), ScriptContent: "# TODO: docker/metadata-action generates tags/labels from git context\necho 'Set IMAGE tag from TeamCity build parameters'"}},
-			ManualTasks: []string{"docker/metadata-action → use TeamCity build parameters for image tags (%build.vcs.number%, %build.number%)"}}
-	}
-
-	m["JetBrains/qodana-action"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted, Note: "Qodana → use TeamCity native Qodana build feature",
-			Steps: []Step{{Name: cmp.Or(name, "Qodana"), ScriptContent: "# TeamCity has native Qodana integration\n# Add Qodana build feature in TeamCity project settings\n# Or run via Docker:\ndocker run --rm -v \"$(pwd)\":/data/project jetbrains/qodana-jvm-community:latest"}}}
-	}
 
 	m["aws-actions/configure-aws-credentials"] = func(name, _ string, inputs map[string]string) StepResult {
 		region := cmp.Or(inputs["aws-region"], "us-east-1")
@@ -150,66 +196,27 @@ func initActionRegistry() map[string]actionTransformer {
 			Steps:       []Step{{Name: cmp.Or(name, "Configure AWS credentials"), ScriptContent: "export AWS_ACCESS_KEY_ID=\"$AWS_ACCESS_KEY_ID\"\nexport AWS_SECRET_ACCESS_KEY=\"$AWS_SECRET_ACCESS_KEY\"\nexport AWS_DEFAULT_REGION=\"" + region + "\""}},
 			ManualTasks: []string{"AWS credentials → create TeamCity parameters: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (type: password)"}}
 	}
-	m["azure/login"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Azure login"), ScriptContent: "az login --service-principal -u \"$AZURE_CLIENT_ID\" -p \"$AZURE_CLIENT_SECRET\" --tenant \"$AZURE_TENANT_ID\""}},
-			ManualTasks: []string{"Azure credentials → create TeamCity parameters: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET (password), AZURE_TENANT_ID"}}
-	}
-	m["google-github-actions/auth"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Google Cloud auth"), ScriptContent: "gcloud auth activate-service-account --key-file=\"$GOOGLE_APPLICATION_CREDENTIALS\""}},
-			ManualTasks: []string{"GCP credentials → configure service account key as TeamCity secure parameter"}}
-	}
-	m["aws-actions/amazon-ecr-login"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "ECR login"), ScriptContent: "aws ecr get-login-password --region \"$AWS_DEFAULT_REGION\" | docker login --username AWS --password-stdin \"$ECR_REGISTRY\""}},
-			ManualTasks: []string{"ECR login → ensure AWS credentials and ECR_REGISTRY parameter are configured"}}
-	}
-	m["webfactory/ssh-agent"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "SSH agent"), ScriptContent: "eval \"$(ssh-agent -s)\" && echo \"$SSH_PRIVATE_KEY\" | ssh-add -"}},
-			ManualTasks: []string{"SSH private key → create TeamCity parameter SSH_PRIVATE_KEY (type: password)"}}
-	}
-	m["hashicorp/vault-action"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Vault secrets"), ScriptContent: "# TODO: Fetch secrets from HashiCorp Vault\nexport VAULT_ADDR=\"$VAULT_ADDR\"\nvault kv get -format=json secret/data/ci"}},
-			ManualTasks: []string{"Vault → configure VAULT_ADDR and VAULT_TOKEN as TeamCity parameters"}}
-	}
-
 	m["azure/webapps-deploy"] = func(name, _ string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: fmt.Sprintf("az webapp deploy --name %q --src-path \"${PACKAGE:-.}\"", inputs["app-name"])}})
-	}
-	m["aws-actions/amazon-ecs-deploy-task-definition"] = func(name, _ string, _ map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "ECS deploy"), ScriptContent: "aws ecs update-service --cluster \"$CLUSTER\" --service \"$SERVICE\" --force-new-deployment"}})
+		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: fmt.Sprintf("az webapp deploy --name %q --src-path \"${PACKAGE:-.}\"", requiredInput(inputs, "app-name", "APP_NAME"))}})
 	}
 	m["azure/k8s-deploy"] = func(name, _ string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Kubernetes deploy"), ScriptContent: "kubectl apply -f " + cmp.Or(inputs["manifests"], "k8s/")}})
 	}
 	m["azure/k8s-set-context"] = func(name, _ string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "K8s set context"), ScriptContent: fmt.Sprintf("az aks get-credentials --resource-group %q --name %q", inputs["resource-group"], inputs["cluster-name"])}})
+		return Converted([]Step{{Name: cmp.Or(name, "K8s set context"), ScriptContent: fmt.Sprintf("az aks get-credentials --resource-group %q --name %q", requiredInput(inputs, "resource-group", "RESOURCE_GROUP"), requiredInput(inputs, "cluster-name", "CLUSTER_NAME"))}})
 	}
 	m["google-github-actions/deploy-cloudrun"] = func(name, _ string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "Cloud Run deploy"), ScriptContent: fmt.Sprintf("gcloud run deploy %q --image %q --region \"${REGION:-us-central1}\"", inputs["service"], inputs["image"])}})
+		return Converted([]Step{{Name: cmp.Or(name, "Cloud Run deploy"), ScriptContent: fmt.Sprintf("gcloud run deploy %q --image %q --region \"${REGION:-us-central1}\"", requiredInput(inputs, "service", "SERVICE"), requiredInput(inputs, "image", "IMAGE"))}})
 	}
 	m["aws-actions/amazon-ecs-render-task-definition"] = func(name, _ string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '.containerDefinitions[0].image = %q' %s > new-task-def.json", inputs["image"], cmp.Or(inputs["task-definition"], "task-definition.json"))}})
-	}
-	m["FirebaseExtended/action-hosting-deploy"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Firebase deploy"), ScriptContent: "firebase deploy --only hosting"}},
-			ManualTasks: []string{"Firebase → create TeamCity parameter FIREBASE_TOKEN (type: password)"}}
-	}
-	m["amondnet/vercel-action"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Vercel deploy"), ScriptContent: "npx vercel --prod --token \"$VERCEL_TOKEN\""}},
-			ManualTasks: []string{"Vercel → create TeamCity parameter VERCEL_TOKEN (type: password)"}}
+		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '.containerDefinitions[0].image = %q' %s > new-task-def.json", requiredInput(inputs, "image", "IMAGE"), cmp.Or(inputs["task-definition"], "task-definition.json"))}})
 	}
 	m["appleboy/scp-action"] = func(name, _ string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: fmt.Sprintf("scp -r %s %s:%s", cmp.Or(inputs["source"], "."), inputs["host"], cmp.Or(inputs["target"], "~/"))}})
+		return Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: fmt.Sprintf("scp -r %s %s:%s", cmp.Or(inputs["source"], "."), requiredInput(inputs, "host", "DEPLOY_HOST"), cmp.Or(inputs["target"], "~/"))}})
 	}
 	m["SamKirkland/FTP-Deploy-Action"] = func(name, _ string, inputs map[string]string) StepResult {
 		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "FTP deploy"), ScriptContent: fmt.Sprintf("lftp -c \"open -u $FTP_USER,$FTP_PASSWORD %s; mirror -R %s %s\"", inputs["server"], cmp.Or(inputs["local-dir"], "./"), cmp.Or(inputs["server-dir"], "/"))}},
+			Steps:       []Step{{Name: cmp.Or(name, "FTP deploy"), ScriptContent: fmt.Sprintf("lftp -c \"open -u $FTP_USER,$FTP_PASSWORD %s; mirror -R %s %s\"", requiredInput(inputs, "server", "FTP_SERVER"), cmp.Or(inputs["local-dir"], "./"), cmp.Or(inputs["server-dir"], "/"))}},
 			ManualTasks: []string{"FTP credentials → create TeamCity parameters FTP_USER, FTP_PASSWORD (type: password)"}}
 	}
 	m["ncipollo/release-action"] = func(name, _ string, inputs map[string]string) StepResult {
@@ -220,10 +227,6 @@ func initActionRegistry() map[string]actionTransformer {
 		}
 		return Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd}})
 	}
-	m["anothrNick/github-tag-action"] = func(name, _ string, _ map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "Auto tag"), ScriptContent: "# TODO: Determine new version tag from commit messages\ngit tag \"$NEW_TAG\" && git push origin \"$NEW_TAG\""}})
-	}
-
 	m["golangci/golangci-lint-action"] = func(name, _ string, inputs map[string]string) StepResult {
 		cmd := "golangci-lint run"
 		if args := inputs["args"]; args != "" {
@@ -264,36 +267,17 @@ func initActionRegistry() map[string]actionTransformer {
 			Steps:       []Step{{Name: cmp.Or(name, "GitHub script"), ScriptContent: "# TODO: This was a GitHub Script action using Octokit\n# " + strings.ReplaceAll(script, "\n", "\n# ")}},
 			ManualTasks: []string{"actions/github-script → convert Octokit JS to shell/curl commands"}}
 	}
-	m["dorny/paths-filter"] = func(_, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusUnsupported, Identifier: "dorny/paths-filter", Note: "paths-filter → use TeamCity VCS trigger rules",
-			ManualTasks: []string{"dorny/paths-filter → configure VCS trigger rules with path patterns in TeamCity"}}
-	}
-	m["tj-actions/changed-files"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Get changed files"), ScriptContent: "CHANGED_FILES=$(git diff --name-only HEAD~1)\necho \"$CHANGED_FILES\""}},
-			ManualTasks: []string{"tj-actions/changed-files → TeamCity provides %teamcity.build.changedFiles.file%"}}
-	}
-
-	m["slackapi/slack-github-action"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Slack notification"), ScriptContent: "# TeamCity has built-in Slack integration\n# Configure in: Project Settings → Build Features → Slack Notifier"}},
-			ManualTasks: []string{"Slack notification → configure TeamCity Slack Notifier"}}
-	}
-
 	m["aquasecurity/trivy-action"] = func(name, _ string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Trivy security scan"), ScriptContent: fmt.Sprintf("trivy %s %s", cmp.Or(inputs["scan-type"], "fs"), cmp.Or(inputs["image-ref"], "."))}})
 	}
 
-	m["JS-DevTools/npm-publish"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted, Steps: []Step{{Name: cmp.Or(name, "npm publish"), ScriptContent: "npm publish"}},
-			ManualTasks: []string{"npm publish token → create TeamCity parameter NPM_TOKEN (type: password)"}}
-	}
-	m["pypa/gh-action-pypi-publish"] = func(name, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusConverted, Steps: []Step{{Name: cmp.Or(name, "PyPI publish"), ScriptContent: "pip install twine && twine upload dist/*"}},
-			ManualTasks: []string{"PyPI credentials → create TeamCity parameters TWINE_USERNAME, TWINE_PASSWORD (type: password)"}}
-	}
-
 	return m
+}
+
+// requiredInput falls back to a ${VAR:?} shell guard so a missing required action input
+// fails the generated step with a clear message instead of emitting empty arguments.
+func requiredInput(inputs map[string]string, key, envVar string) string {
+	return cmp.Or(inputs[key], fmt.Sprintf("${%s:?Set %s}", envVar, envVar))
 }
 
 func transformDockerBuild(name, _ string, inputs map[string]string) StepResult {
