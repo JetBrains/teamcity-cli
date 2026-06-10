@@ -71,6 +71,9 @@ func (c *Client) GetBuildMessages(ctx context.Context, buildID string, opts Buil
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode build messages: %w", err)
 	}
+	if result.Messages == nil {
+		result.Messages = []BuildMessage{} // non-nil so --json emits [] not null
+	}
 
 	return &result, nil
 }

@@ -76,6 +76,27 @@ func TestGetBuildMessages_head(t *testing.T) {
 	assert.Equal(t, "Build started", resp.Messages[0].Text)
 }
 
+func TestGetBuildMessagesEmptyIsNonNil(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/app/rest/builds" || r.URL.Path == "/httpAuth/app/rest/builds" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
+			return
+		}
+		// Server omits the "messages" key for a build with no log lines yet.
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"lastMessageIndex":0}`))
+	})
+
+	resp, err := client.GetBuildMessages(t.Context(), "1", BuildMessagesOptions{Count: -10, Tail: true})
+	require.NoError(t, err)
+	assert.NotNil(t, resp.Messages)
+	b, err := json.Marshal(resp.Messages)
+	require.NoError(t, err)
+	assert.Equal(t, "[]", string(b))
+}
+
 func TestGetBuildMessages_withSinceID(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
