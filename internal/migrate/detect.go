@@ -11,9 +11,15 @@ import (
 	"github.com/rhysd/actionlint"
 )
 
+// Bamboo patterns cover the canonical bamboo-specs/ root plus one level up (multi-CI repos keep specs under e.g. Bamboo/bamboo-specs/) and one level down (!include layouts).
 var ciPatterns = map[SourceCI][]string{
 	GitHubActions: {".github/workflows/*.yml", ".github/workflows/*.yaml"},
-	Bamboo:        {"bamboo-specs/*.yml", "bamboo-specs/*.yaml", "bamboo.yml", "bamboo.yaml"},
+	Bamboo: {
+		"bamboo-specs/*.yml", "bamboo-specs/*.yaml",
+		"bamboo-specs/*/*.yml", "bamboo-specs/*/*.yaml",
+		"*/bamboo-specs/*.yml", "*/bamboo-specs/*.yaml",
+		"bamboo.yml", "bamboo.yaml",
+	},
 }
 
 func Detect(dir string, filterSource SourceCI) ([]CIConfig, error) {

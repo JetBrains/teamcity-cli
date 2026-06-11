@@ -361,3 +361,20 @@ Job:
 	require.Len(t, result.Pipeline.Jobs[0].Steps, 1)
 	assert.Equal(t, "%teamcity.build.checkoutDir%/sub", result.Pipeline.Jobs[0].Steps[0].WorkingDirectory)
 }
+
+func TestBambooIncludeDirectiveErrorsWithPaths(t *testing.T) {
+	t.Parallel()
+
+	spec := `---
+version: 2
+!include build/plan.yml
+!include deployment/plan.yml
+`
+	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
+	_, err := Convert(cfg, []byte(spec), Options{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "!include")
+	assert.Contains(t, err.Error(), "bamboo-specs/build/plan.yml")
+	assert.Contains(t, err.Error(), "bamboo-specs/deployment/plan.yml")
+	assert.Contains(t, err.Error(), "--file")
+}

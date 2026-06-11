@@ -46,6 +46,37 @@ func TestDetectWithFilter(t *testing.T) {
 	assert.Equal(t, GitHubActions, configs[0].Source)
 }
 
+func TestDetectBambooNonCanonicalPaths(t *testing.T) {
+	t.Parallel()
+
+	spec := []byte("version: 2\nplan:\n  key: K\nstages: []\n")
+	dir := t.TempDir()
+	// Multi-CI repo layout (Checkmarx/ci-cd-integrations) and !include sub-spec layout (rjchicago/bamboo-specs-demo).
+	for _, p := range []string{
+		"Bamboo/bamboo-specs/bamboo.yml",
+		"Bamboo/bamboo-specs/docker.bamboo.yml",
+		"bamboo-specs/build/plan.yml",
+	} {
+		full := filepath.Join(dir, filepath.FromSlash(p))
+		require.NoError(t, os.MkdirAll(filepath.Dir(full), 0755))
+		require.NoError(t, os.WriteFile(full, spec, 0644))
+	}
+
+	configs, err := Detect(dir, Bamboo)
+	require.NoError(t, err)
+	require.Len(t, configs, 3)
+	var files []string
+	for _, c := range configs {
+		assert.Equal(t, Bamboo, c.Source)
+		files = append(files, c.File)
+	}
+	assert.ElementsMatch(t, files, []string{
+		"Bamboo/bamboo-specs/bamboo.yml",
+		"Bamboo/bamboo-specs/docker.bamboo.yml",
+		"bamboo-specs/build/plan.yml",
+	})
+}
+
 func TestDetectEmptyDir(t *testing.T) {
 	t.Parallel()
 

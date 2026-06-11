@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"maps"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -14,6 +15,18 @@ import (
 func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, error) {
 	var spec map[string]any
 	if err := yaml.Unmarshal(data, &spec); err != nil {
+		if includes := bambooIncludes(data); len(includes) > 0 {
+			dir := filepath.Dir(filepath.ToSlash(cfg.File))
+			for i, inc := range includes {
+				includes[i] = filepath.ToSlash(filepath.Join(dir, inc))
+			}
+			return nil, fmt.Errorf("%s is a multi-file spec using !include, which the converter cannot resolve; convert each included spec instead: teamcity migrate --file %s",
+				cfg.File, strings.Join(includes, " / "))
+		}
+		var seq []any
+		if yaml.Unmarshal(data, &seq) == nil {
+			return nil, fmt.Errorf("%s is not a plan spec (root is a YAML list) — likely a fragment referenced via !include from another spec", cfg.File)
+		}
 		return nil, fmt.Errorf("invalid YAML: %w", err)
 	}
 
@@ -22,7 +35,7 @@ func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 	if _, ok := spec["plan"]; !ok {
 		result.NeedsReview = append(result.NeedsReview,
 			cfg.File+" has no top-level `plan:` block — likely a deployment or permissions spec; convert manually")
-		result.Pipeline = fallbackPipeline(cfg, result)
+		result.Pipeline = fallbackPipeline(cfg, result, opts)
 		return result, nil
 	}
 
@@ -47,7 +60,7 @@ func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 	if len(stages) == 0 {
 		result.NeedsReview = append(result.NeedsReview,
 			"Bamboo spec has no `stages` block — nothing to convert")
-		result.Pipeline = fallbackPipeline(cfg, result)
+		result.Pipeline = fallbackPipeline(cfg, result, opts)
 		return result, nil
 	}
 
@@ -900,6 +913,17 @@ func analyzeBamboo(relPath string, data []byte) (*CIConfig, error) {
 	}
 	slices.Sort(cfg.Features)
 	return cfg, nil
+}
+
+var bambooIncludeRe = regexp.MustCompile(`!include\s+['"]?([^'"\s]+)`)
+
+// bambooIncludes lists files referenced by Bamboo !include directives.
+func bambooIncludes(data []byte) []string {
+	var out []string
+	for _, m := range bambooIncludeRe.FindAllSubmatch(data, -1) {
+		out = append(out, string(m[1]))
+	}
+	return out
 }
 
 // bambooBraceVarRe matches `${name}` references; bare `$VAR` shell expansions pass through.
