@@ -7,7 +7,6 @@ import (
 )
 
 var skippedActions = []struct{ action, note string }{
-	{"actions/checkout", "checkout (TeamCity VCS checkout is automatic)"},
 	{"actions/setup-node", "setup-node (use agent tooling or nvm)"},
 	{"actions/setup-java", "setup-java (use agent JDK)"},
 	{"actions/setup-go", "setup-go (use agent Go installation)"},
@@ -130,9 +129,15 @@ func initActionRegistry() map[string]actionTransformer {
 	m := map[string]actionTransformer{}
 
 	for _, a := range skippedActions {
-		note := a.note
-		m[a.action] = func(_ string, _ map[string]string) StepResult {
-			return StepResult{Status: StatusSimplified, Note: note}
+		action, note := a.action, a.note
+		m[a.action] = func(_ string, inputs map[string]string) StepResult {
+			r := StepResult{Status: StatusSimplified, Note: note}
+			for _, k := range SortedKeys(inputs) {
+				if strings.HasSuffix(k, "-version") && inputs[k] != "" {
+					r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("%s pins %s %s → ensure the agent provides that version", action, k, inputs[k]))
+				}
+			}
+			return r
 		}
 	}
 	for _, a := range scriptActions {
@@ -154,6 +159,17 @@ func initActionRegistry() map[string]actionTransformer {
 				Steps:       []Step{{Name: cmp.Or(stepName, name), ScriptContent: script}},
 				ManualTasks: manual}
 		}
+	}
+
+	m["actions/checkout"] = func(_ string, inputs map[string]string) StepResult {
+		r := StepResult{Status: StatusSimplified, Note: "checkout (TeamCity VCS checkout is automatic)"}
+		// Non-default checkout options change what lands on disk; TC auto-checkout won't replicate them.
+		for _, k := range []string{"path", "submodules", "lfs", "fetch-depth", "ref"} {
+			if v := inputs[k]; v != "" && v != "false" {
+				r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("actions/checkout sets %s: %s → configure checkout rules / submodules / fetch depth on the TC VCS root", k, v))
+			}
+		}
+		return r
 	}
 
 	m["actions/cache"] = func(_ string, _ map[string]string) StepResult {
@@ -226,9 +242,11 @@ func initActionRegistry() map[string]actionTransformer {
 		tag := cmp.Or(inputs["tag"], "%teamcity.build.branch%")
 		cmd := fmt.Sprintf("gh release create %q --generate-notes", tag)
 		if body := inputs["body"]; body != "" {
-			cmd += fmt.Sprintf(" --notes %q", body)
+			cmd += " --notes " + shellQuote(body)
 		}
-		return Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd}})
+		r := Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd}})
+		r.ManualTasks = ghReleaseAuthNote
+		return r
 	}
 	m["golangci/golangci-lint-action"] = func(name string, inputs map[string]string) StepResult {
 		cmd := "golangci-lint run"
@@ -243,17 +261,21 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 
 	m["actions/create-release"] = func(name string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "Create release"), ScriptContent: fmt.Sprintf("gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))}})
+		r := Converted([]Step{{Name: cmp.Or(name, "Create release"), ScriptContent: fmt.Sprintf("gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))}})
+		r.ManualTasks = ghReleaseAuthNote
+		return r
 	}
 	m["softprops/action-gh-release"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
 		fmt.Fprintf(&cmd, "gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))
-		// `files:` is a whitespace/newline-separated glob list; append each as one unquoted arg so a multiline value can't spill onto a new shell line.
+		// `files:` is a whitespace/newline-separated glob list; split per token (left unquoted so globs still expand).
 		for f := range strings.FieldsSeq(inputs["files"]) {
 			cmd.WriteString(" ")
 			cmd.WriteString(f)
 		}
-		return Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd.String()}})
+		r := Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd.String()}})
+		r.ManualTasks = ghReleaseAuthNote
+		return r
 	}
 	m["peaceiris/actions-gh-pages"] = func(name string, inputs map[string]string) StepResult {
 		dir := cmp.Or(inputs["publish_dir"], "./public")
@@ -276,6 +298,9 @@ func initActionRegistry() map[string]actionTransformer {
 	return m
 }
 
+// ghReleaseAuthNote flags that gh needs a token on the agent, which GHA injected automatically.
+var ghReleaseAuthNote = []string{"gh release create → set GH_TOKEN as a TC password parameter (GHA injected GITHUB_TOKEN automatically)"}
+
 // requiredInput falls back to a ${VAR:?} shell guard so a missing action input fails the step instead of emitting empty arguments.
 func requiredInput(inputs map[string]string, key, envVar string) string {
 	return cmp.Or(inputs[key], fmt.Sprintf("${%s:?Set %s}", envVar, envVar))
@@ -288,14 +313,14 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 
 	var lines []string
 	if file != "" && file != "Dockerfile" {
-		lines = append(lines, fmt.Sprintf("DOCKERFILE=%q", file))
+		lines = append(lines, "DOCKERFILE="+shellQuote(file))
 	}
 	if tags != "" {
 		tagList := strings.Split(strings.TrimSpace(tags), "\n")
 		for i, tag := range tagList {
 			tagList[i] = strings.TrimSpace(tag)
 		}
-		lines = append(lines, fmt.Sprintf("IMAGE=%q", tagList[0]))
+		lines = append(lines, "IMAGE="+shellQuote(tagList[0]))
 		for _, extra := range tagList[1:] {
 			if extra != "" {
 				lines = append(lines, "# Additional tag: "+extra)
@@ -317,7 +342,7 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 			}
 		}
 	}
-	fmt.Fprintf(&buildCmd, ` -t "$IMAGE" %q`, context)
+	buildCmd.WriteString(` -t "$IMAGE" ` + shellQuote(context))
 	lines = append(lines, buildCmd.String())
 
 	if inputs["push"] == "true" {
@@ -327,5 +352,11 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 }
 
 func ghPagesScript(branch, folder string) string {
-	return fmt.Sprintf("git config user.name \"TeamCity\"\ngit config user.email \"teamcity@localhost\"\ngit checkout --orphan %s\ncp -r %s/* .\ngit add .\ngit commit -m \"Deploy\"\ngit push origin %s --force", branch, folder, branch)
+	b, f := shellQuote(branch), shellQuote(folder)
+	return fmt.Sprintf("git config user.name \"TeamCity\"\ngit config user.email \"teamcity@localhost\"\ngit checkout --orphan %s\ncp -r %s/* .\ngit add .\ngit commit -m \"Deploy\"\ngit push origin %s --force", b, f, b)
+}
+
+// shellQuote single-quotes s so it is one inert shell word — unlike double quotes, $(), backticks, and $vars do not expand.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }

@@ -238,6 +238,10 @@ func bambooTaskBody(v any) map[string]any {
 }
 
 func transformBambooTask(t bambooTask, result *ConversionResult, jobName string, final bool) StepResult {
+	if v, ok := t.body["enabled"]; ok && !boolFromAny(v) {
+		return StepResult{Status: StatusSimplified, Note: t.identifier + " (disabled in Bamboo — skipped)"}
+	}
+
 	transformer, ok := bambooTaskRegistry[t.identifier]
 	if !ok {
 		for prefix, fn := range bambooPluginKeyAliases {
@@ -1169,11 +1173,11 @@ func dig(m map[string]any, keys ...string) any {
 // bambooSecretPlaceholder replaces the value of a secret-looking plan variable so it never lands in the generated YAML.
 const bambooSecretPlaceholder = "TODO: set via `teamcity project token put`"
 
-// bambooSecretMarkers are case-insensitive substrings that imply a variable holds a credential.
-var bambooSecretMarkers = []string{"password", "sshkey", "passphrase", "secret", "token"}
+// bambooSecretMarkers are case-insensitive substrings (matched after stripping ._-) that imply a variable holds a credential.
+var bambooSecretMarkers = []string{"password", "sshkey", "passphrase", "secret", "token", "apikey", "privatekey", "accesskey", "deploykey", "credential"}
 
 func bambooLooksSecret(name string) bool {
-	low := strings.ToLower(name)
+	low := strings.NewReplacer("_", "", "-", "", ".", "").Replace(strings.ToLower(name))
 	return slices.ContainsFunc(bambooSecretMarkers, func(m string) bool {
 		return strings.Contains(low, m)
 	})

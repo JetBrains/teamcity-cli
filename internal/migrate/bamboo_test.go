@@ -266,12 +266,16 @@ Job:
 variables:
   api_token: super-secret-value
   db_password: hunter2
+  ssh_key: leaky-pem
+  api_key: leaky-key
   greeting: hello
 `)
 
 	out := result.YAML
 	assert.NotContains(t, out, "super-secret-value", "secret value must not leak into generated YAML")
 	assert.NotContains(t, out, "hunter2", "secret value must not leak into generated YAML")
+	assert.NotContains(t, out, "leaky-pem", "key-style names (ssh_key) must redact across separators")
+	assert.NotContains(t, out, "leaky-key", "key-style names (api_key) must redact across separators")
 	assert.Contains(t, out, "api_token:")
 	assert.Contains(t, out, "db_password:")
 	assert.Contains(t, out, "greeting: \"hello\"", "non-secret values pass through unchanged")
@@ -356,6 +360,30 @@ Mac:
 	assert.Equal(t, "Windows-Medium", runsOn["Win"], "MSBuild can't run on the Linux default")
 	assert.Equal(t, "Mac-Medium", runsOn["Mac"], "Fastlane can't run on the Linux default")
 	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "runner inferred from task")
+}
+
+func TestBambooDisabledTaskSkipped(t *testing.T) {
+	t.Parallel()
+
+	result := convertBambooSpec(t, `
+stages:
+  - 'Build':
+      jobs:
+        - Job
+Job:
+  tasks:
+    - script:
+        scripts:
+          - make
+    - script:
+        scripts:
+          - rm -rf /data
+        enabled: false
+`)
+	// The disabled task must not become an executable step; it surfaces under Simplified.
+	require.Len(t, result.Pipeline.Jobs[0].Steps, 1)
+	assert.NotContains(t, result.YAML, "rm -rf /data")
+	assert.Contains(t, strings.Join(result.Simplified, "\n"), "disabled in Bamboo")
 }
 
 func TestBambooMapFormRequirementsSetRunsOn(t *testing.T) {
