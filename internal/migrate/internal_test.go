@@ -54,11 +54,48 @@ func TestMapRunner(t *testing.T) {
 	t.Parallel()
 
 	defaults := Options{}
-	assert.Equal(t, "Ubuntu-24.04-Large", defaults.MapRunner("ubuntu-latest"))
-	assert.Equal(t, "macOS-15-Sequoia-Large-Arm64", defaults.MapRunner("macos-latest"))
-	assert.Equal(t, "custom-label", defaults.MapRunner("custom-label"))
+	assert.Equal(t, "Linux-Large", defaults.MapRunner("ubuntu-latest"))
+	assert.Equal(t, "Mac-Medium", defaults.MapRunner("macos-latest"))
+	assert.Equal(t, "Windows-Medium", defaults.MapRunner("windows-latest"))
 
 	override := Options{RunnerMap: map[string]string{"ubuntu-latest": "My-Linux-Image"}}
 	assert.Equal(t, "My-Linux-Image", override.MapRunner("ubuntu-latest"))
-	assert.Equal(t, "macOS-15-Sequoia-Large-Arm64", override.MapRunner("macos-latest"))
+	assert.Equal(t, "Mac-Medium", override.MapRunner("macos-latest"))
+}
+
+func TestResolveRunner(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		label string
+		want  string
+		known bool
+	}{
+		{"ubuntu-latest", "Linux-Large", true},
+		{"self-hosted", "self-hosted", true},
+		// OS-shaped labels outside the map resolve via substring heuristics.
+		{"ubuntu-18.04", "Linux-Large", true},
+		{"windows-11", "Windows-Medium", true},
+		{"macos-12", "Mac-Medium", true},
+		{"darwin-arm64", "Mac-Medium", true},
+		// Anything else names a self-hosted runner in GHA semantics.
+		{"buildjet-4vcpu", "self-hosted", false},
+		{"my-gpu-box", "self-hosted", false},
+	}
+	for _, tt := range tests {
+		got, known := Options{}.ResolveRunner(tt.label)
+		assert.Equal(t, tt.want, got, tt.label)
+		assert.Equal(t, tt.known, known, tt.label)
+	}
+}
+
+func TestBuildRunnerMapPrefersLargeOverXLarge(t *testing.T) {
+	t.Parallel()
+
+	// The 2026.2 hosted-agent enum, in schema order: XLarge precedes Large.
+	m := BuildRunnerMap([]string{"Windows-Small", "Mac-Medium", "Linux-XLarge", "Linux-Large", "Linux-Medium", "Linux-Small", "Windows-Medium"})
+	assert.Equal(t, "Linux-Large", m["ubuntu-latest"])
+	assert.Equal(t, "Mac-Medium", m["macos-latest"])
+	assert.Equal(t, "Windows-Medium", m["windows-latest"])
+	assert.Equal(t, "Linux-Large", m["ubuntu-22.04"])
 }

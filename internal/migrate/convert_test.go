@@ -28,7 +28,7 @@ func TestConvertGitHubActions(t *testing.T) {
 	assert.GreaterOrEqual(t, len(result.Simplified), 10, "should simplify many steps")
 
 	for _, want := range []string{
-		"jobs:", "runs-on: Ubuntu-24.04-Large", "type: script",
+		"jobs:", "runs-on: Linux-Large", "type: script",
 		"./gradlew jsBrowserProductionWebpack", "./gradlew jsTest",
 		"files-publication:", "dependencies:", "- build", "- test_unit",
 		"mkdir -p dist", "npx playwright test", "Deploy to GitHub Pages",
@@ -204,6 +204,111 @@ jobs:
 	manuals := strings.Join(result.ManualSetup, "\n")
 	// Windows step warns; the Linux step must not, so exactly one warning is expected.
 	assert.Equal(t, 1, strings.Count(manuals, "runs on a Windows runner with no explicit shell"))
+}
+
+func TestMatrixRunsOnEmitsDefaultRunner(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: echo hi
+`
+	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	require.NoError(t, err)
+
+	// A matrix expression must not silently drop runs-on — emit the default runner and flag it.
+	assert.Contains(t, result.YAML, "runs-on: Linux-Large")
+	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "runs-on uses expression")
+}
+
+func TestSelfHostedStyleRunnerLabels(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  gpu:
+    runs-on: my-gpu-box
+    steps:
+      - run: echo hi
+  std:
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - run: echo hi
+`
+	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	require.NoError(t, err)
+
+	assert.Contains(t, result.YAML, "runs-on: self-hosted")
+	assert.NotContains(t, result.YAML, "runs-on: my-gpu-box")
+	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), `Job "gpu" runs-on "my-gpu-box" is not a GitHub-hosted runner`)
+}
+
+func TestWorkflowCallPreservesInputsAndSecrets(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: publish
+on: push
+jobs:
+  publish-openapi:
+    uses: hmcts/workflow-publish-openapi-spec/.github/workflows/publish-openapi.yml@v1
+    with:
+      test_to_run: 'uk.gov.hmcts.dm.openapi.OpenAPIPublisherTest'
+      java_version: 21
+    secrets:
+      SWAGGER_PUBLISHER_API_TOKEN: ${{ secrets.SWAGGER_PUBLISHER_API_TOKEN }}
+  inherit-job:
+    uses: org/repo/.github/workflows/other.yml@v2
+    secrets: inherit
+`
+	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/publish.yml"}
+	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	require.NoError(t, err)
+
+	for _, want := range []string{
+		"test_to_run: uk.gov.hmcts.dm.openapi.OpenAPIPublisherTest",
+		"java_version: 21",
+		"swagger_publisher_api_token",
+	} {
+		assert.Contains(t, strings.ToLower(result.YAML), strings.ToLower(want))
+	}
+	manuals := strings.Join(result.ManualSetup, "\n")
+	assert.Contains(t, manuals, "Secret SWAGGER_PUBLISHER_API_TOKEN")
+	assert.Contains(t, manuals, "secrets: inherit")
+}
+
+func TestMultilineIfCondensedInManualSetup(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: GitHub Pages action
+        if: |
+          github.ref == 'refs/heads/master' &&
+          matrix.java == 21
+        run: echo deploy
+`
+	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	require.NoError(t, err)
+
+	for _, item := range result.ManualSetup {
+		assert.NotContains(t, item, "\n", "manual-setup items must stay on one line: %q", item)
+	}
+	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "github.ref == 'refs/heads/master' && matrix.java == 21")
 }
 
 func TestMapGHAExpressions(t *testing.T) {

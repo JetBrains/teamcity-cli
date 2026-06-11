@@ -115,12 +115,12 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 		return nil
 	}
 
-	convertOpts := migrate.Options{RunnerMap: resolveCloudRunners(f)}
-
 	var schemaData []byte
 	if !opts.noValidate {
 		schemaData = resolveSchema(f)
 	}
+
+	convertOpts := migrate.Options{RunnerMap: resolveRunnerMap(f, schemaData)}
 
 	results = []*migrate.ConversionResult{}
 	var conversionErrors int
@@ -208,7 +208,11 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 
 	if len(writtenFiles) > 0 {
 		_, _ = fmt.Fprintf(f.Printer.Out, "Written:\n")
-		for _, path := range writtenFiles {
+		for i, path := range writtenFiles {
+			if results[i].ValidationError != "" {
+				_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Green(path), output.Yellow("(schema validation failed — review before deploying)"))
+				continue
+			}
 			_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", output.Green(path))
 		}
 	}
@@ -397,6 +401,16 @@ func migrateReadPath(sourceDir, file string) string {
 		return file
 	}
 	return filepath.Join(sourceDir, file)
+}
+
+// resolveRunnerMap derives runner names from the validation schema's hosted-agent enum (so emitted runs-on passes that schema), then cloud images, then defaults (nil).
+func resolveRunnerMap(f *cmdutil.Factory, schemaData []byte) map[string]string {
+	if names := pipelineschema.HostedAgentNames(schemaData); len(names) > 0 {
+		if m := migrate.BuildRunnerMap(names); m != nil {
+			return m
+		}
+	}
+	return resolveCloudRunners(f)
 }
 
 // resolveCloudRunners fetches cloud image names and delegates to migrate.BuildRunnerMap; nil means fall back to defaults.

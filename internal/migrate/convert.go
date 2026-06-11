@@ -78,7 +78,7 @@ func Convert(cfg CIConfig, data []byte, opts Options) (*ConversionResult, error)
 		result, err = convertBamboo(cfg, data, opts)
 	default:
 		result = NewResult(cfg)
-		result.Pipeline = fallbackPipeline(cfg, result)
+		result.Pipeline = fallbackPipeline(cfg, result, opts)
 	}
 
 	if err != nil {
@@ -93,13 +93,13 @@ func Convert(cfg CIConfig, data []byte, opts Options) (*ConversionResult, error)
 	return result, nil
 }
 
-func fallbackPipeline(cfg CIConfig, result *ConversionResult) *Pipeline {
+func fallbackPipeline(cfg CIConfig, result *ConversionResult, opts Options) *Pipeline {
 	result.NeedsReview = append(result.NeedsReview,
 		fmt.Sprintf("Full %s pipeline needs manual or AI-assisted conversion", cfg.Source))
 	return &Pipeline{
 		Comment: "# Converted from: " + cfg.File + " (" + string(cfg.Source) + ")\n\n",
 		Jobs: []Job{{
-			ID: "main", Name: "Main", RunsOn: "Ubuntu-24.04-Large",
+			ID: "main", Name: "Main", RunsOn: opts.MapRunner("ubuntu-latest"),
 			Steps: []Step{{
 				Name:          "Placeholder",
 				ScriptContent: fmt.Sprintf("echo 'TODO: Convert %s (%s) pipeline manually'\necho 'Use the migrate-to-teamcity skill with an AI agent for assisted conversion'", cfg.File, cfg.Source),
@@ -148,23 +148,50 @@ func SortedKeys[V any](m map[string]V) []string {
 	return slices.Sorted(maps.Keys(m))
 }
 
-func (o Options) MapRunner(label string) string {
-	if mapped, ok := o.RunnerMap[label]; ok {
-		return mapped
-	}
-	if mapped, ok := RunnerMap[label]; ok {
-		return mapped
-	}
-	return label
+// condense collapses whitespace runs (incl. newlines) so multiline YAML values stay on one report line.
+func condense(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
 
+func (o Options) MapRunner(label string) string {
+	mapped, _ := o.ResolveRunner(label)
+	return mapped
+}
+
+// ResolveRunner maps a CI runner label to a TC agent name; unknown labels resolve to "self-hosted" with ok=false (non-GitHub-hosted labels name self-hosted runners).
+func (o Options) ResolveRunner(label string) (mapped string, ok bool) {
+	if mapped, ok := o.RunnerMap[label]; ok {
+		return mapped, true
+	}
+	if mapped, ok := RunnerMap[label]; ok {
+		return mapped, true
+	}
+	if label == "self-hosted" {
+		return label, true
+	}
+	low := strings.ToLower(label)
+	switch {
+	case strings.Contains(low, "ubuntu"), strings.Contains(low, "linux"):
+		return o.MapRunner("ubuntu-latest"), true
+	case strings.Contains(low, "mac"), strings.Contains(low, "osx"), strings.Contains(low, "darwin"):
+		return o.MapRunner("macos-latest"), true
+	case strings.Contains(low, "win"):
+		return o.MapRunner("windows-latest"), true
+	}
+	return "self-hosted", false
+}
+
+// RunnerMap holds the default GHA-label → JetBrains-hosted-agent mapping per the 2026.2 schema enum; overridden by schema- or cloud-derived names when connected.
 var RunnerMap = map[string]string{
-	"ubuntu-latest":  "Ubuntu-24.04-Large",
-	"ubuntu-24.04":   "Ubuntu-24.04-Large",
-	"ubuntu-22.04":   "Ubuntu-22.04-Large",
-	"macos-latest":   "macOS-15-Sequoia-Large-Arm64",
-	"macos-15":       "macOS-15-Sequoia-Large-Arm64",
-	"macos-14":       "macOS-14-Sonoma-Large-Arm64",
-	"windows-latest": "Windows-Server-2022-Large",
-	"windows-2022":   "Windows-Server-2022-Large",
+	"ubuntu-latest":  "Linux-Large",
+	"ubuntu-24.04":   "Linux-Large",
+	"ubuntu-22.04":   "Linux-Large",
+	"ubuntu-20.04":   "Linux-Large",
+	"macos-latest":   "Mac-Medium",
+	"macos-15":       "Mac-Medium",
+	"macos-14":       "Mac-Medium",
+	"macos-13":       "Mac-Medium",
+	"windows-latest": "Windows-Medium",
+	"windows-2022":   "Windows-Medium",
+	"windows-2019":   "Windows-Medium",
 }
