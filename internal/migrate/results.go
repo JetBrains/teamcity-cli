@@ -31,14 +31,8 @@ func HasValidationErrors(results []*ConversionResult) bool {
 func BuildRunnerMap(imageNames []string) map[string]string {
 	byOS := map[string][]string{}
 	for _, name := range imageNames {
-		n := strings.ToLower(name)
-		switch {
-		case strings.Contains(n, "ubuntu") || strings.Contains(n, "linux"):
-			byOS["linux"] = append(byOS["linux"], name)
-		case strings.Contains(n, "macos") || strings.Contains(n, "mac"):
-			byOS["mac"] = append(byOS["mac"], name)
-		case strings.Contains(n, "windows"):
-			byOS["windows"] = append(byOS["windows"], name)
+		if os := classifyOS(name); os != "" {
+			byOS[os] = append(byOS[os], name)
 		}
 	}
 	if len(byOS) == 0 {

@@ -20,13 +20,12 @@ const (
 )
 
 type StepResult struct {
-	Status      ResultStatus
-	Steps       []Step
-	Artifacts   []FilePublication
-	Features    []string
-	Note        string
-	ManualTasks []string
-	Identifier  string
+	Status                ResultStatus
+	Steps                 []Step
+	Artifacts             []FilePublication
+	EnableDependencyCache bool
+	Note                  string
+	ManualTasks           []string
 }
 
 func Converted(steps []Step) StepResult {
@@ -34,20 +33,25 @@ func Converted(steps []Step) StepResult {
 }
 
 func Unknown(identifier string, inputs map[string]string) StepResult {
+	r := unknownStub(identifier, shortActionID(identifier), "Action inputs", inputs)
+	r.Note = identifier
+	return r
+}
+
+// unknownStub renders a TODO script step that preserves the original fields as comments.
+func unknownStub(identifier, name, fieldsLabel string, fields map[string]string) StepResult {
 	var stub strings.Builder
 	fmt.Fprintf(&stub, "# TODO: Replace %s with equivalent commands", identifier)
-	if len(inputs) > 0 {
-		stub.WriteString("\n# Action inputs:")
-		for _, k := range SortedKeys(inputs) {
-			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, inputs[k])))
+	if len(fields) > 0 {
+		stub.WriteString("\n# " + fieldsLabel + ":")
+		for _, k := range SortedKeys(fields) {
+			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, fields[k])))
 		}
 	}
-	stub.WriteString("\necho 'TODO: implement equivalent of " + shortActionID(identifier) + "'")
+	stub.WriteString("\necho 'TODO: implement equivalent of " + name + "'")
 	return StepResult{
-		Status:     StatusUnknown,
-		Identifier: identifier,
-		Note:       identifier,
-		Steps:      []Step{{Name: shortActionID(identifier), ScriptContent: stub.String()}},
+		Status: StatusUnknown,
+		Steps:  []Step{{Name: name, ScriptContent: stub.String()}},
 	}
 }
 
@@ -77,21 +81,40 @@ func applyResults(results []StepResult, cr *ConversionResult) (steps []Step, art
 			steps = append(steps, r.Steps...)
 		case StatusSimplified:
 			cr.Simplified = append(cr.Simplified, r.Note)
-			for _, f := range r.Features {
-				if f == "enable-dependency-cache" {
-					cache = true
-				}
-			}
 		case StatusUnsupported:
 			cr.NeedsReview = append(cr.NeedsReview, r.Note)
 		case StatusUnknown:
 			cr.NeedsReview = append(cr.NeedsReview, r.Note)
 			steps = append(steps, r.Steps...)
 		}
+		cache = cache || r.EnableDependencyCache
 		artifacts = append(artifacts, r.Artifacts...)
 		cr.ManualSetup = append(cr.ManualSetup, r.ManualTasks...)
 	}
 	return
+}
+
+// noOpFallback replaces a job whose steps were all simplified or unsupported, so it still emits schema-valid YAML.
+func noOpFallback(jobName string, result *ConversionResult) []Step {
+	result.ManualSetup = append(result.ManualSetup,
+		fmt.Sprintf("Job %q has no convertible steps (all simplified or unsupported) → delete the job or replace with manual TC configuration", jobName))
+	return []Step{{
+		Name:          "No-op",
+		ScriptContent: fmt.Sprintf("# TODO: All steps in job %q were simplified or unsupported (see manual-setup notes)\necho 'Job %s has no executable steps; configure manually or delete'", jobName, jobName),
+	}}
+}
+
+// mergeStepParams folds env params into every step's parameters.
+func mergeStepParams(steps []Step, params map[string]string) {
+	if len(params) == 0 {
+		return
+	}
+	for i := range steps {
+		if steps[i].Parameters == nil {
+			steps[i].Parameters = map[string]string{}
+		}
+		maps.Copy(steps[i].Parameters, params)
+	}
 }
 
 type actionTransformer func(name, uses string, inputs map[string]string) StepResult
@@ -290,12 +313,7 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 
 	steps, artifacts, cache := applyResults(stepResults, result)
 	if len(steps) == 0 && len(stepResults) > 0 {
-		result.ManualSetup = append(result.ManualSetup,
-			fmt.Sprintf("Job %q has no convertible steps (all simplified or unsupported) → delete the job or replace with manual TC configuration", id))
-		steps = []Step{{
-			Name:          "No-op",
-			ScriptContent: fmt.Sprintf("# TODO: All steps in job %q were unsupported on TeamCity (see manual-setup notes)\necho 'Job %s has no executable steps; configure manually or delete'", id, id),
-		}}
+		steps = noOpFallback(id, result)
 	}
 	j.Steps = steps
 	j.FilesPublication = artifacts
@@ -411,15 +429,7 @@ func transformGHAStep(step *actionlint.Step, acc *ghaJobAccumulator) []StepResul
 		} else {
 			r = Unknown(uses, inputs)
 		}
-		r.Identifier = uses
-		if env := extractGHAEnvParams(step.Env, result); len(env) > 0 {
-			for i := range r.Steps {
-				if r.Steps[i].Parameters == nil {
-					r.Steps[i].Parameters = map[string]string{}
-				}
-				maps.Copy(r.Steps[i].Parameters, env)
-			}
-		}
+		mergeStepParams(r.Steps, extractGHAEnvParams(step.Env, result))
 		return []StepResult{r}
 	}
 
@@ -450,10 +460,7 @@ func extractGHAEnvParams(env *actionlint.Env, result *ConversionResult) map[stri
 		val := v.Value.Value
 		mapped := MapGHAExpressions(val)
 		params[v.Name.Value] = mapped
-		for _, m := range secretsRe.FindAllStringSubmatch(val, -1) {
-			result.ManualSetup = append(result.ManualSetup,
-				fmt.Sprintf("Secret %s → create with: teamcity project token put <project-id> <value>", m[1]))
-		}
+		detectGHASecrets(val, result)
 		flagUnmappedGHAExpressions(mapped, "Env "+v.Name.Value, result)
 	}
 	return params

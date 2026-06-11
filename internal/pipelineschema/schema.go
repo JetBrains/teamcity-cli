@@ -48,17 +48,7 @@ func ValidateWithSchema(yamlData string, schemaData []byte) string {
 		return fmt.Sprintf("invalid YAML: %s", err)
 	}
 
-	var schemaDoc any
-	if err := json.Unmarshal(schemaData, &schemaDoc); err != nil {
-		return fmt.Sprintf("internal error: invalid schema: %s", err)
-	}
-
-	compiler := jsonschema.NewCompiler()
-	if err := compiler.AddResource("schema.json", schemaDoc); err != nil {
-		return fmt.Sprintf("internal error: %s", err)
-	}
-
-	schema, err := compiler.Compile("schema.json")
+	schema, err := Compile(schemaData)
 	if err != nil {
 		return fmt.Sprintf("internal error: %s", err)
 	}
@@ -67,6 +57,19 @@ func ValidateWithSchema(yamlData string, schemaData []byte) string {
 		return err.Error()
 	}
 	return ""
+}
+
+// Compile parses and compiles a pipeline JSON schema document.
+func Compile(schemaData []byte) (*jsonschema.Schema, error) {
+	var schemaDoc any
+	if err := json.Unmarshal(schemaData, &schemaDoc); err != nil {
+		return nil, fmt.Errorf("invalid schema: %w", err)
+	}
+	compiler := jsonschema.NewCompiler()
+	if err := compiler.AddResource("schema.json", schemaDoc); err != nil {
+		return nil, err
+	}
+	return compiler.Compile("schema.json")
 }
 
 // ConvertYAMLToJSON normalizes YAML-decoded values to JSON-compatible types.

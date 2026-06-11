@@ -1,7 +1,6 @@
 package migrate
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,11 +36,7 @@ func Detect(dir string, filterSource SourceCI) ([]CIConfig, error) {
 			for _, match := range matches {
 				rel, _ := filepath.Rel(dir, match)
 				rel = filepath.ToSlash(rel)
-				cfg, err := analyzeFile(source, rel, match)
-				if err != nil {
-					cfg = &CIConfig{Source: source, File: rel, Features: []string{}}
-				}
-				configs = append(configs, *cfg)
+				configs = append(configs, *analyzeFile(source, rel, match))
 			}
 		}
 	}
@@ -55,22 +50,22 @@ func Detect(dir string, filterSource SourceCI) ([]CIConfig, error) {
 	return configs, nil
 }
 
-func analyzeFile(source SourceCI, relPath, absPath string) (*CIConfig, error) {
+func analyzeFile(source SourceCI, relPath, absPath string) *CIConfig {
 	data, err := os.ReadFile(absPath)
 	if err != nil {
-		return nil, err
+		return &CIConfig{Source: source, File: relPath, Features: []string{}}
 	}
 	return analyzeContents(source, relPath, data)
 }
 
-func analyzeContents(source SourceCI, relPath string, data []byte) (*CIConfig, error) {
+func analyzeContents(source SourceCI, relPath string, data []byte) *CIConfig {
 	switch source {
 	case GitHubActions:
 		return analyzeGitHubActions(relPath, data)
 	case Bamboo:
 		return analyzeBamboo(relPath, data)
 	}
-	return &CIConfig{Source: source, File: relPath, Features: []string{}}, nil
+	return &CIConfig{Source: source, File: relPath, Features: []string{}}
 }
 
 // AnalyzeFile reads a single path and returns its CIConfig, inferring the source from the path when not provided.
@@ -88,12 +83,7 @@ func AnalyzeFile(path string, source SourceCI) (*CIConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	rel := filepath.ToSlash(path)
-	cfg, err := analyzeContents(source, rel, data)
-	if err != nil {
-		cfg = &CIConfig{Source: source, File: rel, Features: []string{}}
-	}
-	return cfg, nil
+	return analyzeContents(source, filepath.ToSlash(path), data), nil
 }
 
 // InferSource guesses a CI source from a path; returns "" when no heuristic matches.
@@ -109,21 +99,15 @@ func InferSource(path string) SourceCI {
 	return ""
 }
 
-func analyzeGitHubActions(relPath string, data []byte) (*CIConfig, error) {
-	workflow, errs := actionlint.Parse(data)
-	if workflow == nil {
-		if len(errs) > 0 {
-			return nil, errs[0]
-		}
-		return nil, errors.New("parse error")
-	}
+func analyzeGitHubActions(relPath string, data []byte) *CIConfig {
+	cfg := &CIConfig{Source: GitHubActions, File: relPath, Features: []string{}}
 
-	cfg := &CIConfig{
-		Source:   GitHubActions,
-		File:     relPath,
-		Jobs:     len(workflow.Jobs),
-		Features: []string{},
+	workflow, _ := actionlint.Parse(data)
+	if workflow == nil {
+		// Don't fail detection on a malformed workflow; conversion surfaces the parse error.
+		return cfg
 	}
+	cfg.Jobs = len(workflow.Jobs)
 
 	features := map[string]bool{}
 	for _, job := range workflow.Jobs {
@@ -145,7 +129,7 @@ func analyzeGitHubActions(relPath string, data []byte) (*CIConfig, error) {
 	for f := range features {
 		cfg.Features = append(cfg.Features, f)
 	}
-	return cfg, nil
+	return cfg
 }
 
 func analyzeGHAStep(step *actionlint.Step, features map[string]bool) {

@@ -1,7 +1,6 @@
 package pipeline
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -136,23 +135,12 @@ type validationError struct {
 }
 
 func validateAgainstSchema(schemaData []byte, doc any) ([]validationError, error) {
-	var schemaDoc any
-	if err := json.Unmarshal(schemaData, &schemaDoc); err != nil {
-		return nil, fmt.Errorf("invalid JSON schema: %w", err)
-	}
-
-	compiler := jsonschema.NewCompiler()
-	if err := compiler.AddResource("schema.json", schemaDoc); err != nil {
-		return nil, fmt.Errorf("failed to compile schema: %w", err)
-	}
-
-	schema, err := compiler.Compile("schema.json")
+	schema, err := pipelineschema.Compile(schemaData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile schema: %w", err)
 	}
 
-	converted := pipelineschema.ConvertYAMLToJSON(doc)
-	err = schema.Validate(converted)
+	err = schema.Validate(pipelineschema.ConvertYAMLToJSON(doc))
 	if err == nil {
 		return nil, nil
 	}

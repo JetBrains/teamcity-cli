@@ -25,3 +25,27 @@ func TestHostedAgentNames(t *testing.T) {
 	assert.Nil(t, HostedAgentNames(nil))
 	assert.Nil(t, HostedAgentNames([]byte("not json")))
 }
+
+func TestConvertYAMLToJSON(t *testing.T) {
+	t.Parallel()
+
+	// jsonschema only accepts string keys, so map[any]any keys must stringify.
+	assert.Equal(t,
+		map[string]any{"1": "one", "two": 2},
+		ConvertYAMLToJSON(map[any]any{1: "one", "two": 2}))
+
+	in := map[string]any{
+		"jobs": map[any]any{
+			"build": map[string]any{
+				"steps": []any{
+					map[any]any{"script": "go build"},
+				},
+			},
+		},
+	}
+	got := ConvertYAMLToJSON(in).(map[string]any)
+	jobs := got["jobs"].(map[string]any)
+	build := jobs["build"].(map[string]any)
+	steps := build["steps"].([]any)
+	assert.Equal(t, "go build", steps[0].(map[string]any)["script"])
+}

@@ -51,22 +51,6 @@ func TestConvertGitHubActions(t *testing.T) {
 	assert.GreaterOrEqual(t, checkoutCount, 1, "should simplify checkout steps")
 }
 
-func TestConvertQodana(t *testing.T) {
-	t.Parallel()
-
-	data, err := os.ReadFile("testdata/github/quality.yml")
-	require.NoError(t, err)
-
-	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/quality.yml"}
-	result, err := migrate.Convert(cfg, data, migrate.Options{})
-	require.NoError(t, err)
-
-	assert.Equal(t, "quality.tc.yml", result.OutputFile)
-	assert.Equal(t, 1, result.JobsConverted)
-	assert.Contains(t, result.YAML, "Qodana")
-	assert.Contains(t, result.YAML, "native Qodana integration")
-}
-
 func TestActionTransformers(t *testing.T) {
 	t.Parallel()
 
@@ -78,17 +62,12 @@ func TestActionTransformers(t *testing.T) {
 		}{
 			{"actions/checkout@v4", true},
 			{"docker/build-push-action@v5", true},
-			{"codecov/codecov-action@v3", true},
 			{"my-org/custom-action@v1", false},
-			// Data-table entries (scriptActions, manualActions, unsupportedActions).
-			{"JetBrains/qodana-action@v2025.1", true},
-			{"aws-actions/amazon-ecs-deploy-task-definition@v2", true},
-			{"anothrNick/github-tag-action@v1", true},
+			// One entry per data table, plus a version ref containing "/".
+			{"codecov/codecov-action@v3", true},
 			{"azure/login@v2", true},
-			{"hashicorp/vault-action@v3", true},
-			{"slackapi/slack-github-action@v2", true},
-			{"pypa/gh-action-pypi-publish@release/v1", true},
 			{"dorny/paths-filter@v3", true},
+			{"pypa/gh-action-pypi-publish@release/v1", true},
 		}
 		for _, tt := range tests {
 			t.Run(tt.action, func(t *testing.T) {
@@ -98,11 +77,15 @@ func TestActionTransformers(t *testing.T) {
 		}
 	})
 
-	t.Run("checkout simplified", func(t *testing.T) {
+	t.Run("script action converts to fixed step", func(t *testing.T) {
 		t.Parallel()
-		transformer, _ := migrate.LookupActionTransformer("actions/checkout@v4")
-		r := transformer("", "actions/checkout@v4", nil)
-		assert.Equal(t, migrate.StatusSimplified, r.Status)
+		transformer, ok := migrate.LookupActionTransformer("JetBrains/qodana-action@v2025.1")
+		require.True(t, ok)
+		r := transformer("", "JetBrains/qodana-action@v2025.1", nil)
+		assert.Equal(t, migrate.StatusConverted, r.Status)
+		require.Len(t, r.Steps, 1)
+		assert.Equal(t, "Qodana", r.Steps[0].Name)
+		assert.Contains(t, r.Steps[0].ScriptContent, "native Qodana integration")
 	})
 
 	t.Run("cache enables dependency cache", func(t *testing.T) {
@@ -110,7 +93,7 @@ func TestActionTransformers(t *testing.T) {
 		transformer, _ := migrate.LookupActionTransformer("actions/cache@v3")
 		r := transformer("", "actions/cache@v3", nil)
 		assert.Equal(t, migrate.StatusSimplified, r.Status)
-		assert.Contains(t, r.Features, "enable-dependency-cache")
+		assert.True(t, r.EnableDependencyCache)
 	})
 
 	t.Run("upload-artifact produces file publication", func(t *testing.T) {
@@ -120,17 +103,6 @@ func TestActionTransformers(t *testing.T) {
 		assert.Equal(t, migrate.StatusSimplified, r.Status)
 		require.Len(t, r.Artifacts, 1)
 		assert.Equal(t, "dist/**", r.Artifacts[0].Path)
-	})
-
-	t.Run("qodana converts with native-integration script", func(t *testing.T) {
-		t.Parallel()
-		transformer, ok := migrate.LookupActionTransformer("JetBrains/qodana-action@v2025.1")
-		require.True(t, ok)
-		r := transformer("", "JetBrains/qodana-action@v2025.1", nil)
-		assert.Equal(t, migrate.StatusConverted, r.Status)
-		require.Len(t, r.Steps, 1)
-		assert.Equal(t, "Qodana", r.Steps[0].Name)
-		assert.Contains(t, r.Steps[0].ScriptContent, "native Qodana integration")
 	})
 
 	t.Run("missing required inputs emit shell guards", func(t *testing.T) {

@@ -50,14 +50,10 @@ func TestBambooDockerDefaultsImage(t *testing.T) {
 	assert.Equal(t, "docker run -e FOO=1 app:1", run.Steps[0].ScriptContent)
 }
 
-func TestMapRunner(t *testing.T) {
+func TestMapRunnerOverride(t *testing.T) {
 	t.Parallel()
 
-	defaults := Options{}
-	assert.Equal(t, "Linux-Large", defaults.MapRunner("ubuntu-latest"))
-	assert.Equal(t, "Mac-Medium", defaults.MapRunner("macos-latest"))
-	assert.Equal(t, "Windows-Medium", defaults.MapRunner("windows-latest"))
-
+	// Default mapping is covered by TestResolveRunner; overrides win, missing keys fall through.
 	override := Options{RunnerMap: map[string]string{"ubuntu-latest": "My-Linux-Image"}}
 	assert.Equal(t, "My-Linux-Image", override.MapRunner("ubuntu-latest"))
 	assert.Equal(t, "Mac-Medium", override.MapRunner("macos-latest"))

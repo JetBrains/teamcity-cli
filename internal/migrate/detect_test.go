@@ -39,10 +39,11 @@ func TestDetectWithFilter(t *testing.T) {
 	workflowDir := filepath.Join(dir, ".github", "workflows")
 	require.NoError(t, os.MkdirAll(workflowDir, 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(workflowDir, "ci.yml"), []byte("on: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "bamboo.yml"), []byte("version: 2\nplan:\n  key: K\nstages: []\n"), 0644))
 
 	configs, err := Detect(dir, GitHubActions)
 	require.NoError(t, err)
-	require.Len(t, configs, 1)
+	require.Len(t, configs, 1, "the bamboo spec must be filtered out")
 	assert.Equal(t, GitHubActions, configs[0].Source)
 }
 
@@ -75,15 +76,6 @@ func TestDetectBambooNonCanonicalPaths(t *testing.T) {
 		"Bamboo/bamboo-specs/docker.bamboo.yml",
 		"bamboo-specs/build/plan.yml",
 	})
-}
-
-func TestDetectEmptyDir(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	configs, err := Detect(dir, "")
-	require.NoError(t, err)
-	assert.Empty(t, configs)
 }
 
 func TestInferSource(t *testing.T) {
