@@ -1,18 +1,24 @@
-"""TestRunner — validation harness for eval checks.
+"""EvalRunner — validation harness for eval checks.
 
-Each check function receives a TestRunner and calls runner.passed() / runner.failed().
+Each check function receives an EvalRunner and calls runner.passed() / runner.failed().
+All recorded results are deterministic checks; LLM grades are tracked separately by
+the test runner so they can never blend into the gated pass rate.
 """
 
 from __future__ import annotations
 
-import json
-import sys
+import re
+import shlex
 import traceback
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import Callable
 
 from scaffold.events import ClaudeEvents
+
+_ENV_ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_FLAG = re.compile(r"^-{1,2}[A-Za-z]")
+_SEGMENT_SPLIT = re.compile(r"[|;&]+")
 
 
 @dataclass
@@ -54,13 +60,63 @@ class EvalRunner:
     def failed(self, msg: str) -> None:
         self._results.append(CheckResult(self._current_check, False, msg))
 
-    def has_command(self, *fragments: str) -> bool:
-        """Check if any mentioned command contains ALL fragments."""
+    # --- Command parsing -------------------------------------------------
+    #
+    # Executed Bash commands are tokenized (not substring-matched) so that a
+    # project ID containing "build" or a URL never trips a command check.
+
+    def teamcity_argvs(self) -> list[list[str]]:
+        """Tokenized `teamcity ...` invocations from executed commands.
+
+        Splits compound shell commands on |, ;, & and matches the binary by
+        basename, so pipes and `bin/teamcity` are handled.
+        """
+        argvs: list[list[str]] = []
         for cmd in self.commands:
-            cmd_lower = cmd.lower()
-            if all(f.lower() in cmd_lower for f in fragments):
+            for segment in _SEGMENT_SPLIT.split(cmd):
+                try:
+                    tokens = shlex.split(segment, posix=True)
+                except ValueError:
+                    tokens = segment.split()
+                while tokens and _ENV_ASSIGN.match(tokens[0]):
+                    tokens.pop(0)
+                if tokens and PurePosixPath(tokens[0]).name == "teamcity":
+                    argvs.append(tokens)
+        return argvs
+
+    @staticmethod
+    def subcommand_tokens(argv: list[str]) -> list[str]:
+        """Non-flag tokens after the binary, up to the first redirection."""
+        path: list[str] = []
+        for tok in argv[1:]:
+            if tok.startswith("<") or tok.startswith(">") or tok.startswith("2>"):
+                break
+            if not _FLAG.match(tok):
+                path.append(tok)
+        return path
+
+    @staticmethod
+    def flag_tokens(argv: list[str]) -> list[str]:
+        return [t for t in argv[1:] if _FLAG.match(t)]
+
+    def has_subcommand(self, *path: str) -> bool:
+        """True if any executed teamcity command starts with these subcommand tokens."""
+        for argv in self.teamcity_argvs():
+            tokens = self.subcommand_tokens(argv)
+            if len(tokens) >= len(path) and all(tokens[i] == p for i, p in enumerate(path)):
                 return True
         return False
+
+    def has_flag(self, *flags: str) -> bool:
+        """True if any executed teamcity command carries one of these exact flags."""
+        for argv in self.teamcity_argvs():
+            for tok in self.flag_tokens(argv):
+                name = tok.split("=", 1)[0]
+                if name in flags:
+                    return True
+        return False
+
+    # --- Text matching ----------------------------------------------------
 
     def has_text(self, *fragments: str) -> bool:
         """Check if response text contains ALL fragments."""
@@ -71,13 +127,14 @@ class EvalRunner:
         text_lower = self.text.lower()
         return not any(f.lower() in text_lower for f in fragments)
 
-    def run(self, checks: list[Callable[[TestRunner], None]]) -> list[CheckResult]:
+    def run(self, checks: list[Callable[[EvalRunner], None]]) -> list[CheckResult]:
         for check_fn in checks:
             self._current_check = check_fn.__name__
             try:
                 check_fn(self)
             except Exception as e:
                 self.failed(f"Exception: {e}\n{traceback.format_exc()}")
+        self._current_check = ""
         return self._results
 
     @property
