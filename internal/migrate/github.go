@@ -238,7 +238,9 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 				result.ManualSetup = append(result.ManualSetup,
 					fmt.Sprintf("Job %q runs-on %q is not a GitHub-hosted runner → emitted `self-hosted`; configure matching agent requirements in TeamCity", id, raw))
 			}
-			runsOnWindows = strings.Contains(strings.ToLower(raw), "windows")
+			for _, l := range job.RunsOn.Labels {
+				runsOnWindows = runsOnWindows || strings.Contains(strings.ToLower(l.Value), "windows")
+			}
 		}
 		if len(job.RunsOn.Labels) > 1 {
 			all := make([]string, len(job.RunsOn.Labels))
@@ -388,6 +390,9 @@ func transformGHAStep(step *actionlint.Step, acc *ghaJobAccumulator) []StepResul
 			shell = exec.Shell.Value
 		}
 		switch {
+		case (shell == "bash" || shell == "sh") && acc.runsOnWindows:
+			result.ManualSetup = append(result.ManualSetup,
+				fmt.Sprintf("Step %q sets shell %q on a Windows runner → TeamCity script steps run cmd.exe; provide Git Bash/WSL on the agent or rewrite for cmd", stepName, shell))
 		case shell != "" && shell != "bash" && shell != "sh":
 			result.ManualSetup = append(result.ManualSetup,
 				fmt.Sprintf("Step %q uses shell %q → prepend shebang or configure agent accordingly", stepName, shell))
