@@ -394,6 +394,25 @@ J2:
 	assert.Equal(t, []string{"A_J1"}, result.Pipeline.Jobs[1].Dependencies)
 }
 
+func TestBambooDisabledJobBecomesNoOp(t *testing.T) {
+	t.Parallel()
+
+	result := convertBambooSpec(t, `
+stages:
+  - 'Build':
+      jobs:
+        - Job
+Job:
+  enabled: false
+  tasks:
+    - script:
+        - rm -rf /data
+`)
+	// A disabled job must not emit its tasks as executable steps.
+	assert.NotContains(t, result.YAML, "rm -rf /data")
+	assert.Contains(t, strings.Join(result.NeedsReview, "\n"), "disabled in Bamboo")
+}
+
 func TestBambooDisabledTaskSkipped(t *testing.T) {
 	t.Parallel()
 

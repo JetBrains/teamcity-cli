@@ -141,8 +141,13 @@ func convertBambooJob(stageName, jobName string, def map[string]any, deps []stri
 	}
 
 	if v, ok := def["enabled"]; ok && !boolFromAny(v) {
-		result.ManualSetup = append(result.ManualSetup,
-			fmt.Sprintf("Job %q is disabled in Bamboo → converted anyway; pause or delete the TC job", jobName))
+		result.NeedsReview = append(result.NeedsReview,
+			fmt.Sprintf("Job %q is disabled in Bamboo → emitted as a no-op placeholder; re-enable or delete it in TC", jobName))
+		j.Steps = []Step{{
+			Name:          "No-op (disabled in Bamboo)",
+			ScriptContent: fmt.Sprintf("echo 'Job %s is disabled in Bamboo; tasks were not converted'", jobName),
+		}}
+		return j
 	}
 
 	tasks := bambooTaskList(def["tasks"])
