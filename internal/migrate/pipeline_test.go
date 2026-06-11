@@ -15,7 +15,7 @@ func TestMarshalYAMLSingleJob(t *testing.T) {
 		Jobs: []Job{{
 			ID:     "build",
 			Name:   "Build",
-			RunsOn: "Ubuntu-24.04-Large",
+			RunsOn: "Linux-Large",
 			Steps: []Step{{
 				Name:          "Run tests",
 				ScriptContent: "go test ./...",
@@ -25,7 +25,7 @@ func TestMarshalYAMLSingleJob(t *testing.T) {
 	yaml := p.String()
 	assert.Contains(t, yaml, "  build:\n")
 	assert.Contains(t, yaml, `    name: "Build"`)
-	assert.Contains(t, yaml, "    runs-on: Ubuntu-24.04-Large")
+	assert.Contains(t, yaml, "    runs-on: Linux-Large")
 	assert.Contains(t, yaml, `        name: "Run tests"`)
 	assert.Contains(t, yaml, "script-content: go test ./...")
 
@@ -37,9 +37,9 @@ func TestMarshalYAMLDependencies(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{
-			{ID: "build", Name: "Build", RunsOn: "Ubuntu-24.04-Large",
+			{ID: "build", Name: "Build", RunsOn: "Linux-Large",
 				Steps: []Step{{Name: "build", ScriptContent: "make"}}},
-			{ID: "test", Name: "Test", RunsOn: "Ubuntu-24.04-Large",
+			{ID: "test", Name: "Test", RunsOn: "Linux-Large",
 				Dependencies: []string{"build"},
 				Steps:        []Step{{Name: "test", ScriptContent: "make test"}}},
 		},
@@ -53,9 +53,9 @@ func TestMarshalYAMLIDCollision(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{
-			{ID: "build-test", Name: "A", RunsOn: "Ubuntu-24.04-Large",
+			{ID: "build-test", Name: "A", RunsOn: "Linux-Large",
 				Steps: []Step{{Name: "s", ScriptContent: "echo a"}}},
-			{ID: "build_test", Name: "B", RunsOn: "Ubuntu-24.04-Large",
+			{ID: "build_test", Name: "B", RunsOn: "Linux-Large",
 				Steps: []Step{{Name: "s", ScriptContent: "echo b"}}},
 		},
 	}
@@ -69,9 +69,9 @@ func TestMarshalYAMLDuplicateIDs(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{
-			{ID: "build", Name: "A", RunsOn: "Ubuntu-24.04-Large",
+			{ID: "build", Name: "A", RunsOn: "Linux-Large",
 				Steps: []Step{{Name: "s", ScriptContent: "echo a"}}},
-			{ID: "build", Name: "B", RunsOn: "Ubuntu-24.04-Large",
+			{ID: "build", Name: "B", RunsOn: "Linux-Large",
 				Steps: []Step{{Name: "s", ScriptContent: "echo b"}}},
 		},
 	}
@@ -85,7 +85,7 @@ func TestMarshalYAMLEmptyDeps(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Ubuntu-24.04-Large",
+			ID: "build", Name: "Build", RunsOn: "Linux-Large",
 			Dependencies: []string{},
 			Steps:        []Step{{Name: "s", ScriptContent: "echo ok"}},
 		}},
@@ -98,7 +98,7 @@ func TestMarshalYAMLParameters(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Ubuntu-24.04-Large",
+			ID: "build", Name: "Build", RunsOn: "Linux-Large",
 			Parameters: map[string]string{"FOO": "bar", "BAZ": "qux"},
 			Steps:      []Step{{Name: "s", ScriptContent: "echo ok"}},
 		}},
@@ -115,7 +115,7 @@ func TestMarshalYAMLFilesPublication(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Ubuntu-24.04-Large",
+			ID: "build", Name: "Build", RunsOn: "Linux-Large",
 			Steps: []Step{{Name: "s", ScriptContent: "make"}},
 			FilesPublication: []FilePublication{{
 				Path: "dist/**", ShareWithJobs: true, PublishArtifact: true,
@@ -132,7 +132,7 @@ func TestMarshalYAMLMultilineScript(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Ubuntu-24.04-Large",
+			ID: "build", Name: "Build", RunsOn: "Linux-Large",
 			Steps: []Step{{Name: "multi", ScriptContent: "echo hello\necho world"}},
 		}},
 	}
@@ -147,7 +147,7 @@ func TestMarshalYAMLComment(t *testing.T) {
 	p := &Pipeline{
 		Comment: "# Converted from: ci.yml\n\n",
 		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Ubuntu-24.04-Large",
+			ID: "build", Name: "Build", RunsOn: "Linux-Large",
 			Steps: []Step{{Name: "s", ScriptContent: "echo ok"}},
 		}},
 	}
@@ -159,7 +159,7 @@ func TestMarshalYAMLStepParameters(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Ubuntu-24.04-Large",
+			ID: "build", Name: "Build", RunsOn: "Linux-Large",
 			Steps: []Step{{
 				Name:          "s",
 				ScriptContent: "echo ok",
@@ -175,9 +175,9 @@ func TestMarshalYAMLDepRefResolution(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{
-			{ID: "build-it", Name: "Build", RunsOn: "Ubuntu-24.04-Large",
+			{ID: "build-it", Name: "Build", RunsOn: "Linux-Large",
 				Steps: []Step{{Name: "s", ScriptContent: "make"}}},
-			{ID: "test-it", Name: "Test", RunsOn: "Ubuntu-24.04-Large",
+			{ID: "test-it", Name: "Test", RunsOn: "Linux-Large",
 				Dependencies: []string{"build-it"},
 				Steps:        []Step{{Name: "s", ScriptContent: "make test"}}},
 		},

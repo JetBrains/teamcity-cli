@@ -27,24 +27,18 @@ func HasValidationErrors(results []*ConversionResult) bool {
 	return false
 }
 
-// BuildRunnerMap maps known CI runner labels to the first matching cloud image name; returns nil when no OS matches.
+// BuildRunnerMap maps known CI runner labels to the best matching agent name; returns nil when no OS matches.
 func BuildRunnerMap(imageNames []string) map[string]string {
-	byOS := map[string]string{}
+	byOS := map[string][]string{}
 	for _, name := range imageNames {
 		n := strings.ToLower(name)
 		switch {
 		case strings.Contains(n, "ubuntu") || strings.Contains(n, "linux"):
-			if _, ok := byOS["linux"]; !ok {
-				byOS["linux"] = name
-			}
+			byOS["linux"] = append(byOS["linux"], name)
 		case strings.Contains(n, "macos") || strings.Contains(n, "mac"):
-			if _, ok := byOS["mac"]; !ok {
-				byOS["mac"] = name
-			}
+			byOS["mac"] = append(byOS["mac"], name)
 		case strings.Contains(n, "windows"):
-			if _, ok := byOS["windows"]; !ok {
-				byOS["windows"] = name
-			}
+			byOS["windows"] = append(byOS["windows"], name)
 		}
 	}
 	if len(byOS) == 0 {
@@ -52,20 +46,39 @@ func BuildRunnerMap(imageNames []string) map[string]string {
 	}
 
 	m := map[string]string{}
-	if img, ok := byOS["linux"]; ok {
+	if img := pickRunnerSize(byOS["linux"]); img != "" {
 		for _, k := range []string{"ubuntu-latest", "ubuntu-24.04", "ubuntu-22.04", "ubuntu-20.04"} {
 			m[k] = img
 		}
 	}
-	if img, ok := byOS["mac"]; ok {
+	if img := pickRunnerSize(byOS["mac"]); img != "" {
 		for _, k := range []string{"macos-latest", "macos-15", "macos-14", "macos-13"} {
 			m[k] = img
 		}
 	}
-	if img, ok := byOS["windows"]; ok {
+	if img := pickRunnerSize(byOS["windows"]); img != "" {
 		for _, k := range []string{"windows-latest", "windows-2022", "windows-2019"} {
 			m[k] = img
 		}
 	}
 	return m
+}
+
+// pickRunnerSize prefers Large over Medium over XLarge over Small — closest to GHA's default 4-core runners.
+func pickRunnerSize(names []string) string {
+	if len(names) == 0 {
+		return ""
+	}
+	for _, size := range []string{"large", "medium", "xlarge", "small"} {
+		for _, n := range names {
+			low := strings.ToLower(n)
+			if size == "large" && strings.Contains(low, "xlarge") {
+				continue
+			}
+			if strings.Contains(low, size) {
+				return n
+			}
+		}
+	}
+	return names[0]
 }

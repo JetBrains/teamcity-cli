@@ -195,28 +195,32 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 	}
 
 	if job.WorkflowCall != nil {
-		uses := ""
-		if job.WorkflowCall.Uses != nil {
-			uses = job.WorkflowCall.Uses.Value
-		}
-		result.NeedsReview = append(result.NeedsReview,
-			fmt.Sprintf("Job %q calls reusable workflow %q → inline or convert the called workflow separately", id, uses))
-		j.Steps = []Step{{
-			Name:          "Reusable workflow call",
-			ScriptContent: fmt.Sprintf("# TODO: Job %q calls reusable workflow: %s\n# Inline the workflow steps or convert separately\necho 'TODO: implement reusable workflow call'", id, uses),
-		}}
+		j.Steps = []Step{workflowCallStub(id, job.WorkflowCall, result)}
 		return j
 	}
 
 	var runsOnWindows bool
-	if job.RunsOn != nil && len(job.RunsOn.Labels) > 0 {
+	switch {
+	case job.RunsOn == nil:
+	// A bare `runs-on: ${{ matrix.os }}` parses into LabelsExpr, not Labels — without this
+	// branch the field would be dropped silently and the job would have no agent target.
+	case job.RunsOn.LabelsExpr != nil:
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Job %q runs-on uses expression %q → emitted the default runner; expand the matrix into separate jobs with explicit runners", id, condense(job.RunsOn.LabelsExpr.Value)))
+		j.RunsOn = opts.MapRunner("ubuntu-latest")
+	case len(job.RunsOn.Labels) > 0:
 		raw := job.RunsOn.Labels[0].Value
 		if strings.Contains(raw, "${{") {
 			result.ManualSetup = append(result.ManualSetup,
-				fmt.Sprintf("Job %q runs-on uses matrix expression %q → expand the matrix into separate jobs with explicit runners", id, raw))
+				fmt.Sprintf("Job %q runs-on uses matrix expression %q → expand the matrix into separate jobs with explicit runners", id, condense(raw)))
 			j.RunsOn = opts.MapRunner("ubuntu-latest")
 		} else {
-			j.RunsOn = opts.MapRunner(raw)
+			mapped, known := opts.ResolveRunner(raw)
+			j.RunsOn = mapped
+			if !known {
+				result.ManualSetup = append(result.ManualSetup,
+					fmt.Sprintf("Job %q runs-on %q is not a GitHub-hosted runner → emitted `self-hosted`; configure matching agent requirements in TeamCity", id, raw))
+			}
 			runsOnWindows = strings.Contains(strings.ToLower(raw), "windows")
 		}
 		if len(job.RunsOn.Labels) > 1 {
@@ -248,7 +252,7 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 
 	if job.If != nil && job.If.Value != "" {
 		result.ManualSetup = append(result.ManualSetup,
-			fmt.Sprintf("Job %q condition: %s → configure as branch filter or execution policy", id, job.If.Value))
+			fmt.Sprintf("Job %q condition: %s → configure as branch filter or execution policy", id, condense(job.If.Value)))
 	}
 	if job.Strategy != nil && job.Strategy.Matrix != nil {
 		result.ManualSetup = append(result.ManualSetup,
@@ -275,7 +279,7 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 		}
 		if step.If != nil && step.If.Value != "" {
 			result.ManualSetup = append(result.ManualSetup,
-				fmt.Sprintf("Step %q has if: %s → add execution condition or branch filter in TeamCity", stepName, step.If.Value))
+				fmt.Sprintf("Step %q has if: %s → add execution condition or branch filter in TeamCity", stepName, condense(step.If.Value)))
 		}
 		if step.ContinueOnError != nil && step.ContinueOnError.Value {
 			result.ManualSetup = append(result.ManualSetup,
@@ -304,6 +308,46 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 	}
 
 	return j
+}
+
+// workflowCallStub renders a TODO step for a reusable-workflow job, preserving with: inputs and secrets: names in comments so nothing is silently dropped.
+func workflowCallStub(id string, call *actionlint.WorkflowCall, result *ConversionResult) Step {
+	uses := ""
+	if call.Uses != nil {
+		uses = call.Uses.Value
+	}
+	result.NeedsReview = append(result.NeedsReview,
+		fmt.Sprintf("Job %q calls reusable workflow %q → inline or convert the called workflow separately", id, uses))
+
+	var stub strings.Builder
+	fmt.Fprintf(&stub, "# TODO: Job %q calls reusable workflow: %s\n# Inline the workflow steps or convert separately", id, uses)
+	if len(call.Inputs) > 0 {
+		stub.WriteString("\n# Workflow inputs (with:):")
+		for _, k := range SortedKeys(call.Inputs) {
+			val := ""
+			if in := call.Inputs[k]; in != nil && in.Value != nil {
+				val = in.Value.Value
+			}
+			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, val)))
+		}
+	}
+	if len(call.Secrets) > 0 {
+		stub.WriteString("\n# Workflow secrets:")
+		for _, k := range SortedKeys(call.Secrets) {
+			val := ""
+			if sec := call.Secrets[k]; sec != nil && sec.Value != nil {
+				val = sec.Value.Value
+			}
+			detectGHASecrets(val, result)
+			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, val)))
+		}
+	}
+	if call.InheritSecrets {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Job %q passes `secrets: inherit` to a reusable workflow → recreate the secrets it needs with: teamcity project token put <project-id> <value>", id))
+	}
+	stub.WriteString("\necho 'TODO: implement reusable workflow call'")
+	return Step{Name: "Reusable workflow call", ScriptContent: stub.String()}
 }
 
 func transformGHAStep(step *actionlint.Step, acc *ghaJobAccumulator) []StepResult {

@@ -11,6 +11,31 @@ import (
 
 var Bytes = schemas.Pipeline
 
+// HostedAgentNames extracts the JetBrains-hosted agent enum from a schema's runs-on definition; nil when the schema doesn't constrain agent names.
+func HostedAgentNames(schemaData []byte) []string {
+	var s struct {
+		Definitions struct {
+			RunOn struct {
+				AnyOf []struct {
+					Enum []string `json:"enum"`
+				} `json:"anyOf"`
+			} `json:"runOn"`
+		} `json:"definitions"`
+	}
+	if err := json.Unmarshal(schemaData, &s); err != nil {
+		return nil
+	}
+	for _, opt := range s.Definitions.RunOn.AnyOf {
+		if len(opt.Enum) == 1 && opt.Enum[0] == "self-hosted" {
+			continue
+		}
+		if len(opt.Enum) > 0 {
+			return opt.Enum
+		}
+	}
+	return nil
+}
+
 // Validate checks TC pipeline YAML against the embedded schema; returns "" if valid.
 func Validate(yamlData string) string {
 	return ValidateWithSchema(yamlData, Bytes)
