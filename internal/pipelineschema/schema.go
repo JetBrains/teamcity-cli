@@ -36,11 +36,6 @@ func HostedAgentNames(schemaData []byte) []string {
 	return nil
 }
 
-// Validate checks TC pipeline YAML against the embedded schema; returns "" if valid.
-func Validate(yamlData string) string {
-	return ValidateWithSchema(yamlData, Bytes)
-}
-
 // ValidateWithSchema checks TC pipeline YAML against the given JSON schema; returns "" if valid.
 func ValidateWithSchema(yamlData string, schemaData []byte) string {
 	var doc any

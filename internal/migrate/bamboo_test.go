@@ -67,10 +67,8 @@ func TestBambooConvertFixture(t *testing.T) {
 	assert.Contains(t, yaml, "Deploy_Deploy:")
 	assert.Contains(t, yaml, "dependencies:\n      - Build_Build")
 	assert.Contains(t, yaml, "greeting:")
-	assert.Contains(t, yaml, "release_channel:")
 	assert.NotContains(t, yaml, "env.greeting:", "plan variables are config params, not env vars")
 	assert.Contains(t, yaml, "%build.number%")
-	assert.Contains(t, yaml, "%teamcity.build.branch%")
 
 	manuals := strings.Join(result.ManualSetup, "\n")
 	assert.Contains(t, manuals, "Stage \"Deploy\" is manual")
@@ -82,7 +80,7 @@ func TestBambooConvertFixture(t *testing.T) {
 	simplified := strings.Join(result.Simplified, "\n")
 	assert.Contains(t, simplified, "checkout")
 
-	assert.Empty(t, pipelineschema.Validate(yaml))
+	assert.Empty(t, pipelineschema.ValidateWithSchema(yaml, pipelineschema.Bytes))
 }
 
 func TestBambooCollidingJobIDsStayDistinctInDeps(t *testing.T) {

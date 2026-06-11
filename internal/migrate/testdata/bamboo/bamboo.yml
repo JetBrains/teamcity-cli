@@ -85,4 +85,3 @@ notifications: []
 labels: []
 variables:
   greeting: hello
-  release_channel: stable
