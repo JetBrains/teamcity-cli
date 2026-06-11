@@ -254,8 +254,7 @@ func initActionRegistry() map[string]actionTransformer {
 	m["softprops/action-gh-release"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
 		fmt.Fprintf(&cmd, "gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))
-		// `files:` is a whitespace/newline-separated glob list; append each as a separate arg
-		// so a multiline value can't spill onto a new shell line (left unquoted to keep glob expansion).
+		// `files:` is a whitespace/newline-separated glob list; append each as one unquoted arg so a multiline value can't spill onto a new shell line.
 		for f := range strings.FieldsSeq(inputs["files"]) {
 			cmd.WriteString(" ")
 			cmd.WriteString(f)
@@ -283,8 +282,7 @@ func initActionRegistry() map[string]actionTransformer {
 	return m
 }
 
-// requiredInput falls back to a ${VAR:?} shell guard so a missing required action input
-// fails the generated step with a clear message instead of emitting empty arguments.
+// requiredInput falls back to a ${VAR:?} shell guard so a missing action input fails the step instead of emitting empty arguments.
 func requiredInput(inputs map[string]string, key, envVar string) string {
 	return cmp.Or(inputs[key], fmt.Sprintf("${%s:?Set %s}", envVar, envVar))
 }

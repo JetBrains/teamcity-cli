@@ -115,8 +115,7 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 		client = nil
 	}
 
-	// The schema also drives runner-name mapping, so resolve it even with --no-validate —
-	// the flag must not change the generated YAML, only skip the validation step.
+	// The schema also drives runner-name mapping, so resolve it even with --no-validate — the flag must only skip validation, not change the YAML.
 	schemaData := resolveSchema(client)
 
 	convertOpts := migrate.Options{RunnerMap: resolveRunnerMap(client, schemaData)}

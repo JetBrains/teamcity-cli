@@ -121,9 +121,7 @@ func bambooPlanDoc(docs []map[string]any) (map[string]any, int) {
 
 func convertBambooJob(stageName, jobName string, def map[string]any, deps []string, opts Options, result *ConversionResult) Job {
 	j := Job{
-		// Keep the raw id; Pipeline.String() sanitizes and de-duplicates job keys and
-		// resolves dependencies against them, so two names that collide after sanitization
-		// (e.g. "Build-A" and "Build_A") stay distinct instead of merging.
+		// Keep the raw id; Pipeline.String() sanitizes and de-duplicates keys, so names that collide after sanitization (e.g. "Build-A"/"Build_A") stay distinct.
 		ID:           stageName + "_" + jobName,
 		Name:         jobName,
 		Dependencies: append([]string{}, deps...),
@@ -357,9 +355,7 @@ func bambooScript(body map[string]any, result *ConversionResult, jobName string)
 		WorkingDirectory: bambooWorkingDir(body),
 	}
 	if isPowerShell {
-		// TC `type: script` runs cmd.exe on Windows. A single line can be dispatched via
-		// `powershell -Command "..."`, but a multi-line body can't be one cmd.exe argument —
-		// leave it as raw PowerShell and flag it for the PowerShell runner.
+		// TC scripts run cmd.exe on Windows: a single line dispatches via `powershell -Command`, but a multi-line body stays raw PowerShell and is flagged for the PowerShell runner.
 		if strings.Contains(script, "\n") {
 			result.ManualSetup = append(result.ManualSetup,
 				fmt.Sprintf("Job %q has a multi-line Windows PowerShell task → run it under TeamCity's PowerShell runner; the step body is emitted as raw PowerShell", jobName))

@@ -43,8 +43,7 @@ type FilePublication struct {
 
 var jobIDUnsafe = regexp.MustCompile(`[^A-Za-z0-9_]+`)
 
-// SanitizeJobID rewrites every run of characters outside [A-Za-z0-9_] to a single "_",
-// so the result is a valid pipeline job key and dependency reference (schema: ^[A-Za-z0-9_]+$).
+// SanitizeJobID rewrites every run of characters outside [A-Za-z0-9_] to "_" so the result is a valid job key and dependency reference.
 func SanitizeJobID(id string) string {
 	return jobIDUnsafe.ReplaceAllString(id, "_")
 }
