@@ -44,7 +44,7 @@ func TestGenerateGallery(t *testing.T) {
 			BrandVersion: "v1.1.1",
 			Crumbs:       []string{"jetbrains", "teamcity-cli", "gallery"},
 			Facts: []termbook.Fact{
-				{Value: "146", Label: "screens"},
+				{Value: "156", Label: "screens"},
 				{Value: "17", Label: "command groups"},
 			},
 			Notes: termbook.Notes{
