@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -56,7 +57,15 @@ func loadSchemaCache(serverURL string) ([]byte, error) {
 	if time.Since(info.ModTime()) > schemaCacheTTL {
 		return nil, errors.New("schema cache expired")
 	}
-	return os.ReadFile(path)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	// A torn write leaves invalid JSON with a fresh mtime; treat it as a miss so it self-heals.
+	if !json.Valid(data) {
+		return nil, errors.New("schema cache corrupt")
+	}
+	return data, nil
 }
 
 func saveSchemaCache(serverURL string, schema []byte) error {

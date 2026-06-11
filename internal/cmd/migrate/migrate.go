@@ -115,10 +115,9 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 		client = nil
 	}
 
-	var schemaData []byte
-	if !opts.noValidate {
-		schemaData = resolveSchema(client)
-	}
+	// The schema also drives runner-name mapping, so resolve it even with --no-validate —
+	// the flag must not change the generated YAML, only skip the validation step.
+	schemaData := resolveSchema(client)
 
 	convertOpts := migrate.Options{RunnerMap: resolveRunnerMap(client, schemaData)}
 
@@ -196,34 +195,37 @@ func printMigrateReport(f *cmdutil.Factory, opts *migrateOptions, configs []migr
 		printConversionResult(f, cfgByFile[result.SourceFile], result, opts.dryRun)
 	}
 
-	if !opts.dryRun {
-		if len(writtenFiles) > 0 {
-			_, _ = fmt.Fprintf(f.Printer.Out, "Written:\n")
-			for i, path := range writtenFiles {
-				if results[i].ValidationError != "" {
-					_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Green(path), output.Yellow("(schema validation failed — review before deploying)"))
-					continue
-				}
-				_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", output.Green(path))
+	if len(writtenFiles) > 0 {
+		_, _ = fmt.Fprintf(f.Printer.Out, "Written:\n")
+		for i, path := range writtenFiles {
+			if results[i].ValidationError != "" {
+				_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Green(path), output.Yellow("(schema validation failed — review before deploying)"))
+				continue
 			}
-		}
-
-		manualItems := migrate.CollectManualSetup(results)
-		if len(manualItems) > 0 {
-			_, _ = fmt.Fprintf(f.Printer.Out, "\nManual setup needed:\n")
-			for _, item := range manualItems {
-				_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Yellow("•"), item)
-			}
-		}
-
-		if len(writtenFiles) > 0 {
-			_, _ = fmt.Fprintf(f.Printer.Out, "\nNext:\n")
-			_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline validate %s\n", writtenFiles[0])
-			_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline create <name> -p <project-id> -f %s\n", writtenFiles[0])
+			_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", output.Green(path))
 		}
 	}
 
+	printItemList(f, "Needs review:", migrate.CollectNeedsReview(results))
+	printItemList(f, "Manual setup needed:", migrate.CollectManualSetup(results))
+
+	if len(writtenFiles) > 0 {
+		_, _ = fmt.Fprintf(f.Printer.Out, "\nNext:\n")
+		_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline validate %s\n", writtenFiles[0])
+		_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline create <name> -p <project-id> -f %s\n", writtenFiles[0])
+	}
+
 	printMigrateTips(f)
+}
+
+func printItemList(f *cmdutil.Factory, header string, items []string) {
+	if len(items) == 0 {
+		return
+	}
+	_, _ = fmt.Fprintf(f.Printer.Out, "\n%s\n", header)
+	for _, item := range items {
+		_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Yellow("•"), item)
+	}
 }
 
 func trackMigrate(f *cmdutil.Factory, opts *migrateOptions, configs []migrate.CIConfig, results []*migrate.ConversionResult) {
@@ -285,13 +287,10 @@ func migrateValidationField(opts *migrateOptions, results []*migrate.ConversionR
 	return analytics.MigrateValidationValid
 }
 
-func printConversionStatus(f *cmdutil.Factory, result *migrate.ConversionResult, dryRun bool) {
+func printConversionStatus(f *cmdutil.Factory, result *migrate.ConversionResult) {
 	if result.ValidationError != "" {
 		_, _ = fmt.Fprintf(f.Printer.Out, "    %s Schema validation failed (use --no-validate to skip)\n",
 			output.Red("✗"))
-		return
-	}
-	if dryRun {
 		return
 	}
 	reviews, manuals := len(result.NeedsReview), len(result.ManualSetup)
@@ -346,7 +345,7 @@ func printConversionResult(f *cmdutil.Factory, cfg migrate.CIConfig, result *mig
 			output.Faint(summarizeSimplifications(result.Simplified)))
 	}
 
-	printConversionStatus(f, result, dryRun)
+	printConversionStatus(f, result)
 
 	if dryRun {
 		_, _ = fmt.Fprintf(f.Printer.Out, "\n--- %s ---\n%s--- end ---\n\n", result.OutputFile, result.YAML)

@@ -32,7 +32,7 @@ Official TeamCity migration docs:
 | `needs: [job1]` | `dependencies: [job1]` | |
 | `runs-on: ubuntu-latest` | `runs-on: Linux-Large` | See runner mapping below |
 | `env.KEY: val` | `parameters: env.KEY: val` | |
-| `secrets.X` | `%env.X%` + credentialsJSON | Create via `teamcity project token put` |
+| `secrets.X` | `%X%` | Add `X: "credentialsJSON:<uuid>"` under `secrets:`; create via `teamcity project token put` |
 | `strategy.matrix` | Separate jobs or `parallelism` | |
 | `container: image` | `docker-image:` on steps | |
 | `services:` | Docker Compose or step-level | |
@@ -95,7 +95,7 @@ Bamboo Specs YAML lives in `bamboo-specs/*.yml` (or `bamboo.yml` in the repo roo
 | `final-tasks[]` | Steps with always-run policy | Surfaced as manual setup; set per-step `Even if some build steps have failed` |
 | `artifacts[]` | `files-publication[]` | `shared: true` → `share-with-jobs`; otherwise `publish-artifact` |
 | `artifact-subscriptions[]` | Artifact dependencies | Manual: add to pipeline `dependencies:` block |
-| `requirements[]` | `runs-on` + agent requirements | First entry maps via runner table; rest become manual notes |
+| `requirements[]` | `runs-on` + agent requirements | First OS-shaped entry picks the runner; non-OS entries become manual notes. With no OS requirement, OS-bound tasks (ms-build, fastlane, xcode, ...) infer it |
 | `docker.image` | Docker container settings | Surfaced as manual setup; wrap step or use Docker wrapper feature |
 | `triggers[]` (polling, cron, ...) | VCS / scheduled triggers | Manual; configure in TC UI |
 | `branches:` | VCS root branch filters | Manual; configure on the VCS root |
@@ -122,7 +122,7 @@ Bamboo Specs YAML lives in `bamboo-specs/*.yml` (or `bamboo.yml` in the repo roo
 | `dump-variables` | `env \| sort` | |
 | `artifact-download` | Manual artifact-dependency | Surfaced as manual setup |
 | `test-parser` / `j_unit` / `nunit-parser` / `mocha` | Remove -- TC has built-in test report import | Manual: confirm report path |
-| `ssh` / `scp` | Inline `ssh`/`scp` script | Manual: upload SSH key with `teamcity project ssh-key upload` |
+| `ssh` / `scp` | Inline `ssh`/`scp` script | Manual: upload SSH key with `teamcity project ssh upload` |
 | `ms-build` / `ms-test` / `visual-studio` / `nunit-runner` | Inline equivalent commands | |
 | `fastlane` | `fastlane <lane>` | |
 | `unlock-keychain` | `security unlock-keychain ...` | Manual: store password as TC token |

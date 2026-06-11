@@ -32,16 +32,7 @@ func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 		return nil, fmt.Errorf("invalid YAML: %w", err)
 	}
 
-	// Canonical bamboo.yml streams hold a plan spec plus deployment/permission docs after `---`.
-	spec := docs[0]
-	specIdx := 0
-	for i, d := range docs {
-		_, hasPlan := d["plan"]
-		if hasPlan && len(anySlice(d["stages"])) > 0 {
-			spec, specIdx = d, i
-			break
-		}
-	}
+	spec, specIdx := bambooPlanDoc(docs)
 
 	result := NewResult(cfg)
 
@@ -115,6 +106,17 @@ func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 
 	result.Pipeline = p
 	return result, nil
+}
+
+// bambooPlanDoc picks the plan spec out of a multi-doc stream — canonical bamboo.yml holds a plan spec plus deployment/permission docs after `---`.
+func bambooPlanDoc(docs []map[string]any) (map[string]any, int) {
+	for i, d := range docs {
+		_, hasPlan := d["plan"]
+		if hasPlan && len(anySlice(d["stages"])) > 0 {
+			return d, i
+		}
+	}
+	return docs[0], 0
 }
 
 func convertBambooJob(stageName, jobName string, def map[string]any, deps []string, opts Options, result *ConversionResult) Job {
@@ -388,6 +390,10 @@ func bambooCheckout(body map[string]any, result *ConversionResult, jobName strin
 		result.ManualSetup = append(result.ManualSetup,
 			fmt.Sprintf("Job %q checkout used Bamboo repo %q → ensure a TC VCS root for that repo is attached to the pipeline", jobName, repo))
 	}
+	if path := stringFromAny(body["path"]); path != "" {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Job %q checks out into subdirectory %q → add a checkout rule (+:. => %s) on the TC VCS root", jobName, path, path))
+	}
 	return StepResult{Status: StatusSimplified, Note: "checkout (TeamCity VCS checkout is automatic)"}
 }
 
@@ -461,7 +467,7 @@ func bambooGradle(body map[string]any, result *ConversionResult, jobName string)
 		tasks = "build"
 	}
 	wrapper := "./gradlew"
-	if useWrapper, _ := body["use-wrapper"].(bool); !useWrapper {
+	if !boolFromAny(body["use-wrapper"]) {
 		if v, _ := body["executable"].(string); v != "" {
 			wrapper = v
 		}
@@ -500,7 +506,7 @@ func bambooNpmRunner(tool string) bambooTransformer {
 }
 
 func bambooBower(body map[string]any, result *ConversionResult, jobName string) StepResult {
-	cmd := cmp.Or(stringFromAny(body["command"]), "install")
+	cmd := stringField(body, "command", "install")
 	return Converted([]Step{{
 		Name:          stringField(body, "description", "Run Bower"),
 		ScriptContent: MapBambooExpressions("bower " + cmd),
@@ -526,7 +532,7 @@ func bambooDocker(body map[string]any, result *ConversionResult, jobName string)
 	image := stringFromAny(body["image"])
 	switch cmdType {
 	case "build":
-		dockerfile := cmp.Or(stringFromAny(body["dockerfile"]), "Dockerfile")
+		dockerfile := stringField(body, "dockerfile", "Dockerfile")
 		return Converted([]Step{{
 			Name:          stringField(body, "description", "Docker build"),
 			ScriptContent: MapBambooExpressions(fmt.Sprintf("docker build -f %s -t %s .", dockerfile, cmp.Or(image, "build:latest"))),
@@ -574,11 +580,9 @@ func bambooDumpVariables(body map[string]any, result *ConversionResult, jobName 
 func bambooArtifactDownload(body map[string]any, result *ConversionResult, jobName string) StepResult {
 	src := cmp.Or(stringFromAny(body["source-plan"]), stringFromAny(body["sourcePlan"]))
 	artifact := stringFromAny(body["artifact"])
-	dest := cmp.Or(stringFromAny(body["destination"]), ".")
+	dest := stringField(body, "destination", ".")
 	if artifact == "" {
-		result.NeedsReview = append(result.NeedsReview,
-			fmt.Sprintf("Job %q has artifact-download with no artifact name → review manually", jobName))
-		return StepResult{Status: StatusUnsupported, Note: "artifact-download without name"}
+		return StepResult{Status: StatusUnsupported, Note: fmt.Sprintf("Job %q has artifact-download with no artifact name → review manually", jobName)}
 	}
 	result.ManualSetup = append(result.ManualSetup,
 		fmt.Sprintf("artifact-download for %q from %q → declare an artifact-dependency in TC pipeline `dependencies:`; downloaded to %q", artifact, src, dest))
@@ -606,11 +610,11 @@ func bambooSSH(body map[string]any, result *ConversionResult, jobName string) St
 	if host == "" || len(cmds) == 0 {
 		return Unknown("ssh", flattenStringMap(body))
 	}
-	user := cmp.Or(stringFromAny(body["username"]), "$SSH_USER")
+	user := stringField(body, "username", "$SSH_USER")
 	target := user + "@" + host
 	script := fmt.Sprintf("ssh %s <<'EOF'\n%s\nEOF", target, strings.Join(cmds, "\n"))
 	result.ManualSetup = append(result.ManualSetup,
-		fmt.Sprintf("Job %q SSH task → upload an SSH key with `teamcity project ssh-key upload` and reference it in the agent runner", jobName))
+		fmt.Sprintf("Job %q SSH task → upload an SSH key with `teamcity project ssh upload` and reference it in the agent runner", jobName))
 	return Converted([]Step{{
 		Name:          stringField(body, "description", "SSH "+host),
 		ScriptContent: MapBambooExpressions(script),
@@ -624,10 +628,10 @@ func bambooSCP(body map[string]any, result *ConversionResult, jobName string) St
 	if host == "" || src == "" || dst == "" {
 		return Unknown("scp", flattenStringMap(body))
 	}
-	user := cmp.Or(stringFromAny(body["username"]), "$SSH_USER")
+	user := stringField(body, "username", "$SSH_USER")
 	cmd := fmt.Sprintf("scp -r %s %s@%s:%s", src, user, host, dst)
 	result.ManualSetup = append(result.ManualSetup,
-		fmt.Sprintf("Job %q SCP task → upload an SSH key with `teamcity project ssh-key upload` and configure on the agent", jobName))
+		fmt.Sprintf("Job %q SCP task → upload an SSH key with `teamcity project ssh upload` and configure on the agent", jobName))
 	return Converted([]Step{{
 		Name:          stringField(body, "description", "SCP to "+host),
 		ScriptContent: MapBambooExpressions(cmd),
@@ -647,6 +651,9 @@ func bambooMSBuild(body map[string]any, result *ConversionResult, jobName string
 
 func bambooMSTest(body map[string]any, result *ConversionResult, jobName string) StepResult {
 	asm := stringFromAny(body["test-files"])
+	if asm == "" {
+		return Unknown("ms-test", flattenStringMap(body))
+	}
 	return Converted([]Step{{
 		Name:          stringField(body, "description", "MSTest"),
 		ScriptContent: MapBambooExpressions("mstest /testcontainer:" + asm),
@@ -655,21 +662,28 @@ func bambooMSTest(body map[string]any, result *ConversionResult, jobName string)
 
 func bambooVisualStudio(body map[string]any, result *ConversionResult, jobName string) StepResult {
 	sln := cmp.Or(stringFromAny(body["solution"]), stringFromAny(body["projectFile"]))
+	if sln == "" {
+		return Unknown("visual-studio", flattenStringMap(body))
+	}
 	return Converted([]Step{{
 		Name:          stringField(body, "description", "Visual Studio build"),
-		ScriptContent: MapBambooExpressions("devenv " + sln + " /Build " + cmp.Or(stringFromAny(body["configuration"]), "Release")),
+		ScriptContent: MapBambooExpressions("devenv " + sln + " /Build " + stringField(body, "configuration", "Release")),
 	}})
 }
 
 func bambooNUnitRunner(body map[string]any, result *ConversionResult, jobName string) StepResult {
+	asm := stringFromAny(body["assembly"])
+	if asm == "" {
+		return Unknown("nunit-runner", flattenStringMap(body))
+	}
 	return Converted([]Step{{
 		Name:          stringField(body, "description", "NUnit runner"),
-		ScriptContent: MapBambooExpressions("nunit3-console " + stringFromAny(body["assembly"])),
+		ScriptContent: MapBambooExpressions("nunit3-console " + asm),
 	}})
 }
 
 func bambooFastlane(body map[string]any, result *ConversionResult, jobName string) StepResult {
-	lane := cmp.Or(stringFromAny(body["lane"]), "release")
+	lane := stringField(body, "lane", "release")
 	return Converted([]Step{{
 		Name:          stringField(body, "description", "Fastlane "+lane),
 		ScriptContent: MapBambooExpressions("fastlane " + lane),
@@ -677,7 +691,7 @@ func bambooFastlane(body map[string]any, result *ConversionResult, jobName strin
 }
 
 func bambooUnlockKeychain(body map[string]any, result *ConversionResult, jobName string) StepResult {
-	keychain := cmp.Or(stringFromAny(body["keychain"]), "$HOME/Library/Keychains/login.keychain-db")
+	keychain := stringField(body, "keychain", "$HOME/Library/Keychains/login.keychain-db")
 	result.ManualSetup = append(result.ManualSetup,
 		fmt.Sprintf("Job %q unlocks keychain %q → store the password as a TC token (`teamcity project token put`) and reference it as %%KEYCHAIN_PASSWORD%%", jobName, keychain))
 	return Converted([]Step{{
@@ -691,7 +705,7 @@ func bambooStopJob(body map[string]any, result *ConversionResult, jobName string
 }
 
 func bambooRepoTag(body map[string]any, result *ConversionResult, jobName string) StepResult {
-	tag := cmp.Or(stringFromAny(body["name"]), "v%build.number%")
+	tag := stringField(body, "name", "v%build.number%")
 	return Converted([]Step{{
 		Name:          "Tag repository",
 		ScriptContent: MapBambooExpressions("git tag " + tag + "\ngit push origin " + tag),
@@ -707,7 +721,7 @@ func bambooRepoBranch(body map[string]any, result *ConversionResult, jobName str
 }
 
 func bambooRepoCommit(body map[string]any, result *ConversionResult, jobName string) StepResult {
-	msg := cmp.Or(stringFromAny(body["message"]), "Automated commit %build.number%")
+	msg := stringField(body, "message", "Automated commit %build.number%")
 	return Converted([]Step{{
 		Name:          "Commit",
 		ScriptContent: MapBambooExpressions(fmt.Sprintf("git add -A\ngit diff --cached --quiet || git commit -m %q", msg)),
@@ -715,7 +729,7 @@ func bambooRepoCommit(body map[string]any, result *ConversionResult, jobName str
 }
 
 func bambooRepoPush(body map[string]any, result *ConversionResult, jobName string) StepResult {
-	branch := cmp.Or(stringFromAny(body["branch"]), "%teamcity.build.branch%")
+	branch := stringField(body, "branch", "%teamcity.build.branch%")
 	return Converted([]Step{{
 		Name:          "Push",
 		ScriptContent: MapBambooExpressions("git push origin " + branch),
@@ -740,7 +754,7 @@ func bambooAWSCodeDeploy(body map[string]any, result *ConversionResult, jobName 
 }
 
 func bambooGrails(body map[string]any, result *ConversionResult, jobName string) StepResult {
-	cmd := cmp.Or(stringFromAny(body["command"]), "test-app")
+	cmd := stringField(body, "command", "test-app")
 	return Converted([]Step{{
 		Name:          "Grails " + cmd,
 		ScriptContent: MapBambooExpressions("grails " + cmd),
@@ -802,15 +816,29 @@ var bambooRequirementOSHints = map[string]string{
 }
 
 func bambooRunsOn(def map[string]any, tasks []bambooTask, opts Options, result *ConversionResult, jobName string) string {
-	reqs := stringSliceFromAny(def["requirements"])
 	var osHint string
 	var nonOS []string
-	for _, r := range reqs {
-		if hint, ok := bambooRequirementOSHints[strings.ToLower(r)]; ok && osHint == "" {
+	for _, entry := range anySlice(def["requirements"]) {
+		// Requirements come as bare strings ("linux") or single-key maps ("operatingSystem: Windows").
+		label, display := "", ""
+		switch r := entry.(type) {
+		case string:
+			label, display = r, r
+		case map[string]any:
+			if len(r) == 0 {
+				continue
+			}
+			k := SortedKeys(r)[0]
+			label = stringFromAny(r[k])
+			display = k + ": " + label
+		default:
+			continue
+		}
+		if hint, ok := bambooRequirementOSHints[strings.ToLower(label)]; ok && osHint == "" {
 			osHint = hint
 			continue
 		}
-		nonOS = append(nonOS, r)
+		nonOS = append(nonOS, display)
 	}
 	if len(nonOS) > 0 {
 		result.ManualSetup = append(result.ManualSetup,
@@ -892,11 +920,13 @@ func surfaceBambooMeta(spec map[string]any, result *ConversionResult) {
 func analyzeBamboo(relPath string, data []byte) *CIConfig {
 	cfg := &CIConfig{Source: Bamboo, File: relPath, Features: []string{}}
 
-	var spec map[string]any
-	if err := yaml.Unmarshal(data, &spec); err != nil {
+	docs, err := bambooDocuments(data)
+	if err != nil {
 		// Don't fail detection on malformed YAML; convertBamboo surfaces the parse error.
 		return cfg
 	}
+	// Use the same plan-document selection as convertBamboo so detection stats match conversion.
+	spec, _ := bambooPlanDoc(docs)
 
 	if _, ok := spec["plan"]; !ok {
 		cfg.Features = append(cfg.Features, "non-plan")
@@ -1024,6 +1054,10 @@ var bambooKnownVars = map[string]string{
 	"bamboo.repository.git.branch":             "%teamcity.build.branch%",
 	"bamboo.repository.git.repositoryUrl":      "%vcsroot.url%",
 	"bamboo.repository.name":                   "%vcsroot.name%",
+	"bamboo.planRepository.branchName":         "%teamcity.build.branch%",
+	"bamboo.planRepository.revision":           "%build.vcs.number%",
+	"bamboo.planRepository.repositoryUrl":      "%vcsroot.url%",
+	"bamboo.planRepository.name":               "%vcsroot.name%",
 	"bamboo.working.directory":                 "%teamcity.build.checkoutDir%",
 	"bamboo.tmp.directory":                     "%system.teamcity.build.tempDir%",
 	"bamboo.buildPlanName":                     "%teamcity.buildConfName%",

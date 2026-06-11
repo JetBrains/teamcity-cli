@@ -4,17 +4,26 @@ import "strings"
 
 // CollectManualSetup returns the deduplicated union of ManualSetup items across results, preserving first-seen order.
 func CollectManualSetup(results []*ConversionResult) []string {
+	return collectUnique(results, func(r *ConversionResult) []string { return r.ManualSetup })
+}
+
+// CollectNeedsReview returns the deduplicated union of NeedsReview items across results, preserving first-seen order.
+func CollectNeedsReview(results []*ConversionResult) []string {
+	return collectUnique(results, func(r *ConversionResult) []string { return r.NeedsReview })
+}
+
+func collectUnique(results []*ConversionResult, items func(*ConversionResult) []string) []string {
 	seen := map[string]bool{}
-	items := []string{}
+	out := []string{}
 	for _, r := range results {
-		for _, item := range r.ManualSetup {
+		for _, item := range items(r) {
 			if !seen[item] {
 				seen[item] = true
-				items = append(items, item)
+				out = append(out, item)
 			}
 		}
 	}
-	return items
+	return out
 }
 
 // HasValidationErrors reports whether any result has a non-empty ValidationError.
@@ -39,20 +48,15 @@ func BuildRunnerMap(imageNames []string) map[string]string {
 		return nil
 	}
 
+	best := map[string]string{}
+	for os, names := range byOS {
+		best[os] = pickRunnerSize(names)
+	}
+	// Derive the label set from RunnerMap so the default and image-derived mappings can't drift apart.
 	m := map[string]string{}
-	if img := pickRunnerSize(byOS["linux"]); img != "" {
-		for _, k := range []string{"ubuntu-latest", "ubuntu-24.04", "ubuntu-22.04", "ubuntu-20.04"} {
-			m[k] = img
-		}
-	}
-	if img := pickRunnerSize(byOS["mac"]); img != "" {
-		for _, k := range []string{"macos-latest", "macos-15", "macos-14", "macos-13"} {
-			m[k] = img
-		}
-	}
-	if img := pickRunnerSize(byOS["windows"]); img != "" {
-		for _, k := range []string{"windows-latest", "windows-2022", "windows-2019"} {
-			m[k] = img
+	for label := range RunnerMap {
+		if img := best[classifyOS(label)]; img != "" {
+			m[label] = img
 		}
 	}
 	return m

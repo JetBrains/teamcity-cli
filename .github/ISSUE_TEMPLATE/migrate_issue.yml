@@ -28,6 +28,7 @@ body:
       label: Source CI system
       options:
         - GitHub Actions
+        - Bamboo
         - GitLab CI
         - Jenkins
         - CircleCI

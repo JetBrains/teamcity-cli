@@ -41,7 +41,6 @@ var skippedActions = []struct{ action, note string }{
 	{"mikepenz/action-junit-report", "junit-report → TeamCity has built-in JUnit report processing"},
 	{"EnricoMi/publish-unit-test-result-action", "publish-unit-test-result → TeamCity has built-in test report processing"},
 	{"actions/configure-pages", "configure-pages (GitHub Pages metadata, no-op for TeamCity)"},
-	{"actions/deploy-pages", "deploy-pages (GitHub Pages specific)"},
 }
 
 var scriptActions = []struct{ action, script, name string }{
@@ -62,7 +61,6 @@ var scriptActions = []struct{ action, script, name string }{
 	{"stefanzweifel/git-auto-commit-action", "git add -A && git diff --cached --quiet || git commit -m \"Auto-commit\" && git push", "Git auto-commit"},
 	{"EndBug/add-and-commit", "git add -A && git diff --cached --quiet || git commit -m \"Auto-commit\" && git push", "Git add and commit"},
 	{"JetBrains/qodana-action", "# TeamCity has native Qodana integration\n# Add Qodana build feature in TeamCity project settings\n# Or run via Docker:\ndocker run --rm -v \"$(pwd)\":/data/project jetbrains/qodana-jvm-community:latest", "Qodana"},
-	{"aws-actions/amazon-ecs-deploy-task-definition", "aws ecs update-service --cluster \"$CLUSTER\" --service \"$SERVICE\" --force-new-deployment", "ECS deploy"},
 	{"anothrNick/github-tag-action", "# TODO: Determine new version tag from commit messages\ngit tag \"$NEW_TAG\" && git push origin \"$NEW_TAG\"", "Auto tag"},
 }
 
@@ -107,6 +105,9 @@ var manualActions = []struct {
 	{"pypa/gh-action-pypi-publish", "PyPI publish",
 		"pip install twine && twine upload dist/*",
 		[]string{"PyPI credentials → create TeamCity parameters TWINE_USERNAME, TWINE_PASSWORD (type: password)"}},
+	{"aws-actions/amazon-ecs-deploy-task-definition", "ECS deploy",
+		"aws ecs update-service --cluster \"${CLUSTER:?Set CLUSTER}\" --service \"${SERVICE:?Set SERVICE}\" --force-new-deployment",
+		[]string{"ECS deploy → create TeamCity parameters CLUSTER and SERVICE for the target cluster/service"}},
 }
 
 var unsupportedActions = []struct {
@@ -117,6 +118,8 @@ var unsupportedActions = []struct {
 		[]string{"CodeQL → consider Qodana build feature for static analysis in TeamCity"}},
 	{"github/codeql-action/analyze", "CodeQL analyze → use Qodana or third-party SAST in TeamCity", nil},
 	{"github/codeql-action/autobuild", "CodeQL autobuild → not needed with Qodana", nil},
+	{"actions/deploy-pages", "deploy-pages → performs the actual Pages deployment; recreate as a deploy step or keep the Pages workflow",
+		[]string{"actions/deploy-pages → deploy the site from TeamCity (see peaceiris/JamesIves conversions) or keep GitHub Pages deployment on GitHub"}},
 	{"actions/labeler", "actions/labeler → GitHub-specific; no TeamCity equivalent", nil},
 	{"actions/stale", "actions/stale → GitHub-specific; no TeamCity equivalent", nil},
 	{"actions/first-interaction", "actions/first-interaction → GitHub-specific", nil},
@@ -134,36 +137,36 @@ func initActionRegistry() map[string]actionTransformer {
 
 	for _, a := range skippedActions {
 		note := a.note
-		m[a.action] = func(_, _ string, _ map[string]string) StepResult {
+		m[a.action] = func(_ string, _ map[string]string) StepResult {
 			return StepResult{Status: StatusSimplified, Note: note}
 		}
 	}
 	for _, a := range scriptActions {
 		script, name := a.script, a.name
-		m[a.action] = func(stepName, _ string, _ map[string]string) StepResult {
+		m[a.action] = func(stepName string, _ map[string]string) StepResult {
 			return Converted([]Step{{Name: cmp.Or(stepName, name), ScriptContent: script}})
 		}
 	}
 	for _, a := range unsupportedActions {
 		reason, manual := a.reason, a.manual
-		m[a.action] = func(_, _ string, _ map[string]string) StepResult {
+		m[a.action] = func(_ string, _ map[string]string) StepResult {
 			return StepResult{Status: StatusUnsupported, Note: reason, ManualTasks: manual}
 		}
 	}
 	for _, a := range manualActions {
 		name, script, manual := a.name, a.script, a.manual
-		m[a.action] = func(stepName, _ string, _ map[string]string) StepResult {
+		m[a.action] = func(stepName string, _ map[string]string) StepResult {
 			return StepResult{Status: StatusConverted,
 				Steps:       []Step{{Name: cmp.Or(stepName, name), ScriptContent: script}},
 				ManualTasks: manual}
 		}
 	}
 
-	m["actions/cache"] = func(_, _ string, _ map[string]string) StepResult {
+	m["actions/cache"] = func(_ string, _ map[string]string) StepResult {
 		return StepResult{Status: StatusSimplified, Note: "cache → enable-dependency-cache: true", EnableDependencyCache: true}
 	}
 
-	m["actions/upload-artifact"] = func(_, _ string, inputs map[string]string) StepResult {
+	m["actions/upload-artifact"] = func(_ string, inputs map[string]string) StepResult {
 		var arts []FilePublication
 		// `path:` is a newline-separated list of files/globs; emit one publication entry each.
 		for p := range strings.SplitSeq(cmp.Or(inputs["path"], "**/*"), "\n") {
@@ -173,7 +176,7 @@ func initActionRegistry() map[string]actionTransformer {
 		}
 		return StepResult{Status: StatusSimplified, Note: "upload-artifact → files-publication", Artifacts: arts}
 	}
-	m["actions/download-artifact"] = func(_, _ string, inputs map[string]string) StepResult {
+	m["actions/download-artifact"] = func(_ string, inputs map[string]string) StepResult {
 		r := StepResult{Status: StatusSimplified, Note: "download-artifact → files-publication with share-with-jobs"}
 		if name := inputs["name"]; name != "" {
 			r.ManualTasks = []string{fmt.Sprintf("Artifact download %q → ensure upstream job publishes via files-publication with share-with-jobs: true", name)}
@@ -181,7 +184,7 @@ func initActionRegistry() map[string]actionTransformer {
 		return r
 	}
 
-	m["docker/login-action"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["docker/login-action"] = func(name string, inputs map[string]string) StepResult {
 		registry := cmp.Or(inputs["registry"], "Docker Hub")
 		return StepResult{Status: StatusConverted,
 			Steps:       []Step{{Name: cmp.Or(name, "Docker login"), ScriptContent: "# Configure Docker registry connection in TeamCity project settings\n# Registry: " + registry}},
@@ -189,36 +192,43 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 	m["docker/build-push-action"] = transformDockerBuild
 
-	m["aws-actions/configure-aws-credentials"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["aws-actions/configure-aws-credentials"] = func(name string, inputs map[string]string) StepResult {
 		region := cmp.Or(inputs["aws-region"], "us-east-1")
 		return StepResult{Status: StatusConverted,
 			Steps:       []Step{{Name: cmp.Or(name, "Configure AWS credentials"), ScriptContent: "export AWS_ACCESS_KEY_ID=\"$AWS_ACCESS_KEY_ID\"\nexport AWS_SECRET_ACCESS_KEY=\"$AWS_SECRET_ACCESS_KEY\"\nexport AWS_DEFAULT_REGION=\"" + region + "\""}},
 			ManualTasks: []string{"AWS credentials → create TeamCity parameters: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (type: password)"}}
 	}
-	m["azure/webapps-deploy"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["azure/webapps-deploy"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: fmt.Sprintf("az webapp deploy --name %q --src-path \"${PACKAGE:-.}\"", requiredInput(inputs, "app-name", "APP_NAME"))}})
 	}
-	m["azure/k8s-deploy"] = func(name, _ string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "Kubernetes deploy"), ScriptContent: "kubectl apply -f " + cmp.Or(inputs["manifests"], "k8s/")}})
+	m["azure/k8s-deploy"] = func(name string, inputs map[string]string) StepResult {
+		var cmd strings.Builder
+		cmd.WriteString("kubectl apply")
+		// `manifests:` is a newline-separated list; emit one -f per entry so a multiline value can't spill onto a new shell line.
+		for f := range strings.FieldsSeq(cmp.Or(inputs["manifests"], "k8s/")) {
+			cmd.WriteString(" -f ")
+			cmd.WriteString(f)
+		}
+		return Converted([]Step{{Name: cmp.Or(name, "Kubernetes deploy"), ScriptContent: cmd.String()}})
 	}
-	m["azure/k8s-set-context"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["azure/k8s-set-context"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "K8s set context"), ScriptContent: fmt.Sprintf("az aks get-credentials --resource-group %q --name %q", requiredInput(inputs, "resource-group", "RESOURCE_GROUP"), requiredInput(inputs, "cluster-name", "CLUSTER_NAME"))}})
 	}
-	m["google-github-actions/deploy-cloudrun"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["google-github-actions/deploy-cloudrun"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Cloud Run deploy"), ScriptContent: fmt.Sprintf("gcloud run deploy %q --image %q --region \"${REGION:-us-central1}\"", requiredInput(inputs, "service", "SERVICE"), requiredInput(inputs, "image", "IMAGE"))}})
 	}
-	m["aws-actions/amazon-ecs-render-task-definition"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["aws-actions/amazon-ecs-render-task-definition"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '.containerDefinitions[0].image = %q' %s > new-task-def.json", requiredInput(inputs, "image", "IMAGE"), cmp.Or(inputs["task-definition"], "task-definition.json"))}})
 	}
-	m["appleboy/scp-action"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["appleboy/scp-action"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: fmt.Sprintf("scp -r %s %s:%s", cmp.Or(inputs["source"], "."), requiredInput(inputs, "host", "DEPLOY_HOST"), cmp.Or(inputs["target"], "~/"))}})
 	}
-	m["SamKirkland/FTP-Deploy-Action"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["SamKirkland/FTP-Deploy-Action"] = func(name string, inputs map[string]string) StepResult {
 		return StepResult{Status: StatusConverted,
 			Steps:       []Step{{Name: cmp.Or(name, "FTP deploy"), ScriptContent: fmt.Sprintf("lftp -c \"open -u $FTP_USER,$FTP_PASSWORD %s; mirror -R %s %s\"", requiredInput(inputs, "server", "FTP_SERVER"), cmp.Or(inputs["local-dir"], "./"), cmp.Or(inputs["server-dir"], "/"))}},
 			ManualTasks: []string{"FTP credentials → create TeamCity parameters FTP_USER, FTP_PASSWORD (type: password)"}}
 	}
-	m["ncipollo/release-action"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["ncipollo/release-action"] = func(name string, inputs map[string]string) StepResult {
 		tag := cmp.Or(inputs["tag"], "%teamcity.build.branch%")
 		cmd := fmt.Sprintf("gh release create %q --generate-notes", tag)
 		if body := inputs["body"]; body != "" {
@@ -226,7 +236,7 @@ func initActionRegistry() map[string]actionTransformer {
 		}
 		return Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd}})
 	}
-	m["golangci/golangci-lint-action"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["golangci/golangci-lint-action"] = func(name string, inputs map[string]string) StepResult {
 		cmd := "golangci-lint run"
 		if args := inputs["args"]; args != "" {
 			cmd += " " + args
@@ -238,10 +248,10 @@ func initActionRegistry() map[string]actionTransformer {
 		return r
 	}
 
-	m["actions/create-release"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["actions/create-release"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Create release"), ScriptContent: fmt.Sprintf("gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))}})
 	}
-	m["softprops/action-gh-release"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["softprops/action-gh-release"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
 		fmt.Fprintf(&cmd, "gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))
 		// `files:` is a whitespace/newline-separated glob list; append each as a separate arg
@@ -252,21 +262,21 @@ func initActionRegistry() map[string]actionTransformer {
 		}
 		return Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd.String()}})
 	}
-	m["peaceiris/actions-gh-pages"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["peaceiris/actions-gh-pages"] = func(name string, inputs map[string]string) StepResult {
 		dir := cmp.Or(inputs["publish_dir"], "./public")
 		return Converted([]Step{{Name: cmp.Or(name, "Deploy to GitHub Pages"), ScriptContent: ghPagesScript("gh-pages", dir)}})
 	}
-	m["JamesIves/github-pages-deploy-action"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["JamesIves/github-pages-deploy-action"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Deploy to GitHub Pages"), ScriptContent: ghPagesScript(cmp.Or(inputs["branch"], "gh-pages"), cmp.Or(inputs["folder"], "."))}})
 	}
 
-	m["actions/github-script"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["actions/github-script"] = func(name string, inputs map[string]string) StepResult {
 		script := cmp.Or(inputs["script"], "echo 'TODO: convert GitHub Script to shell commands'")
 		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "GitHub script"), ScriptContent: "# TODO: This was a GitHub Script action using Octokit\n# " + strings.ReplaceAll(script, "\n", "\n# ")}},
+			Steps:       []Step{{Name: cmp.Or(name, "GitHub script"), ScriptContent: "# TODO: This was a GitHub Script action using Octokit\n" + commentBlock(script)}},
 			ManualTasks: []string{"actions/github-script → convert Octokit JS to shell/curl commands"}}
 	}
-	m["aquasecurity/trivy-action"] = func(name, _ string, inputs map[string]string) StepResult {
+	m["aquasecurity/trivy-action"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Trivy security scan"), ScriptContent: fmt.Sprintf("trivy %s %s", cmp.Or(inputs["scan-type"], "fs"), cmp.Or(inputs["image-ref"], "."))}})
 	}
 
@@ -279,7 +289,7 @@ func requiredInput(inputs map[string]string, key, envVar string) string {
 	return cmp.Or(inputs[key], fmt.Sprintf("${%s:?Set %s}", envVar, envVar))
 }
 
-func transformDockerBuild(name, _ string, inputs map[string]string) StepResult {
+func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	context := cmp.Or(inputs["context"], ".")
 	tags := inputs["tags"]
 	file := inputs["file"]

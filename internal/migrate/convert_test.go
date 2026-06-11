@@ -1,11 +1,10 @@
-package migrate_test
+package migrate
 
 import (
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/JetBrains/teamcity-cli/internal/migrate"
 	"github.com/JetBrains/teamcity-cli/internal/pipelineschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,12 +16,12 @@ func TestConvertGitHubActions(t *testing.T) {
 	data, err := os.ReadFile("testdata/github/ci.yml")
 	require.NoError(t, err)
 
-	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/ci.yml"}
-	result, err := migrate.Convert(cfg, data, migrate.Options{})
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, data, Options{})
 	require.NoError(t, err)
 
 	assert.Equal(t, "ci.tc.yml", result.OutputFile)
-	assert.Equal(t, migrate.GitHubActions, result.Source)
+	assert.Equal(t, GitHubActions, result.Source)
 	assert.Equal(t, 4, result.JobsConverted)
 	assert.Greater(t, result.StepsConverted, 0)
 	assert.GreaterOrEqual(t, len(result.Simplified), 10, "should simplify many steps")
@@ -71,7 +70,7 @@ func TestActionTransformers(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.action, func(t *testing.T) {
-				_, ok := migrate.LookupActionTransformer(tt.action)
+				_, ok := LookupActionTransformer(tt.action)
 				assert.Equal(t, tt.found, ok)
 			})
 		}
@@ -79,10 +78,10 @@ func TestActionTransformers(t *testing.T) {
 
 	t.Run("script action converts to fixed step", func(t *testing.T) {
 		t.Parallel()
-		transformer, ok := migrate.LookupActionTransformer("JetBrains/qodana-action@v2025.1")
+		transformer, ok := LookupActionTransformer("JetBrains/qodana-action@v2025.1")
 		require.True(t, ok)
-		r := transformer("", "JetBrains/qodana-action@v2025.1", nil)
-		assert.Equal(t, migrate.StatusConverted, r.Status)
+		r := transformer("", nil)
+		assert.Equal(t, StatusConverted, r.Status)
 		require.Len(t, r.Steps, 1)
 		assert.Equal(t, "Qodana", r.Steps[0].Name)
 		assert.Contains(t, r.Steps[0].ScriptContent, "native Qodana integration")
@@ -90,26 +89,26 @@ func TestActionTransformers(t *testing.T) {
 
 	t.Run("cache enables dependency cache", func(t *testing.T) {
 		t.Parallel()
-		transformer, _ := migrate.LookupActionTransformer("actions/cache@v3")
-		r := transformer("", "actions/cache@v3", nil)
-		assert.Equal(t, migrate.StatusSimplified, r.Status)
+		transformer, _ := LookupActionTransformer("actions/cache@v3")
+		r := transformer("", nil)
+		assert.Equal(t, StatusSimplified, r.Status)
 		assert.True(t, r.EnableDependencyCache)
 	})
 
 	t.Run("upload-artifact produces file publication", func(t *testing.T) {
 		t.Parallel()
-		transformer, _ := migrate.LookupActionTransformer("actions/upload-artifact@v4")
-		r := transformer("", "actions/upload-artifact@v4", map[string]string{"path": "dist/**"})
-		assert.Equal(t, migrate.StatusSimplified, r.Status)
+		transformer, _ := LookupActionTransformer("actions/upload-artifact@v4")
+		r := transformer("", map[string]string{"path": "dist/**"})
+		assert.Equal(t, StatusSimplified, r.Status)
 		require.Len(t, r.Artifacts, 1)
 		assert.Equal(t, "dist/**", r.Artifacts[0].Path)
 	})
 
 	t.Run("missing required inputs emit shell guards", func(t *testing.T) {
 		t.Parallel()
-		transformer, ok := migrate.LookupActionTransformer("azure/k8s-set-context@v4")
+		transformer, ok := LookupActionTransformer("azure/k8s-set-context@v4")
 		require.True(t, ok)
-		r := transformer("", "azure/k8s-set-context@v4", map[string]string{})
+		r := transformer("", map[string]string{})
 		require.Len(t, r.Steps, 1)
 		assert.Contains(t, r.Steps[0].ScriptContent, "${RESOURCE_GROUP:?")
 		assert.Contains(t, r.Steps[0].ScriptContent, "${CLUSTER_NAME:?")
@@ -118,11 +117,11 @@ func TestActionTransformers(t *testing.T) {
 
 	t.Run("docker build-push", func(t *testing.T) {
 		t.Parallel()
-		transformer, _ := migrate.LookupActionTransformer("docker/build-push-action@v5")
-		r := transformer("Build", "docker/build-push-action@v5", map[string]string{
+		transformer, _ := LookupActionTransformer("docker/build-push-action@v5")
+		r := transformer("Build", map[string]string{
 			"tags": "myapp:latest", "push": "true", "context": ".",
 		})
-		assert.Equal(t, migrate.StatusConverted, r.Status)
+		assert.Equal(t, StatusConverted, r.Status)
 		require.Len(t, r.Steps, 1)
 		assert.Contains(t, r.Steps[0].ScriptContent, "docker build")
 		assert.Contains(t, r.Steps[0].ScriptContent, "docker push")
@@ -131,7 +130,7 @@ func TestActionTransformers(t *testing.T) {
 
 func TestUnknownActionMultilineInputCommented(t *testing.T) {
 	t.Parallel()
-	r := migrate.Unknown("acme/dangerous@v1", map[string]string{
+	r := Unknown("acme/dangerous@v1", map[string]string{
 		"note": "hello\nrm -rf tmp",
 	})
 	require.Len(t, r.Steps, 1)
@@ -141,9 +140,9 @@ func TestUnknownActionMultilineInputCommented(t *testing.T) {
 func TestGHReleaseMultilineFilesNotInjected(t *testing.T) {
 	t.Parallel()
 
-	transformer, ok := migrate.LookupActionTransformer("softprops/action-gh-release@v2")
+	transformer, ok := LookupActionTransformer("softprops/action-gh-release@v2")
 	require.True(t, ok)
-	r := transformer("Release", "softprops/action-gh-release@v2", map[string]string{
+	r := transformer("Release", map[string]string{
 		"tag_name": "v1.0.0",
 		"files":    "dist/app.zip\nrm -rf tmp",
 	})
@@ -169,8 +168,8 @@ jobs:
     steps:
       - run: echo hi
 `
-	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/ci.yml"}
-	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
 	require.NoError(t, err)
 
 	manuals := strings.Join(result.ManualSetup, "\n")
@@ -192,8 +191,8 @@ jobs:
     steps:
       - run: echo hi
 `
-	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/ci.yml"}
-	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
 	require.NoError(t, err)
 
 	// A matrix expression must not silently drop runs-on — emit the default runner and flag it.
@@ -216,8 +215,8 @@ jobs:
     steps:
       - run: echo hi
 `
-	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/ci.yml"}
-	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
 	require.NoError(t, err)
 
 	assert.Contains(t, result.YAML, "runs-on: self-hosted")
@@ -242,8 +241,8 @@ jobs:
     uses: org/repo/.github/workflows/other.yml@v2
     secrets: inherit
 `
-	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/publish.yml"}
-	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/publish.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
 	require.NoError(t, err)
 
 	for _, want := range []string{
@@ -273,8 +272,8 @@ jobs:
           matrix.java == 21
         run: echo deploy
 `
-	cfg := migrate.CIConfig{Source: migrate.GitHubActions, File: ".github/workflows/ci.yml"}
-	result, err := migrate.Convert(cfg, []byte(wf), migrate.Options{})
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
 	require.NoError(t, err)
 
 	for _, item := range result.ManualSetup {
@@ -296,6 +295,6 @@ func TestMapGHAExpressions(t *testing.T) {
 		{"${{ github.event_name }}", "${{ github.event_name }}"},
 	}
 	for _, tt := range tests {
-		assert.Equal(t, tt.want, migrate.MapGHAExpressions(tt.input))
+		assert.Equal(t, tt.want, MapGHAExpressions(tt.input))
 	}
 }

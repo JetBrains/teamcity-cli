@@ -214,6 +214,7 @@ func TestMapBambooExpressions(t *testing.T) {
 	cases := []struct{ in, want string }{
 		{"v${bamboo.build.number}", "v%build.number%"},
 		{"branch=${bamboo.repository.branch.name}", "branch=%teamcity.build.branch%"},
+		{"branch=${bamboo.planRepository.branchName}", "branch=%teamcity.build.branch%"},
 		{"custom=${bamboo.my_custom_var}", "custom=%my_custom_var%"},
 		{"shell=$HOME ${bamboo.build.number}", "shell=$HOME %build.number%"},
 		{"echo ${HOME}", "echo ${HOME}"},
@@ -358,6 +359,28 @@ Mac:
 	assert.Equal(t, "Windows-Medium", runsOn["Win"], "MSBuild can't run on the Linux default")
 	assert.Equal(t, "Mac-Medium", runsOn["Mac"], "Fastlane can't run on the Linux default")
 	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "runner inferred from task")
+}
+
+func TestBambooMapFormRequirementsSetRunsOn(t *testing.T) {
+	t.Parallel()
+
+	// Requirements come as bare strings or single-key maps; the map form must not be dropped.
+	result := convertBambooSpec(t, `
+stages:
+  - 'Build':
+      jobs:
+        - Job
+Job:
+  requirements:
+    - isAvailable: docker
+    - operatingSystem: Windows
+  tasks:
+    - script:
+        - make
+`)
+	require.Len(t, result.Pipeline.Jobs, 1)
+	assert.Equal(t, "Windows-Medium", result.Pipeline.Jobs[0].RunsOn)
+	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "isAvailable: docker")
 }
 
 func TestBambooTaskConditionsSurfaced(t *testing.T) {
