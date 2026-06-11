@@ -471,3 +471,43 @@ Job:
 	assert.Contains(t, script, `"$TC_SCRIPT" --flag value`)
 	assert.Contains(t, script, "first arg: $1")
 }
+
+func TestBambooMultiDocumentStream(t *testing.T) {
+	t.Parallel()
+
+	spec := `---
+version: 2
+plan:
+  project-key: P
+  key: K
+  name: Plan
+stages:
+  - 'Build':
+      jobs:
+        - Job
+Job:
+  tasks:
+    - script:
+        scripts:
+          - make
+---
+version: 2
+deployment:
+  name: Deploy Plan
+  source-plan: P-K
+release-naming: release-1
+environments:
+  - Production
+Production:
+  tasks:
+    - script: echo deploy
+`
+	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
+	result, err := Convert(cfg, []byte(spec), Options{})
+	require.NoError(t, err)
+
+	// The plan document converts; the deployment document must be flagged, not silently dropped.
+	require.Len(t, result.Pipeline.Jobs, 1)
+	assert.Equal(t, "make", result.Pipeline.Jobs[0].Steps[0].ScriptContent)
+	assert.Contains(t, strings.Join(result.NeedsReview, "\n"), "document #2 is a deployment spec")
+}

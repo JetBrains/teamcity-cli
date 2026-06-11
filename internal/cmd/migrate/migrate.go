@@ -419,7 +419,7 @@ func resolveCloudRunners(f *cmdutil.Factory) map[string]string {
 	if err != nil {
 		return nil
 	}
-	list, err := client.GetCloudImages(api.CloudImagesOptions{})
+	list, _, err := client.GetCloudImages(api.CloudImagesOptions{})
 	if err != nil || len(list.Images) == 0 {
 		return nil
 	}

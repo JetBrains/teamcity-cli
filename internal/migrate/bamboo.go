@@ -1,8 +1,11 @@
 package migrate
 
 import (
+	"bytes"
 	"cmp"
+	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"path/filepath"
 	"regexp"
@@ -13,8 +16,8 @@ import (
 )
 
 func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, error) {
-	var spec map[string]any
-	if err := yaml.Unmarshal(data, &spec); err != nil {
+	docs, err := bambooDocuments(data)
+	if err != nil {
 		if includes := bambooIncludes(data); len(includes) > 0 {
 			dir := filepath.Dir(filepath.ToSlash(cfg.File))
 			for i, inc := range includes {
@@ -30,7 +33,26 @@ func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 		return nil, fmt.Errorf("invalid YAML: %w", err)
 	}
 
+	// Canonical bamboo.yml streams hold a plan spec plus deployment/permission docs after `---`.
+	spec := docs[0]
+	specIdx := 0
+	for i, d := range docs {
+		_, hasPlan := d["plan"]
+		if hasPlan && len(anySlice(d["stages"])) > 0 {
+			spec, specIdx = d, i
+			break
+		}
+	}
+
 	result := NewResult(cfg)
+
+	for i, d := range docs {
+		if i == specIdx {
+			continue
+		}
+		result.NeedsReview = append(result.NeedsReview,
+			fmt.Sprintf("%s document #%d is a %s → convert manually (deployment projects and permissions have no TC YAML equivalent)", cfg.File, i+1, bambooDocKind(d)))
+	}
 
 	if _, ok := spec["plan"]; !ok {
 		result.NeedsReview = append(result.NeedsReview,
@@ -964,6 +986,40 @@ func analyzeBamboo(relPath string, data []byte) (*CIConfig, error) {
 	}
 	slices.Sort(cfg.Features)
 	return cfg, nil
+}
+
+// bambooDocuments decodes every YAML document in the stream, so specs after `---` aren't silently dropped.
+func bambooDocuments(data []byte) ([]map[string]any, error) {
+	var docs []map[string]any
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	for {
+		var doc map[string]any
+		if err := dec.Decode(&doc); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
+		if doc != nil {
+			docs = append(docs, doc)
+		}
+	}
+	if len(docs) == 0 {
+		return nil, errors.New("empty YAML stream")
+	}
+	return docs, nil
+}
+
+func bambooDocKind(doc map[string]any) string {
+	switch {
+	case doc["deployment"] != nil:
+		return "deployment spec"
+	case doc["plan-permissions"] != nil || doc["deployment-permissions"] != nil:
+		return "permissions spec"
+	case doc["plan"] != nil:
+		return "plan spec"
+	}
+	return "spec"
 }
 
 var bambooIncludeRe = regexp.MustCompile(`!include\s+['"]?([^'"\s]+)`)
