@@ -7,6 +7,7 @@
 - Starting and monitoring builds
 - Personal builds (local changes)
 - Finding jobs and projects
+- Binding a repository to a job or a project
 - Working with build artifacts
 - Build metadata (pin/unpin, tag, comment)
 - Managing the build queue
@@ -220,6 +221,23 @@ teamcity job view <job-id>
 **Search for a job by name:**
 ```bash
 teamcity job list --json | jq '.[] | select(.name | contains("deploy"))'
+```
+
+## Binding a repository to a job or a project
+
+**Bind the current repository to a job and project:**
+```bash
+teamcity link --project ProjectA --job JobA
+```
+
+**Bind the current repository to a project, specifying the scope:**
+```bash
+teamcity link --project ProjectA --scope /services/api
+```
+
+**Bind the current repository to a job, specifying the server:**
+```bash
+teamcity link --job JobA --server https://nightly.example
 ```
 
 ## Working with Build Artifacts

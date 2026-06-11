@@ -9,6 +9,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from string import Template
 
 # Claude binary path. Set CLAUDE_BIN env var in CI if claude isn't on PATH.
 _CLAUDE_BIN = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or "claude"
@@ -30,6 +31,7 @@ class ClaudeResult:
 # Env vars to propagate into Claude's subprocess
 _PROPAGATE_KEYS = (
     "ANTHROPIC_API_KEY",
+    "ANTHROPIC_BASE_URL",
     "CLAUDE_CODE_OAUTH_TOKEN",
     "TEAMCITY_URL",
     "TEAMCITY_TOKEN",
@@ -65,12 +67,20 @@ def _copy_auth_config(work_dir: Path) -> None:
 def _setup_workspace(
     work_dir: Path,
     treatment: Treatment,
+    setup_files: dict[str, str] | None = None,
 ) -> None:
     """Write skill files and auth config into the workspace."""
     _copy_auth_config(work_dir)
     if treatment.skill_dir and treatment.skill_dir.exists():
         dest = work_dir / ".claude" / "skills" / "teamcity-cli"
         shutil.copytree(treatment.skill_dir, dest)
+    for rel_path, content in (setup_files or {}).items():
+        if Path(rel_path).is_absolute():
+            raise ValueError(f"setup file path must be relative: {rel_path}")
+        path = work_dir / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        values = {k: os.environ.get(k, "") for k in _PROPAGATE_KEYS}
+        path.write_text(Template(content).safe_substitute(values))
 
 
 def _build_isolated_env(work_dir: Path) -> dict[str, str]:
@@ -112,13 +122,14 @@ def run_claude(
     *,
     model: str | None = None,
     timeout: int = 600,
+    setup_files: dict[str, str] | None = None,
 ) -> ClaudeResult:
     """Run Claude Code CLI locally in a temp directory with isolated config."""
     model = model or os.environ.get("BENCH_CC_MODEL", "claude-sonnet-4-5-20250929")
 
     with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
         work_dir = Path(tmp)
-        _setup_workspace(work_dir, treatment)
+        _setup_workspace(work_dir, treatment, setup_files)
         env = _build_isolated_env(work_dir)
 
         cmd = [
@@ -162,13 +173,14 @@ def run_claude_docker(
     model: str | None = None,
     timeout: int = 600,
     image: str = "tc-skill-eval",
+    setup_files: dict[str, str] | None = None,
 ) -> ClaudeResult:
     """Run Claude Code CLI inside a Docker container (fully isolated)."""
     model = model or os.environ.get("BENCH_CC_MODEL", "claude-sonnet-4-5-20250929")
 
     with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
         work_dir = Path(tmp)
-        _setup_workspace(work_dir, treatment)
+        _setup_workspace(work_dir, treatment, setup_files)
 
         env_flags: list[str] = []
         for key in _PROPAGATE_KEYS:

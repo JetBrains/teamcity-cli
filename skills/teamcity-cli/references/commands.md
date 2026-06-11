@@ -12,6 +12,7 @@
 - Pipelines (`teamcity pipeline`)
 - Configuration (`teamcity config`)
 - Direct API (`teamcity api`)
+- Link (`teamcity link`)
 - Global Flags
 - List Output Flags
 
@@ -523,6 +524,33 @@ teamcity api '/app/rest/builds/id:BUILD_ID/artifacts/children/SUBPATH'
 - `--raw` - Output raw response without formatting
 - `--silent` - Suppress output on success
 - `-i, --include` - Include response headers in output
+
+## Link (`teamcity link`)
+
+Binds a Git repository to a TeamCity project or job by creating or updating the `teamcity.toml` file at the repo root. When invoked from a repository subdirectory, the command upserts a binding that is applied to commands run from that directory. This can be used in a monorepo for binding specific subdirectories to specific jobs.
+
+**Bind the current repository to a job and project:**
+```bash
+# Bind the current repository to a job and project
+teamcity link --project ProjectA --job JobA
+
+# Bind the current repository to a project, specifying multiple jobs of interest
+teamcity link --project ProjectA --jobs JobA,JobB
+
+# Bind the current repository to a project, specifying the scope
+teamcity link --project ProjectA --scope /services/api
+
+# Bind the current repository to a job, specifying the server:
+teamcity link --job JobA --server https://nightly.example
+```
+
+### Flags
+
+- `--project <id>` - Specifies the project for the binding
+- `--job <id>` - Specifies the job for the binding
+- `--jobs <id1,id2>` - Specifies jobs of interest stored separately from the main binding job
+- `--server <url>` - When multiple servers are authenticated, can be used to specify the server for which the binding is upserted
+- `--scope <path>` - Upserts a binding for a specific directory. If the value is an empty string, upserts the binding for the repository root.
 
 ## Global Flags
 

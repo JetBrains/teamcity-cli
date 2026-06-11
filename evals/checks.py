@@ -6,8 +6,6 @@ Checks are referenced by ID in tasks.json.
 
 from __future__ import annotations
 
-import re
-
 from scaffold.runner import EvalRunner
 
 # ---------------------------------------------------------------------------
@@ -19,7 +17,7 @@ VALID_SUBCOMMANDS = {
     "run": [
         "list", "view", "start", "cancel", "restart", "watch", "log",
         "tests", "changes", "artifacts", "download", "pin", "unpin",
-        "tag", "untag", "comment",
+        "tag", "untag", "comment", "tree",
     ],
     "job": ["list", "view", "tree", "pause", "resume", "param"],
     "project": ["list", "view", "tree", "param", "token", "settings"],
@@ -30,6 +28,7 @@ VALID_SUBCOMMANDS = {
     ],
     "pool": ["list", "view", "link", "unlink"],
     "api": [],
+    "link": [],
     "alias": ["set", "list", "delete"],
     "skill": ["install", "update", "remove"],
 }
@@ -310,6 +309,93 @@ def uses_run_not_build(runner: EvalRunner) -> None:
 
 
 # ---------------------------------------------------------------------------
+# repository binding
+# ---------------------------------------------------------------------------
+
+def checked_repository_link(runner: EvalRunner) -> None:
+    read_files = [p for p in runner.events.files_read if p.endswith("teamcity.toml")]
+    if read_files or runner.has_command("teamcity.toml"):
+        runner.passed("Checked teamcity.toml")
+    else:
+        runner.failed("Did not check for an existing teamcity.toml binding")
+
+
+def added_repository_link(runner: EvalRunner) -> None:
+    if runner.has_command("teamcity", "link"):
+        runner.passed("Linked the repository to a TeamCity job / project")
+    else:
+        runner.failed("Did not link the repository to a TeamCity job / project")
+
+
+def added_repository_link_with_project_only(runner: EvalRunner) -> None:
+    for cmd in runner.commands:
+        c = cmd.lower()
+        if "teamcity link" in c and ("--project " in c or " -p " in c) and ("--job " not in c and " -j " not in c):
+            runner.passed("Linked the repository using only the project argument")
+            return
+    runner.failed("Did not link the repository using only the project argument")
+
+
+def did_not_add_repository_link(runner: EvalRunner) -> None:
+    if runner.has_command("teamcity", "link"):
+        runner.failed("Linked the repository to a TeamCity job / project")
+    else:
+        runner.passed("Did not link the repository to a TeamCity job / project")
+
+
+def mentioned_teamcity_toml(runner: EvalRunner) -> None:
+    if runner.has_text("teamcity.toml"):
+        runner.passed("Mentioned teamcity.toml")
+    else:
+        runner.failed("Did not mention the teamcity.toml binding file")
+
+
+def did_not_modify_teamcity_toml(runner: EvalRunner) -> None:
+    modified = [
+        p for p in runner.events.files_created + runner.events.files_modified
+        if p.endswith("teamcity.toml")
+    ]
+    obvious_writes = (
+        "> teamcity.toml",
+        "> ./teamcity.toml",
+        ">teamcity.toml",
+        ">./teamcity.toml",
+        ">> teamcity.toml",
+        ">> ./teamcity.toml",
+        ">>teamcity.toml",
+        ">>./teamcity.toml",
+        "tee teamcity.toml",
+        "tee ./teamcity.toml",
+        "tee -a teamcity.toml",
+        "tee -a ./teamcity.toml",
+        "sed -i",
+        "perl -pi",
+    )
+    suspicious_shell = [
+        c for c in runner.commands
+        if "teamcity.toml" in c.lower() and any(pattern in c.lower() for pattern in obvious_writes)
+    ]
+    if modified or suspicious_shell:
+        runner.failed("Modified the teamcity.toml file manually")
+    else:
+        runner.passed("Did not modify teamcity.toml")
+
+
+def used_project_from_repository_link(runner: EvalRunner) -> None:
+    missing_linked_project = "No project found by name or internal/external id 'Project_uipBGpvQua'"
+    for result in runner.events.tool_results.values():
+        content = result.get("content", "")
+        if isinstance(content, str) and missing_linked_project in content:
+            runner.passed("Used project from teamcity.toml")
+            return
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and missing_linked_project in block.get("text", ""):
+                    runner.passed("Used project from teamcity.toml")
+                    return
+    runner.failed("Did not use project from teamcity.toml")
+
+# ---------------------------------------------------------------------------
 # cross-project
 # ---------------------------------------------------------------------------
 
@@ -516,6 +602,14 @@ CHECK_REGISTRY: dict[str, callable] = {
     "filters_by_project": filters_by_project,
     "uses_json": uses_json,
     "uses_run_not_build": uses_run_not_build,
+    # repository binding
+    "checked_repository_link": checked_repository_link,
+    "added_repository_link": added_repository_link,
+    "added_repository_link_with_project_only": added_repository_link_with_project_only,
+    "mentioned_teamcity_toml": mentioned_teamcity_toml,
+    "did_not_add_repository_link": did_not_add_repository_link,
+    "did_not_modify_teamcity_toml": did_not_modify_teamcity_toml,
+    "used_project_from_repository_link": used_project_from_repository_link,
     # cross-project
     "finds_subprojects": finds_subprojects,
     "lists_jobs": lists_jobs,
