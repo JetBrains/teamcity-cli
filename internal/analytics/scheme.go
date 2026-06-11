@@ -281,7 +281,7 @@ func migrateGroup() fus.GroupSchema {
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventCompleted)},
 			EventData: map[string][]string{
-				"source":            {fus.EnumExpr(MigrateSourceGitHubActions, MigrateSourceBamboo, MigrateSourceGitLab, MigrateSourceJenkins, MigrateSourceCircleCI, MigrateSourceAzure, MigrateSourceBitbucket, MigrateSourceTravis, MigrateSourceMixed, MigrateSourceOther, MigrateSourceNone)},
+				"source":            {fus.EnumExpr(MigrateSourceGitHubActions, MigrateSourceBamboo, MigrateSourceMixed, MigrateSourceOther, MigrateSourceNone)},
 				"outcome":           {fus.EnumExpr(MigrateOutcomeClean, MigrateOutcomePartial, MigrateOutcomeFailed, MigrateOutcomeNothingFound)},
 				"validation_status": {fus.EnumExpr(MigrateValidationValid, MigrateValidationInvalid, MigrateValidationSkipped)},
 				"is_dry_run":        {fus.EnumRefExpr(enumBoolean)},

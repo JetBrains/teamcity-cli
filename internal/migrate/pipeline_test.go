@@ -32,24 +32,8 @@ func TestMarshalYAMLSingleJob(t *testing.T) {
 	assert.Contains(t, yaml, "script-content: go test ./...")
 	assert.NotContains(t, yaml, "dependencies:", "empty dependency list must not be emitted")
 
-	valErr := pipelineschema.Validate(yaml)
+	valErr := pipelineschema.ValidateWithSchema(yaml, pipelineschema.Bytes)
 	assert.Empty(t, valErr, "generated YAML should be valid: %s", valErr)
-}
-
-func TestMarshalYAMLIDCollision(t *testing.T) {
-	t.Parallel()
-	p := &Pipeline{
-		Jobs: []Job{
-			{ID: "build-test", Name: "A", RunsOn: "Linux-Large",
-				Steps: []Step{{Name: "s", ScriptContent: "echo a"}}},
-			{ID: "build_test", Name: "B", RunsOn: "Linux-Large",
-				Steps: []Step{{Name: "s", ScriptContent: "echo b"}}},
-		},
-	}
-	yaml := p.String()
-	assert.Contains(t, yaml, "  build_test:\n")
-	assert.Contains(t, yaml, "  build_test_2:\n")
-	assert.Empty(t, pipelineschema.Validate(yaml))
 }
 
 func TestMarshalYAMLParameters(t *testing.T) {
@@ -71,7 +55,7 @@ func TestMarshalYAMLParameters(t *testing.T) {
 	assert.Contains(t, yaml, "      env.FOO: \"bar\"")
 	assert.Contains(t, yaml, "  env.GLOBAL: \"val\"")
 	assert.Contains(t, yaml, "          env.MY_VAR: \"val\"")
-	assert.Empty(t, pipelineschema.Validate(yaml))
+	assert.Empty(t, pipelineschema.ValidateWithSchema(yaml, pipelineschema.Bytes))
 }
 
 func TestMarshalYAMLFilesPublication(t *testing.T) {

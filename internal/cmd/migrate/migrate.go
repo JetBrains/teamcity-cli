@@ -38,19 +38,12 @@ Supported sources: GitHub Actions, Bamboo (bamboo-specs/*.yml). Other systems
 (GitLab, Jenkins, CircleCI, Azure DevOps, Travis, Bitbucket) will land in
 follow-up releases.
 
-The generated YAML files can be deployed with:
-  teamcity pipeline create <name> --project <id> --file <generated>.tc.yml
-
-This is a heuristic converter — always review generated files before
-shipping. For higher-quality conversions, run the bundled
-'migrate-to-teamcity' skill under an AI agent.
+This is a heuristic converter — always review generated files before shipping.
 
 TeamCity Pipelines YAML is a subset of full TeamCity capability. Features
 like matrix strategies, conditional step execution, service containers,
 templates, and native trigger definitions have no YAML equivalent and are
-surfaced under "Manual setup needed" for follow-up.
-
-Report issues at: https://jb.gg/tc/migrate/issues`,
+surfaced under "Manual setup needed" for follow-up.`,
 		Example: `  teamcity migrate
   teamcity migrate --dry-run
   teamcity migrate --file .github/workflows/ci.yml

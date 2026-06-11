@@ -1,27 +1,5 @@
 # Concept Mappings: CI Systems to TeamCity
 
-Official TeamCity migration docs:
-- [Jenkins to TeamCity Migration Guidelines](https://www.jetbrains.com/help/teamcity/jenkins-to-teamcity-migration-guidelines.html)
-- [Mapping TeamCity Concepts to Other CI Terms](https://www.jetbrains.com/help/teamcity/mapping-teamcity-concepts-to-other-ci-terms.html)
-
-## General TeamCity Terminology
-
-| Common CI term | TeamCity term |
-|---|---|
-| Pipeline / Workflow | Build Chain |
-| Job / Stage | Build Configuration |
-| Build / Run | Build |
-| Step / Task | Build Step |
-| Runner / Agent / Executor | Build Agent |
-| Agent pool / Runner group | Agent Pool |
-| Variables / Env vars | Build Parameters |
-| Secrets / Credentials | Password-type parameters, credentialsJSON |
-| Artifact | Build Artifact |
-| Trigger (push, PR, schedule) | Build Trigger |
-| Source control / Repository | VCS Root |
-| Working directory | Build Checkout Directory |
-| Agent label / Tag | Agent Requirement |
-
 ## GitHub Actions to TeamCity Pipeline YAML
 
 | GitHub Actions | TeamCity | Notes |
@@ -82,7 +60,7 @@ Hosted agent names come from the server's pipeline schema (`runs-on` enum: `Linu
 
 ## Bamboo Specs to TeamCity Pipeline YAML
 
-Bamboo Specs YAML lives in `bamboo-specs/*.yml` (or `bamboo.yml` in the repo root). The converter walks `stages → jobs → tasks` and turns each task into a TeamCity step. Stage ordering becomes job dependencies: every job in stage N depends on every job in stage N-1.
+Bamboo Specs YAML lives in `bamboo-specs/*.yml` (or `bamboo.yml` in the repo root). The converter walks `stages → jobs → tasks` and turns each task into a TeamCity step.
 
 | Bamboo concept | TeamCity | Notes |
 |---|---|---|
@@ -99,6 +77,7 @@ Bamboo Specs YAML lives in `bamboo-specs/*.yml` (or `bamboo.yml` in the repo roo
 | `docker.image` | Docker container settings | Surfaced as manual setup; wrap step or use Docker wrapper feature |
 | `triggers[]` (polling, cron, ...) | VCS / scheduled triggers | Manual; configure in TC UI |
 | `branches:` | VCS root branch filters | Manual; configure on the VCS root |
+| `dependencies:` (top-level plan deps) | Cross-pipeline `dependencies:` or snapshot dependencies | Manual |
 | `variables:` | Pipeline parameters | Lifted to top-level `parameters:` |
 | `${bamboo.foo}` references | `%foo%` (TC parameter) | Predefined names map to TC equivalents (see below) |
 | `plan-permissions:` | Project roles | Manual; configure in TC Administration → Roles |

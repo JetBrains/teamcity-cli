@@ -82,9 +82,6 @@ func AnalyzeFile(path string, source SourceCI) (*CIConfig, error) {
 			return nil, fmt.Errorf("cannot infer CI source from %q; pass --from", path)
 		}
 	}
-	if !ValidSource(source) {
-		return nil, fmt.Errorf("unknown CI source %q", source)
-	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

@@ -52,8 +52,6 @@ var scriptActions = []struct{ action, script, name string }{
 	{"helm/kind-action", "kind create cluster", "Create kind cluster"},
 	{"peter-evans/create-pull-request", "gh pr create --fill", "Create pull request"},
 	{"cypress-io/github-action", "npx cypress run", "Cypress E2E tests"},
-	{"coverallsapp/github-action", "npm install -g coveralls && cat coverage/lcov.info | coveralls", "Coveralls upload"},
-	{"paambaati/codeclimate-action", "curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > cc-test-reporter && chmod +x cc-test-reporter && ./cc-test-reporter after-build", "Code Climate upload"},
 	{"snyk/actions", "snyk test", "Snyk security scan"},
 	{"wagoid/commitlint-github-action", "npx commitlint --from HEAD~1", "Commitlint"},
 	{"treosh/lighthouse-ci-action", "npx @lhci/cli autorun", "Lighthouse CI"},
@@ -61,7 +59,6 @@ var scriptActions = []struct{ action, script, name string }{
 	{"stefanzweifel/git-auto-commit-action", "git add -A && git diff --cached --quiet || git commit -m \"Auto-commit\" && git push", "Git auto-commit"},
 	{"EndBug/add-and-commit", "git add -A && git diff --cached --quiet || git commit -m \"Auto-commit\" && git push", "Git add and commit"},
 	{"JetBrains/qodana-action", "# TeamCity has native Qodana integration\n# Add Qodana build feature in TeamCity project settings\n# Or run via Docker:\ndocker run --rm -v \"$(pwd)\":/data/project jetbrains/qodana-jvm-community:latest", "Qodana"},
-	{"anothrNick/github-tag-action", "# TODO: Determine new version tag from commit messages\ngit tag \"$NEW_TAG\" && git push origin \"$NEW_TAG\"", "Auto tag"},
 }
 
 // manualActions convert to a fixed script step plus manual-setup notes (typically credentials to recreate as TC parameters).
@@ -90,9 +87,6 @@ var manualActions = []struct {
 	{"FirebaseExtended/action-hosting-deploy", "Firebase deploy",
 		"firebase deploy --only hosting",
 		[]string{"Firebase → create TeamCity parameter FIREBASE_TOKEN (type: password)"}},
-	{"amondnet/vercel-action", "Vercel deploy",
-		"npx vercel --prod --token \"$VERCEL_TOKEN\"",
-		[]string{"Vercel → create TeamCity parameter VERCEL_TOKEN (type: password)"}},
 	{"tj-actions/changed-files", "Get changed files",
 		"CHANGED_FILES=$(git diff --name-only HEAD~1)\necho \"$CHANGED_FILES\"",
 		[]string{"tj-actions/changed-files → TeamCity provides %teamcity.build.changedFiles.file%"}},

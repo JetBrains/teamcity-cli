@@ -290,7 +290,6 @@ var bambooTaskRegistry = map[string]bambooTransformer{
 	"gradle":            bambooGradle,
 	"npm":               bambooNpm,
 	"node":              bambooNode,
-	"node_unit":         bambooNode,
 	"docker":            bambooDocker,
 	"docker-cli":        bambooDocker,
 	"inject-variables":  bambooInjectVariables,

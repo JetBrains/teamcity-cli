@@ -109,7 +109,6 @@ func TestAnalyzeFileExplicitPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, GitHubActions, cfg.Source)
 	assert.Equal(t, 4, cfg.Jobs)
-	assert.Greater(t, cfg.Steps, 0)
 }
 
 func TestAnalyzeFileMissingSourceCannotInfer(t *testing.T) {

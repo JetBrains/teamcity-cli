@@ -29,8 +29,6 @@ secrets:                 # Sensitive values — value MUST start with "credentia
   env.SECRET_NAME: "credentialsJSON:uuid-here"
 ```
 
-The schema enforces the `credentialsJSON:<uuid>` form for every secret. Plain string values are rejected — create the credential first with `teamcity project token put`, then reference its UUID here.
-
 ## Step Types
 
 ### `type: script`
@@ -65,15 +63,7 @@ The schema enforces the `credentialsJSON:<uuid>` form for every secret. Plain st
 
 ## Agent Types (TeamCity Cloud)
 
-| Agent | OS |
-|---|---|
-| `Linux-Small` / `Linux-Medium` / `Linux-Large` / `Linux-XLarge` | Linux |
-| `Mac-Medium` | macOS |
-| `Windows-Small` / `Windows-Medium` | Windows |
-
-The authoritative list is the `runs-on` enum in the server's pipeline schema; verify with `teamcity pipeline schema` when in doubt.
-
-For self-hosted agents:
+Hosted agent names come from the server's pipeline schema — see the runner mapping in [mappings](mappings.md). For self-hosted agents:
 ```yaml
 runs-on:
   self-hosted:
@@ -128,8 +118,6 @@ jobs:
 teamcity pipeline validate my-pipeline.tc.yml
 ```
 
-Uses JSON Schema — reports errors with line numbers.
-
 ### What `validate` does NOT check
 
 The schema validates structure (jobs/steps shape, types, secret format, runner field types) but not the inner shape of each step type. That means:
@@ -138,4 +126,4 @@ The schema validates structure (jobs/steps shape, types, secret format, runner f
 - `type: gradle` with no `gradle-params` may pass schema but produce an empty build.
 - Keys that don't exist (`if:`, `interruptible:`, `timeout:`) pass schema but are silently ignored at runtime.
 
-Treat `pipeline validate` as a fast structural check, not proof of correctness. Always run the pipeline to confirm.
+Treat `pipeline validate` as a fast structural check, not proof of correctness.

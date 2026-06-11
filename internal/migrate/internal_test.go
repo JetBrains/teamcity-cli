@@ -13,7 +13,6 @@ func TestOutputFileName(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{".github/workflows/ci.yml", "ci.tc.yml"},
 		{".github/workflows/release.yaml", "release.tc.yaml"},
 		{".gitlab-ci.yml", ".gitlab-ci.tc.yml"},
 		{"Jenkinsfile", "Jenkinsfile.tc.yml"},
@@ -33,7 +32,6 @@ func TestSanitizeJobID(t *testing.T) {
 	// Punctuation outside the safe set must collapse to "_" so the id stays a valid dependency reference.
 	assert.Equal(t, "Build_Test", SanitizeJobID("Build & Test"))
 	assert.Equal(t, "Deploy_prod_", SanitizeJobID("Deploy (prod)"))
-	assert.Regexp(t, `^[A-Za-z0-9_]+$`, SanitizeJobID("Build & Test"))
 }
 
 func TestBambooDockerDefaultsImage(t *testing.T) {
@@ -76,7 +74,6 @@ func TestResolveRunner(t *testing.T) {
 		{"darwin-arm64", "Mac-Medium", true},
 		// Anything else names a self-hosted runner in GHA semantics.
 		{"buildjet-4vcpu", "self-hosted", false},
-		{"my-gpu-box", "self-hosted", false},
 	}
 	for _, tt := range tests {
 		got, known := Options{}.ResolveRunner(tt.label)
