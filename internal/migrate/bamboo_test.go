@@ -88,8 +88,7 @@ func TestBambooConvertFixture(t *testing.T) {
 func TestBambooCollidingJobIDsStayDistinctInDeps(t *testing.T) {
 	t.Parallel()
 
-	// "a-b" and "a.b" both sanitize to "S_a_b"; a dependent job must depend on both
-	// distinct keys, not collapse onto the first.
+	// "a-b" and "a.b" both sanitize to "S_a_b"; a dependent job must depend on both distinct keys, not collapse onto the first.
 	result := convertBambooSpec(t, `
 stages:
   - 'S':

@@ -67,8 +67,7 @@ var (
 	dslServerURL  string
 )
 
-// ConfigDir returns the path to the teamcity-cli config directory (~/.config/tc
-// or $XDG_CONFIG_HOME/tc).
+// ConfigDir returns the teamcity-cli config directory ($XDG_CONFIG_HOME/tc or ~/.config/tc).
 func ConfigDir() (string, error) {
 	home, err := userHomeDirFn()
 	if err != nil {

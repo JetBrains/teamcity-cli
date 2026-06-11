@@ -220,8 +220,7 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 	var runsOnWindows bool
 	switch {
 	case job.RunsOn == nil:
-	// A bare `runs-on: ${{ matrix.os }}` parses into LabelsExpr, not Labels — without this
-	// branch the field would be dropped silently and the job would have no agent target.
+	// A bare `runs-on: ${{ matrix.os }}` parses into LabelsExpr, not Labels — without this branch it would be dropped silently.
 	case job.RunsOn.LabelsExpr != nil:
 		result.ManualSetup = append(result.ManualSetup,
 			fmt.Sprintf("Job %q runs-on uses expression %q → emitted the default runner; expand the matrix into separate jobs with explicit runners", id, condense(job.RunsOn.LabelsExpr.Value)))
