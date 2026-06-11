@@ -116,7 +116,9 @@ func convertBambooJob(stageName, jobName string, def map[string]any, deps []stri
 		return j
 	}
 
-	j.RunsOn = bambooRunsOn(def, opts, result, jobName)
+	tasks := bambooTaskList(def["tasks"])
+	finalTasks := bambooTaskList(def["final-tasks"])
+	j.RunsOn = bambooRunsOn(def, append(tasks, finalTasks...), opts, result, jobName)
 
 	if docker, ok := def["docker"].(map[string]any); ok {
 		if img, _ := docker["image"].(string); img != "" {
@@ -133,11 +135,11 @@ func convertBambooJob(stageName, jobName string, def map[string]any, deps []stri
 		}
 	}
 
-	for _, t := range bambooTaskList(def["tasks"]) {
+	for _, t := range tasks {
 		stepResults = append(stepResults, transformBambooTask(t, result, jobName, false))
 	}
 
-	for _, t := range bambooTaskList(def["final-tasks"]) {
+	for _, t := range finalTasks {
 		stepResults = append(stepResults, transformBambooTask(t, result, jobName, true))
 	}
 
@@ -251,6 +253,11 @@ func transformBambooTask(t bambooTask, result *ConversionResult, jobName string,
 			fmt.Sprintf("Job %q has Bamboo final-task %q → set step execution policy to 'Even if some build steps have failed' in TeamCity", jobName, t.identifier))
 	}
 
+	if conds := anySlice(t.body["conditions"]); len(conds) > 0 {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Task %q in job %q has Bamboo conditions %s → TC YAML has no step conditions; guard the script or configure an execution condition", t.identifier, jobName, condense(fmt.Sprint(conds))))
+	}
+
 	if env := t.body["environment"]; env != nil {
 		params := bambooEnvParams(env, result, fmt.Sprintf("Task %q in job %q", t.identifier, jobName))
 		if len(params) > 0 {
@@ -318,13 +325,23 @@ var bambooPluginKeyAliases = map[string]bambooTransformer{
 
 func bambooScript(body map[string]any, result *ConversionResult, jobName string) StepResult {
 	scripts := stringSliceFromAny(body["scripts"])
+	arg, _ := body["argument"].(string)
 	if len(scripts) == 0 {
 		if file, _ := body["file"].(string); file != "" {
-			arg, _ := body["argument"].(string)
 			scripts = []string{strings.TrimSpace(file + " " + arg)}
+			arg = ""
 		}
 	}
 	script := strings.Join(scripts, "\n")
+	// Bamboo passes `argument:` to inline scripts as $1…$n; reproduce via a temp file so the args aren't dropped.
+	if arg != "" && script != "" {
+		if interpreter, _ := body["interpreter"].(string); interpreter == "WINDOWS_POWER_SHELL" {
+			result.ManualSetup = append(result.ManualSetup,
+				fmt.Sprintf("Job %q has a PowerShell task with `argument:` %q → pass the arguments to the script manually", jobName, arg))
+		} else {
+			script = fmt.Sprintf("TC_SCRIPT=$(mktemp)\ncat > \"$TC_SCRIPT\" <<'TC_EOF'\n%s\nTC_EOF\nchmod +x \"$TC_SCRIPT\"\n\"$TC_SCRIPT\" %s", script, arg)
+		}
+	}
 	script = MapBambooExpressions(script)
 
 	step := Step{
@@ -794,7 +811,7 @@ var bambooRequirementOSHints = map[string]string{
 	"ubuntu-24.04": "ubuntu-24.04",
 }
 
-func bambooRunsOn(def map[string]any, opts Options, result *ConversionResult, jobName string) string {
+func bambooRunsOn(def map[string]any, tasks []bambooTask, opts Options, result *ConversionResult, jobName string) string {
 	reqs := stringSliceFromAny(def["requirements"])
 	var osHint string
 	var nonOS []string
@@ -809,10 +826,44 @@ func bambooRunsOn(def map[string]any, opts Options, result *ConversionResult, jo
 		result.ManualSetup = append(result.ManualSetup,
 			fmt.Sprintf("Job %q has agent requirements %v → set agent capabilities/requirements in TeamCity", jobName, nonOS))
 	}
+	// OS-bound tasks (MSBuild, Fastlane, …) would be guaranteed failures on the Linux default.
+	if osHint == "" {
+		for _, t := range tasks {
+			if hint := bambooTaskOSHint(t.identifier); hint != "" {
+				osHint = hint
+				result.ManualSetup = append(result.ManualSetup,
+					fmt.Sprintf("Job %q runner inferred from task %q → verify the agent OS", jobName, t.identifier))
+				break
+			}
+		}
+	}
 	if osHint == "" {
 		osHint = "ubuntu-latest"
 	}
 	return opts.MapRunner(osHint)
+}
+
+// bambooTaskOSHints maps tasks that only run on one OS to a runner key; plugin-key forms are matched by substring below.
+var bambooTaskOSHints = map[string]string{
+	"ms-build":        "windows-latest",
+	"ms-test":         "windows-latest",
+	"visual-studio":   "windows-latest",
+	"nunit-runner":    "windows-latest",
+	"fastlane":        "macos-latest",
+	"unlock-keychain": "macos-latest",
+}
+
+func bambooTaskOSHint(identifier string) string {
+	if hint, ok := bambooTaskOSHints[identifier]; ok {
+		return hint
+	}
+	switch {
+	case strings.Contains(identifier, "plugin.dotnet"):
+		return "windows-latest"
+	case strings.Contains(identifier, "xcode"):
+		return "macos-latest"
+	}
+	return ""
 }
 
 func surfaceBambooMeta(spec map[string]any, result *ConversionResult) {

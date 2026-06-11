@@ -378,3 +378,96 @@ version: 2
 	assert.Contains(t, err.Error(), "bamboo-specs/deployment/plan.yml")
 	assert.Contains(t, err.Error(), "--file")
 }
+
+func TestBambooOSBoundTasksSetRunsOn(t *testing.T) {
+	t.Parallel()
+
+	spec := `---
+version: 2
+plan:
+  project-key: P
+  key: K
+  name: Plan
+stages:
+  - 'Build':
+      jobs:
+        - Win
+        - Mac
+Win:
+  tasks:
+    - ms-build:
+        solution: app.sln
+Mac:
+  tasks:
+    - fastlane:
+        lane: beta
+`
+	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
+	result, err := Convert(cfg, []byte(spec), Options{})
+	require.NoError(t, err)
+
+	runsOn := map[string]string{}
+	for _, j := range result.Pipeline.Jobs {
+		runsOn[j.Name] = j.RunsOn
+	}
+	assert.Equal(t, "Windows-Medium", runsOn["Win"], "MSBuild can't run on the Linux default")
+	assert.Equal(t, "Mac-Medium", runsOn["Mac"], "Fastlane can't run on the Linux default")
+	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "runner inferred from task")
+}
+
+func TestBambooTaskConditionsSurfaced(t *testing.T) {
+	t.Parallel()
+
+	spec := `---
+version: 2
+plan:
+  project-key: P
+  key: K
+  name: Plan
+stages:
+  - 'Build':
+      jobs:
+        - Job
+Job:
+  tasks:
+    - script:
+        scripts:
+          - make deploy
+        conditions:
+          - variable:
+              equals:
+                env: prod
+`
+	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
+	result, err := Convert(cfg, []byte(spec), Options{})
+	require.NoError(t, err)
+	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "has Bamboo conditions")
+}
+
+func TestBambooInlineScriptArgumentPreserved(t *testing.T) {
+	t.Parallel()
+
+	spec := `---
+version: 2
+plan:
+  project-key: P
+  key: K
+  name: Plan
+stages:
+  - 'Build':
+      jobs:
+        - Job
+Job:
+  tasks:
+    - script:
+        scripts:
+          - 'echo "first arg: $1"'
+        argument: --flag value
+`
+	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
+	result, err := Convert(cfg, []byte(spec), Options{})
+	require.NoError(t, err)
+	script := result.Pipeline.Jobs[0].Steps[0].ScriptContent
+	assert.Contains(t, script, `"$TC_SCRIPT" --flag value`)
+	assert.Contains(t, script, "first arg: $1")
+}
