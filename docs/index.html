@@ -416,6 +416,16 @@ body {
   text-wrap: pretty;
 }
 .notes-panel p:last-child { margin-bottom: 0; }
+.notes-panel a {
+  color: var(--fg-1);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--accent) 50%, transparent);
+  transition: color 0.15s, border-color 0.15s;
+}
+.notes-panel a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 .notes-panel .mono-hint {
   font-family: var(--mono); font-size: 11px; color: var(--fg-3);
 }
@@ -437,6 +447,8 @@ body {
   display: flex; align-items: baseline; justify-content: space-between;
   font-family: var(--mono); font-size: 10.5px; color: var(--fg-4);
 }
+.foot a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.foot a:hover { color: var(--accent); border-bottom-color: var(--accent); }
 .attrib {
   display: flex; align-items: center; gap: 14px;
   padding: 18px 0 0;
@@ -562,14 +574,14 @@ body {
     <div class="brand">
       
       <div class="brand-name">teamcity cli</div>
-      <div class="brand-ver">v0.10.0</div>
+      <div class="brand-ver">v1.1.1</div>
       <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Toggle navigation">
         <span class="nav-toggle-icon" aria-hidden="true">☰</span>
         <span class="nav-toggle-label">menu</span>
       </button>
     </div>
 
-    <div class="sidebar-meta">146 screens · 2026-05-05 17:36</div>
+    <div class="sidebar-meta">146 screens · 2026-06-11 21:28</div>
 
     <div class="search">
       <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
@@ -1089,7 +1101,8 @@ body {
     <div class="side-foot">
       <a href="https://github.com/jetbrains/teamcity-cli/" target="_blank" rel="noopener">↗ github</a><br>
       146 screens · 17 groups<br>
-      generated 2026-05-05 17:36
+      generated 2026-06-11 21:28<br>
+      with <a href="https://github.com/tiulpin/termbook" target="_blank" rel="noopener">termbook</a>
     </div>
   </aside>
 
@@ -1111,7 +1124,7 @@ body {
         
       </div>
       <div class="fact">
-        <b>147</b> screens<br><b>17</b> command groups<br>
+        <b>146</b> screens<br><b>17</b> command groups<br>
       </div>
     </section>
 
@@ -1436,8 +1449,7 @@ Build finished</pre>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity run diff 45231 45230</span></div>
-                <pre class="term-body"><span class="term-fg33">!</span> &quot;teamcity run diff&quot; is experimental: flags, output, and JSON schema may change or the command may be removed without notice. It is intentionally undocumented — do not rely on it in scripts.
-COMPARING  <span class="term-fg32">✓</span> 45231  #831  →  <span class="term-fg31">✗</span> 45230  #442
+                <pre class="term-body">COMPARING  <span class="term-fg32">✓</span> 45231  #831  →  <span class="term-fg31">✗</span> 45230  #442
 <span class="term-fg2">Job: </span><span class="term-fg36">Build</span><span class="term-fg2">  ·  Branch: </span>main → feature&#47;auth
 &nbsp;
 <span class="term-fg1">STATUS</span>
@@ -1586,15 +1598,15 @@ logs&#47;build.log          45 KiB  <span class="term-fg32">   ✓</span>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity run tests 1</span></div>
-                <pre class="term-body"><span class="term-fg2">View in browser:</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231&amp;buildTab=tests
-&nbsp;
-TESTS: <span class="term-fg32">145 passed</span>
-&nbsp;
-<span class="term-fg32">✓</span> TestAuthHandler&#47;valid_token
+                <pre class="term-body"><span class="term-fg32">✓</span> TestAuthHandler&#47;valid_token
 <span class="term-fg32">✓</span> TestConnectionPool&#47;acquire
 <span class="term-fg32">✓</span> TestConnectionPool&#47;release
 <span class="term-fg32">✓</span> TestShutdown&#47;graceful
-<span class="term-fg32">✓</span> TestMigration&#47;forward</pre>
+<span class="term-fg32">✓</span> TestMigration&#47;forward
+&nbsp;
+TESTS: <span class="term-fg32">145 passed</span>
+&nbsp;
+<span class="term-fg2">View in browser:</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231&amp;buildTab=tests</pre>
               </div>
             </div>
           </article>
@@ -1840,7 +1852,7 @@ Status: <span class="term-fg32">Active</span>
 │   ├── <span class="term-fg36">Run Tests</span> <span class="term-fg2">MyApp_Test</span>
 │   │   └── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span>
 │   └── <span class="term-fg36">Integration Tests</span> <span class="term-fg2">MyApp_IntTest</span>
-│       └── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span> <span class="term-fg33">(circular)</span>
+│       └── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span>
 └── <span class="term-fg2">▼ Dependencies</span>
     └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span></pre>
               </div>
@@ -2553,7 +2565,7 @@ Description: Main product monorepo
 <span class="term-fg2">Build</span> from VCS
 <span class="term-fg2">VCS Root</span> MyApp_HttpsGithubComOrgRepoGit @ .teamcity
 &nbsp;
-<span class="term-fg2">Last sync</span> Jan 27 (Jan 27 11:30)
+<span class="term-fg2">Last sync</span> Jan 27 (Jan 27 10:30)
 &nbsp;
 <span class="term-fg2">View</span> <span class="term-fg2">https:&#47;&#47;tc.example.com&#47;project.html?projectId=MyApp&amp;tab=versionedSettings</span></pre>
               </div>
@@ -3620,7 +3632,7 @@ Token expires: <span class="term-fg33">Dec 31, 2026</span>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity config list</span></div>
-                <pre class="term-body"><span class="term-fg2">Config:</span> &#47;var&#47;folders&#47;4y&#47;7q13x9990bv9hf94lw6g4ptm0000gn&#47;T&#47;TestGenerateGallery997979501&#47;001&#47;tc&#47;config.yml
+                <pre class="term-body"><span class="term-fg2">Config:</span> &#47;tmp&#47;TestGenerateGallery1278077114&#47;001&#47;tc&#47;config.yml
 &nbsp;
 default_server=
 &nbsp;
@@ -3788,7 +3800,7 @@ buildtype  job        built-in</pre>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill list</span></div>
                 <pre class="term-body">Name          Version  Description
-teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user provides a TeamCity build URL — drives the `teamcity` CLI for builds, logs, jobs, queues, agents, pools, projects, and pipelines.  (default)</pre>
+teamcity-cli  1.0.0    Use when working with TeamCity CI&#47;CD or when a user provides a TeamCity build URL — drives the `teamcity` CLI for builds, logs, jobs, queues, agents, pools, projects, and pipelines.  (default)</pre>
               </div>
             </div>
           </article>
@@ -3807,14 +3819,7 @@ teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user p
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill install teamcity-cli</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Installed teamcity-cli for warp (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for claude-code (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for codex (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for cursor (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for droid (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for antigravity (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for gemini-cli (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for junie (0.10.1)</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Installed teamcity-cli for claude-code (1.0.0)</pre>
               </div>
             </div>
           </article>
@@ -3833,7 +3838,7 @@ teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user p
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill update</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (0.10.1)</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (1.0.0)</pre>
               </div>
             </div>
           </article>
@@ -3852,14 +3857,7 @@ teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user p
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill remove teamcity-cli</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Removed teamcity-cli from warp
-<span class="term-fg32">✓</span> Removed teamcity-cli from claude-code
-<span class="term-fg32">✓</span> Removed teamcity-cli from codex
-<span class="term-fg32">✓</span> Removed teamcity-cli from cursor
-<span class="term-fg32">✓</span> Removed teamcity-cli from droid
-<span class="term-fg32">✓</span> Removed teamcity-cli from antigravity
-<span class="term-fg32">✓</span> Removed teamcity-cli from gemini-cli
-<span class="term-fg32">✓</span> Removed teamcity-cli from junie</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Removed teamcity-cli from claude-code</pre>
               </div>
             </div>
           </article>
@@ -3924,8 +3922,8 @@ teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user p
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity update</span></div>
                 <pre class="term-body">Checking for updates...
-<span class="term-fg2">vdev</span> → <span class="term-fg32">v0.10.0</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
-<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v0.10.0</span></pre>
+<span class="term-fg2">vdev</span> → <span class="term-fg32">v1.1.1</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
+<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v1.1.1</span></pre>
               </div>
             </div>
           </article>
@@ -4178,7 +4176,7 @@ Aliases:
 &nbsp;
 LIFECYCLE
   cancel      Cancel a run
-  diff        [experimental] Compare two runs and show differences
+  diff        Compare two runs and show differences
   list        List recent runs
   restart     Restart a run
   start       Start a new run
@@ -4248,10 +4246,13 @@ Aliases:
   job, buildtype
 &nbsp;
 Available Commands:
+  create      Create a job
   list        List jobs
   param       Manage job parameters
   pause       Pause a job
   resume      Resume a paused job
+  settings    Manage job settings
+  step        Manage job build steps
   tree        Display snapshot dependency tree
   view        View job details
 &nbsp;
@@ -4880,6 +4881,7 @@ Available Commands:
   create      Create a project connection
   delete      Delete a project connection
   list        List project connections
+  view        View a project connection
 &nbsp;
 Flags:
   -h, --help   help for connection
@@ -5127,7 +5129,7 @@ build behavior, can reference other parameters, and may be marked
 as password (secure) so their values never appear in logs.
 &nbsp;
 The &lt;project-id&gt; positional is optional when teamcity.toml binds this
-repo via &#39;teamcity link&#39; — the linked project is used automatically.
+repo via &#39;teamcity link&#39; - the linked project is used automatically.
 &nbsp;
 See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-parameters.html
 &nbsp;
@@ -5177,7 +5179,7 @@ build behavior, can reference other parameters, and may be marked
 as password (secure) so their values never appear in logs.
 &nbsp;
 The &lt;job-id&gt; positional is optional when teamcity.toml binds this
-repo via &#39;teamcity link&#39; — the linked job is used automatically.
+repo via &#39;teamcity link&#39; - the linked job is used automatically.
 &nbsp;
 See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-parameters.html
 &nbsp;
@@ -5319,7 +5321,7 @@ Use &quot;teamcity project connection create [command] --help&quot; for more inf
 
     <footer class="foot">
       <div>teamcity cli · screen gallery</div>
-      <div>146 screens · 2026-05-05 17:36</div>
+      <div>146 screens · 2026-06-11 21:28</div>
     </footer>
     <div class="attrib">
 			<span class="jb-wordmark">JetBrains</span>

@@ -41,10 +41,10 @@ func TestGenerateGallery(t *testing.T) {
 		termbook.WithCSS(jetBrainsCSS),
 		termbook.WithDecor(termbook.Decor{
 			BrandName:    "teamcity cli",
-			BrandVersion: "v0.10.0",
+			BrandVersion: "v1.1.1",
 			Crumbs:       []string{"jetbrains", "teamcity-cli", "gallery"},
 			Facts: []termbook.Fact{
-				{Value: "147", Label: "screens"},
+				{Value: "146", Label: "screens"},
 				{Value: "17", Label: "command groups"},
 			},
 			Notes: termbook.Notes{
