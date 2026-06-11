@@ -3,6 +3,7 @@ package migrate
 import (
 	"fmt"
 	"maps"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -125,7 +126,8 @@ func DeduplicateOutputNames(results []*ConversionResult) {
 		if seen[r.OutputFile] <= 1 {
 			continue
 		}
-		dir := filepath.Dir(filepath.ToSlash(r.SourceFile))
+		// path.Dir, not filepath.Dir — on Windows filepath.Clean rewrites the slash-normalized path with backslashes.
+		dir := path.Dir(filepath.ToSlash(r.SourceFile))
 		prefix := strings.NewReplacer(".", "", "/", "-").Replace(dir)
 		if prefix == "" {
 			continue
