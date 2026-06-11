@@ -65,13 +65,13 @@ The schema enforces the `credentialsJSON:<uuid>` form for every secret. Plain st
 
 ## Agent Types (TeamCity Cloud)
 
-| Agent | OS | Arch |
-|---|---|---|
-| `Ubuntu-24.04-Large` | Linux | x86_64 |
-| `Ubuntu-22.04-Large` | Linux | x86_64 |
-| `macOS-15-Sequoia-Large-Arm64` | macOS 15 | ARM64 |
-| `macOS-14-Sonoma-Large-Arm64` | macOS 14 | ARM64 |
-| `Windows-Server-2022-Large` | Windows | x86_64 |
+| Agent | OS |
+|---|---|
+| `Linux-Small` / `Linux-Medium` / `Linux-Large` / `Linux-XLarge` | Linux |
+| `Mac-Medium` | macOS |
+| `Windows-Small` / `Windows-Medium` | Windows |
+
+The authoritative list is the `runs-on` enum in the server's pipeline schema; verify with `teamcity pipeline schema` when in doubt.
 
 For self-hosted agents:
 ```yaml

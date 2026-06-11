@@ -30,7 +30,7 @@ Official TeamCity migration docs:
 | `steps[].run` | `steps[].script-content` | Shell commands transfer verbatim |
 | `steps[].uses: action` | Depends on action | See action mapping below |
 | `needs: [job1]` | `dependencies: [job1]` | |
-| `runs-on: ubuntu-latest` | `runs-on: Ubuntu-24.04-Large` | See runner mapping below |
+| `runs-on: ubuntu-latest` | `runs-on: Linux-Large` | See runner mapping below |
 | `env.KEY: val` | `parameters: env.KEY: val` | |
 | `secrets.X` | `%env.X%` + credentialsJSON | Create via `teamcity project token put` |
 | `strategy.matrix` | Separate jobs or `parallelism` | |
@@ -73,12 +73,12 @@ Official TeamCity migration docs:
 
 | GitHub Actions | TeamCity Cloud |
 |---|---|
-| `ubuntu-latest` / `ubuntu-24.04` | `Ubuntu-24.04-Large` |
-| `ubuntu-22.04` | `Ubuntu-22.04-Large` |
-| `macos-latest` / `macos-15` | `macOS-15-Sequoia-Large-Arm64` |
-| `macos-14` | `macOS-14-Sonoma-Large-Arm64` |
-| `windows-latest` / `windows-2022` | `Windows-Server-2022-Large` |
+| `ubuntu-latest` / `ubuntu-24.04` / `ubuntu-22.04` | `Linux-Large` |
+| `macos-latest` / `macos-15` / `macos-14` | `Mac-Medium` |
+| `windows-latest` / `windows-2022` | `Windows-Medium` |
 | Self-hosted labels | `self-hosted` with agent requirements |
+
+Hosted agent names come from the server's pipeline schema (`runs-on` enum: `Linux-Small/Medium/Large/XLarge`, `Mac-Medium`, `Windows-Small/Medium` as of 2026.2). When connected, the CLI derives this mapping from the live schema — check `teamcity pipeline schema` if a name is rejected.
 
 ## Bamboo Specs to TeamCity Pipeline YAML
 

@@ -43,7 +43,7 @@ jobs:
 jobs:
   build_stable:
     name: "build (stable)"
-    runs-on: Ubuntu-24.04-Large
+    runs-on: Linux-Large
     steps:
       - type: script
         name: "Install mdsf-cli"
@@ -54,7 +54,7 @@ jobs:
 
   build_oldstable:
     name: "build (oldstable)"
-    runs-on: Ubuntu-24.04-Large
+    runs-on: Linux-Large
     steps:
       - type: script
         name: "Install Go oldstable"
@@ -66,7 +66,7 @@ jobs:
 
   test_1_21:   # repeated for each Go version
     name: "test (1.21)"
-    runs-on: Ubuntu-24.04-Large
+    runs-on: Linux-Large
     steps:
       - type: script
         docker-image: "golang:1.21"

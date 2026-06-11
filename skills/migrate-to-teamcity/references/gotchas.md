@@ -58,7 +58,7 @@ TC has no native matrix. Expand each matrix combination into a separate job. The
 ```yaml
 test_go_1_21:
   name: "test (Go 1.21)"
-  runs-on: Ubuntu-24.04-Large
+  runs-on: Linux-Large
   steps:
     - type: script
       docker-image: "golang:1.21"
@@ -70,7 +70,7 @@ test_go_1_21:
 ```yaml
 build_oldstable:
   name: "build (oldstable)"
-  runs-on: Ubuntu-24.04-Large
+  runs-on: Linux-Large
   steps:
     - type: script
       name: "Install Go 1.23"
