@@ -16,6 +16,7 @@ class TaskConfig:
     checks: list[str] = field(default_factory=list)
     llm_grade: bool = False
     default_treatments: list[str] = field(default_factory=lambda: ["CONTROL", "CURRENT"])
+    setup_files: dict[str, str] = field(default_factory=dict)
 
 
 def _load_all() -> list[dict]:
@@ -32,6 +33,7 @@ def load_task(task_name: str) -> TaskConfig:
                 checks=t.get("checks", []),
                 llm_grade=t.get("llm_grade", False),
                 default_treatments=t.get("treatments", ["CONTROL", "CURRENT"]),
+                setup_files=t.get("setup_files", {}),
             )
     raise KeyError(f"Task '{task_name}' not found in {TASKS_FILE}")
 
