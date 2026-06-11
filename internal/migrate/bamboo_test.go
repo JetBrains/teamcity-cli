@@ -177,6 +177,7 @@ Job:
   tasks:
     - made-up-task:
         config: 1
+        password: hunter2
 `)
 	require.NotEmpty(t, result.NeedsReview)
 
@@ -184,6 +185,7 @@ Job:
 	step := result.Pipeline.Jobs[0].Steps[0]
 	assert.Contains(t, step.ScriptContent, "TODO: implement equivalent of made-up-task")
 	assert.Contains(t, step.ScriptContent, "config: 1")
+	assert.NotContains(t, step.ScriptContent, "hunter2", "secret-looking stub fields must be redacted")
 }
 
 func TestBambooNoPlanSurfacesAsReview(t *testing.T) {
@@ -240,15 +242,21 @@ Job:
       shared: true
     - name: log
       pattern: 'build.log'
+    - name: reports
+      pattern:
+        - 'a.xml'
+        - 'b.xml'
 `)
 	require.Len(t, result.Pipeline.Jobs, 1)
 	pubs := result.Pipeline.Jobs[0].FilesPublication
-	require.Len(t, pubs, 2)
+	require.Len(t, pubs, 4)
 	assert.Equal(t, "target/*.jar", pubs[0].Path)
 	assert.True(t, pubs[0].ShareWithJobs)
 	assert.False(t, pubs[0].PublishArtifact)
 	assert.Equal(t, "build.log", pubs[1].Path)
 	assert.True(t, pubs[1].PublishArtifact)
+	assert.Equal(t, "a.xml", pubs[2].Path, "list-form pattern emits one publication per entry")
+	assert.Equal(t, "b.xml", pubs[3].Path)
 }
 
 func TestBambooSecretPlanVarRedacted(t *testing.T) {
@@ -360,6 +368,30 @@ Mac:
 	assert.Equal(t, "Windows-Medium", runsOn["Win"], "MSBuild can't run on the Linux default")
 	assert.Equal(t, "Mac-Medium", runsOn["Mac"], "Fastlane can't run on the Linux default")
 	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "runner inferred from task")
+}
+
+func TestBambooEmptyStageKeepsDependencyChain(t *testing.T) {
+	t.Parallel()
+
+	result := convertBambooSpec(t, `
+stages:
+  - 'A':
+      jobs: [J1]
+  - 'Empty': {}
+  - 'B':
+      jobs: [J2]
+J1:
+  tasks:
+    - script:
+        - echo a
+J2:
+  tasks:
+    - script:
+        - echo b
+`)
+	// The job-less middle stage must not detach B from A.
+	require.Len(t, result.Pipeline.Jobs, 2)
+	assert.Equal(t, []string{"A_J1"}, result.Pipeline.Jobs[1].Dependencies)
 }
 
 func TestBambooDisabledTaskSkipped(t *testing.T) {

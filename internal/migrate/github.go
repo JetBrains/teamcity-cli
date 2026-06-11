@@ -45,7 +45,11 @@ func unknownStub(identifier, name, fieldsLabel string, fields map[string]string)
 	if len(fields) > 0 {
 		stub.WriteString("\n# " + fieldsLabel + ":")
 		for _, k := range SortedKeys(fields) {
-			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, fields[k])))
+			v := fields[k]
+			if bambooLooksSecret(k) {
+				v = "REDACTED"
+			}
+			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, v)))
 		}
 	}
 	stub.WriteString("\necho 'TODO: implement equivalent of " + name + "'")

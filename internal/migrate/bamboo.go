@@ -99,7 +99,10 @@ func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 			p.Jobs = append(p.Jobs, j)
 			stageJobIDs = append(stageJobIDs, j.ID)
 		}
-		prevJobIDs = stageJobIDs
+		// A stage with no resolvable jobs must not sever the ordering chain for later stages.
+		if len(stageJobIDs) > 0 {
+			prevJobIDs = stageJobIDs
+		}
 	}
 
 	surfaceBambooMeta(spec, result)
@@ -135,6 +138,11 @@ func convertBambooJob(stageName, jobName string, def map[string]any, deps []stri
 			ScriptContent: fmt.Sprintf("echo 'TODO: missing job definition for %s'", jobName),
 		}}
 		return j
+	}
+
+	if v, ok := def["enabled"]; ok && !boolFromAny(v) {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Job %q is disabled in Bamboo → converted anyway; pause or delete the TC job", jobName))
 	}
 
 	tasks := bambooTaskList(def["tasks"])
@@ -173,7 +181,7 @@ func convertBambooJob(stageName, jobName string, def map[string]any, deps []stri
 
 	for _, a := range anySlice(def["artifacts"]) {
 		if amap, ok := a.(map[string]any); ok {
-			artifacts = append(artifacts, bambooArtifact(amap))
+			artifacts = append(artifacts, bambooArtifacts(amap)...)
 		}
 	}
 	j.FilesPublication = artifacts
@@ -777,21 +785,27 @@ func transformBambooArtifactSubscription(sub map[string]any) StepResult {
 	}
 }
 
-func bambooArtifact(a map[string]any) FilePublication {
-	pattern, _ := a["pattern"].(string)
+func bambooArtifacts(a map[string]any) []FilePublication {
 	location, _ := a["location"].(string)
-	path := pattern
-	if location != "" && pattern != "" {
-		path = strings.TrimRight(location, "/") + "/" + pattern
-	} else if location != "" {
-		path = location
-	}
 	shared := boolFromAny(a["shared"])
-	return FilePublication{
-		Path:            path,
-		ShareWithJobs:   shared,
-		PublishArtifact: !shared,
+	patterns := stringSliceFromAny(a["pattern"])
+	if len(patterns) == 0 {
+		patterns = []string{""}
 	}
+	var out []FilePublication
+	for _, pattern := range patterns {
+		path := pattern
+		if location != "" && pattern != "" {
+			path = strings.TrimRight(location, "/") + "/" + pattern
+		} else if location != "" {
+			path = location
+		}
+		if path == "" {
+			continue
+		}
+		out = append(out, FilePublication{Path: path, ShareWithJobs: shared, PublishArtifact: !shared})
+	}
+	return out
 }
 
 // bambooRequirementOSHints maps OS-shaped Bamboo capability labels to a GHA runner key (non-OS reqs surface as manual tasks).
