@@ -306,7 +306,7 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 		}
 		if step.ContinueOnError != nil && step.ContinueOnError.Value {
 			result.ManualSetup = append(result.ManualSetup,
-				fmt.Sprintf("Step %q has continue-on-error: true → set step execution policy to 'Even if some build steps have failed' in TeamCity (TC fails the build on nonzero exit by default)", stepName))
+				fmt.Sprintf("Step %q has continue-on-error: true → wrap the command so its exit code is ignored (e.g. `cmd || true`) or override the failure condition; TC fails the build on nonzero exit by default", stepName))
 		}
 		stepResults = append(stepResults, transformGHAStep(step, acc)...)
 	}
