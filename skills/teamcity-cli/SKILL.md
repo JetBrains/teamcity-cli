@@ -6,6 +6,14 @@ description: Use when working with TeamCity CI/CD or when a user provides a Team
 
 # TeamCity CLI (`teamcity`)
 
+## Mandatory rules
+
+- **Do not guess flags or syntax.** Use the [command reference](references/commands.md) or `teamcity <command> --help`. Builds are **runs** (`teamcity run`); build configurations are **jobs** (`teamcity job`). Never use `--count` — use `--limit` (or `-n`).
+- **Always check the repository binding before TeamCity work.** Before executing any `teamcity` command, inspect the binding in `teamcity.toml`. Use the linked project/job unless the user explicitly supplied a different project, job, or URL. The binding is scoped by server and optional path; `jobs` can contain multiple jobs relevant to the repository.
+- **Create or complete the repository binding only for scoped work, and do it before the final answer.** Scoped work means the user supplied a project id/name, job id/name, TeamCity URL, or asks about a specific project area. If `teamcity.toml` is missing or lacks that target, run the ["teamcity link" command](references/commands.md#link-teamcity-link); this is required even when the investigation itself is already done. For project-wide tasks, run `teamcity link --project <project-id> --no-input`. For job-specific tasks, run `teamcity link --project <project-id> --job <job-id> --no-input` when both are known, or `teamcity link --job <job-id> --no-input` if only the job is known. For a TeamCity URL, use the URL's server with `--server <url>` if the active server may differ.
+- **Do not create repository bindings for server-wide work.** For broad tasks such as finding recent builds, listing projects, listing pools, or giving a server overview, check `teamcity.toml` but do not run `teamcity link`. Do not bind a random failed job or sample project inspected as part of a broad overview.
+- **Do not manually edit `teamcity.toml`.** Use `teamcity link` only. If a repository binding exists, do not overwrite it unless specifically asked by the user; it is permissible to add the missing project or job id. Mention both `teamcity.toml` and any `teamcity link` command you ran in the final answer.
+
 ## Quick Start
 
 ```bash
@@ -13,8 +21,6 @@ teamcity auth status                    # Check authentication
 teamcity run list --status failure      # Find failed builds
 teamcity run log <id> --failed --raw    # Full failure diagnostics
 ```
-
-**Do not guess flags or syntax.** Use the [command reference](references/commands.md) or `teamcity <command> --help`. Builds are **runs** (`teamcity run`); build configurations are **jobs** (`teamcity job`). Never use `--count` — use `--limit` (or `-n`).
 
 ## Gotchas
 
