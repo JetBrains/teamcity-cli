@@ -102,7 +102,7 @@ build_oldstable:
 - **Conditional jobs don't translate directly.** `if: github.ref == 'refs/heads/main'` needs a branch filter on the VCS trigger, not a YAML-level condition.
 - **VCS root must be created before the pipeline.** `teamcity pipeline create` accepts `--vcs-root <id>`, not a repo URL. Create it first: `teamcity project vcs create --url <repo> --auth anonymous -p <ProjectId>`. The CLI prints the VCS root ID on success.
 - **Default branch defaults to `refs/heads/main`.** Many repos still use `master`. Pass `--branch refs/heads/master` to `teamcity project vcs create` if needed. Check the repo's default branch before creating the VCS root.
-- **VCS root auth: no OAuth from CLI.** GitHub OAuth connections require browser-based setup in TC UI. When creating VCS roots via API, use anonymous auth for public repos or upload an SSH key (`teamcity project ssh-key upload`) and use SSH URL (`git@github.com:...`). For private repos, deploy keys work well -- add the public key as a deploy key in the repo, upload the private key to TC.
+- **VCS root auth: no OAuth from CLI.** GitHub OAuth connections require browser-based setup in TC UI. When creating VCS roots via API, use anonymous auth for public repos or upload an SSH key (`teamcity project ssh upload`) and use SSH URL (`git@github.com:...`). For private repos, deploy keys work well -- add the public key as a deploy key in the repo, upload the private key to TC.
 
 ### Bamboo-specific
 
@@ -112,7 +112,7 @@ build_oldstable:
 - **`final-tasks:` are not always-run in TC YAML.** TC only knows execution policies per step. After pipeline creation, set "Even if some build steps have failed" on every step that came from `final-tasks:` (UI only).
 - **`other:` block is dropped.** Settings like `concurrent-build-plugin`, `clean-working-dir`, `all-other-apps` have no YAML equivalent — configure cleanup/concurrency in TC build settings.
 - **Repository declarations don't move with the spec.** Bamboo `repositories:` blocks become TC VCS roots, but the converter doesn't create them. Run `teamcity project vcs create` for each Bamboo-specs `repositories[]` entry before creating the pipeline.
-- **Plan keys aren't IDs.** Bamboo `plan.key: SAMP` ≠ TC pipeline ID. The CLI generates a pipeline ID from the file name; use `--name` on `teamcity pipeline create` to set the human-readable name.
+- **Plan keys aren't IDs.** Bamboo `plan.key: SAMP` ≠ TC pipeline ID. The positional `<name>` argument of `teamcity pipeline create <name>` sets the display name, and TeamCity derives the pipeline ID from it.
 - **Multi-plan specs need splitting.** A single Bamboo specs file with several `plan:` blocks isn't supported — split into one file per plan first, then run `teamcity migrate`.
 
 ## Troubleshooting

@@ -28,12 +28,18 @@ func Detect(dir string, filterSource SourceCI) ([]CIConfig, error) {
 		if filterSource != "" && source != filterSource {
 			continue
 		}
+		// Overlapping patterns (e.g. bamboo-specs/*/* and */bamboo-specs/*) can match the same file.
+		seen := map[string]bool{}
 		for _, pattern := range patterns {
 			matches, err := filepath.Glob(filepath.Join(dir, pattern))
 			if err != nil {
 				return nil, err
 			}
 			for _, match := range matches {
+				if seen[match] {
+					continue
+				}
+				seen[match] = true
 				rel, _ := filepath.Rel(dir, match)
 				rel = filepath.ToSlash(rel)
 				configs = append(configs, *analyzeFile(source, rel, match))
@@ -129,14 +135,28 @@ func analyzeGitHubActions(relPath string, data []byte) *CIConfig {
 	for f := range features {
 		cfg.Features = append(cfg.Features, f)
 	}
+	slices.Sort(cfg.Features)
 	return cfg
 }
 
 func analyzeGHAStep(step *actionlint.Step, features map[string]bool) {
+	if step.Env != nil {
+		for _, v := range step.Env.Vars {
+			if v != nil && v.Value != nil && secretsRe.MatchString(v.Value.Value) {
+				features["secrets"] = true
+			}
+		}
+	}
 	switch exec := step.Exec.(type) {
 	case *actionlint.ExecRun:
-		if exec.Run != nil && strings.Contains(exec.Run.Value, "docker") {
+		if exec.Run == nil {
+			return
+		}
+		if strings.Contains(exec.Run.Value, "docker") {
 			features["docker"] = true
+		}
+		if secretsRe.MatchString(exec.Run.Value) {
+			features["secrets"] = true
 		}
 	case *actionlint.ExecAction:
 		if exec.Uses == nil {
@@ -151,8 +171,11 @@ func analyzeGHAStep(step *actionlint.Step, features map[string]bool) {
 		case strings.Contains(uses, "docker/"):
 			features["docker"] = true
 		}
-		if strings.Contains(uses, "${{") && strings.Contains(uses, "secrets.") {
-			features["secrets"] = true
+		for _, input := range exec.Inputs {
+			if input != nil && input.Value != nil && secretsRe.MatchString(input.Value.Value) {
+				features["secrets"] = true
+				break
+			}
 		}
 	}
 }

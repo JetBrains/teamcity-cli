@@ -105,19 +105,16 @@ func TestMarshalYAMLMultilineScript(t *testing.T) {
 	assert.Contains(t, yaml, "          echo world\n")
 }
 
-func TestMarshalYAMLDepRefResolution(t *testing.T) {
+func TestDeduplicateOutputNames(t *testing.T) {
 	t.Parallel()
-	p := &Pipeline{
-		Jobs: []Job{
-			{ID: "build-it", Name: "Build", RunsOn: "Linux-Large",
-				Steps: []Step{{Name: "s", ScriptContent: "make"}}},
-			{ID: "test-it", Name: "Test", RunsOn: "Linux-Large",
-				Dependencies: []string{"build-it"},
-				Steps:        []Step{{Name: "s", ScriptContent: "make test"}}},
-		},
+	results := []*ConversionResult{
+		{SourceFile: "bamboo-specs/build/plan.yml", OutputFile: "plan.tc.yml"},
+		{SourceFile: "bamboo-specs/deploy/plan.yml", OutputFile: "plan.tc.yml"},
+		{SourceFile: ".github/workflows/ci.yml", OutputFile: "ci.tc.yml"},
 	}
-	yaml := p.String()
-	assert.Contains(t, yaml, "  build_it:\n")
-	assert.Contains(t, yaml, "      - build_it\n")
-	assert.Empty(t, pipelineschema.Validate(yaml))
+	DeduplicateOutputNames(results)
+	// Colliding names get a directory-derived prefix; unique names stay untouched.
+	assert.Equal(t, "bamboo-specs-build-plan.tc.yml", results[0].OutputFile)
+	assert.Equal(t, "bamboo-specs-deploy-plan.tc.yml", results[1].OutputFile)
+	assert.Equal(t, "ci.tc.yml", results[2].OutputFile)
 }

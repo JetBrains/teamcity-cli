@@ -77,6 +77,6 @@ jobs:
 
 1. **`docker-image` is the clean path for single-toolchain version matrices.** Each test job pins its Go version via `docker-image: golang:X.Y`. No install scripts needed.
 2. **Mixed-toolchain jobs can't use `docker-image`.** The build job needs both Go (specific version) and npm (for mdsf-cli). The `golang:` image doesn't have npm. Solution: run on the agent (which has both Go and Node) and install the non-default Go version via tarball.
-3. **`softprops/action-gh-release` → `gh release create`.** The converter stubs this. Replace with `gh release create "$TAG" --generate-notes`. Needs a `GITHUB_TOKEN` secret configured via `teamcity project token put`.
+3. **`softprops/action-gh-release` converts automatically** to `gh release create ... --generate-notes` (tag from `tag_name` or `%teamcity.build.branch%`, plus `files:` globs). It still needs a `GITHUB_TOKEN` secret configured via `teamcity project token put`.
 4. **`stable`/`oldstable` are Go-specific aliases.** Map `stable` to the agent's default Go; for `oldstable`, install the previous minor release explicitly.
 

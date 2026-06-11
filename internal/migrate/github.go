@@ -117,7 +117,7 @@ func mergeStepParams(steps []Step, params map[string]string) {
 	}
 }
 
-type actionTransformer func(name, uses string, inputs map[string]string) StepResult
+type actionTransformer func(name string, inputs map[string]string) StepResult
 
 var actionRegistry = initActionRegistry()
 
@@ -129,13 +129,9 @@ func LookupActionTransformer(uses string) (actionTransformer, bool) {
 	if t, ok := actionRegistry[name]; ok {
 		return t, true
 	}
-	// Walk shorter prefixes so owner/repo and owner/* wildcards match owner/repo/subpath.
+	// Walk shorter prefixes so an owner/repo entry matches owner/repo/subpath.
 	for i := strings.LastIndex(name, "/"); i > 0; i = strings.LastIndex(name[:i], "/") {
-		prefix := name[:i]
-		if t, ok := actionRegistry[prefix]; ok {
-			return t, true
-		}
-		if t, ok := actionRegistry[prefix+"/*"]; ok {
+		if t, ok := actionRegistry[name[:i]]; ok {
 			return t, true
 		}
 	}
@@ -198,7 +194,6 @@ type ghaRunDefaults struct {
 type ghaJobAccumulator struct {
 	result        *ConversionResult
 	defaults      ghaRunDefaults
-	opts          Options
 	runsOnWindows bool
 }
 
@@ -292,7 +287,7 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 		}
 	}
 
-	acc := &ghaJobAccumulator{result: result, defaults: jobDefaults, opts: opts, runsOnWindows: runsOnWindows}
+	acc := &ghaJobAccumulator{result: result, defaults: jobDefaults, runsOnWindows: runsOnWindows}
 
 	var stepResults []StepResult
 	for _, step := range job.Steps {
@@ -425,7 +420,7 @@ func transformGHAStep(step *actionlint.Step, acc *ghaJobAccumulator) []StepResul
 
 		var r StepResult
 		if transformer, ok := LookupActionTransformer(uses); ok {
-			r = transformer(stepName, uses, inputs)
+			r = transformer(stepName, inputs)
 		} else {
 			r = Unknown(uses, inputs)
 		}

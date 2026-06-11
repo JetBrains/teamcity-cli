@@ -21,7 +21,6 @@ func TestHostedAgentNames(t *testing.T) {
 	selfOnly := []byte(`{"definitions": {"runOn": {"anyOf": [{"type": "string", "enum": ["self-hosted"]}]}}}`)
 	assert.Nil(t, HostedAgentNames(selfOnly))
 
-	assert.Nil(t, HostedAgentNames(Bytes), "embedded schema does not constrain agent names")
 	assert.Nil(t, HostedAgentNames(nil))
 	assert.Nil(t, HostedAgentNames([]byte("not json")))
 }

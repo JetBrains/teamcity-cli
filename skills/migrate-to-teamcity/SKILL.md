@@ -22,11 +22,11 @@ teamcity run start PipelineId --watch
 
 - **Always `type: script` for `./gradlew` and `./mvnw`.** TC's `type: gradle`/`type: maven` runners use the agent's version, not the project's. This causes real build failures.
 - **Schema valid does not mean pipeline works.** Migration is not done until builds pass.
-- **No OAuth VCS roots from CLI.** Use anonymous auth (public repos) or upload SSH key (`teamcity project ssh-key upload`) with `git@github.com:` URL. OAuth requires TC UI.
+- **No OAuth VCS roots from CLI.** Use anonymous auth (public repos) or upload SSH key (`teamcity project ssh upload`) with `git@github.com:` URL. OAuth requires TC UI.
 - **Secrets, triggers, and branch filters are always manual.** The converter flags them but cannot create them. Use `teamcity project token put` for secrets. Configure triggers in TC UI.
 - **VCS root must exist before pipeline create.** `teamcity pipeline create` takes `--vcs-root <id>`, not a URL. Create it first with `teamcity project vcs create`.
 - **Default branch defaults to `main`.** Pass `--branch refs/heads/master` to `teamcity project vcs create` if the repo uses `master`.
-- **PowerShell steps need wrapping on Windows.** Azure DevOps `powershell:` runs natively; TC `type: script` on Windows defaults to `cmd.exe`. Wrap with `powershell -Command { ... }`.
+- **PowerShell steps need wrapping on Windows.** TC `type: script` on Windows runs `cmd.exe`. Single-line PowerShell (GHA Windows runners default to it; Bamboo `interpreter: WINDOWS_POWER_SHELL`) wraps as `powershell -Command "<script>"`; multi-line bodies need TC's PowerShell runner.
 - **Unknown actions/tasks become stubs.** Read the action's source, write an equivalent shell script. Most actions are thin CLI wrappers. See [mappings](references/mappings.md).
 - **(Bamboo) Final-tasks need step execution policy.** TC has no `final-tasks:` block; set "Even if some build steps have failed" on those steps after pipeline creation (UI only — not in YAML).
 - **(Bamboo) Manual stages need approval/manual triggers.** A Bamboo `manual: true` stage has no YAML equivalent in TC pipelines — configure as a manual trigger on the downstream pipeline.
