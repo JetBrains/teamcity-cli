@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -167,12 +166,7 @@ func convertBambooJob(stageName, jobName string, def map[string]any, deps []stri
 
 	steps, artifacts, cache := applyResults(stepResults, result)
 	if len(steps) == 0 && len(stepResults) > 0 {
-		result.ManualSetup = append(result.ManualSetup,
-			fmt.Sprintf("Job %q has no convertible steps (all simplified or unsupported) → delete the job or replace with manual TC configuration", jobName))
-		steps = []Step{{
-			Name:          "No-op",
-			ScriptContent: fmt.Sprintf("# TODO: All tasks in Bamboo job %q were simplified or unsupported (see manual-setup notes)\necho 'Job %s has no executable steps; configure manually or delete'", jobName, jobName),
-		}}
+		steps = noOpFallback(jobName, result)
 	}
 	j.Steps = steps
 	j.EnableDependencyCache = cache
@@ -199,15 +193,12 @@ func bambooStageEntry(entry any) (string, map[string]any, bool) {
 	if !ok || len(m) == 0 {
 		return "", nil, false
 	}
-	keys := SortedKeys(m)
-	if len(keys) == 0 {
-		return "", nil, false
-	}
-	info, _ := m[keys[0]].(map[string]any)
+	name := SortedKeys(m)[0]
+	info, _ := m[name].(map[string]any)
 	if info == nil {
 		info = map[string]any{}
 	}
-	return keys[0], info, true
+	return name, info, true
 }
 
 type bambooTask struct {
@@ -227,10 +218,8 @@ func bambooTaskList(v any) []bambooTask {
 		if !ok || len(m) == 0 {
 			continue
 		}
-		for _, k := range SortedKeys(m) {
-			out = append(out, bambooTask{identifier: k, body: bambooTaskBody(m[k])})
-			break
-		}
+		k := SortedKeys(m)[0]
+		out = append(out, bambooTask{identifier: k, body: bambooTaskBody(m[k])})
 	}
 	return out
 }
@@ -281,15 +270,7 @@ func transformBambooTask(t bambooTask, result *ConversionResult, jobName string,
 	}
 
 	if env := t.body["environment"]; env != nil {
-		params := bambooEnvParams(env, result, fmt.Sprintf("Task %q in job %q", t.identifier, jobName))
-		if len(params) > 0 {
-			for i := range sr.Steps {
-				if sr.Steps[i].Parameters == nil {
-					sr.Steps[i].Parameters = map[string]string{}
-				}
-				maps.Copy(sr.Steps[i].Parameters, params)
-			}
-		}
+		mergeStepParams(sr.Steps, bambooEnvParams(env, result, fmt.Sprintf("Task %q in job %q", t.identifier, jobName)))
 	}
 
 	return sr
@@ -355,9 +336,11 @@ func bambooScript(body map[string]any, result *ConversionResult, jobName string)
 		}
 	}
 	script := strings.Join(scripts, "\n")
+	interpreter, _ := body["interpreter"].(string)
+	isPowerShell := interpreter == "WINDOWS_POWER_SHELL"
 	// Bamboo passes `argument:` to inline scripts as $1…$n; reproduce via a temp file so the args aren't dropped.
 	if arg != "" && script != "" {
-		if interpreter, _ := body["interpreter"].(string); interpreter == "WINDOWS_POWER_SHELL" {
+		if isPowerShell {
 			result.ManualSetup = append(result.ManualSetup,
 				fmt.Sprintf("Job %q has a PowerShell task with `argument:` %q → pass the arguments to the script manually", jobName, arg))
 		} else {
@@ -371,7 +354,7 @@ func bambooScript(body map[string]any, result *ConversionResult, jobName string)
 		ScriptContent:    script,
 		WorkingDirectory: bambooWorkingDir(body),
 	}
-	if interpreter, _ := body["interpreter"].(string); interpreter == "WINDOWS_POWER_SHELL" {
+	if isPowerShell {
 		// TC `type: script` runs cmd.exe on Windows. A single line can be dispatched via
 		// `powershell -Command "..."`, but a multi-line body can't be one cmd.exe argument —
 		// leave it as raw PowerShell and flag it for the PowerShell runner.
@@ -478,10 +461,10 @@ func bambooGradle(body map[string]any, result *ConversionResult, jobName string)
 		tasks = "build"
 	}
 	wrapper := "./gradlew"
-	if useSystem, _ := body["use-wrapper"].(bool); useSystem {
-		wrapper = "./gradlew"
-	} else if v, ok := body["executable"].(string); ok && v != "" {
-		wrapper = v
+	if useWrapper, _ := body["use-wrapper"].(bool); !useWrapper {
+		if v, _ := body["executable"].(string); v != "" {
+			wrapper = v
+		}
 	}
 	return Converted([]Step{{
 		Name:             stringField(body, "description", "Run Gradle"),
@@ -765,24 +748,9 @@ func bambooGrails(body map[string]any, result *ConversionResult, jobName string)
 }
 
 func bambooUnknownTask(identifier string, body map[string]any) StepResult {
-	var stub strings.Builder
-	fmt.Fprintf(&stub, "# TODO: Replace Bamboo task %q with equivalent commands", identifier)
-	if len(body) > 0 {
-		stub.WriteString("\n# Task fields:")
-		for _, k := range SortedKeys(body) {
-			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %v", k, body[k])))
-		}
-	}
-	stub.WriteString("\necho 'TODO: implement equivalent of " + identifier + "'")
-	return StepResult{
-		Status:     StatusUnknown,
-		Identifier: identifier,
-		Note:       "Bamboo task: " + identifier,
-		Steps: []Step{{
-			Name:          identifier,
-			ScriptContent: stub.String(),
-		}},
-	}
+	r := unknownStub(fmt.Sprintf("Bamboo task %q", identifier), identifier, "Task fields", flattenStringMap(body))
+	r.Note = "Bamboo task: " + identifier
+	return r
 }
 
 func transformBambooArtifactSubscription(sub map[string]any) StepResult {
@@ -921,18 +889,18 @@ func surfaceBambooMeta(spec map[string]any, result *ConversionResult) {
 	}
 }
 
-func analyzeBamboo(relPath string, data []byte) (*CIConfig, error) {
+func analyzeBamboo(relPath string, data []byte) *CIConfig {
 	cfg := &CIConfig{Source: Bamboo, File: relPath, Features: []string{}}
 
 	var spec map[string]any
 	if err := yaml.Unmarshal(data, &spec); err != nil {
 		// Don't fail detection on malformed YAML; convertBamboo surfaces the parse error.
-		return cfg, nil
+		return cfg
 	}
 
 	if _, ok := spec["plan"]; !ok {
 		cfg.Features = append(cfg.Features, "non-plan")
-		return cfg, nil
+		return cfg
 	}
 
 	stages, _ := spec["stages"].([]any)
@@ -985,7 +953,7 @@ func analyzeBamboo(relPath string, data []byte) (*CIConfig, error) {
 		cfg.Features = append(cfg.Features, f)
 	}
 	slices.Sort(cfg.Features)
-	return cfg, nil
+	return cfg
 }
 
 // bambooDocuments decodes every YAML document in the stream, so specs after `---` aren't silently dropped.
@@ -1024,7 +992,6 @@ func bambooDocKind(doc map[string]any) string {
 
 var bambooIncludeRe = regexp.MustCompile(`!include\s+['"]?([^'"\s]+)`)
 
-// bambooIncludes lists files referenced by Bamboo !include directives.
 func bambooIncludes(data []byte) []string {
 	var out []string
 	for _, m := range bambooIncludeRe.FindAllSubmatch(data, -1) {

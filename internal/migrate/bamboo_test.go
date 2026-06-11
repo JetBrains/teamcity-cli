@@ -12,6 +12,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// convertBambooSpec prepends the canonical plan preamble to body and converts the spec.
+func convertBambooSpec(t *testing.T, body string) *ConversionResult {
+	t.Helper()
+	spec := "version: 2\nplan:\n  project-key: P\n  key: K\n  name: Plan\n" + body
+	result, err := Convert(CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}, []byte(spec), Options{})
+	require.NoError(t, err)
+	return result
+}
+
 func TestBambooDetectFromFixture(t *testing.T) {
 	t.Parallel()
 
@@ -81,12 +90,7 @@ func TestBambooCollidingJobIDsStayDistinctInDeps(t *testing.T) {
 
 	// "a-b" and "a.b" both sanitize to "S_a_b"; a dependent job must depend on both
 	// distinct keys, not collapse onto the first.
-	spec := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'S':
       jobs:
@@ -107,10 +111,7 @@ stages:
   tasks:
     - script:
         - echo c
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(spec), Options{})
-	require.NoError(t, err)
+`)
 
 	var doc struct {
 		Jobs map[string]struct {
@@ -124,12 +125,7 @@ stages:
 func TestBambooScriptShorthand(t *testing.T) {
 	t.Parallel()
 
-	yaml := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Stage':
       jobs:
@@ -139,10 +135,7 @@ Job:
     - script:
         - echo one
         - echo two
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(yaml), Options{})
-	require.NoError(t, err)
+`)
 	require.Len(t, result.Pipeline.Jobs, 1)
 	require.Len(t, result.Pipeline.Jobs[0].Steps, 1)
 	step := result.Pipeline.Jobs[0].Steps[0]
@@ -153,12 +146,7 @@ Job:
 func TestBambooMavenFullForm(t *testing.T) {
 	t.Parallel()
 
-	yaml := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -170,10 +158,7 @@ Job:
         project-file: pom.xml
         jdk: 'JDK 17'
         tests: 'true'
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(yaml), Options{})
-	require.NoError(t, err)
+`)
 	require.Len(t, result.Pipeline.Jobs[0].Steps, 1)
 	step := result.Pipeline.Jobs[0].Steps[0]
 	assert.Contains(t, step.ScriptContent, "mvn -f pom.xml clean install")
@@ -186,12 +171,7 @@ Job:
 func TestBambooUnknownTaskBecomesStub(t *testing.T) {
 	t.Parallel()
 
-	yaml := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -200,10 +180,7 @@ Job:
   tasks:
     - made-up-task:
         config: 1
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(yaml), Options{})
-	require.NoError(t, err)
+`)
 	require.NotEmpty(t, result.NeedsReview)
 
 	require.Len(t, result.Pipeline.Jobs[0].Steps, 1)
@@ -249,12 +226,7 @@ func TestMapBambooExpressions(t *testing.T) {
 func TestBambooArtifactPattern(t *testing.T) {
 	t.Parallel()
 
-	yaml := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -270,10 +242,7 @@ Job:
       shared: true
     - name: log
       pattern: 'build.log'
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(yaml), Options{})
-	require.NoError(t, err)
+`)
 	require.Len(t, result.Pipeline.Jobs, 1)
 	pubs := result.Pipeline.Jobs[0].FilesPublication
 	require.Len(t, pubs, 2)
@@ -287,12 +256,7 @@ Job:
 func TestBambooSecretPlanVarRedacted(t *testing.T) {
 	t.Parallel()
 
-	yaml := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -305,10 +269,7 @@ variables:
   api_token: super-secret-value
   db_password: hunter2
   greeting: hello
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(yaml), Options{})
-	require.NoError(t, err)
+`)
 
 	out := result.YAML
 	assert.NotContains(t, out, "super-secret-value", "secret value must not leak into generated YAML")
@@ -338,12 +299,7 @@ func TestBambooEnvParamsRedactsSecrets(t *testing.T) {
 func TestBambooWorkingDirExpressionMapped(t *testing.T) {
 	t.Parallel()
 
-	yaml := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -354,10 +310,7 @@ Job:
         scripts:
           - make
         working-dir: ${bamboo.working.directory}/sub
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(yaml), Options{})
-	require.NoError(t, err)
+`)
 	require.Len(t, result.Pipeline.Jobs[0].Steps, 1)
 	assert.Equal(t, "%teamcity.build.checkoutDir%/sub", result.Pipeline.Jobs[0].Steps[0].WorkingDirectory)
 }
@@ -382,12 +335,7 @@ version: 2
 func TestBambooOSBoundTasksSetRunsOn(t *testing.T) {
 	t.Parallel()
 
-	spec := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -401,10 +349,7 @@ Mac:
   tasks:
     - fastlane:
         lane: beta
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(spec), Options{})
-	require.NoError(t, err)
+`)
 
 	runsOn := map[string]string{}
 	for _, j := range result.Pipeline.Jobs {
@@ -418,12 +363,7 @@ Mac:
 func TestBambooTaskConditionsSurfaced(t *testing.T) {
 	t.Parallel()
 
-	spec := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -437,22 +377,14 @@ Job:
           - variable:
               equals:
                 env: prod
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(spec), Options{})
-	require.NoError(t, err)
+`)
 	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), "has Bamboo conditions")
 }
 
 func TestBambooInlineScriptArgumentPreserved(t *testing.T) {
 	t.Parallel()
 
-	spec := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -463,10 +395,7 @@ Job:
         scripts:
           - 'echo "first arg: $1"'
         argument: --flag value
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(spec), Options{})
-	require.NoError(t, err)
+`)
 	script := result.Pipeline.Jobs[0].Steps[0].ScriptContent
 	assert.Contains(t, script, `"$TC_SCRIPT" --flag value`)
 	assert.Contains(t, script, "first arg: $1")
@@ -475,12 +404,7 @@ Job:
 func TestBambooMultiDocumentStream(t *testing.T) {
 	t.Parallel()
 
-	spec := `---
-version: 2
-plan:
-  project-key: P
-  key: K
-  name: Plan
+	result := convertBambooSpec(t, `
 stages:
   - 'Build':
       jobs:
@@ -501,10 +425,7 @@ environments:
 Production:
   tasks:
     - script: echo deploy
-`
-	cfg := CIConfig{Source: Bamboo, File: "bamboo-specs/bamboo.yml"}
-	result, err := Convert(cfg, []byte(spec), Options{})
-	require.NoError(t, err)
+`)
 
 	// The plan document converts; the deployment document must be flagged, not silently dropped.
 	require.Len(t, result.Pipeline.Jobs, 1)

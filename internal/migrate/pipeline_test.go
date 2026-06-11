@@ -6,16 +6,17 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/internal/pipelineschema"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMarshalYAMLSingleJob(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
+		Comment: "# Converted from: ci.yml\n\n",
 		Jobs: []Job{{
-			ID:     "build",
-			Name:   "Build",
-			RunsOn: "Linux-Large",
+			ID:           "build",
+			Name:         "Build",
+			RunsOn:       "Linux-Large",
+			Dependencies: []string{},
 			Steps: []Step{{
 				Name:          "Run tests",
 				ScriptContent: "go test ./...",
@@ -23,30 +24,16 @@ func TestMarshalYAMLSingleJob(t *testing.T) {
 		}},
 	}
 	yaml := p.String()
+	assert.True(t, strings.HasPrefix(yaml, "# Converted from: ci.yml"))
 	assert.Contains(t, yaml, "  build:\n")
 	assert.Contains(t, yaml, `    name: "Build"`)
 	assert.Contains(t, yaml, "    runs-on: Linux-Large")
 	assert.Contains(t, yaml, `        name: "Run tests"`)
 	assert.Contains(t, yaml, "script-content: go test ./...")
+	assert.NotContains(t, yaml, "dependencies:", "empty dependency list must not be emitted")
 
 	valErr := pipelineschema.Validate(yaml)
 	assert.Empty(t, valErr, "generated YAML should be valid: %s", valErr)
-}
-
-func TestMarshalYAMLDependencies(t *testing.T) {
-	t.Parallel()
-	p := &Pipeline{
-		Jobs: []Job{
-			{ID: "build", Name: "Build", RunsOn: "Linux-Large",
-				Steps: []Step{{Name: "build", ScriptContent: "make"}}},
-			{ID: "test", Name: "Test", RunsOn: "Linux-Large",
-				Dependencies: []string{"build"},
-				Steps:        []Step{{Name: "test", ScriptContent: "make test"}}},
-		},
-	}
-	yaml := p.String()
-	assert.Contains(t, yaml, "    dependencies:\n      - build\n")
-	assert.Empty(t, pipelineschema.Validate(yaml))
 }
 
 func TestMarshalYAMLIDCollision(t *testing.T) {
@@ -65,42 +52,17 @@ func TestMarshalYAMLIDCollision(t *testing.T) {
 	assert.Empty(t, pipelineschema.Validate(yaml))
 }
 
-func TestMarshalYAMLDuplicateIDs(t *testing.T) {
-	t.Parallel()
-	p := &Pipeline{
-		Jobs: []Job{
-			{ID: "build", Name: "A", RunsOn: "Linux-Large",
-				Steps: []Step{{Name: "s", ScriptContent: "echo a"}}},
-			{ID: "build", Name: "B", RunsOn: "Linux-Large",
-				Steps: []Step{{Name: "s", ScriptContent: "echo b"}}},
-		},
-	}
-	yaml := p.String()
-	assert.Contains(t, yaml, "  build:\n")
-	assert.Contains(t, yaml, "  build_2:\n", "second duplicate should get unique suffix")
-	assert.Empty(t, pipelineschema.Validate(yaml))
-}
-
-func TestMarshalYAMLEmptyDeps(t *testing.T) {
-	t.Parallel()
-	p := &Pipeline{
-		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Linux-Large",
-			Dependencies: []string{},
-			Steps:        []Step{{Name: "s", ScriptContent: "echo ok"}},
-		}},
-	}
-	yaml := p.String()
-	assert.NotContains(t, yaml, "dependencies:")
-}
-
 func TestMarshalYAMLParameters(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
 		Jobs: []Job{{
 			ID: "build", Name: "Build", RunsOn: "Linux-Large",
 			Parameters: map[string]string{"FOO": "bar", "BAZ": "qux"},
-			Steps:      []Step{{Name: "s", ScriptContent: "echo ok"}},
+			Steps: []Step{{
+				Name:          "s",
+				ScriptContent: "echo ok",
+				Parameters:    map[string]string{"MY_VAR": "val"},
+			}},
 		}},
 		Parameters: map[string]string{"GLOBAL": "val"},
 	}
@@ -108,6 +70,7 @@ func TestMarshalYAMLParameters(t *testing.T) {
 	assert.Contains(t, yaml, "      env.BAZ: \"qux\"")
 	assert.Contains(t, yaml, "      env.FOO: \"bar\"")
 	assert.Contains(t, yaml, "  env.GLOBAL: \"val\"")
+	assert.Contains(t, yaml, "          env.MY_VAR: \"val\"")
 	assert.Empty(t, pipelineschema.Validate(yaml))
 }
 
@@ -142,35 +105,6 @@ func TestMarshalYAMLMultilineScript(t *testing.T) {
 	assert.Contains(t, yaml, "          echo world\n")
 }
 
-func TestMarshalYAMLComment(t *testing.T) {
-	t.Parallel()
-	p := &Pipeline{
-		Comment: "# Converted from: ci.yml\n\n",
-		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Linux-Large",
-			Steps: []Step{{Name: "s", ScriptContent: "echo ok"}},
-		}},
-	}
-	yaml := p.String()
-	require.True(t, strings.HasPrefix(yaml, "# Converted from: ci.yml"))
-}
-
-func TestMarshalYAMLStepParameters(t *testing.T) {
-	t.Parallel()
-	p := &Pipeline{
-		Jobs: []Job{{
-			ID: "build", Name: "Build", RunsOn: "Linux-Large",
-			Steps: []Step{{
-				Name:          "s",
-				ScriptContent: "echo ok",
-				Parameters:    map[string]string{"MY_VAR": "val"},
-			}},
-		}},
-	}
-	yaml := p.String()
-	assert.Contains(t, yaml, "          env.MY_VAR: \"val\"")
-}
-
 func TestMarshalYAMLDepRefResolution(t *testing.T) {
 	t.Parallel()
 	p := &Pipeline{
@@ -185,4 +119,5 @@ func TestMarshalYAMLDepRefResolution(t *testing.T) {
 	yaml := p.String()
 	assert.Contains(t, yaml, "  build_it:\n")
 	assert.Contains(t, yaml, "      - build_it\n")
+	assert.Empty(t, pipelineschema.Validate(yaml))
 }

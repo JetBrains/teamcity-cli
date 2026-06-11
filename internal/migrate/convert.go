@@ -40,7 +40,6 @@ type ConversionResult struct {
 	Simplified      []string `json:"simplified"`
 	NeedsReview     []string `json:"needsReview"`
 	ManualSetup     []string `json:"manualSetup"`
-	Warnings        []string `json:"warnings"`
 	ValidationError string   `json:"validationError,omitempty"`
 
 	Pipeline *Pipeline `json:"-"`
@@ -63,7 +62,6 @@ func NewResult(cfg CIConfig) *ConversionResult {
 		Simplified:  []string{},
 		NeedsReview: []string{},
 		ManualSetup: []string{},
-		Warnings:    []string{},
 	}
 }
 
@@ -77,8 +75,7 @@ func Convert(cfg CIConfig, data []byte, opts Options) (*ConversionResult, error)
 	case Bamboo:
 		result, err = convertBamboo(cfg, data, opts)
 	default:
-		result = NewResult(cfg)
-		result.Pipeline = fallbackPipeline(cfg, result, opts)
+		return nil, fmt.Errorf("unsupported CI source %q", cfg.Source)
 	}
 
 	if err != nil {
@@ -169,16 +166,29 @@ func (o Options) ResolveRunner(label string) (mapped string, ok bool) {
 	if label == "self-hosted" {
 		return label, true
 	}
-	low := strings.ToLower(label)
-	switch {
-	case strings.Contains(low, "ubuntu"), strings.Contains(low, "linux"):
+	switch classifyOS(label) {
+	case "linux":
 		return o.MapRunner("ubuntu-latest"), true
-	case strings.Contains(low, "mac"), strings.Contains(low, "osx"), strings.Contains(low, "darwin"):
+	case "mac":
 		return o.MapRunner("macos-latest"), true
-	case strings.Contains(low, "win"):
+	case "windows":
 		return o.MapRunner("windows-latest"), true
 	}
 	return "self-hosted", false
+}
+
+// classifyOS sniffs the OS out of a runner label or agent image name; "" when none matches.
+func classifyOS(label string) string {
+	low := strings.ToLower(label)
+	switch {
+	case strings.Contains(low, "ubuntu"), strings.Contains(low, "linux"):
+		return "linux"
+	case strings.Contains(low, "mac"), strings.Contains(low, "osx"), strings.Contains(low, "darwin"):
+		return "mac"
+	case strings.Contains(low, "win"):
+		return "windows"
+	}
+	return ""
 }
 
 // RunnerMap holds the default GHA-label → JetBrains-hosted-agent mapping per the 2026.2 schema enum; overridden by schema- or cloud-derived names when connected.

@@ -8,7 +8,6 @@ import (
 
 var skippedActions = []struct{ action, note string }{
 	{"actions/checkout", "checkout (TeamCity VCS checkout is automatic)"},
-	{"actions/checkout-v2", "checkout (TeamCity VCS checkout is automatic)"},
 	{"actions/setup-node", "setup-node (use agent tooling or nvm)"},
 	{"actions/setup-java", "setup-java (use agent JDK)"},
 	{"actions/setup-go", "setup-go (use agent Go installation)"},
@@ -146,9 +145,9 @@ func initActionRegistry() map[string]actionTransformer {
 		}
 	}
 	for _, a := range unsupportedActions {
-		reason, id, manual := a.reason, a.action, a.manual
+		reason, manual := a.reason, a.manual
 		m[a.action] = func(_, _ string, _ map[string]string) StepResult {
-			return StepResult{Status: StatusUnsupported, Identifier: id, Note: reason, ManualTasks: manual}
+			return StepResult{Status: StatusUnsupported, Note: reason, ManualTasks: manual}
 		}
 	}
 	for _, a := range manualActions {
@@ -161,7 +160,7 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 
 	m["actions/cache"] = func(_, _ string, _ map[string]string) StepResult {
-		return StepResult{Status: StatusSimplified, Note: "cache → enable-dependency-cache: true", Features: []string{"enable-dependency-cache"}}
+		return StepResult{Status: StatusSimplified, Note: "cache → enable-dependency-cache: true", EnableDependencyCache: true}
 	}
 
 	m["actions/upload-artifact"] = func(_, _ string, inputs map[string]string) StepResult {

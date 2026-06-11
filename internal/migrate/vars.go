@@ -2,8 +2,6 @@ package migrate
 
 import "regexp"
 
-// GitHub Actions expression → TeamCity parameter mapping.
-
 var ghExprMap = []struct {
 	pattern *regexp.Regexp
 	replace string

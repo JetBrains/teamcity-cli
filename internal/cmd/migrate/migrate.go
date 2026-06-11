@@ -1,7 +1,6 @@
 package migrate
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -75,8 +74,6 @@ Report issues at: https://jb.gg/tc/migrate/issues`,
 }
 
 func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
-	sourceDir := "."
-
 	var configs []migrate.CIConfig
 	var results []*migrate.ConversionResult
 	defer func() {
@@ -98,7 +95,7 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 		}
 		configs = []migrate.CIConfig{*cfg}
 	} else {
-		detected, err := migrate.Detect(sourceDir, filterSource)
+		detected, err := migrate.Detect(".", filterSource)
 		if err != nil {
 			return fmt.Errorf("scanning for CI configurations: %w", err)
 		}
@@ -107,25 +104,28 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 
 	if len(configs) == 0 {
 		if opts.jsonOutput {
-			enc := json.NewEncoder(f.Printer.Out)
-			enc.SetIndent("", "  ")
-			return enc.Encode(migrate.MigrateOutput{Sources: []migrate.CIConfig{}, Results: []*migrate.ConversionResult{}})
+			return f.Printer.PrintJSON(migrate.MigrateOutput{Sources: []migrate.CIConfig{}, Results: []*migrate.ConversionResult{}})
 		}
 		f.Printer.Info("No CI configurations detected")
 		return nil
 	}
 
-	var schemaData []byte
-	if !opts.noValidate {
-		schemaData = resolveSchema(f)
+	client, err := f.Client()
+	if err != nil {
+		client = nil
 	}
 
-	convertOpts := migrate.Options{RunnerMap: resolveRunnerMap(f, schemaData)}
+	var schemaData []byte
+	if !opts.noValidate {
+		schemaData = resolveSchema(client)
+	}
+
+	convertOpts := migrate.Options{RunnerMap: resolveRunnerMap(client, schemaData)}
 
 	results = []*migrate.ConversionResult{}
 	var conversionErrors int
 	for _, cfg := range configs {
-		data, err := os.ReadFile(migrateReadPath(sourceDir, cfg.File))
+		data, err := os.ReadFile(cfg.File)
 		if err != nil {
 			f.Printer.Warn("Failed to read %s: %v", cfg.File, err)
 			conversionErrors++
@@ -170,21 +170,20 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 	}
 
 	if opts.jsonOutput {
-		out := migrate.MigrateOutput{
-			Sources: configs,
-			Results: results,
-		}
-		enc := json.NewEncoder(f.Printer.Out)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(out); err != nil {
+		if err := f.Printer.PrintJSON(migrate.MigrateOutput{Sources: configs, Results: results}); err != nil {
 			return err
 		}
-		if conversionErrors > 0 {
-			return &cmdutil.ExitError{Code: 1}
-		}
-		return validationExitError(results, opts.noValidate)
+	} else {
+		printMigrateReport(f, opts, configs, results, writtenFiles)
 	}
 
+	if conversionErrors > 0 {
+		return &cmdutil.ExitError{Code: 1}
+	}
+	return validationExitError(results, opts.noValidate)
+}
+
+func printMigrateReport(f *cmdutil.Factory, opts *migrateOptions, configs []migrate.CIConfig, results []*migrate.ConversionResult, writtenFiles []string) {
 	if !opts.dryRun {
 		_, _ = fmt.Fprintf(f.Printer.Out, "Detected %d CI configuration(s):\n\n", len(configs))
 	}
@@ -193,50 +192,38 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 	for _, c := range configs {
 		cfgByFile[c.File] = c
 	}
-
 	for _, result := range results {
 		printConversionResult(f, cfgByFile[result.SourceFile], result, opts.dryRun)
 	}
 
-	if opts.dryRun {
-		printMigrateTips(f)
-		if conversionErrors > 0 {
-			return &cmdutil.ExitError{Code: 1}
-		}
-		return validationExitError(results, opts.noValidate)
-	}
-
-	if len(writtenFiles) > 0 {
-		_, _ = fmt.Fprintf(f.Printer.Out, "Written:\n")
-		for i, path := range writtenFiles {
-			if results[i].ValidationError != "" {
-				_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Green(path), output.Yellow("(schema validation failed — review before deploying)"))
-				continue
+	if !opts.dryRun {
+		if len(writtenFiles) > 0 {
+			_, _ = fmt.Fprintf(f.Printer.Out, "Written:\n")
+			for i, path := range writtenFiles {
+				if results[i].ValidationError != "" {
+					_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Green(path), output.Yellow("(schema validation failed — review before deploying)"))
+					continue
+				}
+				_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", output.Green(path))
 			}
-			_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", output.Green(path))
 		}
-	}
 
-	manualItems := migrate.CollectManualSetup(results)
-	if len(manualItems) > 0 {
-		_, _ = fmt.Fprintf(f.Printer.Out, "\nManual setup needed:\n")
-		for _, item := range manualItems {
-			_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Yellow("•"), item)
+		manualItems := migrate.CollectManualSetup(results)
+		if len(manualItems) > 0 {
+			_, _ = fmt.Fprintf(f.Printer.Out, "\nManual setup needed:\n")
+			for _, item := range manualItems {
+				_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Yellow("•"), item)
+			}
 		}
-	}
 
-	if len(writtenFiles) > 0 {
-		_, _ = fmt.Fprintf(f.Printer.Out, "\nNext:\n")
-		_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline validate %s\n", writtenFiles[0])
-		_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline create <name> -p <project-id> -f %s\n", writtenFiles[0])
+		if len(writtenFiles) > 0 {
+			_, _ = fmt.Fprintf(f.Printer.Out, "\nNext:\n")
+			_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline validate %s\n", writtenFiles[0])
+			_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline create <name> -p <project-id> -f %s\n", writtenFiles[0])
+		}
 	}
 
 	printMigrateTips(f)
-
-	if conversionErrors > 0 {
-		return &cmdutil.ExitError{Code: 1}
-	}
-	return validationExitError(results, opts.noValidate)
 }
 
 func trackMigrate(f *cmdutil.Factory, opts *migrateOptions, configs []migrate.CIConfig, results []*migrate.ConversionResult) {
@@ -298,7 +285,6 @@ func migrateValidationField(opts *migrateOptions, results []*migrate.ConversionR
 	return analytics.MigrateValidationValid
 }
 
-// printConversionStatus prints schema failure, a clean conversion, or a partial conversion with unresolved counts.
 func printConversionStatus(f *cmdutil.Factory, result *migrate.ConversionResult, dryRun bool) {
 	if result.ValidationError != "" {
 		_, _ = fmt.Fprintf(f.Printer.Out, "    %s Schema validation failed (use --no-validate to skip)\n",
@@ -324,7 +310,6 @@ func printConversionStatus(f *cmdutil.Factory, result *migrate.ConversionResult,
 		output.Yellow("⚠"), strings.Join(parts, ", "))
 }
 
-// printMigrateTips points at the skill path and issue tracker after a conversion.
 func printMigrateTips(f *cmdutil.Factory) {
 	f.Printer.Info("")
 	f.Printer.Tip("run the migrate-to-teamcity skill with an AI agent for better conversions; report issues at https://jb.gg/tc/migrate/issues")
@@ -378,11 +363,7 @@ func summarizeSimplifications(items []string) string {
 }
 
 // resolveSchema fetches the cached server schema, falling back to the embedded one when offline.
-func resolveSchema(f *cmdutil.Factory) []byte {
-	client, err := f.Client()
-	if err != nil {
-		return pipelineschema.Bytes
-	}
+func resolveSchema(client api.ClientInterface) []byte {
 	c, ok := client.(*api.Client)
 	if !ok {
 		return pipelineschema.Bytes
@@ -394,29 +375,18 @@ func resolveSchema(f *cmdutil.Factory) []byte {
 	return schema
 }
 
-// migrateReadPath resolves a config path against the scan dir, leaving absolute paths
-// (supplied via --file) intact — filepath.Join(".", "/abs") would strip the leading slash.
-func migrateReadPath(sourceDir, file string) string {
-	if filepath.IsAbs(file) {
-		return file
-	}
-	return filepath.Join(sourceDir, file)
-}
-
 // resolveRunnerMap derives runner names from the validation schema's hosted-agent enum (so emitted runs-on passes that schema), then cloud images, then defaults (nil).
-func resolveRunnerMap(f *cmdutil.Factory, schemaData []byte) map[string]string {
+func resolveRunnerMap(client api.ClientInterface, schemaData []byte) map[string]string {
 	if names := pipelineschema.HostedAgentNames(schemaData); len(names) > 0 {
 		if m := migrate.BuildRunnerMap(names); m != nil {
 			return m
 		}
 	}
-	return resolveCloudRunners(f)
+	return resolveCloudRunners(client)
 }
 
-// resolveCloudRunners fetches cloud image names and delegates to migrate.BuildRunnerMap; nil means fall back to defaults.
-func resolveCloudRunners(f *cmdutil.Factory) map[string]string {
-	client, err := f.Client()
-	if err != nil {
+func resolveCloudRunners(client api.ClientInterface) map[string]string {
+	if client == nil {
 		return nil
 	}
 	list, _, err := client.GetCloudImages(api.CloudImagesOptions{})
