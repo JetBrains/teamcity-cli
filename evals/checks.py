@@ -6,6 +6,8 @@ Checks are referenced by ID in tasks.json.
 
 from __future__ import annotations
 
+import re
+
 from scaffold.runner import EvalRunner
 
 # ---------------------------------------------------------------------------
@@ -321,23 +323,28 @@ def checked_repository_link(runner: EvalRunner) -> None:
 
 
 def added_repository_link(runner: EvalRunner) -> None:
-    if runner.has_command("teamcity", "link"):
+    if any(_has_repository_link_command(cmd) for cmd in runner.commands):
         runner.passed("Linked the repository to a TeamCity job / project")
     else:
         runner.failed("Did not link the repository to a TeamCity job / project")
 
 
 def added_repository_link_with_project_only(runner: EvalRunner) -> None:
+    project_flag = re.compile(r"(^|\s)(--project|-p)(\s|=)")
+    job_flag = re.compile(r"(^|\s)(--job|-j)(\s|=)")
     for cmd in runner.commands:
-        c = cmd.lower()
-        if "teamcity link" in c and ("--project " in c or " -p " in c) and ("--job " not in c and " -j " not in c):
+        if (
+            _has_repository_link_command(cmd) and
+            project_flag.search(cmd) and
+            not job_flag.search(cmd)
+        ):
             runner.passed("Linked the repository using only the project argument")
             return
     runner.failed("Did not link the repository using only the project argument")
 
 
 def did_not_add_repository_link(runner: EvalRunner) -> None:
-    if runner.has_command("teamcity", "link"):
+    if any(_has_repository_link_command(cmd) for cmd in runner.commands):
         runner.failed("Linked the repository to a TeamCity job / project")
     else:
         runner.passed("Did not link the repository to a TeamCity job / project")
@@ -382,18 +389,28 @@ def did_not_modify_teamcity_toml(runner: EvalRunner) -> None:
 
 
 def used_project_from_repository_link(runner: EvalRunner) -> None:
-    missing_linked_project = "No project found by name or internal/external id 'Project_uipBGpvQua'"
+    linked_project = "No project found by name or internal/external id 'Project_uipBGpvQua'"
     for result in runner.events.tool_results.values():
         content = result.get("content", "")
-        if isinstance(content, str) and missing_linked_project in content:
+        if isinstance(content, str) and linked_project in content:
             runner.passed("Used project from teamcity.toml")
             return
         if isinstance(content, list):
             for block in content:
-                if isinstance(block, dict) and missing_linked_project in block.get("text", ""):
+                if isinstance(block, dict) and linked_project in block.get("text", ""):
                     runner.passed("Used project from teamcity.toml")
                     return
     runner.failed("Did not use project from teamcity.toml")
+
+
+_LINK_INVOCATION = re.compile(r"(?:^|[;&|]\s*)(teamcity\s+link(?:\s+[^;&|]+)*)", re.IGNORECASE)
+_HELP_FLAG = re.compile(r"(^|\s)(--help|-h)(\s|$)")
+
+def _has_repository_link_command(cmd: str) -> bool:
+    return any(
+        not _HELP_FLAG.search(match.group(1))
+        for match in _LINK_INVOCATION.finditer(cmd)
+    )
 
 # ---------------------------------------------------------------------------
 # cross-project
