@@ -133,7 +133,8 @@ func initActionRegistry() map[string]actionTransformer {
 		m[a.action] = func(_ string, inputs map[string]string) StepResult {
 			r := StepResult{Status: StatusSimplified, Note: note}
 			for _, k := range SortedKeys(inputs) {
-				if strings.HasSuffix(k, "-version") && inputs[k] != "" {
+				pinKey := strings.HasSuffix(k, "-version") || strings.HasSuffix(k, "_version") || k == "version" || k == "toolchain"
+				if pinKey && inputs[k] != "" {
 					r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("%s pins %s %s → ensure the agent provides that version", action, k, inputs[k]))
 				}
 			}
@@ -315,17 +316,11 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	if file != "" && file != "Dockerfile" {
 		lines = append(lines, "DOCKERFILE="+shellQuote(file))
 	}
+	var extraTags []string
 	if tags != "" {
-		tagList := strings.Split(strings.TrimSpace(tags), "\n")
-		for i, tag := range tagList {
-			tagList[i] = strings.TrimSpace(tag)
-		}
+		tagList := strings.Fields(tags)
 		lines = append(lines, "IMAGE="+shellQuote(tagList[0]))
-		for _, extra := range tagList[1:] {
-			if extra != "" {
-				lines = append(lines, "# Additional tag: "+extra)
-			}
-		}
+		extraTags = tagList[1:]
 	} else {
 		lines = append(lines, `IMAGE="${IMAGE:?Set IMAGE variable}"`)
 	}
@@ -338,15 +333,23 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	if buildArgs := inputs["build-args"]; buildArgs != "" {
 		for arg := range strings.SplitSeq(strings.TrimSpace(buildArgs), "\n") {
 			if arg = strings.TrimSpace(arg); arg != "" {
-				fmt.Fprintf(&buildCmd, " --build-arg %q", arg)
+				buildCmd.WriteString(" --build-arg " + shellQuote(arg))
 			}
 		}
 	}
-	buildCmd.WriteString(` -t "$IMAGE" ` + shellQuote(context))
+	buildCmd.WriteString(` -t "$IMAGE"`)
+	// The action publishes every tag, so emit each extra as -t plus its own push.
+	for _, t := range extraTags {
+		buildCmd.WriteString(" -t " + shellQuote(t))
+	}
+	buildCmd.WriteString(" " + shellQuote(context))
 	lines = append(lines, buildCmd.String())
 
 	if inputs["push"] == "true" {
 		lines = append(lines, `docker push "$IMAGE"`)
+		for _, t := range extraTags {
+			lines = append(lines, "docker push "+shellQuote(t))
+		}
 	}
 	return Converted([]Step{{Name: cmp.Or(name, "Docker build and push"), ScriptContent: strings.Join(lines, "\n")}})
 }
