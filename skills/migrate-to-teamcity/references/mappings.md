@@ -47,7 +47,7 @@ The **Converter emits** column is what `teamcity migrate` writes; **Your follow-
 | `docker/login-action` | Comment-only placeholder step | Configure a Docker registry connection in TC project settings -- required for private registries, no login command is generated |
 | `docker/build-push-action` | `docker build && docker push` script | |
 | `JetBrains/qodana-action` | Commented pointer to native integration | Add the Qodana build feature in TC settings |
-| `aws-actions/configure-aws-credentials` | `export AWS_*` env lines | Add `env.AWS_ACCESS_KEY_ID` / `env.AWS_SECRET_ACCESS_KEY` under `secrets:` -- the `env.` prefix exports them as environment variables, which is what the script reads |
+| `aws-actions/configure-aws-credentials` | Nothing (simplified out); a manual note carries the wiring | Add `env.AWS_ACCESS_KEY_ID` / `env.AWS_SECRET_ACCESS_KEY` under `secrets:` and `env.AWS_DEFAULT_REGION` under the job's `parameters:` -- step-local exports would not survive across TC steps |
 | `softprops/action-gh-release` | `gh release create "<tag_name>" --generate-notes` plus any `files:` globs; falls back to `%teamcity.build.branch%` when `tag_name` is unset | Add `env.GH_TOKEN` under `secrets:` -- `gh` reads it from the environment, so the `env.` prefix is required |
 | `golangci/golangci-lint-action` | `golangci-lint run <args>` | Assumes the binary on the agent; a pinned `version:` becomes a manual note -- install it yourself |
 | `codecov/codecov-action` | `curl -Os https://cli.codecov.io/latest/linux/codecov && chmod +x codecov && ./codecov` | |

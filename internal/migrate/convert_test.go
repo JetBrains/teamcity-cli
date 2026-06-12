@@ -542,3 +542,16 @@ func TestGHReleaseStateAndAssetQuoting(t *testing.T) {
 	assert.NotContains(t, r.Steps[0].ScriptContent, "--draft")
 	assert.NotContains(t, r.Steps[0].ScriptContent, "--prerelease")
 }
+
+func TestAWSCredentialsBecomeJobParamsNote(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("aws-actions/configure-aws-credentials@v4")
+	require.True(t, ok)
+	r := transformer("", map[string]string{"aws-region": "eu-west-1"})
+	assert.Equal(t, StatusSimplified, r.Status)
+	assert.Empty(t, r.Steps, "step-local exports don't survive across TC steps")
+	manuals := strings.Join(r.ManualTasks, "\n")
+	assert.Contains(t, manuals, "env.AWS_ACCESS_KEY_ID")
+	assert.Contains(t, manuals, `env.AWS_DEFAULT_REGION: "eu-west-1"`)
+}

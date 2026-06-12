@@ -209,9 +209,9 @@ func initActionRegistry() map[string]actionTransformer {
 
 	m["aws-actions/configure-aws-credentials"] = func(name string, inputs map[string]string) StepResult {
 		region := cmp.Or(inputs["aws-region"], "us-east-1")
-		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Configure AWS credentials"), ScriptContent: "export AWS_ACCESS_KEY_ID=\"$AWS_ACCESS_KEY_ID\"\nexport AWS_SECRET_ACCESS_KEY=\"$AWS_SECRET_ACCESS_KEY\"\nexport AWS_DEFAULT_REGION=\"" + region + "\""}},
-			ManualTasks: []string{"AWS credentials → create TeamCity parameters: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (type: password)"}}
+		// A step-local export dies with the step process in TC, so this maps to job env parameters instead of a script step.
+		return StepResult{Status: StatusSimplified, Note: "configure-aws-credentials → job env parameters",
+			ManualTasks: []string{fmt.Sprintf("AWS credentials → add env.AWS_ACCESS_KEY_ID / env.AWS_SECRET_ACCESS_KEY under `secrets:` and `env.AWS_DEFAULT_REGION: %q` under the job's `parameters:` so every step sees them", region)}}
 	}
 	m["azure/webapps-deploy"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: fmt.Sprintf("az webapp deploy --name %q --src-path \"${PACKAGE:-.}\"", requiredInput(inputs, "app-name", "APP_NAME"))}})
