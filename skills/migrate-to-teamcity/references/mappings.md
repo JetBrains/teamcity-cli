@@ -47,8 +47,8 @@ The **Converter emits** column is what `teamcity migrate` writes; **Your follow-
 | `docker/login-action` | Comment-only placeholder step | Configure a Docker registry connection in TC project settings -- required for private registries, no login command is generated |
 | `docker/build-push-action` | `docker build && docker push` script | |
 | `JetBrains/qodana-action` | Commented pointer to native integration | Add the Qodana build feature in TC settings |
-| `aws-actions/configure-aws-credentials` | `export AWS_*` env lines | Create `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` TC parameters (password type) |
-| `softprops/action-gh-release` | `gh release create "$TAG" --generate-notes` script | Set `GH_TOKEN` as a TC password parameter |
+| `aws-actions/configure-aws-credentials` | `export AWS_*` env lines | Add `env.AWS_ACCESS_KEY_ID` / `env.AWS_SECRET_ACCESS_KEY` under `secrets:` -- the `env.` prefix exports them as environment variables, which is what the script reads |
+| `softprops/action-gh-release` | `gh release create "$TAG" --generate-notes` script | Add `env.GH_TOKEN` under `secrets:` -- `gh` reads it from the environment, so the `env.` prefix is required |
 | `golangci/golangci-lint-action` | `golangci-lint run <args>` | Assumes the binary on the agent; a pinned `version:` becomes a manual note -- install it yourself |
 | `codecov/codecov-action` | `curl -Os https://cli.codecov.io/latest/linux/codecov && chmod +x codecov && ./codecov` | |
 | `goreleaser/goreleaser-action` | **Stub** (not in the registry) | Replace with `curl -sSfL https://goreleaser.com/static/run \| bash -s -- release --clean` (needs `GITHUB_TOKEN`) |
