@@ -12,6 +12,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
@@ -113,6 +114,7 @@ func TestPipelineValidateUnauthenticatedFallsBackToEmbeddedSchema(t *testing.T) 
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("TEAMCITY_URL", "")
 	t.Setenv("TEAMCITY_TOKEN", "")
+	require.NoError(t, config.Init())
 
 	file := filepath.Join(t.TempDir(), "p.tc.yml")
 	require.NoError(t, os.WriteFile(file, []byte("jobs:\n  build:\n    name: \"Build\"\n    runs-on: Linux-Large\n    steps:\n      - type: script\n        script-content: echo hi\n"), 0o644))
@@ -126,6 +128,7 @@ func TestPipelineValidateUnauthenticatedRefreshSchemaErrors(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("TEAMCITY_URL", "")
 	t.Setenv("TEAMCITY_TOKEN", "")
+	require.NoError(t, config.Init())
 
 	file := filepath.Join(t.TempDir(), "p.tc.yml")
 	require.NoError(t, os.WriteFile(file, []byte("jobs: {}\n"), 0o644))
