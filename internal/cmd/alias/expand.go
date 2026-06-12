@@ -92,11 +92,13 @@ func newShellAliasCmd(f *cmdutil.Factory, name, expansion string) *cobra.Command
 				return nil
 			}
 			expanded := expandShellArgs(expansion, args)
+			output.StopSpinner() // the subprocess writes to the raw fds, never through the spinner-clearing stopWriter
 			//nolint:gosec // shell aliases are user-defined, intentional shell execution
 			c := exec.Command("sh", "-c", expanded)
+			// IOStreams, not Printer: Printer wraps stdout/stderr in a non-*os.File writer, which makes os/exec substitute pipes and the subprocess lose the TTY (no color/width, risk of Wait hanging on inherited pipe fds).
 			c.Stdin = f.IOStreams.In
-			c.Stdout = f.Printer.Out
-			c.Stderr = f.Printer.ErrOut
+			c.Stdout = f.IOStreams.Out
+			c.Stderr = f.IOStreams.ErrOut
 			return c.Run()
 		},
 	}
