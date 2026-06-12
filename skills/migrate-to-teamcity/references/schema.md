@@ -1,5 +1,14 @@
 # TeamCity Pipeline YAML Quick Reference
 
+## Contents
+
+- Structure (full annotated example)
+- Step Types (script, gradle, maven, node-js)
+- Agent Types (TeamCity Cloud + self-hosted)
+- Dependencies Between Jobs
+- Files / Artifacts
+- Validating (and what `validate` does NOT check)
+
 ## Structure
 
 ```yaml

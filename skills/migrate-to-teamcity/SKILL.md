@@ -40,11 +40,18 @@ Run `teamcity migrate` from the repo root -- detection scans `.github/workflows/
 
 Goal: get all pipeline jobs green on the TC server, not just generate valid YAML.
 
-1. Run `teamcity migrate` to generate `.tc.yml` files
-2. Fix any commented stubs for unknown actions -- use [mappings](references/mappings.md)
-3. Create VCS root (`teamcity project vcs create`), then create pipeline with `--vcs-root <id>`. Validate, run, and verify green
-4. If a job fails, check logs with `teamcity run log <id> --failed --raw`, fix the YAML, push with `teamcity pipeline push`, re-run
-5. Report: what migrated, step reduction, what needs manual setup
+Copy this checklist and check off items as you complete them:
+
+```
+Migration progress:
+- [ ] Convert: run `teamcity migrate` from the repo root
+- [ ] Fix every "Needs review" item in the generated YAML (stubs -> real commands, see mappings.md)
+- [ ] Validate: `teamcity pipeline validate <file>` -- only proceed when it passes
+- [ ] Create VCS root (`teamcity project vcs create`), then `teamcity pipeline create <name> -p <project> -f <file> --vcs-root <id>`
+- [ ] Run: `teamcity run start <id> --watch`; on failure read `teamcity run log <id> --failed --raw`, fix, `teamcity pipeline push`, re-run until green
+- [ ] Do every "Manual setup needed" item on the server (secrets, triggers, branch filters)
+- [ ] Report: what migrated, step reduction, what remains manual
+```
 
 ## References
 

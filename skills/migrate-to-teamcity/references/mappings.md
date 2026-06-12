@@ -1,5 +1,12 @@
 # Concept Mappings: CI Systems to TeamCity
 
+## Contents
+
+- GitHub Actions to TeamCity Pipeline YAML (concepts, actions, runners)
+- Fixing a stub
+- Bamboo Specs to TeamCity Pipeline YAML (concepts, tasks, variables)
+- Bamboo Specs that aren't converted
+
 ## GitHub Actions to TeamCity Pipeline YAML
 
 | GitHub Actions | TeamCity | Notes |
@@ -48,6 +55,31 @@ The **Converter emits** column is what `teamcity migrate` writes; **Your follow-
 | `aquasecurity/trivy-action` | `trivy <scan-type> <image-ref>` | Assumes trivy on the agent; install via the trivy install.sh if missing |
 | `github/codeql-action/*` | **Dropped** (listed under Needs review) -- requires GitHub security-events API | Consider the Qodana build feature instead |
 | Unknown actions | Commented stub with original inputs | Read the action's source, write the equivalent shell |
+
+### Fixing a stub
+
+The converter emits unknown actions as commented TODO steps that preserve the original inputs:
+
+```yaml
+- type: script
+  name: "custom-deploy"
+  script-content: |-
+    # TODO: Replace acme/custom-deploy@v2 with equivalent commands
+    # Action inputs:
+    #   region: eu-west-1
+    #   target: prod
+    echo 'TODO: implement equivalent of custom-deploy'
+```
+
+Read the action's repository -- its `action.yml` shows what it actually runs (most actions are thin CLI wrappers). Replace the step body with the equivalent commands:
+
+```yaml
+- type: script
+  name: "custom-deploy"
+  script-content: aws deploy create-deployment --region eu-west-1 --deployment-group prod
+```
+
+Secrets referenced by the original inputs become `%PARAM%` references -- create them with `teamcity project token put`.
 
 ### Runner Mapping
 
