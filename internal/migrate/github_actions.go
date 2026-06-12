@@ -218,7 +218,7 @@ func initActionRegistry() map[string]actionTransformer {
 		// `manifests:` is a newline-separated list; emit one -f per entry so a multiline value can't spill onto a new shell line.
 		for f := range strings.FieldsSeq(cmp.Or(inputs["manifests"], "k8s/")) {
 			cmd.WriteString(" -f ")
-			cmd.WriteString(f)
+			cmd.WriteString(shellQuote(f))
 		}
 		return Converted([]Step{{Name: cmp.Or(name, "Kubernetes deploy"), ScriptContent: cmd.String()}})
 	}

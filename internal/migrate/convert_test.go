@@ -428,3 +428,16 @@ jobs:
 	assert.Contains(t, manuals, `Job "exp" has continue-on-error: ${{ matrix.experimental }}`)
 	assert.Contains(t, manuals, `Step "" has continue-on-error: ${{ matrix.experimental }}`)
 }
+
+func TestK8sDeployManifestsQuoted(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("azure/k8s-deploy@v5")
+	require.True(t, ok)
+	r := transformer("Deploy", map[string]string{"manifests": "deploy/prod;rm\nk8s/$(whoami).yml"})
+	require.Len(t, r.Steps, 1)
+	script := r.Steps[0].ScriptContent
+	// Each manifest token must be an inert single-quoted shell word.
+	assert.Contains(t, script, "-f 'deploy/prod;rm'")
+	assert.Contains(t, script, "-f 'k8s/$(whoami).yml'")
+}
