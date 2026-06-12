@@ -188,6 +188,32 @@ Job:
 	assert.NotContains(t, step.ScriptContent, "hunter2", "secret-looking stub fields must be redacted")
 }
 
+func TestBambooUnknownTaskNestedSecretRedacted(t *testing.T) {
+	t.Parallel()
+
+	result := convertBambooSpec(t, `
+stages:
+  - 'Build':
+      jobs:
+        - Job
+Job:
+  tasks:
+    - made-up-task:
+        configuration:
+          password: hunter2
+          url: https://example.com
+        servers:
+          - host: a
+            api_token: leaky-token
+`)
+	require.Len(t, result.Pipeline.Jobs[0].Steps, 1)
+	step := result.Pipeline.Jobs[0].Steps[0]
+	assert.NotContains(t, result.YAML, "hunter2", "secrets nested in maps must not leak into the generated YAML")
+	assert.NotContains(t, result.YAML, "leaky-token", "secrets nested in lists of maps must not leak")
+	assert.Contains(t, step.ScriptContent, "REDACTED")
+	assert.Contains(t, step.ScriptContent, "https://example.com", "non-secret nested values pass through")
+}
+
 func TestBambooNoPlanSurfacesAsReview(t *testing.T) {
 	t.Parallel()
 

@@ -1217,10 +1217,34 @@ func bambooLooksSecret(name string) bool {
 	})
 }
 
+// flattenStringMap stringifies task fields for stub rendering, redacting secret-looking leaves in nested values first.
 func flattenStringMap(m map[string]any) map[string]string {
 	out := map[string]string{}
 	for k, v := range m {
-		out[k] = stringFromAny(v)
+		out[k] = stringFromAny(redactSecretLeaves(v))
 	}
 	return out
+}
+
+// redactSecretLeaves walks nested maps and lists, replacing any value whose key looks secret so it can't leak into stub comments.
+func redactSecretLeaves(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(t))
+		for k, val := range t {
+			if bambooLooksSecret(k) {
+				out[k] = "REDACTED"
+				continue
+			}
+			out[k] = redactSecretLeaves(val)
+		}
+		return out
+	case []any:
+		out := make([]any, len(t))
+		for i, item := range t {
+			out[i] = redactSecretLeaves(item)
+		}
+		return out
+	}
+	return v
 }
