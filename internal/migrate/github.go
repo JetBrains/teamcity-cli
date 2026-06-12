@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/rhysd/actionlint"
@@ -157,6 +158,7 @@ func convertGitHub(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 	}
 
 	result := NewResult(cfg)
+	flagGHAParseErrors(errs, result)
 	p := &Pipeline{}
 
 	var wfDefaults ghaRunDefaults
@@ -188,6 +190,20 @@ func convertGitHub(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 
 	result.Pipeline = p
 	return result, nil
+}
+
+// flagGHAParseErrors surfaces non-fatal parse errors as NeedsReview entries, capped so a pathological file doesn't flood the report.
+func flagGHAParseErrors(errs []*actionlint.Error, result *ConversionResult) {
+	const maxParseErrors = 3
+	for i, e := range errs {
+		if i == maxParseErrors {
+			result.NeedsReview = append(result.NeedsReview,
+				fmt.Sprintf("...and %d more parse errors → review the source workflow", len(errs)-maxParseErrors))
+			break
+		}
+		result.NeedsReview = append(result.NeedsReview,
+			fmt.Sprintf("Workflow parse error at line %d: %s → fix the source or convert that section manually", e.Line, condense(e.Message)))
+	}
 }
 
 type ghaRunDefaults struct {
@@ -277,6 +293,18 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 		result.ManualSetup = append(result.ManualSetup,
 			fmt.Sprintf("Job %q condition: %s → configure as branch filter or execution policy", id, condense(job.If.Value)))
 	}
+	if job.TimeoutMinutes != nil {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Job %q sets timeout-minutes: %s → configure an execution timeout in TeamCity failure conditions", id, ghaFloatString(job.TimeoutMinutes)))
+	}
+	if ghaBoolSet(job.ContinueOnError) {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Job %q has continue-on-error: %s → its failure must not fail the pipeline; relax dependency failure conditions in TeamCity", id, ghaBoolString(job.ContinueOnError)))
+	}
+	if len(job.Outputs) > 0 {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Job %q defines outputs (%s) → expose them as TeamCity output parameters and rewire consumers of needs.%s.outputs.<name> to %%dep.%s.<param>%%", id, strings.Join(SortedKeys(job.Outputs), ", "), id, id))
+	}
 	if job.Strategy != nil && job.Strategy.Matrix != nil {
 		result.ManualSetup = append(result.ManualSetup,
 			fmt.Sprintf("Job %q uses strategy.matrix → expand to separate jobs or use parallelism in TeamCity", id))
@@ -304,9 +332,13 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 			result.ManualSetup = append(result.ManualSetup,
 				fmt.Sprintf("Step %q has if: %s → add execution condition or branch filter in TeamCity", stepName, condense(step.If.Value)))
 		}
-		if step.ContinueOnError != nil && step.ContinueOnError.Value {
+		if ghaBoolSet(step.ContinueOnError) {
 			result.ManualSetup = append(result.ManualSetup,
-				fmt.Sprintf("Step %q has continue-on-error: true → wrap the command so its exit code is ignored (e.g. `cmd || true`) or override the failure condition; TC fails the build on nonzero exit by default", stepName))
+				fmt.Sprintf("Step %q has continue-on-error: %s → wrap the command so its exit code is ignored (e.g. `cmd || true`) or override the failure condition; TC fails the build on nonzero exit by default", stepName, ghaBoolString(step.ContinueOnError)))
+		}
+		if step.TimeoutMinutes != nil {
+			result.ManualSetup = append(result.ManualSetup,
+				fmt.Sprintf("Step %q sets timeout-minutes: %s → no per-step timeout in TeamCity; configure an execution timeout in the job's failure conditions", stepName, ghaFloatString(step.TimeoutMinutes)))
 		}
 		stepResults = append(stepResults, transformGHAStep(step, acc)...)
 	}
@@ -416,7 +448,8 @@ func transformGHAStep(step *actionlint.Step, acc *ghaJobAccumulator) []StepResul
 
 	case *actionlint.ExecAction:
 		if exec.Uses == nil {
-			return nil
+			return []StepResult{{Status: StatusUnsupported,
+				Note: fmt.Sprintf("Step %q has uses: with no action reference → dropped from output; fix the source step", stepName)}}
 		}
 		uses := exec.Uses.Value
 		inputs := collectActionInputs(exec)
@@ -427,16 +460,24 @@ func transformGHAStep(step *actionlint.Step, acc *ghaJobAccumulator) []StepResul
 		}
 
 		var r StepResult
-		if transformer, ok := LookupActionTransformer(uses); ok {
+		transformer, known := LookupActionTransformer(uses)
+		if known {
 			r = transformer(stepName, inputs)
 		} else {
 			r = Unknown(uses, inputs)
+		}
+		if known && acc.runsOnWindows {
+			for _, s := range r.Steps {
+				r.ManualTasks = append(r.ManualTasks,
+					fmt.Sprintf("Step %q converted from %q emits a POSIX shell script on a Windows runner → provide Git Bash/WSL on the agent or rewrite for cmd/PowerShell", s.Name, uses))
+			}
 		}
 		mergeStepParams(r.Steps, extractGHAEnvParams(step.Env, result))
 		return []StepResult{r}
 	}
 
-	return nil
+	return []StepResult{{Status: StatusUnsupported,
+		Note: fmt.Sprintf("Step %q has neither run: nor uses: → dropped from output; rewrite it as a script step manually", stepName)}}
 }
 
 func collectActionInputs(exec *actionlint.ExecAction) map[string]string {
@@ -491,6 +532,27 @@ func detectGHASecrets(script string, result *ConversionResult) {
 		result.ManualSetup = append(result.ManualSetup,
 			fmt.Sprintf("Secret %s → create with: teamcity project token put <project-id> <value>", match[1]))
 	}
+}
+
+// ghaFloatString renders a numeric GHA field, falling back to its raw ${{ }} expression form.
+// ghaBoolSet reports a bool field that is literally true or driven by a runtime expression.
+func ghaBoolSet(b *actionlint.Bool) bool {
+	return b != nil && (b.Value || b.Expression != nil)
+}
+
+// ghaBoolString renders a literal bool field or its raw expression.
+func ghaBoolString(b *actionlint.Bool) string {
+	if b.Expression != nil {
+		return b.Expression.Value
+	}
+	return strconv.FormatBool(b.Value)
+}
+
+func ghaFloatString(f *actionlint.Float) string {
+	if f.Expression != nil {
+		return f.Expression.Value
+	}
+	return strconv.FormatFloat(f.Value, 'f', -1, 64)
 }
 
 func describeGHATriggers(events []actionlint.Event) string {
