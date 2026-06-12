@@ -517,8 +517,9 @@ func TestGHReleaseStateAndAssetQuoting(t *testing.T) {
 
 	nc, ok := LookupActionTransformer("ncipollo/release-action@v1")
 	require.True(t, ok)
-	r := nc("Release", map[string]string{"tag": "v1.0.0", "draft": "true", "prerelease": "true"})
+	r := nc("Release", map[string]string{"tag": "v1.0.0$(whoami)", "draft": "true", "prerelease": "true"})
 	require.Len(t, r.Steps, 1)
+	assert.Contains(t, r.Steps[0].ScriptContent, "gh release create 'v1.0.0$(whoami)'", "tag stays an inert single-quoted operand")
 	assert.Contains(t, r.Steps[0].ScriptContent, " --draft")
 	assert.Contains(t, r.Steps[0].ScriptContent, " --prerelease")
 

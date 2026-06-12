@@ -266,7 +266,7 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 	m["ncipollo/release-action"] = func(name string, inputs map[string]string) StepResult {
 		tag := cmp.Or(inputs["tag"], "%teamcity.build.branch%")
-		cmd := fmt.Sprintf("gh release create %q --generate-notes", tag) + ghReleaseStateFlags(inputs)
+		cmd := "gh release create " + shellQuote(tag) + " --generate-notes" + ghReleaseStateFlags(inputs)
 		if body := inputs["body"]; body != "" {
 			cmd += " --notes " + shellQuote(body)
 		}
@@ -293,13 +293,13 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 
 	m["actions/create-release"] = func(name string, inputs map[string]string) StepResult {
-		r := Converted([]Step{{Name: cmp.Or(name, "Create release"), ScriptContent: fmt.Sprintf("gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%")) + ghReleaseStateFlags(inputs)}})
+		r := Converted([]Step{{Name: cmp.Or(name, "Create release"), ScriptContent: "gh release create " + shellQuote(cmp.Or(inputs["tag_name"], "%teamcity.build.branch%")) + " --generate-notes" + ghReleaseStateFlags(inputs)}})
 		r.ManualTasks = ghReleaseAuthNote
 		return r
 	}
 	m["softprops/action-gh-release"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
-		fmt.Fprintf(&cmd, "gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))
+		cmd.WriteString("gh release create " + shellQuote(cmp.Or(inputs["tag_name"], "%teamcity.build.branch%")) + " --generate-notes")
 		cmd.WriteString(ghReleaseStateFlags(inputs))
 		// `files:` is a newline-separated glob list; keep one asset per line so a multiline value can't become a new shell line.
 		for f := range strings.SplitSeq(inputs["files"], "\n") {
