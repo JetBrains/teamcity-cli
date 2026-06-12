@@ -35,6 +35,7 @@ class ClaudeResult:
 # Env vars to propagate into Claude's subprocess
 _PROPAGATE_KEYS = (
     "ANTHROPIC_API_KEY",
+    "ANTHROPIC_BASE_URL",
     "CLAUDE_CODE_OAUTH_TOKEN",
     "TEAMCITY_URL",
     "TEAMCITY_TOKEN",
