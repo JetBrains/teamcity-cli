@@ -14,7 +14,7 @@ Some CI jobs depend on platform-specific infrastructure and cannot be meaningful
 | Bamboo plan permissions (`plan-permissions:`) | Configure project roles in TC Administration → Roles |
 | Bamboo notifications block | Configure as TC notification rules per user/project |
 
-When `teamcity migrate` generates stubs for these, delete them rather than trying to fill in the stubs.
+The converter drops these steps (listed under "Needs review") and emits a no-op placeholder when a job ends up with no steps — delete the placeholders rather than trying to fill them in.
 
 ## Expanding matrix strategies
 
@@ -76,7 +76,7 @@ build_oldstable:
 | `command not found: node/go/python` | Tool not on agent PATH | Check agent, or add setup script |
 | `permission denied` on script | File not executable | Add `chmod +x` step or use `bash script.sh` |
 | Artifact path not found | `files-publication` path doesn't match build output | Check actual output path in build log |
-| Snapshot dependency failed | Upstream job failed | Fix upstream first; `deploy` depends on all others |
+| Snapshot dependency failed | Upstream job failed | Fix the deepest failed upstream job first |
 
 ## Always-manual setup
 
@@ -87,7 +87,8 @@ build_oldstable:
 | Triggers (GHA `on:`, Bamboo `triggers:`) | Configure push/PR/schedule in TC project settings |
 | Branch filters (GHA `if:`, Bamboo `branches:`) | Add to VCS trigger for conditional jobs |
 | Cloud auth (AWS / GCP / Azure) | TC Connection in project settings |
-| GHA `concurrency:`, `timeout-minutes:`, `continue-on-error:`, `fail-fast: false` | Build configuration settings in TC UI |
+| GHA `concurrency:`, `timeout-minutes:`, `fail-fast: false` | Build configuration settings in TC UI |
+| GHA `continue-on-error: true` | Wrap the command (`cmd || true`) or override the step's failure condition — the UI step policy won't ignore the step's own exit code |
 | GHA step outputs / Bamboo plan vars | TC `output-parameters:` + cross-job `%dep.X.Y%` references |
 | Bamboo `final-tasks:` | Set "Even if some build steps have failed" on each step (UI) |
 | Bamboo `stages[].manual: true` | Manual trigger on the downstream pipeline (UI) |
