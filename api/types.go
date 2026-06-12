@@ -150,7 +150,7 @@ type CompatibilityList struct {
 
 // IncompatibleReasons contains reasons why an agent can't run a build type
 type IncompatibleReasons struct {
-	Reasons []string `json:"reason,omitempty"`
+	Reasons []string `json:"reason,omitzero"`
 }
 
 // UnmetRequirements holds the human-readable incompatibility description (may be multi-line).
@@ -561,7 +561,7 @@ type Pipeline struct {
 // PipelineJobs represents the jobs within a pipeline
 type PipelineJobs struct {
 	Count int           `json:"count"`
-	Job   []PipelineJob `json:"job,omitempty"`
+	Job   []PipelineJob `json:"job,omitzero"`
 }
 
 // PipelineJob represents a single job in a pipeline (uses YAML keys, not generated IDs)
@@ -574,7 +574,7 @@ type PipelineJob struct {
 type PipelineList struct {
 	Count     int        `json:"count"`
 	NextHref  string     `json:"nextHref,omitempty"`
-	Pipelines []Pipeline `json:"pipeline,omitempty"`
+	Pipelines []Pipeline `json:"pipeline,omitzero"`
 }
 
 // ProjectRef is a lightweight reference to a project
