@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 var skippedActions = []struct{ action, note string }{
@@ -347,7 +348,8 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 		lines = append(lines, "DOCKERFILE="+shellQuote(file))
 	}
 	var extraTags []string
-	if tagList := strings.Fields(tags); len(tagList) > 0 {
+	// `tags:` is documented as list/CSV, so split on commas as well as whitespace.
+	if tagList := strings.FieldsFunc(tags, func(r rune) bool { return r == ',' || unicode.IsSpace(r) }); len(tagList) > 0 {
 		lines = append(lines, "IMAGE="+shellQuote(tagList[0]))
 		extraTags = tagList[1:]
 	} else {
@@ -366,6 +368,9 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 			}
 		}
 	}
+	if platforms := inputs["platforms"]; platforms != "" {
+		buildCmd.WriteString(" --platform " + shellQuote(platforms))
+	}
 	buildCmd.WriteString(` -t "$IMAGE"`)
 	// The action publishes every tag, so emit each extra as -t plus its own push.
 	for _, t := range extraTags {
@@ -380,7 +385,11 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 			lines = append(lines, "docker push "+shellQuote(t))
 		}
 	}
-	return Converted([]Step{{Name: cmp.Or(name, "Docker build and push"), ScriptContent: strings.Join(lines, "\n")}})
+	r := Converted([]Step{{Name: cmp.Or(name, "Docker build and push"), ScriptContent: strings.Join(lines, "\n")}})
+	if platforms := inputs["platforms"]; platforms != "" {
+		r.ManualTasks = []string{fmt.Sprintf("Multi-platform build (%s) → ensure the agent has docker buildx and QEMU configured", platforms)}
+	}
+	return r
 }
 
 func ghPagesScript(branch, folder string) string {

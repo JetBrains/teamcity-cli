@@ -555,3 +555,22 @@ func TestAWSCredentialsBecomeJobParamsNote(t *testing.T) {
 	assert.Contains(t, manuals, "env.AWS_ACCESS_KEY_ID")
 	assert.Contains(t, manuals, `env.AWS_DEFAULT_REGION: "eu-west-1"`)
 }
+
+func TestDockerBuildCSVTagsAndPlatforms(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("docker/build-push-action@v5")
+	r := transformer("Build", map[string]string{
+		"tags":      "repo/app:latest,repo/app:abc123",
+		"platforms": "linux/amd64,linux/arm64",
+		"push":      "true",
+	})
+	require.Len(t, r.Steps, 1)
+	script := r.Steps[0].ScriptContent
+	assert.Contains(t, script, "IMAGE='repo/app:latest'", "CSV tags split into separate references")
+	assert.Contains(t, script, "-t 'repo/app:abc123'")
+	assert.Contains(t, script, "docker push 'repo/app:abc123'")
+	assert.NotContains(t, script, "latest,repo", "no comma-joined single tag")
+	assert.Contains(t, script, "--platform 'linux/amd64,linux/arm64'")
+	assert.Contains(t, strings.Join(r.ManualTasks, "\n"), "buildx and QEMU")
+}
