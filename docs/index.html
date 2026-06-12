@@ -416,6 +416,16 @@ body {
   text-wrap: pretty;
 }
 .notes-panel p:last-child { margin-bottom: 0; }
+.notes-panel a {
+  color: var(--fg-1);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--accent) 50%, transparent);
+  transition: color 0.15s, border-color 0.15s;
+}
+.notes-panel a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 .notes-panel .mono-hint {
   font-family: var(--mono); font-size: 11px; color: var(--fg-3);
 }
@@ -437,6 +447,8 @@ body {
   display: flex; align-items: baseline; justify-content: space-between;
   font-family: var(--mono); font-size: 10.5px; color: var(--fg-4);
 }
+.foot a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.foot a:hover { color: var(--accent); border-bottom-color: var(--accent); }
 .attrib {
   display: flex; align-items: center; gap: 14px;
   padding: 18px 0 0;
@@ -562,14 +574,14 @@ body {
     <div class="brand">
       
       <div class="brand-name">teamcity cli</div>
-      <div class="brand-ver">v0.10.0</div>
+      <div class="brand-ver">v1.1.1</div>
       <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Toggle navigation">
         <span class="nav-toggle-icon" aria-hidden="true">☰</span>
         <span class="nav-toggle-label">menu</span>
       </button>
     </div>
 
-    <div class="sidebar-meta">146 screens · 2026-05-05 17:36</div>
+    <div class="sidebar-meta">156 screens · 2026-06-11 21:37</div>
 
     <div class="search">
       <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
@@ -658,9 +670,12 @@ body {
         
       </li>
       <li class="grp" data-grp="jobs">
-        <div class="grp-title"><span>Jobs</span><span class="count">9</span></div>
+        <div class="grp-title"><span>Jobs</span><span class="count">17</span></div>
         <a href="#job-list" data-cmd="job-list" data-search="job-list job list list build configurations teamcity job list">
           <span class="dot">·</span><span>job list</span>
+        </a>
+        <a href="#job-create" data-cmd="job-create" data-search="job-create job create create a new build configuration in a project teamcity job create deploy --project myapp">
+          <span class="dot">·</span><span>job create</span>
         </a>
         <a href="#job-view" data-cmd="job-view" data-search="job-view job view detail view of a build configuration teamcity job view myapp_build">
           <span class="dot">·</span><span>job view</span>
@@ -685,6 +700,27 @@ body {
         </a>
         <a href="#job-param-delete" data-cmd="job-param-delete" data-search="job-param-delete job param delete delete a job parameter teamcity job param delete myapp_build env.java_home">
           <span class="dot">·</span><span>job param delete</span>
+        </a>
+        <a href="#job-step-list" data-cmd="job-step-list" data-search="job-step-list job step list list a job&#39;s build steps teamcity job step list myapp_build">
+          <span class="dot">·</span><span>job step list</span>
+        </a>
+        <a href="#job-step-view" data-cmd="job-step-view" data-search="job-step-view job step view view a build step&#39;s runner and parameters teamcity job step view myapp_build runner_2">
+          <span class="dot">·</span><span>job step view</span>
+        </a>
+        <a href="#job-step-add" data-cmd="job-step-add" data-search="job-step-add job step add add a build step to a job teamcity job step add myapp_build --type simplerunner --name &#34;run tests&#34; --param script.content=&#34;go test ./...&#34;">
+          <span class="dot">·</span><span>job step add</span>
+        </a>
+        <a href="#job-step-delete" data-cmd="job-step-delete" data-search="job-step-delete job step delete delete a build step teamcity job step delete myapp_build runner_3">
+          <span class="dot">·</span><span>job step delete</span>
+        </a>
+        <a href="#job-settings" data-cmd="job-settings" data-search="job-settings job settings list list a job&#39;s general settings teamcity job settings list myapp_build">
+          <span class="dot">·</span><span>job settings list</span>
+        </a>
+        <a href="#job-settings-get" data-cmd="job-settings-get" data-search="job-settings-get job settings get get a single job setting value teamcity job settings get myapp_build buildnumberpattern">
+          <span class="dot">·</span><span>job settings get</span>
+        </a>
+        <a href="#job-settings-set" data-cmd="job-settings-set" data-search="job-settings-set job settings set set a job setting value teamcity job settings set myapp_build executiontimeoutmin 30">
+          <span class="dot">·</span><span>job settings set</span>
         </a>
         
       </li>
@@ -1005,7 +1041,7 @@ body {
         
       </li>
       <li class="grp" data-grp="help">
-        <div class="grp-title"><span>Help Screens</span><span class="count">25</span></div>
+        <div class="grp-title"><span>Help Screens</span><span class="count">27</span></div>
         <a href="#help-root" data-cmd="help-root" data-search="help-root teamcity root command — shows logo and common commands teamcity  --help">
           <span class="dot">·</span><span>teamcity</span>
         </a>
@@ -1075,6 +1111,12 @@ body {
         <a href="#help-job-param" data-cmd="help-job-param" data-search="help-job-param job param job parameter subcommands teamcity job param --help">
           <span class="dot">·</span><span>job param</span>
         </a>
+        <a href="#help-job-step" data-cmd="help-job-step" data-search="help-job-step job step build step subcommands teamcity job step --help">
+          <span class="dot">·</span><span>job step</span>
+        </a>
+        <a href="#help-job-settings" data-cmd="help-job-settings" data-search="help-job-settings job settings general settings subcommands teamcity job settings --help">
+          <span class="dot">·</span><span>job settings</span>
+        </a>
         <a href="#help-link" data-cmd="help-link" data-search="help-link link bind this repository to a teamcity project teamcity link --help">
           <span class="dot">·</span><span>link</span>
         </a>
@@ -1088,8 +1130,9 @@ body {
 
     <div class="side-foot">
       <a href="https://github.com/jetbrains/teamcity-cli/" target="_blank" rel="noopener">↗ github</a><br>
-      146 screens · 17 groups<br>
-      generated 2026-05-05 17:36
+      156 screens · 17 groups<br>
+      generated 2026-06-11 21:37<br>
+      with <a href="https://github.com/tiulpin/termbook" target="_blank" rel="noopener">termbook</a>
     </div>
   </aside>
 
@@ -1111,7 +1154,7 @@ body {
         
       </div>
       <div class="fact">
-        <b>147</b> screens<br><b>17</b> command groups<br>
+        <b>156</b> screens<br><b>17</b> command groups<br>
       </div>
     </section>
 
@@ -1436,8 +1479,7 @@ Build finished</pre>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity run diff 45231 45230</span></div>
-                <pre class="term-body"><span class="term-fg33">!</span> &quot;teamcity run diff&quot; is experimental: flags, output, and JSON schema may change or the command may be removed without notice. It is intentionally undocumented — do not rely on it in scripts.
-COMPARING  <span class="term-fg32">✓</span> 45231  #831  →  <span class="term-fg31">✗</span> 45230  #442
+                <pre class="term-body">COMPARING  <span class="term-fg32">✓</span> 45231  #831  →  <span class="term-fg31">✗</span> 45230  #442
 <span class="term-fg2">Job: </span><span class="term-fg36">Build</span><span class="term-fg2">  ·  Branch: </span>main → feature&#47;auth
 &nbsp;
 <span class="term-fg1">STATUS</span>
@@ -1586,15 +1628,15 @@ logs&#47;build.log          45 KiB  <span class="term-fg32">   ✓</span>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity run tests 1</span></div>
-                <pre class="term-body"><span class="term-fg2">View in browser:</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231&amp;buildTab=tests
-&nbsp;
-TESTS: <span class="term-fg32">145 passed</span>
-&nbsp;
-<span class="term-fg32">✓</span> TestAuthHandler&#47;valid_token
+                <pre class="term-body"><span class="term-fg32">✓</span> TestAuthHandler&#47;valid_token
 <span class="term-fg32">✓</span> TestConnectionPool&#47;acquire
 <span class="term-fg32">✓</span> TestConnectionPool&#47;release
 <span class="term-fg32">✓</span> TestShutdown&#47;graceful
-<span class="term-fg32">✓</span> TestMigration&#47;forward</pre>
+<span class="term-fg32">✓</span> TestMigration&#47;forward
+&nbsp;
+TESTS: <span class="term-fg32">145 passed</span>
+&nbsp;
+<span class="term-fg2">View in browser:</span> https:&#47;&#47;tc.example.com&#47;viewLog.html?buildId=45231&amp;buildTab=tests</pre>
               </div>
             </div>
           </article>
@@ -1796,6 +1838,26 @@ MyApp_Lint     Lint               My Application  <span class="term-fg32">Active
               </div>
             </div>
           </article>
+          <article class="entry" id="job-create" data-cmd="job-create" data-search="job-create job create create a new build configuration in a project teamcity job create deploy --project myapp">
+            <div class="entry-meta">
+              <div class="id">job-create</div>
+              <h4>job create</h4>
+              <p>Create a new build configuration in a project</p>
+              <div class="tags"><span>jobs</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job create Deploy --project MyApp</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job create Deploy --project MyApp</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Created job &quot;Deploy&quot; (id: MyApp_Deploy) in project &quot;My Application&quot;
+  https:&#47;&#47;tc.example.com&#47;viewType.html?buildTypeId=MyApp_Deploy</pre>
+              </div>
+            </div>
+          </article>
           <article class="entry" id="job-view" data-cmd="job-view" data-search="job-view job view detail view of a build configuration teamcity job view myapp_build">
             <div class="entry-meta">
               <div class="id">job-view</div>
@@ -1840,7 +1902,7 @@ Status: <span class="term-fg32">Active</span>
 │   ├── <span class="term-fg36">Run Tests</span> <span class="term-fg2">MyApp_Test</span>
 │   │   └── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span>
 │   └── <span class="term-fg36">Integration Tests</span> <span class="term-fg2">MyApp_IntTest</span>
-│       └── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span> <span class="term-fg33">(circular)</span>
+│       └── <span class="term-fg36">Deploy Staging</span> <span class="term-fg2">MyApp_Deploy</span>
 └── <span class="term-fg2">▼ Dependencies</span>
     └── <span class="term-fg36">Lint</span> <span class="term-fg2">MyApp_Lint</span></pre>
               </div>
@@ -1962,6 +2024,155 @@ build.parallel  4</pre>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job param delete MyApp_Build env.JAVA_HOME</span></div>
                 <pre class="term-body"><span class="term-fg32">✓</span> Deleted parameter env.JAVA_HOME</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="job-step-list" data-cmd="job-step-list" data-search="job-step-list job step list list a job&#39;s build steps teamcity job step list myapp_build">
+            <div class="entry-meta">
+              <div class="id">job-step-list</div>
+              <h4>job step list</h4>
+              <p>List a job&#39;s build steps</p>
+              <div class="tags"><span>jobs</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job step list MyApp_Build</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job step list MyApp_Build</span></div>
+                <pre class="term-body">#  ID        NAME         TYPE           STATUS
+1  RUNNER_1  Compile      gradle-runner  <span class="term-fg32">enabled</span>
+2  RUNNER_2  Run Tests    simpleRunner   <span class="term-fg32">enabled</span>
+3  RUNNER_3  Build Image  DockerCommand  <span class="term-fg2">disabled</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="job-step-view" data-cmd="job-step-view" data-search="job-step-view job step view view a build step&#39;s runner and parameters teamcity job step view myapp_build runner_2">
+            <div class="entry-meta">
+              <div class="id">job-step-view</div>
+              <h4>job step view</h4>
+              <p>View a build step&#39;s runner and parameters</p>
+              <div class="tags"><span>jobs</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job step view MyApp_Build RUNNER_2</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job step view MyApp_Build RUNNER_2</span></div>
+                <pre class="term-body">ID: RUNNER_2
+Name: Run Tests
+Type: simpleRunner
+Status: <span class="term-fg32">enabled</span>
+&nbsp;
+PARAMETER           VALUE
+script.content      go test -race .&#47;...
+teamcity.step.mode  default
+use.custom.script   true</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="job-step-add" data-cmd="job-step-add" data-search="job-step-add job step add add a build step to a job teamcity job step add myapp_build --type simplerunner --name &#34;run tests&#34; --param script.content=&#34;go test ./...&#34;">
+            <div class="entry-meta">
+              <div class="id">job-step-add</div>
+              <h4>job step add</h4>
+              <p>Add a build step to a job</p>
+              <div class="tags"><span>jobs</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job step add MyApp_Build --type simpleRunner --name &#34;Run Tests&#34; --param script.content=&#34;go test ./...&#34;</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job step add MyApp_Build --type simpleRunner --name &#34;Run Tests&#34; --param script.content=&#34;go test ./...&#34;</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Added step &quot;Run Tests&quot; (id: RUNNER_4) to job MyApp_Build</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="job-step-delete" data-cmd="job-step-delete" data-search="job-step-delete job step delete delete a build step teamcity job step delete myapp_build runner_3">
+            <div class="entry-meta">
+              <div class="id">job-step-delete</div>
+              <h4>job step delete</h4>
+              <p>Delete a build step</p>
+              <div class="tags"><span>jobs</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job step delete MyApp_Build RUNNER_3</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job step delete MyApp_Build RUNNER_3</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Deleted step RUNNER_3</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="job-settings" data-cmd="job-settings" data-search="job-settings job settings list list a job&#39;s general settings teamcity job settings list myapp_build">
+            <div class="entry-meta">
+              <div class="id">job-settings</div>
+              <h4>job settings list</h4>
+              <p>List a job&#39;s general settings</p>
+              <div class="tags"><span>jobs</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job settings list MyApp_Build</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job settings list MyApp_Build</span></div>
+                <pre class="term-body">SETTING              VALUE
+buildNumberPattern   1.0.%build.counter%
+executionTimeoutMin  30
+checkoutMode         ON_AGENT
+artifactRules        build&#47;libs&#47;*.jar =&gt; artifacts
+allowExternalStatus  true</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="job-settings-get" data-cmd="job-settings-get" data-search="job-settings-get job settings get get a single job setting value teamcity job settings get myapp_build buildnumberpattern">
+            <div class="entry-meta">
+              <div class="id">job-settings-get</div>
+              <h4>job settings get</h4>
+              <p>Get a single job setting value</p>
+              <div class="tags"><span>jobs</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job settings get MyApp_Build buildNumberPattern</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job settings get MyApp_Build buildNumberPattern</span></div>
+                <pre class="term-body">1.0.%build.counter%</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="job-settings-set" data-cmd="job-settings-set" data-search="job-settings-set job settings set set a job setting value teamcity job settings set myapp_build executiontimeoutmin 30">
+            <div class="entry-meta">
+              <div class="id">job-settings-set</div>
+              <h4>job settings set</h4>
+              <p>Set a job setting value</p>
+              <div class="tags"><span>jobs</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job settings set MyApp_Build executionTimeoutMin 30</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job settings set MyApp_Build executionTimeoutMin 30</span></div>
+                <pre class="term-body"><span class="term-fg32">✓</span> Set setting executionTimeoutMin</pre>
               </div>
             </div>
           </article>
@@ -2553,7 +2764,7 @@ Description: Main product monorepo
 <span class="term-fg2">Build</span> from VCS
 <span class="term-fg2">VCS Root</span> MyApp_HttpsGithubComOrgRepoGit @ .teamcity
 &nbsp;
-<span class="term-fg2">Last sync</span> Jan 27 (Jan 27 11:30)
+<span class="term-fg2">Last sync</span> Jan 27 (Jan 27 10:30)
 &nbsp;
 <span class="term-fg2">View</span> <span class="term-fg2">https:&#47;&#47;tc.example.com&#47;project.html?projectId=MyApp&amp;tab=versionedSettings</span></pre>
               </div>
@@ -3620,7 +3831,7 @@ Token expires: <span class="term-fg33">Dec 31, 2026</span>
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity config list</span></div>
-                <pre class="term-body"><span class="term-fg2">Config:</span> &#47;var&#47;folders&#47;4y&#47;7q13x9990bv9hf94lw6g4ptm0000gn&#47;T&#47;TestGenerateGallery997979501&#47;001&#47;tc&#47;config.yml
+                <pre class="term-body"><span class="term-fg2">Config:</span> &#47;tmp&#47;TestGenerateGallery1908982343&#47;001&#47;tc&#47;config.yml
 &nbsp;
 default_server=
 &nbsp;
@@ -3788,7 +3999,7 @@ buildtype  job        built-in</pre>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill list</span></div>
                 <pre class="term-body">Name          Version  Description
-teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user provides a TeamCity build URL — drives the `teamcity` CLI for builds, logs, jobs, queues, agents, pools, projects, and pipelines.  (default)</pre>
+teamcity-cli  1.0.0    Use when working with TeamCity CI&#47;CD or when a user provides a TeamCity build URL — drives the `teamcity` CLI for builds, logs, jobs, queues, agents, pools, projects, and pipelines.  (default)</pre>
               </div>
             </div>
           </article>
@@ -3807,14 +4018,7 @@ teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user p
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill install teamcity-cli</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Installed teamcity-cli for warp (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for claude-code (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for codex (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for cursor (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for droid (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for antigravity (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for gemini-cli (0.10.1)
-<span class="term-fg32">✓</span> Installed teamcity-cli for junie (0.10.1)</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Installed teamcity-cli for claude-code (1.0.0)</pre>
               </div>
             </div>
           </article>
@@ -3833,7 +4037,7 @@ teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user p
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill update</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (0.10.1)</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Skill teamcity-cli already up to date (1.0.0)</pre>
               </div>
             </div>
           </article>
@@ -3852,14 +4056,7 @@ teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user p
                   <div class="term-head-pad"></div>
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity skill remove teamcity-cli</span></div>
-                <pre class="term-body"><span class="term-fg32">✓</span> Removed teamcity-cli from warp
-<span class="term-fg32">✓</span> Removed teamcity-cli from claude-code
-<span class="term-fg32">✓</span> Removed teamcity-cli from codex
-<span class="term-fg32">✓</span> Removed teamcity-cli from cursor
-<span class="term-fg32">✓</span> Removed teamcity-cli from droid
-<span class="term-fg32">✓</span> Removed teamcity-cli from antigravity
-<span class="term-fg32">✓</span> Removed teamcity-cli from gemini-cli
-<span class="term-fg32">✓</span> Removed teamcity-cli from junie</pre>
+                <pre class="term-body"><span class="term-fg32">✓</span> Removed teamcity-cli from claude-code</pre>
               </div>
             </div>
           </article>
@@ -3924,8 +4121,8 @@ teamcity-cli  0.10.1   Use when working with TeamCity CI&#47;CD or when a user p
                 </div>
                 <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity update</span></div>
                 <pre class="term-body">Checking for updates...
-<span class="term-fg2">vdev</span> → <span class="term-fg32">v0.10.0</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
-<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v0.10.0</span></pre>
+<span class="term-fg2">vdev</span> → <span class="term-fg32">v1.1.1</span>: <span class="term-fg1">Visit https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;latest</span>
+<span class="term-fg2">https:&#47;&#47;github.com&#47;JetBrains&#47;teamcity-cli&#47;releases&#47;tag&#47;v1.1.1</span></pre>
               </div>
             </div>
           </article>
@@ -4178,7 +4375,7 @@ Aliases:
 &nbsp;
 LIFECYCLE
   cancel      Cancel a run
-  diff        [experimental] Compare two runs and show differences
+  diff        Compare two runs and show differences
   list        List recent runs
   restart     Restart a run
   start       Start a new run
@@ -4248,10 +4445,13 @@ Aliases:
   job, buildtype
 &nbsp;
 Available Commands:
+  create      Create a job
   list        List jobs
   param       Manage job parameters
   pause       Pause a job
   resume      Resume a paused job
+  settings    Manage job settings
+  step        Manage job build steps
   tree        Display snapshot dependency tree
   view        View job details
 &nbsp;
@@ -4880,6 +5080,7 @@ Available Commands:
   create      Create a project connection
   delete      Delete a project connection
   list        List project connections
+  view        View a project connection
 &nbsp;
 Flags:
   -h, --help   help for connection
@@ -5127,7 +5328,7 @@ build behavior, can reference other parameters, and may be marked
 as password (secure) so their values never appear in logs.
 &nbsp;
 The &lt;project-id&gt; positional is optional when teamcity.toml binds this
-repo via &#39;teamcity link&#39; — the linked project is used automatically.
+repo via &#39;teamcity link&#39; - the linked project is used automatically.
 &nbsp;
 See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-parameters.html
 &nbsp;
@@ -5177,7 +5378,7 @@ build behavior, can reference other parameters, and may be marked
 as password (secure) so their values never appear in logs.
 &nbsp;
 The &lt;job-id&gt; positional is optional when teamcity.toml binds this
-repo via &#39;teamcity link&#39; — the linked job is used automatically.
+repo via &#39;teamcity link&#39; - the linked job is used automatically.
 &nbsp;
 See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-parameters.html
 &nbsp;
@@ -5202,6 +5403,106 @@ Global Flags:
   -V, --verbose    Show detailed output including debug info
 &nbsp;
 Use &quot;teamcity job param [command] --help&quot; for more information about a command.</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="help-job-step" data-cmd="help-job-step" data-search="help-job-step job step build step subcommands teamcity job step --help">
+            <div class="entry-meta">
+              <div class="id">help-job-step</div>
+              <h4>job step</h4>
+              <p>Build step subcommands</p>
+              <div class="tags"><span>help</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job step --help</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job step --help</span></div>
+                <pre class="term-body">List, view, add, and delete a job&#39;s build steps.
+&nbsp;
+A build step is a single action in a job (build configuration) - run a
+script, invoke Gradle or Maven, build a Docker image, and so on. Steps
+run in order and each has a runner type and a set of typed parameters.
+&nbsp;
+The &lt;job-id&gt; positional is optional when teamcity.toml binds this repo
+via &#39;teamcity link&#39; - the linked job is used automatically.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-build-steps.html
+&nbsp;
+Usage:
+  teamcity job step [flags]
+  teamcity job step [command]
+&nbsp;
+Available Commands:
+  add         Add a build step to a job
+  delete      Delete a build step
+  list        List job build steps
+  view        View build step details
+&nbsp;
+Flags:
+  -h, --help   help for step
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity job step [command] --help&quot; for more information about a command.</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="help-job-settings" data-cmd="help-job-settings" data-search="help-job-settings job settings general settings subcommands teamcity job settings --help">
+            <div class="entry-meta">
+              <div class="id">help-job-settings</div>
+              <h4>job settings</h4>
+              <p>General settings subcommands</p>
+              <div class="tags"><span>help</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">teamcity job settings --help</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">teamcity job settings --help</span></div>
+                <pre class="term-body">List, get, and set job settings.
+&nbsp;
+Settings are the general build-configuration options (build number
+format, execution timeout, artifact rules, checkout rules, etc.).
+Unlike parameters they always have a server default and cannot be
+deleted, only changed.
+&nbsp;
+The &lt;job-id&gt; positional is optional when teamcity.toml binds this
+repo via &#39;teamcity link&#39; - the linked job is used automatically.
+&nbsp;
+See: https:&#47;&#47;www.jetbrains.com&#47;help&#47;teamcity&#47;configuring-general-settings.html
+&nbsp;
+Usage:
+  teamcity job settings [flags]
+  teamcity job settings [command]
+&nbsp;
+Available Commands:
+  get         Get a job setting value
+  list        List job settings
+  set         Set a job setting value
+&nbsp;
+Flags:
+  -h, --help   help for settings
+&nbsp;
+Global Flags:
+      --debug      Alias for --verbose
+      --no-color   Disable colored output
+      --no-input   Disable interactive prompts
+  -q, --quiet      Suppress non-essential output
+  -V, --verbose    Show detailed output including debug info
+&nbsp;
+Use &quot;teamcity job settings [command] --help&quot; for more information about a command.</pre>
               </div>
             </div>
           </article>
@@ -5319,7 +5620,7 @@ Use &quot;teamcity project connection create [command] --help&quot; for more inf
 
     <footer class="foot">
       <div>teamcity cli · screen gallery</div>
-      <div>146 screens · 2026-05-05 17:36</div>
+      <div>156 screens · 2026-06-11 21:37</div>
     </footer>
     <div class="attrib">
 			<span class="jb-wordmark">JetBrains</span>

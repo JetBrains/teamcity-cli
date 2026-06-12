@@ -101,6 +101,8 @@ func helpScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 		h("help-project-token", "project token", "Secure token subcommands", "project token", "project", "token", "--help"),
 		h("help-project-param", "project param", "Project parameter subcommands", "project param", "project", "param", "--help"),
 		h("help-job-param", "job param", "Job parameter subcommands", "job param", "job", "param", "--help"),
+		h("help-job-step", "job step", "Build step subcommands", "job step", "job", "step", "--help"),
+		h("help-job-settings", "job settings", "General settings subcommands", "job settings", "job", "settings", "--help"),
 		h("help-link", "link", "Bind this repository to a TeamCity project", "link", "link", "--help"),
 		h("help-project-connection-create", "project connection create", "Create-connection subcommands (GitHub App, Docker)", "project connection create", "project", "connection", "create", "--help"),
 	}
@@ -177,6 +179,8 @@ func runScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 func jobScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 	return []termbook.Screen{
 		termbook.Scr("job-list", "job list", "List build configurations", "teamcity job list", capture(t, ts, "job", "list")),
+		termbook.Scr("job-create", "job create", "Create a new build configuration in a project",
+			"teamcity job create Deploy --project MyApp", capture(t, ts, "job", "create", "Deploy", "--project", "MyApp")),
 		termbook.Scr("job-view", "job view", "Detail view of a build configuration",
 			"teamcity job view MyApp_Build", capture(t, ts, "job", "view", "MyApp_Build")),
 		termbook.Scr("job-tree", "job tree", "Snapshot dependency tree of a job",
@@ -193,6 +197,21 @@ func jobScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
 			"teamcity job param set MyApp_Build env.JAVA_HOME /opt/jdk", capture(t, ts, "job", "param", "set", "MyApp_Build", "env.JAVA_HOME", "/opt/jdk")),
 		termbook.Scr("job-param-delete", "job param delete", "Delete a job parameter",
 			"teamcity job param delete MyApp_Build env.JAVA_HOME", capture(t, ts, "job", "param", "delete", "MyApp_Build", "env.JAVA_HOME")),
+		termbook.Scr("job-step-list", "job step list", "List a job's build steps",
+			"teamcity job step list MyApp_Build", capture(t, ts, "job", "step", "list", "MyApp_Build")),
+		termbook.Scr("job-step-view", "job step view", "View a build step's runner and parameters",
+			"teamcity job step view MyApp_Build RUNNER_2", capture(t, ts, "job", "step", "view", "MyApp_Build", "RUNNER_2")),
+		termbook.Scr("job-step-add", "job step add", "Add a build step to a job",
+			"teamcity job step add MyApp_Build --type simpleRunner --name \"Run Tests\" --param script.content=\"go test ./...\"",
+			capture(t, ts, "job", "step", "add", "MyApp_Build", "--type", "simpleRunner", "--name", "Run Tests", "--param", "script.content=go test ./...")),
+		termbook.Scr("job-step-delete", "job step delete", "Delete a build step",
+			"teamcity job step delete MyApp_Build RUNNER_3", capture(t, ts, "job", "step", "delete", "MyApp_Build", "RUNNER_3")),
+		termbook.Scr("job-settings", "job settings list", "List a job's general settings",
+			"teamcity job settings list MyApp_Build", capture(t, ts, "job", "settings", "list", "MyApp_Build")),
+		termbook.Scr("job-settings-get", "job settings get", "Get a single job setting value",
+			"teamcity job settings get MyApp_Build buildNumberPattern", capture(t, ts, "job", "settings", "get", "MyApp_Build", "buildNumberPattern")),
+		termbook.Scr("job-settings-set", "job settings set", "Set a job setting value",
+			"teamcity job settings set MyApp_Build executionTimeoutMin 30", capture(t, ts, "job", "settings", "set", "MyApp_Build", "executionTimeoutMin", "30")),
 	}
 }
 func agentScreens(t *testing.T, ts *cmdtest.TestServer) []termbook.Screen {
