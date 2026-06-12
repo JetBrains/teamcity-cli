@@ -84,9 +84,7 @@ func runRunChanges(f *cmdutil.Factory, runID string, opts *runChangesOptions) er
 		_, _ = fmt.Fprintf(p.Out, "%s  %s  %s\n", output.Yellow(sha), output.Faint(c.Username), output.Faint(date))
 
 		comment := strings.TrimSpace(c.Comment)
-		if idx := strings.Index(comment, "\n"); idx > 0 {
-			comment = comment[:idx]
-		}
+		comment, _, _ = strings.Cut(comment, "\n")
 		_, _ = fmt.Fprintf(p.Out, "  %s\n", comment)
 
 		if !opts.noFiles && c.Files != nil && len(c.Files.File) > 0 {

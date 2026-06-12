@@ -27,6 +27,9 @@ func (c *Client) GetBuildTypeSettings(buildTypeID string) (*SettingsList, error)
 	if err := c.get(c.ctx(), path, &result); err != nil {
 		return nil, err
 	}
+	if result.Property == nil {
+		result.Property = []Setting{} // non-nil so --json emits [] not null
+	}
 
 	return &result, nil
 }

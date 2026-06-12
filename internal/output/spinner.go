@@ -20,9 +20,9 @@ type spinner struct {
 	done   chan struct{}
 }
 
-// StartSpinner shows a "Loading..." indicator on stdout until StopSpinner or the first byte of output; no-op when quiet, non-terminal, or already running, and the first frame waits one 80ms tick so fast work shows nothing.
+// StartSpinner shows a "Loading..." indicator on stdout until StopSpinner or the first byte of output; no-op when quiet, non-terminal, dumb-terminal, or already running, and the first frame waits one 80ms tick so fast work shows nothing.
 func StartSpinner(quiet bool) {
-	if quiet || !IsTerminal() {
+	if quiet || os.Getenv("TERM") == "dumb" || !IsTerminal() {
 		return
 	}
 	spin.mu.Lock()

@@ -139,6 +139,9 @@ func (c *Client) GetBuildSteps(buildTypeID string) (*BuildStepList, error) {
 	if err := c.get(c.ctx(), path, &result); err != nil {
 		return nil, err
 	}
+	if result.Step == nil {
+		result.Step = []BuildStep{} // non-nil so --json emits [] not null
+	}
 
 	return &result, nil
 }

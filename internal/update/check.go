@@ -137,8 +137,8 @@ func IsNewer(current, latest string) bool {
 
 func parseSemver(v string) (major, minor, patch int) {
 	v = strings.TrimPrefix(v, "v")
-	parts := strings.SplitN(v, "-", 2)
-	parts = strings.SplitN(parts[0], ".", 4)
+	base, _, _ := strings.Cut(v, "-")
+	parts := strings.SplitN(base, ".", 4)
 
 	if len(parts) >= 1 {
 		major, _ = strconv.Atoi(parts[0])

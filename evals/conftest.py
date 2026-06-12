@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import shutil
+import subprocess
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,9 +13,14 @@ from pathlib import Path
 import pytest
 
 from scaffold import sentry_log
-from scaffold.tasks import TaskConfig, list_tasks, load_task
+from scaffold.claude import CLAUDE_BIN, DEFAULT_MODEL
+from scaffold.tasks import TASKS_FILE, TaskConfig, list_tasks, load_task
 
-SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
+EVALS_DIR = Path(__file__).resolve().parent
+REPO_ROOT = EVALS_DIR.parent
+SKILLS_DIR = REPO_ROOT / "skills"
+SKILL_MD = SKILLS_DIR / "teamcity-cli" / "SKILL.md"
+SCHEMA_PATH = EVALS_DIR / "cli_schema.json"
 
 
 @dataclass
@@ -26,9 +34,17 @@ TREATMENTS = {
     "CURRENT": TreatmentConfig(name="CURRENT", skill_dir=SKILLS_DIR / "teamcity-cli"),
 }
 
+# Rough historical durations, longest first, so xdist doesn't park the slow
+# tasks on a near-empty tail.
+TASK_DURATION_RANK = [
+    "composite-failure", "cross-project", "daily-loop", "investigate-failure",
+    "inspect-url", "find-builds", "hallucination-resistance",
+    "explore-infrastructure", "negative-unrelated",
+]
+
 
 # ---------------------------------------------------------------------------
-# CLI options
+# CLI options + session setup
 # ---------------------------------------------------------------------------
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -36,6 +52,28 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--treatment", default=None, help="Treatment name(s), comma-separated")
     parser.addoption("--runs", default=1, type=int, help="Repetitions per combination")
     parser.addoption("--experiment", default=None, help="Experiment ID tag (defaults to branch name)")
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Regenerate cli_schema.json from the cobra tree (controller only)."""
+    if hasattr(config, "workerinput"):
+        return  # xdist worker — the controller already generated it
+    generator = REPO_ROOT / "scripts" / "generate-cli-schema.go"
+    if shutil.which("go") and generator.exists():
+        out = subprocess.run(
+            ["go", "run", str(generator)],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=180,
+        )
+        if out.returncode == 0:
+            SCHEMA_PATH.write_text(out.stdout)
+            return
+        if not SCHEMA_PATH.exists():
+            raise pytest.UsageError(f"cli_schema.json generation failed:\n{out.stderr}")
+    elif not SCHEMA_PATH.exists():
+        raise pytest.UsageError(
+            "cli_schema.json missing and `go` not on PATH — run "
+            "`go run scripts/generate-cli-schema.go > evals/cli_schema.json`"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +91,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     task_names = (
         [t.strip() for t in task_filter.split(",")]
         if task_filter else list_tasks()
+    )
+    task_names.sort(
+        key=lambda t: TASK_DURATION_RANK.index(t) if t in TASK_DURATION_RANK else 99
     )
 
     treatment_names = (
@@ -79,16 +120,16 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 # Fixtures
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def verify_env() -> None:
-    """Fail fast if required env vars are missing or TeamCity auth is broken."""
-    import subprocess
+    """Fail fast if required env vars are missing or TeamCity auth is broken.
 
+    Requested by the live eval tests only — unit tests run without a server.
+    """
     missing = [k for k in ("TEAMCITY_URL", "TEAMCITY_TOKEN")
                if not os.environ.get(k)]
     assert not missing, f"Missing required env vars: {', '.join(missing)}"
 
-    import shutil
     assert shutil.which("teamcity"), "teamcity CLI not found on PATH"
     assert shutil.which("claude"), "claude CLI not found on PATH"
 
@@ -103,20 +144,44 @@ def verify_env() -> None:
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
+def _skill_version() -> str:
+    for line in SKILL_MD.read_text().splitlines():
+        if line.startswith("version:"):
+            return line.split(":", 1)[1].strip().strip('"')
+    return "unknown"
+
+
+@pytest.fixture(scope="session")
 def verify_skill() -> None:
     """Verify the skill exists and print its version."""
-    skill_md = SKILLS_DIR / "teamcity-cli" / "SKILL.md"
-    assert skill_md.exists(), f"Skill not found at {skill_md}"
+    assert SKILL_MD.exists(), f"Skill not found at {SKILL_MD}"
+    print(f"\n  Skill: {SKILL_MD.parent}")
+    print(f"  Version: {_skill_version()}\n")
 
-    version = "unknown"
-    for line in skill_md.read_text().splitlines():
-        if line.startswith("version:"):
-            version = line.split(":", 1)[1].strip().strip('"')
-            break
 
-    print(f"\n  Skill: {skill_md.parent}")
-    print(f"  Version: {version}\n")
+def _cmd_output(cmd: list[str]) -> str:
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        return out.stdout.strip().splitlines()[0] if out.stdout.strip() else ""
+    except Exception:
+        return ""
+
+
+@pytest.fixture(scope="session")
+def provenance() -> dict:
+    """Version-stamp every result so runs are comparable across time."""
+    git_sha = (
+        os.environ.get("BUILD_VCS_NUMBER")
+        or _cmd_output(["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"])
+    )
+    return {
+        "git_sha": git_sha[:12],
+        "cli_version": _cmd_output(["teamcity", "--version"]),
+        "claude_version": _cmd_output([CLAUDE_BIN, "--version"]),
+        "model": os.environ.get("BENCH_CC_MODEL") or DEFAULT_MODEL,
+        "skill_version": _skill_version(),
+        "task_set": hashlib.sha256(TASKS_FILE.read_bytes()).hexdigest()[:12],
+    }
 
 
 @pytest.fixture(scope="session", autouse=True)

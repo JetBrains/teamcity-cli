@@ -1,4 +1,8 @@
-"""LLM-as-judge graders — quality assessment beyond command matching.
+"""LLM-as-judge graders — advisory quality signal beyond command matching.
+
+Judge scores never gate: they are reported separately from deterministic checks.
+Grading FAILS CLOSED — if no judge is available or its output can't be parsed,
+the dimension is recorded as ungraded and excluded, never defaulted to a pass.
 
 Auth priority: ANTHROPIC_API_KEY → CLAUDE_CODE_OAUTH_TOKEN → Claude Code CLI (OAuth).
 """
@@ -90,8 +94,9 @@ def llm_grade(
     agent_response: str,
     dimension: str,
     rubric: str,
-) -> GradeResult:
-    """Grade a response on a dimension using LLM-as-judge."""
+) -> GradeResult | None:
+    """Grade a response on a dimension. Returns None when grading is unavailable
+    or unparseable (fail closed) — callers must record the dimension as ungraded."""
     prompt = f"""You are evaluating an AI agent's response to a TeamCity CI/CD task.
 
 <task>
@@ -110,39 +115,39 @@ def llm_grade(
 {rubric}
 </rubric>
 
-Score the response on the dimension using this scale:
-1 = Very poor
-2 = Poor
-3 = Acceptable
-4 = Good
-5 = Excellent
+Score the response on the dimension using the rubric's level anchors.
+Be strict: 3 means typical/adequate. Reserve 4-5 for responses that concretely
+exceed the anchor for 3 — name the specific evidence from the response that
+justifies anything above 3.
 
 Think through your reasoning step by step, then output your final answer as JSON:
-{{"score": <1-5>, "reasoning": "<brief explanation>"}}"""
+{{"score": <1-5>, "reasoning": "<brief explanation citing evidence>"}}"""
 
     text = _call_llm(prompt)
     if not text:
-        return GradeResult(dimension, 3, "Grading unavailable (no API key or CLI)", True)
+        return None
 
     try:
         start = text.rfind("{")
         end = text.rfind("}") + 1
         if start >= 0 and end > start:
             result = json.loads(text[start:end])
-            score = int(result.get("score", 3))
+            score = int(result.get("score"))
+            if not 1 <= score <= 5:
+                return None
             reasoning = result.get("reasoning", "")
             return GradeResult(dimension, score, reasoning, score >= 3)
-    except Exception as e:
-        return GradeResult(dimension, 3, f"Grading parse error: {e}", True)
+    except Exception:
+        return None
 
-    return GradeResult(dimension, 3, "Could not parse grader response", True)
+    return None
 
 
 # ---------------------------------------------------------------------------
 # Pre-built rubrics for TeamCity CLI skill evaluation
 # ---------------------------------------------------------------------------
 
-def grade_command_accuracy(task_instruction: str, response: str) -> GradeResult:
+def grade_command_accuracy(task_instruction: str, response: str) -> GradeResult | None:
     return llm_grade(
         task_instruction,
         response,
@@ -156,7 +161,7 @@ def grade_command_accuracy(task_instruction: str, response: str) -> GradeResult:
     )
 
 
-def grade_workflow_completeness(task_instruction: str, response: str) -> GradeResult:
+def grade_workflow_completeness(task_instruction: str, response: str) -> GradeResult | None:
     return llm_grade(
         task_instruction,
         response,
@@ -170,24 +175,36 @@ def grade_workflow_completeness(task_instruction: str, response: str) -> GradeRe
     )
 
 
-def grade_explanation_quality(task_instruction: str, response: str) -> GradeResult:
+def grade_explanation_quality(task_instruction: str, response: str) -> GradeResult | None:
     return llm_grade(
         task_instruction,
         response,
         "Explanation Quality",
-        """Is the explanation clear, concise, and actionable?
-        5 = Clear, concise, directly actionable
-        4 = Clear and useful, slightly verbose
-        3 = Understandable but could be clearer
-        2 = Confusing or overly verbose
-        1 = Unhelpful or misleading""",
+        """Is the explanation clear, specific, and actionable?
+        5 = Names the specific failing entity (build/test/change), gives the concrete
+            cause, and states an actionable next step — a reader could act without
+            re-running anything
+        4 = Specific findings with evidence (IDs, test names, log lines) but the next
+            step is implied rather than stated
+        3 = Correct summary of what was found, but generic — findings without specific
+            IDs/names, or conclusions without supporting evidence
+        2 = Vague, padded, or partially off-task; the reader must redo the
+            investigation to trust it
+        1 = Misleading, contradictory, or unrelated to what the commands actually
+            returned""",
     )
 
 
-def grade_all(task_instruction: str, response: str) -> list[GradeResult]:
-    """Run all quality graders. Returns list of GradeResults."""
-    return [
-        grade_command_accuracy(task_instruction, response),
-        grade_workflow_completeness(task_instruction, response),
-        grade_explanation_quality(task_instruction, response),
-    ]
+GRADE_DIMENSIONS = {
+    "Command Accuracy": grade_command_accuracy,
+    "Workflow Completeness": grade_workflow_completeness,
+    "Explanation Quality": grade_explanation_quality,
+}
+
+
+def grade_all(task_instruction: str, response: str) -> dict[str, GradeResult | None]:
+    """Run all quality graders. None values are ungraded dimensions (fail closed)."""
+    return {
+        dim: fn(task_instruction, response)
+        for dim, fn in GRADE_DIMENSIONS.items()
+    }

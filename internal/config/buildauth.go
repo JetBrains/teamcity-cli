@@ -1,6 +1,7 @@
 package config
 
 import (
+	"cmp"
 	"net/url"
 	"os"
 
@@ -41,13 +42,11 @@ func GetBuildAuth() (*BuildAuth, bool) {
 		return nil, false
 	}
 
-	serverURL := os.Getenv(EnvServerURL)
-	if serverURL == "" {
-		serverURL = extractServerURL(os.Getenv(EnvBuildURL))
-	}
-	if serverURL == "" {
-		serverURL = props.GetString("teamcity.serverUrl", "")
-	}
+	serverURL := cmp.Or(
+		os.Getenv(EnvServerURL),
+		extractServerURL(os.Getenv(EnvBuildURL)),
+		props.GetString("teamcity.serverUrl", ""),
+	)
 	if serverURL == "" {
 		return nil, false
 	}

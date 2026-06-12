@@ -148,3 +148,8 @@ docs-out/
 
 # Generated from internal/analytics/scheme.go via scripts/generate-fus-schema.go
 /internal/analytics/schema.json
+
+# Skill evals: per-run artifacts + schema generated from the cobra tree
+/evals/results/
+/evals/cli_schema.json
+__pycache__/

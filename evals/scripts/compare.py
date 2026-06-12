@@ -1,260 +1,302 @@
 #!/usr/bin/env python3
-"""Compare eval experiments via Sentry or local result directories.
+"""Statistical gate and report for skill eval runs.
 
-Sentry path (preferred): queries the Discover events API for transactions tagged
-with experiment_id (= branch name). Requires SENTRY_ORG + SENTRY_AUTH_TOKEN —
-the DSN is ingest-only and cannot read.
+Reads the run artifacts one eval session wrote to `results/<experiment>/` and
+computes the only number that matters: the paired skill lift
+(CURRENT − CONTROL per task, deterministic checks only) with a bootstrap 95% CI,
+plus pass^k reliability and an advisory judge summary.
 
-Local path (fallback): diffs two `results/<experiment_id>/` directories written
-by the test runner. Works with zero credentials.
+The gate is self-contained — both arms run in the same session, so live-server
+drift cancels out and no cross-build baseline is needed:
 
-Regression gate: fails if the OVERALL average of CURRENT runs drops >10%.
-Individual task swings are reported but don't gate — single-run variance is too high.
+  BLOCK when the lift CI lower bound < GATE_LIFT_FLOOR  (skill stopped helping)
+  BLOCK when a guardrail task (single-arm, e.g. negative-unrelated) fails on
+        half or more of its reps                        (skill misfires)
 
 Usage:
-    uv run scripts/compare.py                          # current branch vs main (Sentry)
-    uv run scripts/compare.py feature_x main           # explicit A vs B (Sentry)
-    uv run scripts/compare.py results/eval-X results/eval-Y  # local directories
+    uv run python scripts/compare.py                       # results/$BRANCH_NAME (or newest)
+    uv run python scripts/compare.py results/main          # explicit experiment
+    uv run python scripts/compare.py results/A results/B   # informational A/B diff
+
+Env:
+    GATE_MODE        warn (default) — report a breach but exit 0
+                     enforce        — exit 1 on a breach
+    GATE_LIFT_FLOOR  CI lower-bound threshold, default -0.05 (-5 points)
+    GATE_MIN_TASKS   paired tasks required before the gate applies, default 3
+
+Exit codes: 0 ok / 1 gate breach (enforce only) / 2 bad input.
 """
 
 from __future__ import annotations
 
 import json
+import math
 import os
+import random
 import sys
-import urllib.parse
-import urllib.request
 from collections import defaultdict
 from pathlib import Path
+from statistics import mean
+
+EVALS_ROOT = Path(__file__).resolve().parent.parent
+RESULTS_ROOT = EVALS_ROOT / "results"
+TASKS_FILE = EVALS_ROOT / "tasks.json"
+
+BOOTSTRAP_ITERS = 10_000
+BOOTSTRAP_SEED = 1337
+PASS_K = 2
+
+# Pre-fix artifacts carried a treatment-only freebie and judge grades blended
+# into the check list; strip them so legacy runs are comparable to honest ones.
+LEGACY_FREEBIE = "Skill loaded via treatment"
+LEGACY_LLM_PREFIX = "[LLM]"
 
 
-def avg(values: list[float]) -> float:
-    return sum(values) / len(values) if values else 0
+# ---------------------------------------------------------------------------
+# Loading
+# ---------------------------------------------------------------------------
 
-
-def print_comparison(label_a: str, label_b: str, summary_a: dict, summary_b: dict, count_a: int, count_b: int) -> None:
-    all_keys = sorted(set(list(summary_a.keys()) + list(summary_b.keys())))
-
-    print(f"\n  {label_a} ({count_a} runs) → {label_b} ({count_b} runs)\n")
-    print(f"  {'Task/Treatment':<45s}  {label_a:>13s}  {label_b:>13s}  {'Delta':>7s}")
-    print(f"  {'-'*84}")
-
-    current_deltas = []
-    for key in all_keys:
-        a = summary_a.get(key, {})
-        b = summary_b.get(key, {})
-        pa = a.get("pass_rate", 0)
-        pb = b.get("pass_rate", 0)
-
-        if a and b:
-            delta = pb - pa
-            is_current = "/CURRENT" in key
-            marker = ""
-            if is_current and delta < -0.15:
-                marker = "  ↓"
-            elif is_current and delta > 0.15:
-                marker = "  ↑"
-            print(f"  {key:<45s}  {pa:>12.0%}  {pb:>12.0%}   {delta:>+5.0%}{marker}")
-            if is_current:
-                current_deltas.append(delta)
-        elif b:
-            print(f"  {key:<45s}  {'  -':>13s}  {pb:>12.0%}    new")
-        else:
-            print(f"  {key:<45s}  {pa:>12.0%}  {'  -':>13s}   gone")
-
-    print(f"  {'-'*84}")
-    if current_deltas:
-        overall = avg(current_deltas)
-        print(f"  {'CURRENT AVERAGE':<45s}  {' ':>13s}  {' ':>12s}  {overall:>+5.0%}")
-        print()
-
-        if overall < -0.10:
-            print(f"  REGRESSION: overall CURRENT average dropped {overall:+.0%} (threshold: -10%)")
-            sys.exit(1)
-        else:
-            print(f"  No regression (overall CURRENT: {overall:+.0%})")
-    else:
-        print()
-        print(f"  No CURRENT runs to compare.")
-
-
-def load_local_dir(path: Path) -> tuple[dict, int]:
-    results: dict[str, dict] = defaultdict(lambda: {"pass_rates": []})
-    count = 0
-    for f in sorted(path.glob("*.json")):
-        if f.name.endswith(".raw.jsonl"):
+def load_runs(exp_dir: Path) -> list[dict]:
+    """One dict per run: task, treatment, deterministic rate, all-pass flag, grades."""
+    runs = []
+    for f in sorted(exp_dir.glob("*.json")):
+        if f.name == "gate_summary.json":
             continue
-        data = json.loads(f.read_text())
-        task = data.get("task", "")
-        if task:
-            results[task]["pass_rates"].append(data.get("pass_rate", 0))
-            count += 1
-    for data in results.values():
-        data["pass_rate"] = avg(data["pass_rates"])
-        data["n"] = len(data["pass_rates"])
-    return dict(results), count
+        try:
+            data = json.loads(f.read_text())
+        except json.JSONDecodeError:
+            continue
+        results = data.get("results")
+        if not isinstance(results, list):
+            continue
+
+        task = data.get("task_id")
+        treatment = data.get("treatment")
+        if not task or not treatment:  # legacy artifact: "task" is "name/TREATMENT"
+            label = data.get("task", "")
+            if "/" not in label:
+                continue
+            task, treatment = label.rsplit("/", 1)
+
+        checks = [
+            r for r in results
+            if not r.get("message", "").startswith(LEGACY_LLM_PREFIX)
+            and r.get("message") != LEGACY_FREEBIE
+        ]
+        if not checks:
+            continue
+        passed = sum(1 for r in checks if r.get("passed"))
+        runs.append({
+            "task": task,
+            "treatment": treatment,
+            "rate": passed / len(checks),
+            "all_passed": passed == len(checks),
+            "failed_checks": [r["check"] for r in checks if not r.get("passed")],
+            "llm_grades": data.get("llm_grades") or [],
+        })
+    return runs
 
 
-def compare_local(path_a: str, path_b: str) -> None:
-    dir_a = Path(path_a)
-    dir_b = Path(path_b)
-    if not dir_a.is_dir():
-        print(f"Not a directory: {path_a}")
-        sys.exit(1)
-    if not dir_b.is_dir():
-        print(f"Not a directory: {path_b}")
-        sys.exit(1)
-
-    summary_a, count_a = load_local_dir(dir_a)
-    summary_b, count_b = load_local_dir(dir_b)
-    print_comparison(dir_a.name, dir_b.name, summary_a, summary_b, count_a, count_b)
-
-
-def _project_id_from_dsn(dsn: str) -> str | None:
-    """The DSN's final path segment is the numeric project ID."""
+def paired_task_names() -> set[str]:
+    """Tasks whose declared treatments include both arms (guardrails excluded)."""
     try:
-        path = urllib.parse.urlparse(dsn).path.strip("/")
-        return path if path.isdigit() else None
-    except Exception:
+        tasks = json.loads(TASKS_FILE.read_text())
+    except OSError:
+        return set()
+    return {
+        t["id"] for t in tasks
+        if {"CONTROL", "CURRENT"} <= set(t.get("treatments", ["CONTROL", "CURRENT"]))
+    }
+
+
+# ---------------------------------------------------------------------------
+# Statistics
+# ---------------------------------------------------------------------------
+
+def rates_by_task(runs: list[dict]) -> dict[str, dict[str, list[float]]]:
+    out: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for r in runs:
+        out[r["task"]][r["treatment"]].append(r["rate"])
+    return out
+
+
+def paired_lifts(by_task: dict) -> dict[str, float]:
+    return {
+        t: mean(arms["CURRENT"]) - mean(arms["CONTROL"])
+        for t, arms in sorted(by_task.items())
+        if arms.get("CONTROL") and arms.get("CURRENT")
+    }
+
+
+def bootstrap_lift_ci(by_task: dict, paired: list[str]) -> tuple[float, float]:
+    """Hierarchical bootstrap: resample tasks, then reps within each arm."""
+    rng = random.Random(BOOTSTRAP_SEED)
+    means = []
+    for _ in range(BOOTSTRAP_ITERS):
+        lifts = []
+        for t in (paired[rng.randrange(len(paired))] for _ in paired):
+            ctrl, curr = by_task[t]["CONTROL"], by_task[t]["CURRENT"]
+            c = [ctrl[rng.randrange(len(ctrl))] for _ in ctrl]
+            u = [curr[rng.randrange(len(curr))] for _ in curr]
+            lifts.append(mean(u) - mean(c))
+        means.append(mean(lifts))
+    means.sort()
+    return (
+        means[int(0.025 * BOOTSTRAP_ITERS)],
+        means[min(int(0.975 * BOOTSTRAP_ITERS), BOOTSTRAP_ITERS - 1)],
+    )
+
+
+def pass_k(all_passed: list[bool], k: int = PASS_K) -> float | None:
+    """Unbiased estimator of P(k random reps all pass): C(c,k)/C(n,k)."""
+    n, c = len(all_passed), sum(all_passed)
+    if n < k:
+        return None
+    return math.comb(c, k) / math.comb(n, k)
+
+
+def judge_summary(runs: list[dict]) -> dict[str, dict[str, float]]:
+    """dimension → arm → mean judge score (advisory)."""
+    scores: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for r in runs:
+        for g in r["llm_grades"]:
+            scores[g["dimension"]][r["treatment"]].append(g["score"])
+    return {
+        dim: {arm: round(mean(v), 2) for arm, v in arms.items()}
+        for dim, arms in scores.items()
+    }
+
+
+# ---------------------------------------------------------------------------
+# Report + gate
+# ---------------------------------------------------------------------------
+
+def analyze(exp_dir: Path) -> dict | None:
+    runs = load_runs(exp_dir)
+    if not runs:
+        print(f"  No run artifacts in {exp_dir}")
         return None
 
+    by_task = rates_by_task(runs)
+    declared_paired = paired_task_names()
+    lifts = {t: l for t, l in paired_lifts(by_task).items()
+             if not declared_paired or t in declared_paired}
+    guardrails = {
+        t: arms for t, arms in by_task.items()
+        if t not in lifts and (not declared_paired or t not in declared_paired)
+    }
 
-def _sentry_query(
-    org: str,
-    token: str,
-    project: str,
-    query: str,
-    fields: list[str],
-    stats_period: str = "30d",
-) -> list[dict]:
-    """Hit Sentry's Discover events API. Returns the `data` array.
+    all_passed: dict[tuple[str, str], list[bool]] = defaultdict(list)
+    for r in runs:
+        all_passed[(r["task"], r["treatment"])].append(r["all_passed"])
 
-    `project` must be a numeric project ID — the org-wide events endpoint
-    otherwise pools transactions across every project in the org and any
-    shared `experiment_id` (e.g. `main`) leaks in.
-    """
-    host = os.environ.get("SENTRY_HOST", "sentry.io")
-    params: list[tuple[str, str]] = [
-        ("query", query),
-        ("statsPeriod", stats_period),
-        ("per_page", "100"),
-        ("dataset", "transactions"),
-        ("referrer", "teamcity-cli-evals"),
-        ("project", project),
-    ]
-    for f in fields:
-        params.append(("field", f))
-    url = f"https://{host}/api/0/organizations/{org}/events/?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        payload = json.loads(resp.read().decode())
-    return payload.get("data", [])
+    print(f"\n  Experiment: {exp_dir.name}  ({len(runs)} runs)\n")
+    header = (f"  {'Task':<28s} {'CONTROL':>8s} {'CURRENT':>8s} {'Lift':>7s} "
+              f"{'pass^' + str(PASS_K) + ' C/T':>12s}")
+    print(header)
+    print(f"  {'-' * (len(header) - 2)}")
+    for t in sorted(by_task):
+        arms = by_task[t]
+        ctrl = mean(arms["CONTROL"]) if arms.get("CONTROL") else None
+        curr = mean(arms["CURRENT"]) if arms.get("CURRENT") else None
+        pk_c = pass_k(all_passed[(t, "CONTROL")])
+        pk_u = pass_k(all_passed[(t, "CURRENT")])
+        fmt = lambda v, pct=True: ("    -" if v is None else f"{v:>5.0%}" if pct else f"{v:.2f}")
+        lift_s = f"{lifts[t]:>+6.0%}" if t in lifts else ("guard" if t in guardrails else "     -")
+        print(f"  {t:<28s} {fmt(ctrl):>8s} {fmt(curr):>8s} {lift_s:>7s} "
+              f"{fmt(pk_c):>5s}/{fmt(pk_u)}")
 
+    summary: dict = {"experiment": exp_dir.name, "runs": len(runs),
+                     "per_task_lift": {t: round(l, 3) for t, l in lifts.items()}}
 
-def compare_sentry(arg_a: str | None, arg_b: str | None) -> None:
-    org = os.environ.get("SENTRY_ORG")
-    token = os.environ.get("SENTRY_AUTH_TOKEN")
-    if not org or not token:
-        print("Sentry compare needs SENTRY_ORG and SENTRY_AUTH_TOKEN.")
-        sys.exit(1)
-    project = os.environ.get("SENTRY_PROJECT") or _project_id_from_dsn(
-        os.environ.get("SENTRY_DSN", "")
-    )
-    if not project:
-        print("Sentry compare needs SENTRY_PROJECT (numeric id) or SENTRY_DSN to derive it.")
-        sys.exit(1)
+    if lifts:
+        lift_mean = mean(lifts.values())
+        ci_low, ci_high = bootstrap_lift_ci(by_task, list(lifts))
+        print(f"\n  Paired skill lift: {lift_mean:+.1%}  "
+              f"(95% CI [{ci_low:+.1%}, {ci_high:+.1%}], {len(lifts)} tasks)")
+        summary.update(lift=round(lift_mean, 4), ci_low=round(ci_low, 4),
+                       ci_high=round(ci_high, 4))
 
-    if arg_a and arg_b:
-        branch_b, branch_a = arg_a, arg_b
+    judges = judge_summary(runs)
+    if judges:
+        print("\n  Judge (advisory, 1-5):")
+        for dim, arms in sorted(judges.items()):
+            arm_s = "  ".join(f"{a}={v}" for a, v in sorted(arms.items()))
+            print(f"    {dim:<24s} {arm_s}")
+        summary["judge"] = judges
+
+    breaches = []
+    floor = float(os.environ.get("GATE_LIFT_FLOOR", "-0.05"))
+    min_tasks = int(os.environ.get("GATE_MIN_TASKS", "3"))
+    if len(lifts) >= min_tasks:
+        if summary["ci_low"] < floor:
+            breaches.append(
+                f"lift CI lower bound {summary['ci_low']:+.1%} < floor {floor:+.1%}"
+            )
     else:
-        branch_b = os.environ.get("BRANCH_NAME", "").replace("/", "_")
-        branch_a = "main"
-        if not branch_b:
-            print("Set BRANCH_NAME or pass two experiment IDs.")
-            sys.exit(0)
-    if branch_a == branch_b:
-        print(f"Same experiment '{branch_a}', nothing to compare.")
-        sys.exit(0)
+        print(f"\n  Gate skipped: {len(lifts)} paired task(s) < GATE_MIN_TASKS={min_tasks}")
 
-    fields = ["tags[task]", "tags[treatment]", "avg(measurements.pass_rate)", "count()"]
+    for t, arms in sorted(guardrails.items()):
+        flags = [ap for (task, _), aps in all_passed.items() if task == t for ap in aps]
+        if flags and sum(not f for f in flags) * 2 >= len(flags):
+            failed = {c for r in runs if r["task"] == t for c in r["failed_checks"]}
+            breaches.append(f"guardrail '{t}' failed {sum(not f for f in flags)}/{len(flags)} reps "
+                            f"({', '.join(sorted(failed))})")
 
-    def summarize(experiment_id: str) -> tuple[dict, int]:
-        rows = _sentry_query(
-            org,
-            token,
-            project,
-            query=f"event.type:transaction tags[experiment_id]:{experiment_id}",
-            fields=fields,
-        )
-        summary: dict[str, dict] = {}
-        total = 0
-        for row in rows:
-            task = row.get("tags[task]") or ""
-            treat = row.get("tags[treatment]") or ""
-            if not task or not treat:
-                continue
-            key = f"{task}/{treat}"
-            n = int(row.get("count()", 0) or 0)
-            summary[key] = {
-                "pass_rate": float(row.get("avg(measurements.pass_rate)", 0) or 0),
-                "n": n,
-            }
-            total += n
-        return summary, total
-
-    summary_a, count_a = summarize(branch_a)
-    summary_b, count_b = summarize(branch_b)
-    if not summary_a:
-        print(f"No baseline '{branch_a}' in Sentry.")
-        sys.exit(0)
-    if not summary_b:
-        print(f"No results for '{branch_b}' in Sentry.")
-        sys.exit(0)
-    print_comparison(branch_a, branch_b, summary_a, summary_b, count_a, count_b)
+    summary["breaches"] = breaches
+    (exp_dir / "gate_summary.json").write_text(json.dumps(summary, indent=2))
+    return summary
 
 
-RESULTS_ROOT = Path(__file__).resolve().parent.parent / "results"
+def gate(summary: dict) -> int:
+    mode = os.environ.get("GATE_MODE", "warn").lower()
+    if not summary["breaches"]:
+        print("\n  GATE: ok")
+        return 0
+    verdict = "BLOCK" if mode == "enforce" else "WOULD BLOCK (GATE_MODE=warn)"
+    print(f"\n  GATE: {verdict}")
+    for b in summary["breaches"]:
+        print(f"    - {b}")
+    return 1 if mode == "enforce" else 0
 
 
-def _try_local_fallback(arg_a: str | None, arg_b: str | None) -> bool:
-    """Diff two results/<experiment_id>/ dirs when Sentry creds are absent.
-
-    Resolves defaults the same way compare_sentry does: baseline=`main`,
-    branch=$BRANCH_NAME. Returns True if a comparison ran.
-    """
-    if arg_a and arg_b:
-        branch_b, branch_a = arg_a, arg_b
-    else:
-        branch_b = os.environ.get("BRANCH_NAME", "").replace("/", "_")
-        branch_a = "main"
-    if not branch_b or branch_a == branch_b:
-        return False
-    dir_a = RESULTS_ROOT / branch_a
-    dir_b = RESULTS_ROOT / branch_b
-    if not dir_a.is_dir() or not dir_b.is_dir():
-        print(f"  Local fallback: missing results/{branch_a} or results/{branch_b}.")
-        return False
-    print(f"  Local fallback: comparing results/{branch_a} vs results/{branch_b}")
-    compare_local(str(dir_a), str(dir_b))
-    return True
+def diff(dir_a: Path, dir_b: Path) -> int:
+    """Informational: compare two experiments' lifts."""
+    a, b = analyze(dir_a), analyze(dir_b)
+    if not a or not b:
+        return 2
+    if "lift" in a and "lift" in b:
+        print(f"\n  Lift {dir_a.name} → {dir_b.name}: "
+              f"{a['lift']:+.1%} → {b['lift']:+.1%}  (Δ {b['lift'] - a['lift']:+.1%})")
+    return 0
 
 
-def main() -> None:
-    arg_a = sys.argv[1] if len(sys.argv) >= 2 else None
-    arg_b = sys.argv[2] if len(sys.argv) >= 3 else None
+def resolve_experiment_dir() -> Path | None:
+    branch = os.environ.get("BRANCH_NAME", "").replace("/", "_")
+    if branch and (RESULTS_ROOT / branch).is_dir():
+        return RESULTS_ROOT / branch
+    dirs = [d for d in RESULTS_ROOT.iterdir() if d.is_dir()] if RESULTS_ROOT.is_dir() else []
+    return max(dirs, key=lambda d: d.stat().st_mtime) if dirs else None
 
-    looks_like_path = lambda s: "/" in s or s.startswith(".")
-    if arg_a and arg_b and (looks_like_path(arg_a) or looks_like_path(arg_b)):
-        compare_local(arg_a, arg_b)
-    elif os.environ.get("SENTRY_AUTH_TOKEN") and os.environ.get("SENTRY_ORG"):
-        compare_sentry(arg_a, arg_b)
-    elif _try_local_fallback(arg_a, arg_b):
-        return
-    else:
-        print("  No SENTRY_AUTH_TOKEN/SENTRY_ORG set and no local results/<branch> dirs available.")
-        print("  Pass two paths for local diff, or set SENTRY_AUTH_TOKEN + SENTRY_ORG.")
-        sys.exit(2)
+
+def main() -> int:
+    args = [Path(a) for a in sys.argv[1:]]
+    for a in args:
+        if not a.is_dir():
+            print(f"  Not a directory: {a}")
+            return 2
+
+    if len(args) == 2:
+        return diff(args[0], args[1])
+    exp_dir = args[0] if args else resolve_experiment_dir()
+    if not exp_dir:
+        print("  No experiment directory found — pass one, e.g. scripts/compare.py results/main")
+        return 2
+    summary = analyze(exp_dir)
+    if summary is None:
+        return 2
+    return gate(summary)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

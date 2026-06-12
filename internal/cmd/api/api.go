@@ -113,11 +113,11 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 
 	headers := make(map[string]string)
 	for _, h := range opts.headers {
-		parts := strings.SplitN(h, ":", 2)
-		if len(parts) != 2 {
+		k, v, ok := strings.Cut(h, ":")
+		if !ok {
 			return fmt.Errorf("invalid header format %q (expected 'Key: Value')", h)
 		}
-		headers[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		headers[strings.TrimSpace(k)] = strings.TrimSpace(v)
 	}
 
 	var body io.Reader
@@ -138,12 +138,10 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	} else if len(opts.fields) > 0 {
 		jsonBody := make(map[string]any)
 		for _, f := range opts.fields {
-			parts := strings.SplitN(f, "=", 2)
-			if len(parts) != 2 {
+			key, value, ok := strings.Cut(f, "=")
+			if !ok {
 				return fmt.Errorf("invalid field format %q (expected 'key=value')", f)
 			}
-			key := parts[0]
-			value := parts[1]
 
 			var jsonValue any
 			if err := json.Unmarshal([]byte(value), &jsonValue); err != nil {

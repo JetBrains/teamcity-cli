@@ -49,11 +49,10 @@ func NewTestServer(t *testing.T) *TestServer {
 		var bestMatch string
 		var bestHandler http.HandlerFunc
 		for pattern, h := range ts.handlers {
-			parts := strings.SplitN(pattern, " ", 2)
-			if len(parts) != 2 {
+			method, path, ok := strings.Cut(pattern, " ")
+			if !ok {
 				continue
 			}
-			method, path := parts[0], parts[1]
 			if r.Method == method && strings.HasPrefix(r.URL.Path, path) {
 				if len(path) > len(bestMatch) {
 					bestMatch = path

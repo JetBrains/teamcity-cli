@@ -1,11 +1,32 @@
 package alias
 
 import (
+	"bytes"
+	"runtime"
+	"strings"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestShellAliasUsesRawStreams(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("requires sh")
+	}
+	var rawOut, rawErr, wrapped bytes.Buffer
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{In: strings.NewReader(""), Out: &rawOut, ErrOut: &rawErr},
+		Printer:   &output.Printer{Out: &wrapped, ErrOut: &wrapped},
+	}
+	cmd := newShellAliasCmd(f, "greet", "echo hi; echo err >&2")
+	require.NoError(t, cmd.RunE(cmd, nil))
+	assert.Equal(t, "hi\n", rawOut.String())
+	assert.Equal(t, "err\n", rawErr.String())
+	assert.Empty(t, wrapped.String(), "subprocess output must go to the raw streams, not the spinner-wrapping Printer")
+}
 
 func TestExpandPositionalArgs(t *testing.T) {
 	tests := []struct {

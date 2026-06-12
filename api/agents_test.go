@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -235,6 +234,6 @@ func TestRebootAgent(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	err := client.RebootAgent(context.Background(), 1, false)
+	err := client.RebootAgent(t.Context(), 1, false)
 	require.NoError(t, err)
 }

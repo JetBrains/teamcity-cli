@@ -3,6 +3,7 @@
 package gallery_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -622,6 +623,47 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 			}})
 			return
 		}
+		if strings.Contains(r.URL.Path, "/steps/") {
+			stepID := cmdtest.ExtractID(r.URL.Path, "/steps/")
+			cmdtest.JSON(w, api.BuildStep{ID: stepID, Name: "Run Tests", Type: "simpleRunner",
+				Properties: api.PropertyList{Property: []api.Property{
+					{Name: "script.content", Value: "go test -race ./..."},
+					{Name: "teamcity.step.mode", Value: "default"},
+					{Name: "use.custom.script", Value: "true"},
+				}}})
+			return
+		}
+		if strings.Contains(r.URL.Path, "/steps") {
+			cmdtest.JSON(w, api.BuildStepList{Count: 3, Step: []api.BuildStep{
+				{ID: "RUNNER_1", Name: "Compile", Type: "gradle-runner"},
+				{ID: "RUNNER_2", Name: "Run Tests", Type: "simpleRunner"},
+				{ID: "RUNNER_3", Name: "Build Image", Type: "DockerCommand", Disabled: true},
+			}})
+			return
+		}
+		if strings.Contains(r.URL.Path, "/settings/") {
+			values := map[string]string{
+				"buildNumberPattern":  "1.0.%build.counter%",
+				"executionTimeoutMin": "30",
+				"artifactRules":       "build/libs/*.jar => artifacts",
+			}
+			v := values[cmdtest.ExtractID(r.URL.Path, "/settings/")]
+			if v == "" {
+				v = "default"
+			}
+			cmdtest.Text(w, v)
+			return
+		}
+		if strings.Contains(r.URL.Path, "/settings") {
+			cmdtest.JSON(w, api.SettingsList{Count: 5, Property: []api.Setting{
+				{Name: "buildNumberPattern", Value: "1.0.%build.counter%"},
+				{Name: "executionTimeoutMin", Value: "30"},
+				{Name: "checkoutMode", Value: "ON_AGENT"},
+				{Name: "artifactRules", Value: "build/libs/*.jar => artifacts"},
+				{Name: "allowExternalStatus", Value: "true"},
+			}})
+			return
+		}
 		names := map[string]string{"MyApp_Build": "Build", "MyApp_Test": "Run Tests", "MyApp_Deploy": "Deploy Staging", "MyApp_IntTest": "Integration Tests", "MyApp_Lint": "Lint"}
 		name := names[id]
 		if name == "" {
@@ -631,6 +673,31 @@ func setupGalleryMocks(t *testing.T) *cmdtest.TestServer {
 			ID: id, Name: name, ProjectID: "MyApp", ProjectName: "My Application",
 			WebURL: ts.URL + "/viewType.html?buildTypeId=" + id,
 		})
+	})
+
+	ts.Handle("POST /app/rest/buildTypes", func(w http.ResponseWriter, r *http.Request) {
+		var req api.CreateBuildTypeRequest
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		id := req.ID
+		if id == "" {
+			id = "MyApp_" + strings.ReplaceAll(req.Name, " ", "")
+		}
+		cmdtest.JSON(w, api.BuildType{
+			ID: id, Name: req.Name, ProjectID: "MyApp", ProjectName: "My Application",
+			WebURL: ts.URL + "/viewType.html?buildTypeId=" + id,
+		})
+	})
+
+	// Echo the posted step back with a fresh ID so 'job step add' reflects real input.
+	ts.Handle("POST /app/rest/buildTypes/id:", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/steps") {
+			var step api.BuildStep
+			_ = json.NewDecoder(r.Body).Decode(&step)
+			step.ID = "RUNNER_4"
+			cmdtest.JSON(w, step)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	})
 
 	return ts

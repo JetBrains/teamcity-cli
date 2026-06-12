@@ -1,9 +1,12 @@
 """Main eval test runner.
 
+Pytest pass/fail means HARNESS HEALTH only — a CONTROL run scoring zero checks
+is a measurement, not a test failure. Quality gating happens in aggregate over
+the written artifacts (scripts/compare.py: paired skill lift + CI).
+
 Usage:
     just eval                                    # all tasks, default treatments
-    just eval-task investigate-failure            # single task
-    just eval-compare investigate-failure         # CONTROL vs CURRENT
+    just eval --task=investigate-failure          # single task
     just eval --runs=3 -n 4                      # parallel with repetitions
 """
 
@@ -31,11 +34,13 @@ if str(EVALS_ROOT) not in sys.path:
 
 
 @pytest.mark.timeout(900)
+@pytest.mark.usefixtures("verify_env", "verify_skill")
 def test_task(
     task_config: TaskConfig,
     treatment_config: TreatmentConfig,
     experiment_id: str,
     run_id: str,
+    provenance: dict,
 ) -> None:
     # --- Execute Claude ---
     use_docker = not os.environ.get("BENCH_LOCAL")
@@ -53,27 +58,30 @@ def test_task(
     # --- Parse events ---
     events = extract_events(result.raw_output)
 
-    # --- Run checks from CHECK_REGISTRY ---
+    # --- Run deterministic checks from CHECK_REGISTRY ---
     runner = EvalRunner(events, task_name=f"{task_config.name}/{treatment_config.name}")
     check_fns = [CHECK_REGISTRY[c] for c in task_config.checks]
     runner.run(check_fns)
 
-    # --- LLM grading (only tasks that declare it in tasks.json) ---
-    llm_grades = []
+    # --- LLM grading: advisory, reported separately, fails closed ---
+    llm_grades = {}
     if task_config.llm_grade and os.environ.get("ANTHROPIC_API_KEY") and runner.text:
         llm_grades = grade_all(task_config.instruction, runner.text)
-        for g in llm_grades:
-            if g.passed:
-                runner.passed(f"[LLM] {g.dimension}: {g.score}/5 — {g.reasoning}")
-            else:
-                runner.failed(f"[LLM] {g.dimension}: {g.score}/5 — {g.reasoning}")
+    graded = [
+        {"dimension": dim, "score": g.score, "reasoning": g.reasoning}
+        for dim, g in llm_grades.items() if g is not None
+    ]
+    ungraded = [dim for dim, g in llm_grades.items() if g is None]
 
-    # --- Skill presence ---
-    if treatment_config.skill_dir:
-        runner.skills_invoked.append("teamcity-cli")
-        runner.passed("Skill loaded via treatment")
+    # --- Skill usage: availability is the treatment; invocation is observed ---
+    skill_available = treatment_config.skill_dir is not None
+    skill_invoked = any("teamcity" in s.lower() for s in events.skills_invoked)
 
     runner.print_summary()
+    for g in graded:
+        print(f"  [llm] {g['dimension']}: {g['score']}/5 — {g['reasoning']}")
+    if ungraded:
+        print(f"  [llm] ungraded (judge unavailable): {', '.join(ungraded)}")
 
     # --- Log to Sentry (no-op if SENTRY_DSN unset) ---
     sentry_log.log_run(
@@ -87,14 +95,14 @@ def test_task(
         num_turns=events.num_turns,
         input_tokens=events.input_tokens,
         output_tokens=events.output_tokens,
-        skill_invoked=bool(runner.skills_invoked),
+        skill_available=skill_available,
+        skill_invoked=skill_invoked,
         check_results=runner.summary()["results"],
         tool_calls=events.tool_calls,
         tool_results=events.tool_results,
-        llm_grades=[
-            {"dimension": g.dimension, "score": g.score, "reasoning": g.reasoning}
-            for g in llm_grades
-        ],
+        llm_grades=graded,
+        ungraded_dimensions=ungraded,
+        provenance=provenance,
         run_id=run_id,
     )
 
@@ -104,15 +112,21 @@ def test_task(
     prefix = f"{task_config.name}_{treatment_config.name}_{run_id}"
     (artifacts_dir / f"{prefix}.raw.jsonl").write_text(result.raw_output)
     summary = runner.summary()
+    summary["task_id"] = task_config.name
+    summary["treatment"] = treatment_config.name
+    summary["skill_available"] = skill_available
+    summary["skill_invoked"] = skill_invoked
     summary["events"] = events.summary()
-    summary["llm_grades"] = [
-        {"dimension": g.dimension, "score": g.score, "reasoning": g.reasoning}
-        for g in llm_grades
-    ]
+    summary["llm_grades"] = graded
+    summary["ungraded_dimensions"] = ungraded
+    summary["provenance"] = provenance
     (artifacts_dir / f"{prefix}.json").write_text(json.dumps(summary, indent=2))
 
-    # --- Assert ---
-    assert runner.pass_rate >= 0.5, (
-        f"Pass rate {runner.pass_rate:.0%} below threshold 50% — "
-        f"{runner.failed_count}/{runner.total_count} checks failed"
-    )
+    # --- Assert: harness sanity only ---
+    # An agent timeout is a (poor) quality outcome already captured by the
+    # checks; anything else that produced no parseable events is a harness bug.
+    if result.exit_code != 124:
+        assert result.exit_code == 0, (
+            f"harness: claude exited {result.exit_code}: …{result.raw_output[-500:]}"
+        )
+        assert events.num_turns > 0, "harness: no events parsed from claude output"

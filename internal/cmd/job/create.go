@@ -43,6 +43,7 @@ environment variable, or the linked project (see 'teamcity link').`,
 	cmd.Flags().StringVar(&opts.template, "template", "", "Create from an existing template ID")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser after creation")
+	cmd.MarkFlagsMutuallyExclusive("json", "web")
 
 	_ = cmd.RegisterFlagCompletionFunc("project", completion.LinkedProjects())
 

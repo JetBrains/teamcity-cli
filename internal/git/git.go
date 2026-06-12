@@ -57,7 +57,8 @@ func HeadRevision() (string, error) { return ResolveRevision("HEAD") }
 
 // ResolveRevision returns the SHA for rev (full or short).
 func ResolveRevision(rev string) (string, error) {
-	out, err := exec.Command("git", "rev-parse", rev).Output()
+	// --end-of-options stops a leading-dash rev being read as a flag; --verify yields just the SHA.
+	out, err := exec.Command("git", "rev-parse", "--verify", "--end-of-options", rev).Output()
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse %s: %w", rev, err)
 	}
@@ -192,8 +193,8 @@ func CanonicalURL(rawURL string) string {
 		return ""
 	}
 	if rest, ok := strings.CutPrefix(raw, "ssh://"); ok {
-		if i := strings.Index(rest, "@"); i >= 0 {
-			rest = rest[i+1:]
+		if _, after, ok := strings.Cut(rest, "@"); ok {
+			rest = after
 		}
 		if slash := strings.Index(rest, "/"); slash > 0 {
 			host, path := rest[:slash], rest[slash:]
@@ -228,8 +229,8 @@ func RepoPath(rawURL string) string {
 	if canonical == "" {
 		return ""
 	}
-	if i := strings.Index(canonical, "/"); i >= 0 {
-		return strings.TrimPrefix(canonical[i:], "/")
+	if _, after, ok := strings.Cut(canonical, "/"); ok {
+		return after
 	}
 	return canonical
 }

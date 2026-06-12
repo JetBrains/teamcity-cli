@@ -104,7 +104,6 @@ func TestAcceptance(t *testing.T) {
 	}
 
 	for _, dir := range dirs {
-		dir := dir
 		t.Run(dir, func(t *testing.T) {
 			t.Parallel()
 			runScripts(t, dir, host, token, scriptFilter)

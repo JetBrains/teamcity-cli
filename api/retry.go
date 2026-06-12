@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -34,6 +35,9 @@ var (
 	LongRetry = RetryConfig{MaxRetries: 3, Interval: 1 * time.Second}
 )
 
+// maxRetryDrain caps how much of a discarded response body is read to enable connection reuse.
+const maxRetryDrain = 4 << 10
+
 // withRetry retries op on network errors, 429, and 5xx (except 501/505), honoring Retry-After and ctx cancellation.
 func withRetry(ctx context.Context, cfg RetryConfig, op func() (*http.Response, error)) (*http.Response, error) {
 	if cfg.MaxRetries == 0 {
@@ -44,8 +48,17 @@ func withRetry(ctx context.Context, cfg RetryConfig, op func() (*http.Response, 
 	expo.InitialInterval = cfg.Interval
 	expo.MaxInterval = 30 * time.Second
 
+	// Close each retried response before the next attempt so it doesn't leak its body.
+	var prev *http.Response
 	return backoff.Retry(ctx, func() (*http.Response, error) {
+		if prev != nil {
+			// Drain a bounded amount to allow connection reuse without stalling on a huge body.
+			_, _ = io.Copy(io.Discard, io.LimitReader(prev.Body, maxRetryDrain))
+			_ = prev.Body.Close()
+			prev = nil
+		}
 		resp, err := op()
+		prev = resp
 		if err != nil {
 			if isRetryableNetworkError(err) {
 				return resp, err

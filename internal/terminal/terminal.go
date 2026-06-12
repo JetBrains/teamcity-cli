@@ -320,15 +320,11 @@ func stripANSI(s string) string {
 func extractExecOutput(raw string) string {
 	raw = normalizeLineEndings(stripANSI(raw))
 	startPattern := execMarker + "\n"
-	startIdx := strings.Index(raw, startPattern)
-	if startIdx == -1 {
+	_, after, ok := strings.Cut(raw, startPattern)
+	if !ok {
 		return ""
 	}
-	raw = raw[startIdx+len(startPattern):]
-	endIdx := strings.Index(raw, execMarker)
-	if endIdx != -1 {
-		raw = raw[:endIdx]
-	}
+	raw, _, _ = strings.Cut(after, execMarker)
 
 	return strings.TrimSpace(raw)
 }

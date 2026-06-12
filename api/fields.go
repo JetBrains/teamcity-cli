@@ -2,9 +2,9 @@ package api
 
 import (
 	"fmt"
+	"maps"
 	"net/url"
 	"slices"
-	"sort"
 	"strings"
 )
 
@@ -57,11 +57,7 @@ func ToAPIFields(fields []string) string {
 	var result []string
 	result = append(result, topLevel...)
 
-	var parents []string
-	for p := range groups {
-		parents = append(parents, p)
-	}
-	sort.Strings(parents)
+	parents := slices.Sorted(maps.Keys(groups))
 
 	for _, p := range parents {
 		result = append(result, fmt.Sprintf("%s(%s)", p, ToAPIFields(groups[p])))
