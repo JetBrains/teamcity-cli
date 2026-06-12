@@ -79,9 +79,6 @@ var manualActions = []struct {
 	{"aws-actions/amazon-ecr-login", "ECR login",
 		"aws ecr get-login-password --region \"$AWS_DEFAULT_REGION\" | docker login --username AWS --password-stdin \"$ECR_REGISTRY\"",
 		[]string{"ECR login → ensure AWS credentials and ECR_REGISTRY parameter are configured"}},
-	{"webfactory/ssh-agent", "SSH agent",
-		"eval \"$(ssh-agent -s)\" && echo \"$SSH_PRIVATE_KEY\" | ssh-add -",
-		[]string{"SSH private key → create TeamCity parameter SSH_PRIVATE_KEY (type: password)"}},
 	{"hashicorp/vault-action", "Vault secrets",
 		"# TODO: Fetch secrets from HashiCorp Vault\nexport VAULT_ADDR=\"$VAULT_ADDR\"\nvault kv get -format=json secret/data/ci",
 		[]string{"Vault → configure VAULT_ADDR and VAULT_TOKEN as TeamCity parameters"}},
@@ -220,6 +217,11 @@ func initActionRegistry() map[string]actionTransformer {
 		r := Converted([]Step{{Name: cmp.Or(name, "ECS deploy"), ScriptContent: strings.Join(lines, "\n")}})
 		r.ManualTasks = []string{"ECS deploy → ensure AWS credentials are configured as TeamCity parameters"}
 		return r
+	}
+	m["webfactory/ssh-agent"] = func(name string, inputs map[string]string) StepResult {
+		// A step-local ssh-agent dies with the step process, so this maps to TC's build-wide SSH Agent feature.
+		return StepResult{Status: StatusSimplified, Note: "ssh-agent → TeamCity SSH Agent build feature",
+			ManualTasks: []string{"webfactory/ssh-agent → upload the key with `teamcity project ssh upload` and enable the SSH Agent build feature so every step gets the agent"}}
 	}
 	m["aws-actions/configure-aws-credentials"] = func(name string, inputs map[string]string) StepResult {
 		region := cmp.Or(inputs["aws-region"], "us-east-1")

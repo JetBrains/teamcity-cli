@@ -657,3 +657,16 @@ jobs:
 	assert.Contains(t, result.YAML, "eu-west-1", "non-secret literals pass through")
 	assert.Contains(t, result.YAML, "${{ secrets.GH_TOKEN }}", "secret expressions stay visible as references")
 }
+
+func TestSSHAgentBecomesBuildFeatureNote(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("webfactory/ssh-agent@v0.9.0")
+	require.True(t, ok)
+	r := transformer("", map[string]string{"ssh-private-key": "${{ secrets.DEPLOY_KEY }}"})
+	assert.Equal(t, StatusSimplified, r.Status)
+	assert.Empty(t, r.Steps, "step-local ssh-agent does not survive across TC steps")
+	manuals := strings.Join(r.ManualTasks, "\n")
+	assert.Contains(t, manuals, "teamcity project ssh upload")
+	assert.Contains(t, manuals, "SSH Agent build feature")
+}
