@@ -378,7 +378,7 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 	}
 
 	pomPath := filepath.Join(dslDir, "pom.xml")
-	if _, err := os.Stat(pomPath); os.IsNotExist(err) {
+	if _, err := os.Stat(pomPath); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("pom.xml not found in %s", dslDir)
 	}
 

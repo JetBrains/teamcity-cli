@@ -1,6 +1,7 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -76,7 +77,7 @@ func loadLocalChanges(source string, stdin io.Reader) ([]byte, error) {
 	default:
 		patch, err := os.ReadFile(source)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				return nil, api.Validation(
 					"diff file not found: "+source,
 					"Check the file path and try again",

@@ -165,7 +165,8 @@ func push(branchOverride string) {
 	branch := resolveBranch(branchOverride)
 	syncBranch := "cli-docs-sync-" + time.Now().Format("20060102")
 	user := ghUser()
-	forkRepo := user + "/" + strings.SplitN(externalRepo, "/", 2)[1]
+	_, repo, _ := strings.Cut(externalRepo, "/")
+	forkRepo := user + "/" + repo
 
 	tmpDir, err := os.MkdirTemp("", "tc-docs-push-*")
 	if err != nil {

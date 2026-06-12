@@ -50,7 +50,7 @@ func TestSkillInstallRemoveDefault(t *testing.T) {
 
 	cmdtest.RunCmd(t, "skill", "remove", "--agent", "claude-code")
 	_, err = os.Stat(skillDir)
-	assert.True(t, os.IsNotExist(err), "skill dir should be gone after remove")
+	assert.ErrorIs(t, err, os.ErrNotExist, "skill dir should be gone after remove")
 }
 
 func TestSkillInstallUnknownSkill(t *testing.T) {

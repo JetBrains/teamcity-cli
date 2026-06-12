@@ -90,7 +90,7 @@ func Init() error {
 
 	if err := vi.ReadInConfig(); err != nil {
 		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); !ok {
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("failed to read config: %w", err)
 			}
 		}

@@ -3,6 +3,7 @@ package analytics
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -46,7 +47,7 @@ func loadOrCreateSessionAt(path string, now time.Time) (*Session, error) {
 func readSession(path string) (*Session, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, err

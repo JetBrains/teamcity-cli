@@ -110,11 +110,10 @@ func cleanupBuildTriggered(b *Build) {
 // If ref starts with #, it's treated as a build number and looked up.
 // Otherwise it's used as-is (assumed to be an ID).
 func (c *Client) ResolveBuildID(ctx context.Context, ref string) (string, error) {
-	if !strings.HasPrefix(ref, "#") {
+	number, ok := strings.CutPrefix(ref, "#")
+	if !ok {
 		return ref, nil
 	}
-
-	number := strings.TrimPrefix(ref, "#")
 	builds, _, err := c.GetBuilds(ctx, BuildsOptions{Limit: 1, Number: number})
 	if err != nil {
 		return "", err

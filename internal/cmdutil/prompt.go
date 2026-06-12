@@ -119,61 +119,53 @@ func echo(p *output.Printer, label, value string) {
 	_, _ = fmt.Fprintf(p.Out, "%s: %s\n", label, output.Cyan(value))
 }
 
-var (
-	promptThemeOnce sync.Once
-	promptThemeVal  *huh.Theme
-)
-
 // promptTheme renders huh prompts in the CLI's 16-color palette with no borders or magenta accents.
-func promptTheme() *huh.Theme {
-	promptThemeOnce.Do(func() {
-		t := huh.ThemeBase()
+var promptTheme = sync.OnceValue(func() *huh.Theme {
+	t := huh.ThemeBase()
 
-		var (
-			cyan   = lipgloss.Color("6")
-			green  = lipgloss.Color("2")
-			yellow = lipgloss.Color("3")
-			red    = lipgloss.Color("1")
-			faint  = lipgloss.Color("8")
-			plain  = lipgloss.NewStyle()
-		)
+	var (
+		cyan   = lipgloss.Color("6")
+		green  = lipgloss.Color("2")
+		yellow = lipgloss.Color("3")
+		red    = lipgloss.Color("1")
+		faint  = lipgloss.Color("8")
+		plain  = lipgloss.NewStyle()
+	)
 
-		t.Focused.Base = plain
-		t.Focused.Card = plain
-		t.Focused.Title = plain.Bold(true)
-		t.Focused.NoteTitle = plain.Bold(true)
-		t.Focused.Description = plain.Foreground(faint)
-		t.Focused.ErrorIndicator = plain.Foreground(red).SetString(" " + output.Sym().Cross)
-		t.Focused.ErrorMessage = plain.Foreground(red)
+	t.Focused.Base = plain
+	t.Focused.Card = plain
+	t.Focused.Title = plain.Bold(true)
+	t.Focused.NoteTitle = plain.Bold(true)
+	t.Focused.Description = plain.Foreground(faint)
+	t.Focused.ErrorIndicator = plain.Foreground(red).SetString(" " + output.Sym().Cross)
+	t.Focused.ErrorMessage = plain.Foreground(red)
 
-		t.Focused.SelectSelector = plain.Foreground(yellow).SetString(output.Sym().Arrow + " ")
-		t.Focused.NextIndicator = plain.Foreground(yellow).MarginLeft(1).SetString(output.Sym().Arrow)
-		t.Focused.PrevIndicator = plain.Foreground(yellow).MarginRight(1).SetString(output.Sym().ArrowLeft)
-		t.Focused.Option = plain
-		t.Focused.SelectedOption = plain
+	t.Focused.SelectSelector = plain.Foreground(yellow).SetString(output.Sym().Arrow + " ")
+	t.Focused.NextIndicator = plain.Foreground(yellow).MarginLeft(1).SetString(output.Sym().Arrow)
+	t.Focused.PrevIndicator = plain.Foreground(yellow).MarginRight(1).SetString(output.Sym().ArrowLeft)
+	t.Focused.Option = plain
+	t.Focused.SelectedOption = plain
 
-		t.Focused.MultiSelectSelector = plain.Foreground(yellow).SetString(output.Sym().Arrow + " ")
-		t.Focused.SelectedPrefix = plain.Foreground(green).SetString(output.Sym().Check + " ")
-		t.Focused.UnselectedPrefix = plain.Foreground(faint).SetString(output.Sym().Bullet + " ")
-		t.Focused.UnselectedOption = plain
+	t.Focused.MultiSelectSelector = plain.Foreground(yellow).SetString(output.Sym().Arrow + " ")
+	t.Focused.SelectedPrefix = plain.Foreground(green).SetString(output.Sym().Check + " ")
+	t.Focused.UnselectedPrefix = plain.Foreground(faint).SetString(output.Sym().Bullet + " ")
+	t.Focused.UnselectedOption = plain
 
-		t.Focused.FocusedButton = plain.Bold(true).Foreground(cyan).MarginLeft(3)
-		t.Focused.BlurredButton = plain.Foreground(faint).MarginLeft(3)
+	t.Focused.FocusedButton = plain.Bold(true).Foreground(cyan).MarginLeft(3)
+	t.Focused.BlurredButton = plain.Foreground(faint).MarginLeft(3)
 
-		t.Focused.TextInput.Cursor = plain.Foreground(cyan)
-		t.Focused.TextInput.Placeholder = plain.Foreground(faint)
-		t.Focused.TextInput.Prompt = plain.Foreground(yellow)
+	t.Focused.TextInput.Cursor = plain.Foreground(cyan)
+	t.Focused.TextInput.Placeholder = plain.Foreground(faint)
+	t.Focused.TextInput.Prompt = plain.Foreground(yellow)
 
-		t.Blurred = t.Focused
-		t.Blurred.Base = plain
-		t.Blurred.Card = plain
-		t.Blurred.NextIndicator = plain
-		t.Blurred.PrevIndicator = plain
+	t.Blurred = t.Focused
+	t.Blurred.Base = plain
+	t.Blurred.Card = plain
+	t.Blurred.NextIndicator = plain
+	t.Blurred.PrevIndicator = plain
 
-		t.Group.Title = t.Focused.Title
-		t.Group.Description = t.Focused.Description
+	t.Group.Title = t.Focused.Title
+	t.Group.Description = t.Focused.Description
 
-		promptThemeVal = t
-	})
-	return promptThemeVal
-}
+	return t
+})

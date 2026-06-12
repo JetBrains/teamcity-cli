@@ -260,10 +260,8 @@ func startContainers() (*testEnv, error) {
 	results := make([]agentResult, numAgents)
 	var wg sync.WaitGroup
 	for i := range numAgents {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			name := fmt.Sprintf("tc-test-agent-%d", idx+1)
+		wg.Go(func() {
+			name := fmt.Sprintf("tc-test-agent-%d", i+1)
 			c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 				ContainerRequest: testcontainers.ContainerRequest{
 					Name:            name,
@@ -281,8 +279,8 @@ func startContainers() (*testEnv, error) {
 				},
 				Started: true,
 			})
-			results[idx] = agentResult{c, err}
-		}(i)
+			results[i] = agentResult{c, err}
+		})
 	}
 	wg.Wait()
 	for i, r := range results {
