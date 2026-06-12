@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strings"
@@ -21,17 +22,20 @@ func (l *Locator) Add(key, value string) *Locator {
 	return l
 }
 
-// escapeLocatorValue wraps values containing special characters in parentheses.
-// TeamCity locator syntax uses : and , as delimiters, and $ as escape char
-// inside parenthesized values ($) for literal ), $$ for literal $).
+// escapeLocatorValue wraps values containing the : and , delimiters in parentheses and transports values containing ( ) $ as ($base64:<base64url>) — live servers reject the $)-style in-value escapes and name their decoder Base64url, so that is the only encoding that round-trips.
 func escapeLocatorValue(value string) string {
 	if !strings.ContainsAny(value, ":,()$") {
 		return value
 	}
-	// Escape $ first (so we don't double-escape), then )
-	escaped := strings.ReplaceAll(value, "$", "$$")
-	escaped = strings.ReplaceAll(escaped, ")", "$)")
-	return "(" + escaped + ")"
+	if !strings.ContainsAny(value, "()$") {
+		return "(" + value + ")"
+	}
+	return "($base64:" + base64.RawURLEncoding.EncodeToString([]byte(value)) + ")"
+}
+
+// nameValueLocator builds the name:(value:($base64:...)) condition form for dimensions whose value is itself a locator (branch, pool, cloud profile/image) — there the server re-parses even a base64-decoded bare value as locator syntax, so the name must sit in an explicit value condition.
+func nameValueLocator(value string) string {
+	return "name:(value:($base64:" + base64.RawURLEncoding.EncodeToString([]byte(value)) + "))"
 }
 
 // AddRaw adds a key:value pair without escaping the value.

@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -42,11 +41,11 @@ func cloudNameLocator(value string) string {
 	case strings.HasPrefix(value, "name:(") && strings.HasSuffix(value, ")"):
 		return value
 	case strings.HasPrefix(value, "name:"):
-		return cloudNameValueLocator(strings.TrimPrefix(value, "name:"))
+		return nameValueLocator(strings.TrimPrefix(value, "name:"))
 	case isCloudIDLikeLocator(value):
 		return cloudIDLocator(value)
 	default:
-		return cloudNameValueLocator(value)
+		return nameValueLocator(value)
 	}
 }
 
@@ -57,7 +56,7 @@ func cloudIDLocator(value string) string {
 	case strings.HasPrefix(value, "name:(") && strings.HasSuffix(value, ")"):
 		return value
 	case strings.HasPrefix(value, "name:"):
-		return cloudNameValueLocator(strings.TrimPrefix(value, "name:"))
+		return nameValueLocator(strings.TrimPrefix(value, "name:"))
 	case strings.Contains(value, ","):
 		return "id:(" + value + ")"
 	case isCloudIDLikeLocator(value):
@@ -67,11 +66,6 @@ func cloudIDLocator(value string) string {
 	default:
 		return "id:" + value
 	}
-}
-
-func cloudNameValueLocator(value string) string {
-	encoded := base64.RawURLEncoding.EncodeToString([]byte(value))
-	return "name:(value:($base64:" + encoded + "))"
 }
 
 func isCloudIDLikeLocator(value string) bool {

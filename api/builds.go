@@ -36,10 +36,14 @@ func (opts BuildsOptions) Locator() *Locator {
 	locator := NewLocator().
 		Add("buildType", opts.BuildTypeID).
 		Add("defaultFilter", "false")
-	if opts.Branch != "" {
-		locator.Add("branch", opts.Branch)
-	} else {
+	switch {
+	case opts.Branch == "":
 		locator.AddLocator("branch", NewLocator().Add("default", "any"))
+	case strings.ContainsAny(opts.Branch, ":,()$"):
+		// branch's value is a nested locator, so the server re-parses even a base64-decoded bare value; route the name through the value condition (verified live against TeamCity 2026.1).
+		locator.AddRaw("branch", "("+nameValueLocator(opts.Branch)+")")
+	default:
+		locator.Add("branch", opts.Branch)
 	}
 	locator.
 		AddUpper("status", opts.Status).

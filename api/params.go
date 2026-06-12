@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 // ParameterList represents a list of parameters
@@ -38,7 +39,7 @@ func (c *Client) getParameters(basePath string) (*ParameterList, error) {
 }
 
 func (c *Client) getParameter(basePath, name string) (*Parameter, error) {
-	path := fmt.Sprintf("%s/parameters/%s", basePath, name)
+	path := fmt.Sprintf("%s/parameters/%s", basePath, url.PathEscape(name))
 
 	var param Parameter
 	if err := c.get(c.ctx(), path, &param); err != nil {
@@ -49,7 +50,7 @@ func (c *Client) getParameter(basePath, name string) (*Parameter, error) {
 }
 
 func (c *Client) setParameter(basePath, name, value string, secure bool) error {
-	path := fmt.Sprintf("%s/parameters/%s", basePath, name)
+	path := fmt.Sprintf("%s/parameters/%s", basePath, url.PathEscape(name))
 
 	param := Parameter{
 		Name:  name,
@@ -69,48 +70,48 @@ func (c *Client) setParameter(basePath, name, value string, secure bool) error {
 }
 
 func (c *Client) deleteParameter(basePath, name string) error {
-	path := fmt.Sprintf("%s/parameters/%s", basePath, name)
+	path := fmt.Sprintf("%s/parameters/%s", basePath, url.PathEscape(name))
 	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
 }
 
 // GetProjectParameters returns parameters for a project
 func (c *Client) GetProjectParameters(projectID string) (*ParameterList, error) {
-	return c.getParameters("/app/rest/projects/id:" + projectID)
+	return c.getParameters("/app/rest/projects/id:" + url.PathEscape(projectID))
 }
 
 // GetProjectParameter returns a specific parameter for a project
 func (c *Client) GetProjectParameter(projectID, name string) (*Parameter, error) {
-	return c.getParameter("/app/rest/projects/id:"+projectID, name)
+	return c.getParameter("/app/rest/projects/id:"+url.PathEscape(projectID), name)
 }
 
 // SetProjectParameter sets a parameter for a project
 func (c *Client) SetProjectParameter(projectID, name, value string, secure bool) error {
-	return c.setParameter("/app/rest/projects/id:"+projectID, name, value, secure)
+	return c.setParameter("/app/rest/projects/id:"+url.PathEscape(projectID), name, value, secure)
 }
 
 // DeleteProjectParameter deletes a parameter from a project
 func (c *Client) DeleteProjectParameter(projectID, name string) error {
-	return c.deleteParameter("/app/rest/projects/id:"+projectID, name)
+	return c.deleteParameter("/app/rest/projects/id:"+url.PathEscape(projectID), name)
 }
 
 // GetBuildTypeParameters returns parameters for a build configuration
 func (c *Client) GetBuildTypeParameters(buildTypeID string) (*ParameterList, error) {
-	return c.getParameters("/app/rest/buildTypes/id:" + buildTypeID)
+	return c.getParameters("/app/rest/buildTypes/id:" + url.PathEscape(buildTypeID))
 }
 
 // GetBuildTypeParameter returns a specific parameter for a build configuration
 func (c *Client) GetBuildTypeParameter(buildTypeID, name string) (*Parameter, error) {
-	return c.getParameter("/app/rest/buildTypes/id:"+buildTypeID, name)
+	return c.getParameter("/app/rest/buildTypes/id:"+url.PathEscape(buildTypeID), name)
 }
 
 // SetBuildTypeParameter sets a parameter for a build configuration
 func (c *Client) SetBuildTypeParameter(buildTypeID, name, value string, secure bool) error {
-	return c.setParameter("/app/rest/buildTypes/id:"+buildTypeID, name, value, secure)
+	return c.setParameter("/app/rest/buildTypes/id:"+url.PathEscape(buildTypeID), name, value, secure)
 }
 
 // DeleteBuildTypeParameter deletes a parameter from a build configuration
 func (c *Client) DeleteBuildTypeParameter(buildTypeID, name string) error {
-	return c.deleteParameter("/app/rest/buildTypes/id:"+buildTypeID, name)
+	return c.deleteParameter("/app/rest/buildTypes/id:"+url.PathEscape(buildTypeID), name)
 }
 
 // GetParameterValue returns just the raw value of a parameter

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 // GetCurrentUser returns the authenticated user
@@ -17,7 +18,7 @@ func (c *Client) GetCurrentUser() (*User, error) {
 
 // GetUser returns a user by username
 func (c *Client) GetUser(username string) (*User, error) {
-	path := "/app/rest/users/username:" + username
+	path := "/app/rest/users/username:" + url.PathEscape(username)
 
 	var user User
 	if err := c.get(c.ctx(), path, &user); err != nil {
@@ -75,7 +76,7 @@ type Token struct {
 
 // CreateAPIToken creates an API token for the current user
 func (c *Client) CreateAPIToken(name string) (*Token, error) {
-	path := "/app/rest/users/current/tokens/" + name
+	path := "/app/rest/users/current/tokens/" + url.PathEscape(name)
 
 	var token Token
 	if err := c.post(c.ctx(), path, nil, &token); err != nil {
@@ -87,7 +88,7 @@ func (c *Client) CreateAPIToken(name string) (*Token, error) {
 
 // DeleteAPIToken deletes an API token for the current user
 func (c *Client) DeleteAPIToken(name string) error {
-	path := "/app/rest/users/current/tokens/" + name
+	path := "/app/rest/users/current/tokens/" + url.PathEscape(name)
 	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
 }
 

@@ -116,6 +116,19 @@ func TestSetBuildTypeParameter(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestSetBuildTypeParameterEscapesName(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		// Unescaped, the "#" would start a fragment and truncate the path.
+		assert.Contains(t, r.URL.EscapedPath(), "/parameters/feature%23flag")
+		assert.Equal(t, "PUT", r.Method)
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	err := client.SetBuildTypeParameter("MyBuild", "feature#flag", "v1", false)
+	require.NoError(t, err)
+}
+
 func TestDeleteBuildTypeParameter(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {

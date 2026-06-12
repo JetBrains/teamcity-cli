@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 // SettingsList represents a list of build configuration settings
@@ -20,7 +21,7 @@ type Setting struct {
 
 // GetBuildTypeSettings returns all settings for a build configuration
 func (c *Client) GetBuildTypeSettings(buildTypeID string) (*SettingsList, error) {
-	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings", buildTypeID)
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings", url.PathEscape(buildTypeID))
 
 	var result SettingsList
 	if err := c.get(c.ctx(), path, &result); err != nil {
@@ -35,7 +36,7 @@ func (c *Client) GetBuildTypeSettings(buildTypeID string) (*SettingsList, error)
 
 // GetBuildTypeSetting returns the raw plain-text value of a single build configuration setting
 func (c *Client) GetBuildTypeSetting(buildTypeID, name string) (string, error) {
-	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings/%s", buildTypeID, name)
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings/%s", url.PathEscape(buildTypeID), url.PathEscape(name))
 
 	resp, err := c.doRequestWithAccept(c.ctx(), "GET", path, nil, "text/plain")
 	if err != nil {
