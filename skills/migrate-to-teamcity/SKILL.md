@@ -30,7 +30,7 @@ Run `teamcity migrate` from the repo root -- detection scans `.github/workflows/
 
 - **Always `type: script` for `./gradlew` and `./mvnw`.** TC's `type: gradle`/`type: maven` runners use the agent's version, not the project's. This causes real build failures.
 - **Schema valid does not mean pipeline works.** Migration is not done until builds pass.
-- **Private repos: use a GitHub App connection, not a PAT.** `teamcity project connection create github-app` → `teamcity project connection authorize` → `teamcity project vcs create --auth token --connection-id <id>`. For public repos `--auth anonymous` works; SSH deploy keys (`teamcity project ssh upload` with a `git@github.com:` URL) are an alternative.
+- **Private repos: use a GitHub App connection, not a PAT.** `teamcity project connection create github-app -p <project>` → `teamcity project connection authorize <connection-id> -p <project>` (the create output prints the exact command) → `teamcity project vcs create --url <repo-url> --auth token --connection-id <connection-id> -p <project>`. For public repos `--auth anonymous` works; SSH deploy keys (`teamcity project ssh upload` with a `git@github.com:` URL) are an alternative.
 - **Secrets, triggers, and branch filters are always manual.** The converter flags them but cannot create them. Use `teamcity project token put` for secrets. Configure triggers in TC UI.
 - **VCS root must exist before pipeline create.** `teamcity pipeline create` takes `--vcs-root <id>`, not a URL. Create it first with `teamcity project vcs create`.
 - **Default branch defaults to `main`.** Pass `--branch refs/heads/master` to `teamcity project vcs create` if the repo uses `master`.
@@ -46,7 +46,7 @@ Copy this checklist and check off items as you complete them:
 Migration progress:
 - [ ] Convert: run `teamcity migrate` from the repo root
 - [ ] Fix every "Needs review" item in the generated YAML (stubs -> real commands, see mappings.md)
-- [ ] Wire up secrets in the YAML: the converter rewrites `${{ secrets.X }}` to `%X%` but does not define it -- store the value (`teamcity project token put <project> <value>`) and add `secrets: X: "credentialsJSON:<uuid>"`
+- [ ] Wire up secrets in the YAML: the converter rewrites `${{ secrets.X }}` to `%X%` but does not define it -- store the value (`teamcity project token put <project> <value>`) and add `X: "credentialsJSON:<uuid>"` under the top-level `secrets:` block (see schema.md)
 - [ ] Validate: `teamcity pipeline validate <file>` -- only proceed when it passes
 - [ ] Create VCS root (`teamcity project vcs create`), then `teamcity pipeline create <name> -p <project> -f <file> --vcs-root <id>`
 - [ ] Set up the remaining runtime "Manual setup needed" items: registry/cloud connections the steps reference -- the first run fails without them
