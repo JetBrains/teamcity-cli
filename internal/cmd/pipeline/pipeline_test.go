@@ -110,11 +110,18 @@ func TestPipelineSchemaServerErrorPropagates(t *testing.T) {
 	assert.NotContains(t, err.Error(), "predate TeamCity 2026.1")
 }
 
-func TestPipelineValidateUnauthenticatedFallsBackToEmbeddedSchema(t *testing.T) {
+// clearAuthEnv isolates a test from host credentials and TeamCity build-agent auth (props file + BUILD_URL).
+func clearAuthEnv(t *testing.T) {
+	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	t.Setenv("TEAMCITY_URL", "")
-	t.Setenv("TEAMCITY_TOKEN", "")
+	for _, k := range []string{"TEAMCITY_URL", "TEAMCITY_TOKEN", "TEAMCITY_GUEST", "BUILD_URL", config.EnvBuildPropertiesFile} {
+		t.Setenv(k, "")
+	}
 	require.NoError(t, config.Init())
+}
+
+func TestPipelineValidateUnauthenticatedFallsBackToEmbeddedSchema(t *testing.T) {
+	clearAuthEnv(t)
 
 	file := filepath.Join(t.TempDir(), "p.tc.yml")
 	require.NoError(t, os.WriteFile(file, []byte("jobs:\n  build:\n    name: \"Build\"\n    runs-on: Linux-Large\n    steps:\n      - type: script\n        script-content: echo hi\n"), 0o644))
@@ -125,10 +132,7 @@ func TestPipelineValidateUnauthenticatedFallsBackToEmbeddedSchema(t *testing.T) 
 }
 
 func TestPipelineValidateUnauthenticatedRefreshSchemaErrors(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	t.Setenv("TEAMCITY_URL", "")
-	t.Setenv("TEAMCITY_TOKEN", "")
-	require.NoError(t, config.Init())
+	clearAuthEnv(t)
 
 	file := filepath.Join(t.TempDir(), "p.tc.yml")
 	require.NoError(t, os.WriteFile(file, []byte("jobs: {}\n"), 0o644))
