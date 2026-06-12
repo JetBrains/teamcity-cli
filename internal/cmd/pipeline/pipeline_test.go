@@ -121,3 +121,15 @@ func TestPipelineValidateUnauthenticatedFallsBackToEmbeddedSchema(t *testing.T) 
 	assert.Contains(t, out, "embedded schema")
 	assert.Contains(t, out, "is valid")
 }
+
+func TestPipelineValidateUnauthenticatedRefreshSchemaErrors(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("TEAMCITY_URL", "")
+	t.Setenv("TEAMCITY_TOKEN", "")
+
+	file := filepath.Join(t.TempDir(), "p.tc.yml")
+	require.NoError(t, os.WriteFile(file, []byte("jobs: {}\n"), 0o644))
+
+	err := cmdtest.CaptureErr(t, cmdutil.NewFactory(), "pipeline", "validate", file, "--refresh-schema")
+	assert.Contains(t, err.Error(), "authenticated")
+}

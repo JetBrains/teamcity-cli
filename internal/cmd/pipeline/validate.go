@@ -117,6 +117,10 @@ func loadSchema(f *cmdutil.Factory, opts *validateOptions) ([]byte, bool, error)
 
 	client, err := f.Client()
 	if err != nil {
+		// --refresh-schema explicitly asks for a server fetch, so don't mask the auth failure.
+		if opts.refreshSchema {
+			return nil, false, err
+		}
 		f.Printer.Warn("Not authenticated - validating against the embedded schema; run 'teamcity auth login' to use your server's schema")
 		return pipelineschema.Bytes, false, nil
 	}
