@@ -100,9 +100,6 @@ var manualActions = []struct {
 	{"pypa/gh-action-pypi-publish", "PyPI publish",
 		"pip install twine && twine upload dist/*",
 		[]string{"PyPI credentials → create TeamCity parameters TWINE_USERNAME, TWINE_PASSWORD (type: password)"}},
-	{"aws-actions/amazon-ecs-deploy-task-definition", "ECS deploy",
-		"aws ecs update-service --cluster \"${CLUSTER:?Set CLUSTER}\" --service \"${SERVICE:?Set SERVICE}\" --force-new-deployment",
-		[]string{"ECS deploy → create TeamCity parameters CLUSTER and SERVICE for the target cluster/service"}},
 }
 
 var unsupportedActions = []struct {
@@ -208,6 +205,22 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 	m["docker/build-push-action"] = transformDockerBuild
 
+	m["aws-actions/amazon-ecs-deploy-task-definition"] = func(name string, inputs map[string]string) StepResult {
+		cluster, service := requiredInput(inputs, "cluster", "CLUSTER"), requiredInput(inputs, "service", "SERVICE")
+		update := fmt.Sprintf("aws ecs update-service --cluster %q --service %q", cluster, service)
+		var lines []string
+		// The action registers the rendered task definition and deploys that revision; plain --force-new-deployment would roll the old one.
+		if td := inputs["task-definition"]; td != "" {
+			lines = append(lines,
+				"TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "+shellQuote("file://"+td)+" --query taskDefinition.taskDefinitionArn --output text)",
+				update+` --task-definition "$TASK_DEF_ARN"`)
+		} else {
+			lines = append(lines, update+" --force-new-deployment")
+		}
+		r := Converted([]Step{{Name: cmp.Or(name, "ECS deploy"), ScriptContent: strings.Join(lines, "\n")}})
+		r.ManualTasks = []string{"ECS deploy → ensure AWS credentials are configured as TeamCity parameters"}
+		return r
+	}
 	m["aws-actions/configure-aws-credentials"] = func(name string, inputs map[string]string) StepResult {
 		region := cmp.Or(inputs["aws-region"], "us-east-1")
 		// A step-local export dies with the step process in TC, so this maps to job env parameters instead of a script step.
@@ -392,9 +405,23 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	return r
 }
 
+// ghPagesScript stages the site in a temp dir, then clears the orphan index/worktree so only the folder is published.
 func ghPagesScript(branch, folder string) string {
 	b, f := shellQuote(branch), shellQuote(folder)
-	return fmt.Sprintf("git config user.name \"TeamCity\"\ngit config user.email \"teamcity@localhost\"\ngit checkout --orphan %s\ncp -r %s/* .\ngit add .\ngit commit -m \"Deploy\"\ngit push origin %s --force", b, f, b)
+	lines := []string{
+		`git config user.name "TeamCity"`,
+		`git config user.email "teamcity@localhost"`,
+		`SITE_TMP=$(mktemp -d)`,
+		fmt.Sprintf(`cp -r %s/* "$SITE_TMP"/`, f),
+		"git checkout --orphan " + b,
+		"git rm -rfq .",
+		"git clean -fdx",
+		`cp -r "$SITE_TMP"/* .`,
+		"git add .",
+		`git commit -m "Deploy"`,
+		fmt.Sprintf("git push origin %s --force", b),
+	}
+	return strings.Join(lines, "\n")
 }
 
 // shellQuote single-quotes s so it is one inert shell word — unlike double quotes, $(), backticks, and $vars do not expand.

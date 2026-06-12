@@ -574,3 +574,38 @@ func TestDockerBuildCSVTagsAndPlatforms(t *testing.T) {
 	assert.Contains(t, script, "--platform 'linux/amd64,linux/arm64'")
 	assert.Contains(t, strings.Join(r.ManualTasks, "\n"), "buildx and QEMU")
 }
+
+func TestGHPagesPublishesOnlyTheFolder(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("peaceiris/actions-gh-pages@v4")
+	require.True(t, ok)
+	r := transformer("", map[string]string{"publish_dir": "./site"})
+	require.Len(t, r.Steps, 1)
+	script := r.Steps[0].ScriptContent
+	// The orphan index/worktree must be cleared before staging, and the site staged from outside the worktree.
+	require.Less(t, strings.Index(script, `cp -r './site'/* "$SITE_TMP"/`), strings.Index(script, "git checkout --orphan"))
+	require.Less(t, strings.Index(script, "git checkout --orphan"), strings.Index(script, "git rm -rfq ."))
+	require.Less(t, strings.Index(script, "git rm -rfq ."), strings.Index(script, "git clean -fdx"))
+	require.Less(t, strings.Index(script, "git clean -fdx"), strings.Index(script, `cp -r "$SITE_TMP"/* .`))
+}
+
+func TestECSDeployRegistersRenderedTaskDefinition(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("aws-actions/amazon-ecs-deploy-task-definition@v2")
+	require.True(t, ok)
+
+	r := transformer("", map[string]string{"task-definition": "td.json", "cluster": "prod", "service": "web"})
+	require.Len(t, r.Steps, 1)
+	script := r.Steps[0].ScriptContent
+	assert.Contains(t, script, "aws ecs register-task-definition --cli-input-json 'file://td.json'")
+	assert.Contains(t, script, `--task-definition "$TASK_DEF_ARN"`)
+	assert.Contains(t, script, `--cluster "prod" --service "web"`)
+	assert.NotContains(t, script, "--force-new-deployment")
+
+	// Without a rendered definition the old behavior remains.
+	r = transformer("", map[string]string{})
+	assert.Contains(t, r.Steps[0].ScriptContent, "--force-new-deployment")
+	assert.Contains(t, r.Steps[0].ScriptContent, "${CLUSTER:?")
+}
