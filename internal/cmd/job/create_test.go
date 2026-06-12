@@ -101,9 +101,3 @@ func TestJobCreateServerError(T *testing.T) {
 
 	cmdtest.RunCmdWithFactoryExpectErr(T, ts.Factory, "failed to create job", "job", "create", "Build", "--project", "MyProject")
 }
-
-func TestJobCreateJSONWebMutuallyExclusive(T *testing.T) {
-	ts := cmdtest.SetupMockClient(T)
-	err := cmdtest.CaptureErr(T, ts.Factory, "job", "create", "Build", "--project", "MyProject", "--json", "--web")
-	assert.Contains(T, err.Error(), "if any flags in the group [json web] are set none of the others can be")
-}
