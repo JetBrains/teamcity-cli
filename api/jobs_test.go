@@ -245,3 +245,19 @@ func TestSetBuildTypeSetting(t *testing.T) {
 	err := client.SetBuildTypeSetting("bt1", "maxRunningBuilds", "3")
 	require.NoError(t, err)
 }
+
+func TestGetBuildStepsEmptyIsNonNil(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		// Server omits the "step" key for a job with no steps.
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"count":0}`))
+	})
+
+	steps, err := client.GetBuildSteps("bt1")
+	require.NoError(t, err)
+	assert.NotNil(t, steps.Step)
+	b, err := json.Marshal(steps)
+	require.NoError(t, err)
+	assert.Contains(t, string(b), `"step":[]`)
+}

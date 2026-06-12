@@ -41,3 +41,19 @@ func TestGetBuildTypeSetting(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "+:build/** => out\n-:**/*.tmp\n", val)
 }
+
+func TestGetBuildTypeSettingsEmptyIsNonNil(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		// Server omits the "property" key for a job with no settings.
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"count":0}`))
+	})
+
+	settings, err := client.GetBuildTypeSettings("bt1")
+	require.NoError(t, err)
+	assert.NotNil(t, settings.Property)
+	b, err := json.Marshal(settings)
+	require.NoError(t, err)
+	assert.Contains(t, string(b), `"property":[]`)
+}
