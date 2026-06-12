@@ -247,7 +247,12 @@ func initActionRegistry() map[string]actionTransformer {
 		return Converted([]Step{{Name: cmp.Or(name, "Cloud Run deploy"), ScriptContent: fmt.Sprintf("gcloud run deploy %q --image %q --region \"${REGION:-us-central1}\"", requiredInput(inputs, "service", "SERVICE"), requiredInput(inputs, "image", "IMAGE"))}})
 	}
 	m["aws-actions/amazon-ecs-render-task-definition"] = func(name string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '.containerDefinitions[0].image = %q' %s > new-task-def.json", requiredInput(inputs, "image", "IMAGE"), cmp.Or(inputs["task-definition"], "task-definition.json"))}})
+		// container-name selects which container's image to replace in multi-container task definitions.
+		selector := ".containerDefinitions[0].image"
+		if cn := inputs["container-name"]; cn != "" {
+			selector = fmt.Sprintf("(.containerDefinitions[] | select(.name == %q) | .image)", cn)
+		}
+		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '%s = %q' %s > new-task-def.json", selector, requiredInput(inputs, "image", "IMAGE"), cmp.Or(inputs["task-definition"], "task-definition.json"))}})
 	}
 	m["appleboy/scp-action"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: fmt.Sprintf("scp -r %s %s:%s", cmp.Or(inputs["source"], "."), requiredInput(inputs, "host", "DEPLOY_HOST"), cmp.Or(inputs["target"], "~/"))}})
@@ -262,6 +267,12 @@ func initActionRegistry() map[string]actionTransformer {
 		cmd := fmt.Sprintf("gh release create %q --generate-notes", tag) + ghReleaseStateFlags(inputs)
 		if body := inputs["body"]; body != "" {
 			cmd += " --notes " + shellQuote(body)
+		}
+		// `artifacts:` is a comma-delimited path/glob list the action uploads to the release.
+		for a := range strings.SplitSeq(cmp.Or(inputs["artifacts"], inputs["artifact"]), ",") {
+			if a = strings.TrimSpace(a); a != "" {
+				cmd += " " + quoteReleaseAsset(a)
+			}
 		}
 		r := Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd}})
 		r.ManualTasks = ghReleaseAuthNote

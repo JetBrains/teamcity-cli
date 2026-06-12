@@ -609,3 +609,26 @@ func TestECSDeployRegistersRenderedTaskDefinition(t *testing.T) {
 	assert.Contains(t, r.Steps[0].ScriptContent, "--force-new-deployment")
 	assert.Contains(t, r.Steps[0].ScriptContent, "${CLUSTER:?")
 }
+
+func TestECSRenderHonorsContainerName(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("aws-actions/amazon-ecs-render-task-definition@v1")
+	require.True(t, ok)
+	r := transformer("", map[string]string{"image": "repo/app:1", "container-name": "sidecar", "task-definition": "td.json"})
+	assert.Contains(t, r.Steps[0].ScriptContent, `select(.name == "sidecar")`)
+
+	r = transformer("", map[string]string{"image": "repo/app:1"})
+	assert.Contains(t, r.Steps[0].ScriptContent, ".containerDefinitions[0].image")
+}
+
+func TestNcipolloReleaseArtifactsAppended(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("ncipollo/release-action@v1")
+	require.True(t, ok)
+	r := transformer("", map[string]string{"tag": "v1.0.0", "artifacts": "dist/*.zip, my app.tgz"})
+	script := r.Steps[0].ScriptContent
+	assert.Contains(t, script, " dist/*.zip", "globs stay unquoted")
+	assert.Contains(t, script, ` 'my app.tgz'`, "paths with spaces stay one operand")
+}
