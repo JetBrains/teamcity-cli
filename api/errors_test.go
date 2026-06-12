@@ -51,8 +51,7 @@ func TestPermissionError_ErrorMessage(t *testing.T) {
 
 	t.Run("perm + project", func(t *testing.T) {
 		err := mustClassify(t, 403, `{"errors":[{"message":"You do not have \"Run build\" permission in project: 'My_Project'"}]}`)
-		var pe *PermissionError
-		ok := errors.As(err, &pe)
+		pe, ok := errors.AsType[*PermissionError](err)
 		require.True(t, ok)
 		assert.Equal(t, `missing "Run build" permission in project My_Project`, pe.Error())
 	})

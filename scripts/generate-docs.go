@@ -10,7 +10,6 @@ import (
 	"os"
 	"regexp"
 	"slices"
-	"sort"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/spf13/cobra"
@@ -126,7 +125,7 @@ func orderedCommands(rootCmd *cobra.Command, includeCompletion bool) ([]string, 
 			rest = append(rest, name)
 		}
 	}
-	sort.Strings(rest)
+	slices.Sort(rest)
 	names = append(names, rest...)
 	return names, cmds
 }

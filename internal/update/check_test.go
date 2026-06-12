@@ -1,7 +1,6 @@
 package update
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -75,7 +74,7 @@ func TestLatestReleaseFromAPI(t *testing.T) {
 		t.Cleanup(func() { latestReleaseAPIURL = defaultURL })
 		latestReleaseAPIURL = srv.URL
 
-		got, err := latestReleaseFromAPI(context.Background())
+		got, err := latestReleaseFromAPI(t.Context())
 		require.NoError(t, err)
 		assert.Equal(t, "1.2.3", got.Version) // "v" prefix stripped
 		assert.Equal(t, "https://github.com/x/y/releases/tag/v1.2.3", got.URL)
@@ -89,7 +88,7 @@ func TestLatestReleaseFromAPI(t *testing.T) {
 		t.Cleanup(func() { latestReleaseAPIURL = defaultURL })
 		latestReleaseAPIURL = srv.URL
 
-		_, err := latestReleaseFromAPI(context.Background())
+		_, err := latestReleaseFromAPI(t.Context())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "403")
 	})
@@ -102,7 +101,7 @@ func TestLatestReleaseFromAPI(t *testing.T) {
 		t.Cleanup(func() { latestReleaseAPIURL = defaultURL })
 		latestReleaseAPIURL = srv.URL
 
-		_, err := latestReleaseFromAPI(context.Background())
+		_, err := latestReleaseFromAPI(t.Context())
 		assert.Error(t, err)
 	})
 }
@@ -120,7 +119,7 @@ func TestLatestReleaseFromRedirect(t *testing.T) {
 		t.Cleanup(func() { latestReleaseRedirectURL = defaultURL })
 		latestReleaseRedirectURL = srv.URL
 
-		got, err := latestReleaseFromRedirect(context.Background())
+		got, err := latestReleaseFromRedirect(t.Context())
 		require.NoError(t, err)
 		assert.Equal(t, "1.5.0", got.Version)
 		assert.Equal(t, "https://github.com/JetBrains/teamcity-cli/releases/tag/v1.5.0", got.URL)
@@ -135,7 +134,7 @@ func TestLatestReleaseFromRedirect(t *testing.T) {
 		t.Cleanup(func() { latestReleaseRedirectURL = defaultURL })
 		latestReleaseRedirectURL = srv.URL
 
-		got, err := latestReleaseFromRedirect(context.Background())
+		got, err := latestReleaseFromRedirect(t.Context())
 		require.NoError(t, err)
 		assert.Equal(t, "2.0.0", got.Version)
 	})
@@ -148,7 +147,7 @@ func TestLatestReleaseFromRedirect(t *testing.T) {
 		t.Cleanup(func() { latestReleaseRedirectURL = defaultURL })
 		latestReleaseRedirectURL = srv.URL
 
-		_, err := latestReleaseFromRedirect(context.Background())
+		_, err := latestReleaseFromRedirect(t.Context())
 		assert.Error(t, err)
 	})
 
@@ -160,7 +159,7 @@ func TestLatestReleaseFromRedirect(t *testing.T) {
 		t.Cleanup(func() { latestReleaseRedirectURL = defaultURL })
 		latestReleaseRedirectURL = srv.URL
 
-		_, err := latestReleaseFromRedirect(context.Background())
+		_, err := latestReleaseFromRedirect(t.Context())
 		assert.Error(t, err)
 	})
 }
@@ -181,7 +180,7 @@ func TestLatestRelease_FallbackOnAPIFailure(t *testing.T) {
 	latestReleaseAPIURL = apiSrv.URL
 	latestReleaseRedirectURL = redirectSrv.URL
 
-	got, err := LatestRelease(context.Background())
+	got, err := LatestRelease(t.Context())
 	require.NoError(t, err, "fallback should rescue from API failure")
 	assert.Equal(t, "9.9.9", got.Version)
 }
@@ -201,7 +200,7 @@ func TestLatestRelease_BothPathsFail(t *testing.T) {
 	latestReleaseAPIURL = apiSrv.URL
 	latestReleaseRedirectURL = redirectSrv.URL
 
-	_, err := LatestRelease(context.Background())
+	_, err := LatestRelease(t.Context())
 	require.Error(t, err)
 	// Error must mention both failures, not just one.
 	assert.Contains(t, err.Error(), "fallback failed")

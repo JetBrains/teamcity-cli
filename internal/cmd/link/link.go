@@ -168,7 +168,7 @@ func loadOrEmpty(path string) (*link.Config, error) {
 	if err == nil {
 		return c, nil
 	}
-	if os.IsNotExist(err) {
+	if errors.Is(err, os.ErrNotExist) {
 		return &link.Config{}, nil
 	}
 	return nil, err

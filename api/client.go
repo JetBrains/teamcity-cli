@@ -7,10 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"mime"
 	"net/http"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -102,11 +103,7 @@ func (c *Client) debugLogResponse(resp *http.Response) {
 }
 
 func (c *Client) debugLogHeaders(prefix string, headers http.Header) {
-	names := make([]string, 0, len(headers))
-	for name := range headers {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+	names := slices.Sorted(maps.Keys(headers))
 
 	for _, name := range names {
 		values := headers[name]

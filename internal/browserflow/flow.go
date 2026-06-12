@@ -2,6 +2,7 @@
 package browserflow
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
@@ -86,26 +87,11 @@ func Run(ctx context.Context, opts Options) (*Result, error) {
 		return nil, errors.New("browserflow: OpenURL is required")
 	}
 
-	cbPath := opts.CallbackPath
-	if cbPath == "" {
-		cbPath = DefaultCallbackPath
-	}
-	timeout := opts.Timeout
-	if timeout == 0 {
-		timeout = DefaultTimeout
-	}
-	successTitle := opts.SuccessTitle
-	if successTitle == "" {
-		successTitle = "Authentication successful"
-	}
-	successBody := opts.SuccessBody
-	if successBody == "" {
-		successBody = "You can close this window and return to the terminal."
-	}
-	errorTitle := opts.ErrorTitle
-	if errorTitle == "" {
-		errorTitle = "Authentication failed"
-	}
+	cbPath := cmp.Or(opts.CallbackPath, DefaultCallbackPath)
+	timeout := cmp.Or(opts.Timeout, DefaultTimeout)
+	successTitle := cmp.Or(opts.SuccessTitle, "Authentication successful")
+	successBody := cmp.Or(opts.SuccessBody, "You can close this window and return to the terminal.")
+	errorTitle := cmp.Or(opts.ErrorTitle, "Authentication failed")
 
 	type rawResult struct {
 		code, state, errMsg string

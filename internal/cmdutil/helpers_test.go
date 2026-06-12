@@ -2,7 +2,6 @@ package cmdutil
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -272,7 +271,7 @@ func TestProbeGuestAccess(t *testing.T) {
 
 	t.Run("empty url → false (no network call)", func(t *testing.T) {
 		t.Parallel()
-		assert.False(t, ProbeGuestAccess(context.Background(), ""))
+		assert.False(t, ProbeGuestAccess(t.Context(), ""))
 	})
 
 	t.Run("200 → true", func(t *testing.T) {
@@ -282,7 +281,7 @@ func TestProbeGuestAccess(t *testing.T) {
 			_, _ = w.Write([]byte(`{"version":"2025.7","versionMajor":2025,"versionMinor":7,"buildNumber":"1"}`))
 		}))
 		defer srv.Close()
-		assert.True(t, ProbeGuestAccess(context.Background(), srv.URL))
+		assert.True(t, ProbeGuestAccess(t.Context(), srv.URL))
 	})
 
 	t.Run("401 → false", func(t *testing.T) {
@@ -290,13 +289,13 @@ func TestProbeGuestAccess(t *testing.T) {
 			w.WriteHeader(http.StatusUnauthorized)
 		}))
 		defer srv.Close()
-		assert.False(t, ProbeGuestAccess(context.Background(), srv.URL))
+		assert.False(t, ProbeGuestAccess(t.Context(), srv.URL))
 	})
 
 	t.Run("dead address → false", func(t *testing.T) {
 		t.Parallel()
 		// Closed port; ProbeGuestAccess must return false without panicking.
-		assert.False(t, ProbeGuestAccess(context.Background(), "http://127.0.0.1:1"))
+		assert.False(t, ProbeGuestAccess(t.Context(), "http://127.0.0.1:1"))
 	})
 }
 
@@ -305,7 +304,7 @@ func TestNotAuthenticatedError(t *testing.T) {
 
 	t.Run("no keyring err", func(t *testing.T) {
 		t.Parallel()
-		err := NotAuthenticatedError(context.Background(), "", nil)
+		err := NotAuthenticatedError(t.Context(), "", nil)
 		require.NotNil(t, err)
 		assert.Equal(t, "Not authenticated", err.Error())
 		assert.Contains(t, err.Suggestion(), "TEAMCITY_URL")
@@ -314,7 +313,7 @@ func TestNotAuthenticatedError(t *testing.T) {
 	t.Run("with keyring err mentions it", func(t *testing.T) {
 		t.Parallel()
 		ke := errors.New("keychain locked")
-		err := NotAuthenticatedError(context.Background(), "", ke)
+		err := NotAuthenticatedError(t.Context(), "", ke)
 		require.NotNil(t, err)
 		assert.Contains(t, err.Error(), "keyring")
 		assert.Contains(t, err.Error(), "keychain locked")
@@ -327,7 +326,7 @@ func TestNotAuthenticatedError(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		err := NotAuthenticatedError(context.Background(), srv.URL, nil)
+		err := NotAuthenticatedError(t.Context(), srv.URL, nil)
 		require.NotNil(t, err)
 		assert.Contains(t, err.Suggestion(), "TEAMCITY_GUEST=1")
 	})

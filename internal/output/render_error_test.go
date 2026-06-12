@@ -27,8 +27,7 @@ func httpErr(t *testing.T, status int, body string) error {
 // permErr returns a *api.PermissionError with AuthSource set, routed via ErrorFromResponse so cat is populated.
 func permErr(t *testing.T, body string, src api.AuthSource) *api.PermissionError {
 	t.Helper()
-	var pe *api.PermissionError
-	ok := errors.As(httpErr(t, http.StatusForbidden, body), &pe)
+	pe, ok := errors.AsType[*api.PermissionError](httpErr(t, http.StatusForbidden, body))
 	require.True(t, ok, "expected *api.PermissionError")
 	pe.AuthSource = src
 	return pe
@@ -37,8 +36,7 @@ func permErr(t *testing.T, body string, src api.AuthSource) *api.PermissionError
 func notFoundErr(t *testing.T, message string) *api.NotFoundError {
 	t.Helper()
 	body := `{"errors":[{"message":` + jsonString(message) + `}]}`
-	var nf *api.NotFoundError
-	ok := errors.As(httpErr(t, http.StatusNotFound, body), &nf)
+	nf, ok := errors.AsType[*api.NotFoundError](httpErr(t, http.StatusNotFound, body))
 	require.True(t, ok, "expected *api.NotFoundError")
 	return nf
 }

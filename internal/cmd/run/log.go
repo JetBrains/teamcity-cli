@@ -381,9 +381,7 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 
 	lastSeenID := 0
 	for _, msg := range resp.Messages {
-		if msg.ID > lastSeenID {
-			lastSeenID = msg.ID
-		}
+		lastSeenID = max(lastSeenID, msg.ID)
 		printFollowMessage(p.Out, msg, showVerbose, opts.raw, opts.json)
 	}
 

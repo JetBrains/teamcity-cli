@@ -105,9 +105,9 @@ func TestIsRetryableNetworkError_ContextCancellation(T *testing.T) {
 func TestWithRetry_RetriesOnServerError(T *testing.T) {
 	T.Parallel()
 
-	var attempts int32
+	var attempts atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if atomic.AddInt32(&attempts, 1) < 3 {
+		if attempts.Add(1) < 3 {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
@@ -122,7 +122,7 @@ func TestWithRetry_RetriesOnServerError(T *testing.T) {
 
 	require.NoError(T, err)
 	assert.Equal(T, http.StatusOK, resp.StatusCode)
-	assert.Equal(T, int32(3), atomic.LoadInt32(&attempts))
+	assert.Equal(T, int32(3), attempts.Load())
 	resp.Body.Close()
 }
 
@@ -143,9 +143,9 @@ func TestRetryAfterMissing(T *testing.T) {
 func TestWithRetry_RetriesOn429(T *testing.T) {
 	T.Parallel()
 
-	var attempts int32
+	var attempts atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if atomic.AddInt32(&attempts, 1) < 2 {
+		if attempts.Add(1) < 2 {
 			w.WriteHeader(http.StatusTooManyRequests)
 			return
 		}
@@ -160,7 +160,7 @@ func TestWithRetry_RetriesOn429(T *testing.T) {
 
 	require.NoError(T, err)
 	assert.Equal(T, http.StatusOK, resp.StatusCode)
-	assert.Equal(T, int32(2), atomic.LoadInt32(&attempts))
+	assert.Equal(T, int32(2), attempts.Load())
 	resp.Body.Close()
 }
 
@@ -168,10 +168,10 @@ func TestWithRetry_RetriesOn429(T *testing.T) {
 func TestWithRetry_HonorsRetryAfter(T *testing.T) {
 	T.Parallel()
 
-	var attempts int32
+	var attempts atomic.Int32
 	var firstAt, secondAt time.Time
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		n := atomic.AddInt32(&attempts, 1)
+		n := attempts.Add(1)
 		if n == 1 {
 			firstAt = time.Now()
 			w.Header().Set("Retry-After", "1")
@@ -245,16 +245,16 @@ func TestGetWithRetry_ExhaustionPreservesHTTPError(T *testing.T) {
 func TestWithRetry_RetriesOnNetworkError(T *testing.T) {
 	T.Parallel()
 
-	var attempts int32
+	var attempts atomic.Int32
 	cfg := RetryConfig{MaxRetries: 2, Interval: 10 * time.Millisecond}
 
 	//nolint:errcheck // exercising retry behavior, not the return
 	withRetry(T.Context(), cfg, func() (*http.Response, error) {
-		atomic.AddInt32(&attempts, 1)
+		attempts.Add(1)
 		return http.Get("http://127.0.0.1:1") // connection refused
 	})
 
-	assert.Equal(T, int32(3), atomic.LoadInt32(&attempts))
+	assert.Equal(T, int32(3), attempts.Load())
 }
 
 // Client integration: verify get- / post-behavior
@@ -266,9 +266,9 @@ func TestClientRetryBehavior(T *testing.T) {
 	T.Run("get retries on 503", func(t *testing.T) {
 		t.Parallel()
 
-		var attempts int32
+		var attempts atomic.Int32
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if atomic.AddInt32(&attempts, 1) < 3 {
+			if attempts.Add(1) < 3 {
 				w.WriteHeader(http.StatusServiceUnavailable)
 				return
 			}
@@ -283,15 +283,15 @@ func TestClientRetryBehavior(T *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "2024.1", result.Version)
-		assert.Equal(t, int32(3), atomic.LoadInt32(&attempts))
+		assert.Equal(t, int32(3), attempts.Load())
 	})
 
 	T.Run("post never retries", func(t *testing.T) {
 		t.Parallel()
 
-		var attempts int32
+		var attempts atomic.Int32
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			atomic.AddInt32(&attempts, 1)
+			attempts.Add(1)
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}))
 		t.Cleanup(server.Close)
@@ -299,6 +299,6 @@ func TestClientRetryBehavior(T *testing.T) {
 		client := NewClient(server.URL, "test-token")
 		client.post(t.Context(), "/app/rest/buildQueue", nil, nil)
 
-		assert.Equal(t, int32(1), atomic.LoadInt32(&attempts))
+		assert.Equal(t, int32(1), attempts.Load())
 	})
 }
