@@ -22,7 +22,7 @@ Run `teamcity migrate` from the repo root -- detection scans `.github/workflows/
 ## Reading the report
 
 - **Needs review** -- problems inside the generated YAML: TODO stubs, dropped steps, reusable-workflow placeholders. Fix these in the file before creating the pipeline.
-- **Manual setup needed** -- work the converter could not do automatically; each item lands on one of two sides. YAML edits before `pipeline create`: secrets entries (see the checklist), matrix expansion, expression `runs-on`, `container:`/`services:` wiring (see gotchas.md). Server-side configuration after create: triggers, branch filters, connections. Read each item and sort it accordingly.
+- **Manual setup needed** -- work the converter could not do automatically; each item lands on one of two sides. YAML edits before `pipeline create`: secrets entries (see the checklist), matrix expansion, expression `runs-on`, `container:`/`services:` wiring (see gotchas.md). Server-side configuration after create: connections and `if:`-derived branch filters / execution conditions before the first run (they gate what executes); triggers and notifications at the end. Read each item and sort it accordingly.
 - Exit code 1 means at least one source failed to convert *or* one generated file failed schema validation -- files that converted cleanly are still written. Read the per-file ✓/⚠/✗ lines instead of treating exit 1 as total failure.
 - `--json` prints `{"sources": [...], "results": [...]}` to stdout; each result carries `outputFile`, `yaml`, `needsReview`, `manualSetup`, and `validationError`.
 
@@ -49,9 +49,9 @@ Migration progress:
 - [ ] Wire up secrets in the YAML: the converter rewrites `${{ secrets.X }}` to `%X%` but does not define it -- store the value (`teamcity project token put <project> <value>`) and add `X: "credentialsJSON:<uuid>"` under the top-level `secrets:` block (see schema.md)
 - [ ] Validate: `teamcity pipeline validate <file>` -- only proceed when it passes
 - [ ] Create VCS root (`teamcity project vcs create`), then `teamcity pipeline create <name> -p <project> -f <file> --vcs-root <id>`
-- [ ] Set up the remaining runtime "Manual setup needed" items: registry/cloud connections the steps reference -- the first run fails without them
+- [ ] Set up the remaining runtime "Manual setup needed" items before running: registry/cloud connections the steps reference (the first run fails without them), and any `if:`-condition items -- gate converted deploy/release steps via branch filter, execution condition, or a guard in the script so the first run cannot deploy from the wrong branch
 - [ ] Run: `teamcity run start <id> --watch`; on failure read `teamcity run log <id> --failed --raw`, fix, `teamcity pipeline push`, re-run until green
-- [ ] Do the trigger-only "Manual setup needed" items: triggers, branch filters, notifications
+- [ ] Do the trigger-only "Manual setup needed" items: triggers, notifications
 - [ ] Report: what migrated, step reduction, what remains manual
 ```
 
