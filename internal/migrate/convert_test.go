@@ -116,6 +116,14 @@ func TestActionTransformers(t *testing.T) {
 		assert.Contains(t, r.Steps[0].ScriptContent, "docker build")
 		assert.Contains(t, r.Steps[0].ScriptContent, "docker push")
 	})
+
+	t.Run("docker build-push whitespace-only tags fall back to IMAGE guard", func(t *testing.T) {
+		t.Parallel()
+		transformer, _ := LookupActionTransformer("docker/build-push-action@v5")
+		r := transformer("Build", map[string]string{"tags": " \n", "push": "true"})
+		require.Len(t, r.Steps, 1)
+		assert.Contains(t, r.Steps[0].ScriptContent, "${IMAGE:?")
+	})
 }
 
 func TestUnknownActionMultilineInputCommented(t *testing.T) {
