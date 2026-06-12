@@ -368,6 +368,14 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 	return j
 }
 
+// redactLiteralSecret replaces a literal value under a secret-looking key; expressions stay so mapping/flagging see them.
+func redactLiteralSecret(key, val string) string {
+	if bambooLooksSecret(key) && !strings.Contains(val, "${{") {
+		return bambooSecretPlaceholder
+	}
+	return val
+}
+
 // workflowCallStub renders a TODO step for a reusable-workflow job, preserving with: inputs and secrets: names in comments so nothing is silently dropped.
 func workflowCallStub(id string, call *actionlint.WorkflowCall, result *ConversionResult) Step {
 	uses := ""
@@ -386,7 +394,7 @@ func workflowCallStub(id string, call *actionlint.WorkflowCall, result *Conversi
 			if in := call.Inputs[k]; in != nil && in.Value != nil {
 				val = in.Value.Value
 			}
-			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, val)))
+			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, redactLiteralSecret(k, val))))
 		}
 	}
 	if len(call.Secrets) > 0 {
@@ -397,7 +405,7 @@ func workflowCallStub(id string, call *actionlint.WorkflowCall, result *Conversi
 				val = sec.Value.Value
 			}
 			detectGHASecrets(val, result)
-			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, val)))
+			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, redactLiteralSecret(k, val))))
 		}
 	}
 	if call.InheritSecrets {

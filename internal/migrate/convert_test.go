@@ -632,3 +632,28 @@ func TestNcipolloReleaseArtifactsAppended(t *testing.T) {
 	assert.Contains(t, script, " dist/*.zip", "globs stay unquoted")
 	assert.Contains(t, script, ` 'my app.tgz'`, "paths with spaces stay one operand")
 }
+
+func TestWorkflowCallStubRedactsLiteralSecrets(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  call:
+    uses: org/repo/.github/workflows/deploy.yml@v1
+    with:
+      api_key: hunter2
+      region: eu-west-1
+    secrets:
+      DEPLOY_TOKEN: literalpass
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	assert.NotContains(t, result.YAML, "hunter2")
+	assert.NotContains(t, result.YAML, "literalpass")
+	assert.Contains(t, result.YAML, "eu-west-1", "non-secret literals pass through")
+	assert.Contains(t, result.YAML, "${{ secrets.GH_TOKEN }}", "secret expressions stay visible as references")
+}
