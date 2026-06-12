@@ -214,8 +214,12 @@ func runAgentView(f *cmdutil.Factory, nameOrID string, opts *cmdutil.ViewOptions
 	}
 
 	if agent.Build != nil {
+		jobName := agent.Build.BuildTypeID
+		if agent.Build.BuildType != nil {
+			jobName = agent.Build.BuildType.Name
+		}
 		_, _ = fmt.Fprintf(p.Out, "\nCurrent build: %s %d  #%s (%s)\n",
-			agent.Build.BuildType.Name,
+			jobName,
 			agent.Build.ID,
 			agent.Build.Number,
 			agent.Build.Status)
