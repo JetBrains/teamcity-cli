@@ -92,6 +92,10 @@ func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 		}
 
 		jobNames := stringSliceFromAny(stageInfo["jobs"])
+		if len(jobNames) < bambooStageJobEntryCount(stageInfo["jobs"]) {
+			result.NeedsReview = append(result.NeedsReview,
+				fmt.Sprintf("Stage %q has `jobs:` entries that are not plain job-name strings → those jobs were not converted; rewrite `jobs:` as a list of job names", stageName))
+		}
 		var stageJobIDs []string
 		for _, jobName := range jobNames {
 			jobDef, _ := spec[jobName].(map[string]any)
@@ -212,6 +216,17 @@ func bambooStageEntry(entry any) (string, map[string]any, bool) {
 		info = map[string]any{}
 	}
 	return name, info, true
+}
+
+// bambooStageJobEntryCount counts raw entries under a stage's `jobs:` key regardless of YAML shape, so dropped entries are detectable.
+func bambooStageJobEntryCount(v any) int {
+	switch jobs := v.(type) {
+	case string:
+		return 1
+	case map[string]any:
+		return len(jobs)
+	}
+	return len(anySlice(v))
 }
 
 type bambooTask struct {

@@ -394,6 +394,43 @@ J2:
 	assert.Equal(t, []string{"A_J1"}, result.Pipeline.Jobs[1].Dependencies)
 }
 
+func TestBambooMapFormStageJobsSurfaceAsReview(t *testing.T) {
+	t.Parallel()
+
+	result := convertBambooSpec(t, `
+stages:
+  - 'S':
+      jobs:
+        Build: x
+Build:
+  tasks:
+    - script: echo hi
+`)
+	// Map-form jobs yield no usable job names; the loss must surface instead of a clean empty conversion.
+	assert.Empty(t, result.Pipeline.Jobs)
+	reviews := strings.Join(result.NeedsReview, "\n")
+	assert.Contains(t, reviews, `Stage "S"`)
+	assert.Contains(t, reviews, "not plain job-name strings")
+}
+
+func TestBambooNonStringStageJobEntrySurfacesAsReview(t *testing.T) {
+	t.Parallel()
+
+	result := convertBambooSpec(t, `
+stages:
+  - 'S':
+      jobs:
+        - Build
+        - 123
+Build:
+  tasks:
+    - script: echo hi
+`)
+	// The string job converts; the dropped non-string entry must be flagged.
+	require.Len(t, result.Pipeline.Jobs, 1)
+	assert.Contains(t, strings.Join(result.NeedsReview, "\n"), `Stage "S"`)
+}
+
 func TestBambooDisabledJobBecomesNoOp(t *testing.T) {
 	t.Parallel()
 
