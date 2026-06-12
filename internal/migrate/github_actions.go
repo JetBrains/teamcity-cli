@@ -317,8 +317,7 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 		lines = append(lines, "DOCKERFILE="+shellQuote(file))
 	}
 	var extraTags []string
-	if tags != "" {
-		tagList := strings.Fields(tags)
+	if tagList := strings.Fields(tags); len(tagList) > 0 {
 		lines = append(lines, "IMAGE="+shellQuote(tagList[0]))
 		extraTags = tagList[1:]
 	} else {
