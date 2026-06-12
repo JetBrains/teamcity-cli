@@ -1,5 +1,14 @@
 # TeamCity Pipeline YAML Quick Reference
 
+## Contents
+
+- Structure (full annotated example)
+- Step Types (script, gradle, maven, node-js)
+- Agent Types (TeamCity Cloud + self-hosted)
+- Dependencies Between Jobs
+- Files / Artifacts
+- Validating (and what `validate` does NOT check)
+
 ## Structure
 
 ```yaml
@@ -26,7 +35,8 @@ parameters:              # Pipeline-scoped env vars
   env.GLOBAL_KEY: "value"
 
 secrets:                 # Sensitive values — value MUST start with "credentialsJSON:"
-  env.SECRET_NAME: "credentialsJSON:uuid-here"
+  API_KEY: "credentialsJSON:uuid-here"   # referenced as %API_KEY% (matches converter output)
+                                         # env.-prefixed keys become environment variables instead
 ```
 
 ## Step Types

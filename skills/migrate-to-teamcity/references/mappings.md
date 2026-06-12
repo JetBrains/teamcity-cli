@@ -1,5 +1,12 @@
 # Concept Mappings: CI Systems to TeamCity
 
+## Contents
+
+- GitHub Actions to TeamCity Pipeline YAML (concepts, actions, runners)
+- Fixing a stub
+- Bamboo Specs to TeamCity Pipeline YAML (concepts, tasks, variables)
+- Bamboo Specs that aren't converted
+
 ## GitHub Actions to TeamCity Pipeline YAML
 
 | GitHub Actions | TeamCity | Notes |
@@ -16,7 +23,7 @@
 | `services:` | Docker Compose or step-level | |
 | `if: condition` | Branch filter or script logic | |
 | `timeout-minutes:` | Build configuration timeout (UI) | No YAML equivalent |
-| `continue-on-error: true` | Step "Even if some build steps have failed" policy (UI) | No YAML equivalent |
+| `continue-on-error: true` | Wrap the command so its exit code is ignored (`cmd || true`) or override the step's failure condition | TC fails on nonzero exit; the UI step-execution policy only controls running *after* earlier failures — it won't ignore this step's own exit code |
 | `concurrency: { group: ... }` | "Limit max concurrent jobs" build setting (UI) | No YAML equivalent |
 | `outputs:` / `${{ steps.x.outputs.y }}` | `output-parameters:` on producer + `%dep.<job>.<param>%` on consumer | Or write to a shared artifact file |
 | `uses: ./.github/workflows/x.yml` (reusable) | Inline OR convert separately + snapshot dependency | Stub created |
@@ -27,25 +34,52 @@
 
 ### Action Mapping
 
-| Action | TeamCity |
-|---|---|
-| `actions/checkout` | Remove -- TC VCS checkout is automatic |
-| `actions/cache` | `enable-dependency-cache: true` |
-| `actions/upload-artifact` | `files-publication: [{path: "..."}]` |
-| `actions/download-artifact` | Job dependencies with `share-with-jobs` |
-| `actions/setup-node/java/go/python` | Remove -- pre-installed on TC Cloud agents |
-| `gradle/actions/setup-gradle` | Remove -- `./gradlew` runs directly |
-| `docker/login-action` | TC Docker registry connection |
-| `docker/build-push-action` | `docker build && docker push` script |
-| `JetBrains/qodana-action` | TC native Qodana build feature |
-| `aws-actions/configure-aws-credentials` | TC AWS Connection in project settings |
-| `softprops/action-gh-release` | `gh release create "$TAG" --generate-notes` script |
-| `golangci/golangci-lint-action` | `curl -sSfL .../golangci-lint/.../install.sh \| sh -s -- -b $(go env GOPATH)/bin <version>` then `golangci-lint run` |
-| `codecov/codecov-action` | `curl -Os https://cli.codecov.io/latest/linux/codecov && chmod +x codecov && ./codecov` |
-| `goreleaser/goreleaser-action` | `curl -sSfL https://goreleaser.com/static/run \| bash -s -- release --clean` (needs `GITHUB_TOKEN` secret) |
-| `aquasecurity/trivy-action` | `curl -sfL .../trivy/.../install.sh \| sh -s -- -b /usr/local/bin` then `trivy fs .` with matching flags |
-| `github/codeql-action/*` | **Skip** -- GitHub-specific, requires GitHub security-events API. Not portable to TC |
-| Unknown actions | Commented stub with original inputs |
+The **Converter emits** column is what `teamcity migrate` writes; **Your follow-up** is what you still have to do by hand.
+
+| Action | Converter emits | Your follow-up |
+|---|---|---|
+| `actions/checkout` | Removed -- TC VCS checkout is automatic | |
+| `actions/cache` | `enable-dependency-cache: true` | |
+| `actions/upload-artifact` | `files-publication: [{path: "..."}]` | |
+| `actions/download-artifact` | Nothing (simplified out); named downloads get a manual note | Artifacts arrive via the job's `dependencies:` (from `needs:`) -- ensure the upstream job publishes with `share-with-jobs: true`, and add the dependency yourself if the workflow downloaded from a job it didn't `need` |
+| `actions/setup-node/java/go/python` | Removed -- pre-installed on TC Cloud agents | Pinned versions surface as manual notes; ensure the agent provides them |
+| `gradle/actions/setup-gradle` | Removed -- `./gradlew` runs directly | |
+| `docker/login-action` | Comment-only placeholder step | Configure a Docker registry connection in TC project settings -- required for private registries, no login command is generated |
+| `docker/build-push-action` | `docker build && docker push` script | |
+| `JetBrains/qodana-action` | Commented pointer to native integration | Add the Qodana build feature in TC settings |
+| `aws-actions/configure-aws-credentials` | `export AWS_*` env lines | Add `env.AWS_ACCESS_KEY_ID` / `env.AWS_SECRET_ACCESS_KEY` under `secrets:` -- the `env.` prefix exports them as environment variables, which is what the script reads |
+| `softprops/action-gh-release` | `gh release create "<tag_name>" --generate-notes` plus any `files:` globs; falls back to `%teamcity.build.branch%` when `tag_name` is unset | Add `env.GH_TOKEN` under `secrets:` -- `gh` reads it from the environment, so the `env.` prefix is required |
+| `golangci/golangci-lint-action` | `golangci-lint run <args>` | Assumes the binary on the agent; a pinned `version:` becomes a manual note -- install it yourself |
+| `codecov/codecov-action` | `curl -Os https://cli.codecov.io/latest/linux/codecov && chmod +x codecov && ./codecov` | |
+| `goreleaser/goreleaser-action` | **Stub** (not in the registry) | Replace with `curl -sSfL https://goreleaser.com/static/run \| bash -s -- release --clean` (needs `GITHUB_TOKEN`) |
+| `aquasecurity/trivy-action` | `trivy <scan-type> <image-ref>` | Assumes trivy on the agent; install via the trivy install.sh if missing |
+| `github/codeql-action/init`, `/analyze`, `/autobuild` | **Dropped** (listed under Needs review) -- requires GitHub security-events API | Consider the Qodana build feature instead. Other codeql-action subpaths (e.g. `/upload-sarif`) stub like unknown actions |
+| Unknown actions | Commented stub with original inputs | Read the action's source, write the equivalent shell |
+
+### Fixing a stub
+
+The converter emits unknown actions as commented TODO steps that preserve the original inputs:
+
+```yaml
+- type: script
+  name: "custom-deploy"
+  script-content: |-
+    # TODO: Replace acme/custom-deploy@v2 with equivalent commands
+    # Action inputs:
+    #   region: eu-west-1
+    #   target: prod
+    echo 'TODO: implement equivalent of custom-deploy'
+```
+
+Read the action's repository -- its `action.yml` shows what it actually runs (most actions are thin CLI wrappers). Replace the step body with the equivalent commands:
+
+```yaml
+- type: script
+  name: "custom-deploy"
+  script-content: aws deploy create-deployment --region eu-west-1 --deployment-group prod
+```
+
+Secrets referenced by the original inputs become `%PARAM%` references -- create them with `teamcity project token put`.
 
 ### Runner Mapping
 
@@ -94,9 +128,9 @@ Bamboo Specs YAML lives in `bamboo-specs/*.yml` (or `bamboo.yml` in the repo roo
 | `ant` | `ant -f <buildfile> <target>` | |
 | `gradle` | `./gradlew <tasks>` | |
 | `npm` | `npm <command>` | |
-| `node` / `node_unit` | `node <script> <args>` | |
+| `node` | `node <script> <args>` | |
 | `command` | Inline `<exe> <args>` | |
-| `docker` (build/push/run) | `docker <cmd> ...` | Manual notes for registry credentials |
+| `docker` (build/push/run) | `docker <cmd> ...` | Registry login is not converted or flagged -- add `docker login` or a TC registry connection yourself |
 | `inject-variables` | `set -a; . file; set +a` | Manual: review whether to convert to TC parameters |
 | `dump-variables` | `env \| sort` | |
 | `artifact-download` | Manual artifact-dependency | Surfaced as manual setup |
@@ -105,7 +139,7 @@ Bamboo Specs YAML lives in `bamboo-specs/*.yml` (or `bamboo.yml` in the repo roo
 | `ms-build` / `ms-test` / `visual-studio` / `nunit-runner` | Inline equivalent commands | |
 | `fastlane` | `fastlane <lane>` | |
 | `unlock-keychain` | `security unlock-keychain ...` | Manual: store password as TC token |
-| `repository-tag` / `repository-branch` / `repository-commit` / `repository-push` | Inline `git` commands | Manual: ensure agent has push credentials |
+| `repository-tag` / `repository-branch` / `repository-commit` / `repository-push` | Inline `git` commands | Push credentials are not flagged -- ensure the agent has them |
 | `aws-code-deploy` | `aws deploy create-deployment ...` | Manual: store AWS credentials as TC tokens |
 | `grails` / `gulp` / `grunt` / `bower` | Inline runner invocation | |
 | Unknown task | Commented TODO stub with original fields | |
@@ -136,9 +170,9 @@ These constructs land in the bamboo-specs directory but the migrate command does
 | Bamboo construct | TeamCity handling |
 |---|---|
 | `bamboo-specs/deployment.yml` (deployment plans) | Model as a separate pipeline triggered on the build pipeline's success; or use TC deployment build configuration |
-| Multi-plan specs (multiple `plan:` blocks in one file) | Split into one file per plan, then re-run `teamcity migrate` |
+| Multi-document specs (`---`-separated) | The converter handles the first `plan:` document and flags the rest under Needs review -- split remaining documents into separate files and re-run `teamcity migrate` |
 | `repositories:` block (project-level VCS declarations) | Run `teamcity project vcs create` for each repo before pipeline creation |
 | `other:` block (`concurrent-build-plugin`, `clean-working-dir`, ...) | Configure cleanup/concurrency in TC build settings UI |
 | `linked-repositories:` | Manual: create TC VCS roots and reference by ID |
-| Multiple stages with the same name | Bamboo allows it; TC requires unique job IDs — rename in Bamboo before migration |
+| Stages/jobs whose names collide after sanitizing | The converter de-duplicates job IDs with `_2` suffixes, but `dependencies:` referencing the duplicated name resolve to the *first* job -- verify the generated `dependencies:` blocks |
 
