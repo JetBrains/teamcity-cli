@@ -22,7 +22,7 @@ Run `teamcity migrate` from the repo root -- detection scans `.github/workflows/
 ## Reading the report
 
 - **Needs review** -- problems inside the generated YAML: TODO stubs, dropped steps, reusable-workflow placeholders. Fix these in the file before creating the pipeline.
-- **Manual setup needed** -- server-side configuration the YAML cannot express: secrets, triggers, branch filters, connections. Do these on the server after `pipeline create`.
+- **Manual setup needed** -- configuration the YAML cannot express: triggers, branch filters, connections -- server-side work done after `pipeline create`. Secret items are the exception: besides storing the token on the server, add a matching entry under the top-level `secrets:` block in the YAML before creating or pushing the pipeline.
 - Exit code 1 means at least one source failed to convert *or* one generated file failed schema validation -- files that converted cleanly are still written. Read the per-file ✓/⚠/✗ lines instead of treating exit 1 as total failure.
 - `--json` prints `{"sources": [...], "results": [...]}` to stdout; each result carries `outputFile`, `yaml`, `needsReview`, `manualSetup`, and `validationError`.
 
