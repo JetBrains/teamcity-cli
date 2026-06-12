@@ -584,10 +584,10 @@ func TestGHPagesPublishesOnlyTheFolder(t *testing.T) {
 	require.Len(t, r.Steps, 1)
 	script := r.Steps[0].ScriptContent
 	// The orphan index/worktree must be cleared before staging, and the site staged from outside the worktree.
-	require.Less(t, strings.Index(script, `cp -r './site'/* "$SITE_TMP"/`), strings.Index(script, "git checkout --orphan"))
+	require.Less(t, strings.Index(script, `cp -r './site'/. "$SITE_TMP"/`), strings.Index(script, "git checkout --orphan"), "dotfile-safe copy must run before the orphan checkout")
 	require.Less(t, strings.Index(script, "git checkout --orphan"), strings.Index(script, "git rm -rfq ."))
 	require.Less(t, strings.Index(script, "git rm -rfq ."), strings.Index(script, "git clean -fdx"))
-	require.Less(t, strings.Index(script, "git clean -fdx"), strings.Index(script, `cp -r "$SITE_TMP"/* .`))
+	require.Less(t, strings.Index(script, "git clean -fdx"), strings.Index(script, `cp -r "$SITE_TMP"/. .`))
 }
 
 func TestECSDeployRegistersRenderedTaskDefinition(t *testing.T) {
