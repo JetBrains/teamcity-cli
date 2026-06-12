@@ -297,9 +297,9 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 		result.ManualSetup = append(result.ManualSetup,
 			fmt.Sprintf("Job %q sets timeout-minutes: %s → configure an execution timeout in TeamCity failure conditions", id, ghaFloatString(job.TimeoutMinutes)))
 	}
-	if job.ContinueOnError != nil && job.ContinueOnError.Value {
+	if ghaBoolSet(job.ContinueOnError) {
 		result.ManualSetup = append(result.ManualSetup,
-			fmt.Sprintf("Job %q has continue-on-error: true → its failure must not fail the pipeline; relax dependency failure conditions in TeamCity", id))
+			fmt.Sprintf("Job %q has continue-on-error: %s → its failure must not fail the pipeline; relax dependency failure conditions in TeamCity", id, ghaBoolString(job.ContinueOnError)))
 	}
 	if len(job.Outputs) > 0 {
 		result.ManualSetup = append(result.ManualSetup,
@@ -332,9 +332,9 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 			result.ManualSetup = append(result.ManualSetup,
 				fmt.Sprintf("Step %q has if: %s → add execution condition or branch filter in TeamCity", stepName, condense(step.If.Value)))
 		}
-		if step.ContinueOnError != nil && step.ContinueOnError.Value {
+		if ghaBoolSet(step.ContinueOnError) {
 			result.ManualSetup = append(result.ManualSetup,
-				fmt.Sprintf("Step %q has continue-on-error: true → wrap the command so its exit code is ignored (e.g. `cmd || true`) or override the failure condition; TC fails the build on nonzero exit by default", stepName))
+				fmt.Sprintf("Step %q has continue-on-error: %s → wrap the command so its exit code is ignored (e.g. `cmd || true`) or override the failure condition; TC fails the build on nonzero exit by default", stepName, ghaBoolString(step.ContinueOnError)))
 		}
 		if step.TimeoutMinutes != nil {
 			result.ManualSetup = append(result.ManualSetup,
@@ -535,6 +535,19 @@ func detectGHASecrets(script string, result *ConversionResult) {
 }
 
 // ghaFloatString renders a numeric GHA field, falling back to its raw ${{ }} expression form.
+// ghaBoolSet reports a bool field that is literally true or driven by a runtime expression.
+func ghaBoolSet(b *actionlint.Bool) bool {
+	return b != nil && (b.Value || b.Expression != nil)
+}
+
+// ghaBoolString renders a literal bool field or its raw expression.
+func ghaBoolString(b *actionlint.Bool) string {
+	if b.Expression != nil {
+		return b.Expression.Value
+	}
+	return strconv.FormatBool(b.Value)
+}
+
 func ghaFloatString(f *actionlint.Float) string {
 	if f.Expression != nil {
 		return f.Expression.Value

@@ -406,3 +406,25 @@ func TestMapGHAExpressions(t *testing.T) {
 		assert.Equal(t, tt.want, MapGHAExpressions(tt.input))
 	}
 }
+
+func TestGHAExpressionContinueOnErrorFlagged(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  exp:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+    steps:
+      - run: echo hi
+        continue-on-error: ${{ matrix.experimental }}
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	manuals := strings.Join(result.ManualSetup, "\n")
+	assert.Contains(t, manuals, `Job "exp" has continue-on-error: ${{ matrix.experimental }}`)
+	assert.Contains(t, manuals, `Step "" has continue-on-error: ${{ matrix.experimental }}`)
+}
