@@ -509,11 +509,18 @@ func extractGHAEnvParams(env *actionlint.Env, result *ConversionResult) map[stri
 		if v == nil || v.Name == nil || v.Value == nil {
 			continue
 		}
-		val := v.Value.Value
+		name, val := v.Name.Value, v.Value.Value
+		// Literal values under secret-looking names must not land in the YAML; expressions flow through mapping/flagging below.
+		if bambooLooksSecret(name) && !strings.Contains(val, "${{") {
+			params[name] = bambooSecretPlaceholder
+			result.ManualSetup = append(result.ManualSetup,
+				fmt.Sprintf("Env %q looks like a secret → store with `teamcity project token put` and reference as %%env.%s%%; value redacted", name, name))
+			continue
+		}
 		mapped := MapGHAExpressions(val)
-		params[v.Name.Value] = mapped
+		params[name] = mapped
 		detectGHASecrets(val, result)
-		flagUnmappedGHAExpressions(mapped, "Env "+v.Name.Value, result)
+		flagUnmappedGHAExpressions(mapped, "Env "+name, result)
 	}
 	return params
 }

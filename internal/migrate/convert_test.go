@@ -465,3 +465,34 @@ jobs:
 	assert.Contains(t, manuals, `Workflow sets concurrency (group deploy-${{ github.ref }})`)
 	assert.Contains(t, manuals, `Job "deploy" sets concurrency (group production)`)
 }
+
+func TestGHALiteralSecretEnvRedacted(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+env:
+  API_KEY: hunter2
+jobs:
+  b:
+    runs-on: ubuntu-latest
+    env:
+      DB_PASSWORD: swordfish
+      REGION: eu-west-1
+    steps:
+      - run: ./deploy.sh
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	assert.NotContains(t, result.YAML, "hunter2")
+	assert.NotContains(t, result.YAML, "swordfish")
+	assert.Contains(t, result.YAML, "eu-west-1", "non-secret literals pass through")
+	assert.Contains(t, result.YAML, "%GH_TOKEN%", "secrets-expression values keep the mapped reference")
+	manuals := strings.Join(result.ManualSetup, "\n")
+	assert.Contains(t, manuals, `Env "API_KEY" looks like a secret`)
+	assert.Contains(t, manuals, `Env "DB_PASSWORD" looks like a secret`)
+}
