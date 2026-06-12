@@ -21,7 +21,7 @@ type Setting struct {
 
 // GetBuildTypeSettings returns all settings for a build configuration
 func (c *Client) GetBuildTypeSettings(buildTypeID string) (*SettingsList, error) {
-	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings", buildTypeID)
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/settings", url.PathEscape(buildTypeID))
 
 	var result SettingsList
 	if err := c.get(c.ctx(), path, &result); err != nil {

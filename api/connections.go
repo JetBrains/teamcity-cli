@@ -10,7 +10,7 @@ import (
 // GetProjectConnections returns OAuth/connection features for a project
 func (c *Client) GetProjectConnections(projectID string) (*ProjectFeatureList, error) {
 	fields := url.QueryEscape("projectFeature(id,type,properties(property(name,value)))")
-	path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures?locator=type:OAuthProvider&fields=%s", projectID, fields)
+	path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures?locator=type:OAuthProvider&fields=%s", url.PathEscape(projectID), fields)
 
 	var result ProjectFeatureList
 	if err := c.get(c.ctx(), path, &result); err != nil {
@@ -26,7 +26,7 @@ func (c *Client) CreateProjectFeature(projectID string, feat ProjectFeature) (*P
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures", projectID)
+	path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures", url.PathEscape(projectID))
 	var result ProjectFeature
 	if err := c.post(c.ctx(), path, bytes.NewReader(body), &result); err != nil {
 		return nil, err
@@ -36,6 +36,6 @@ func (c *Client) CreateProjectFeature(projectID string, feat ProjectFeature) (*P
 
 // DeleteProjectFeature removes a project feature by id.
 func (c *Client) DeleteProjectFeature(projectID, featureID string) error {
-	path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures/id:%s", projectID, featureID)
+	path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures/id:%s", url.PathEscape(projectID), url.PathEscape(featureID))
 	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
 }

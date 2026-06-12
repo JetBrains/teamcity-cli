@@ -40,7 +40,7 @@ func (c *Client) GetAgents(opts AgentsOptions) (*AgentList, bool, error) {
 			locator.AddRaw("pool", "(id:"+opts.Pool+")")
 		} else if strings.ContainsAny(opts.Pool, ":,()$") {
 			// base64-encode the name: TeamCity ignores in-value escaping for these chars (matches cloud.go).
-			locator.AddRaw("pool", "("+cloudNameValueLocator(opts.Pool)+")")
+			locator.AddRaw("pool", "("+nameValueLocator(opts.Pool)+")")
 		} else {
 			locator.AddRaw("pool", "(name:"+opts.Pool+")")
 		}

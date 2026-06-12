@@ -113,7 +113,7 @@ func TestLocator(T *testing.T) {
 				return NewLocator().
 					Add("branch", "feature(test)")
 			},
-			want: "branch:(feature(test$))",
+			want: "branch:($base64:ZmVhdHVyZSh0ZXN0KQ)",
 		},
 		{
 			name: "multiple special chars",
@@ -121,7 +121,7 @@ func TestLocator(T *testing.T) {
 				return NewLocator().
 					Add("branch", "a:b,c(d)")
 			},
-			want: "branch:(a:b,c(d$))",
+			want: "branch:($base64:YTpiLGMoZCk)",
 		},
 		{
 			name: "unicode characters",
@@ -145,7 +145,7 @@ func TestLocator(T *testing.T) {
 				return NewLocator().
 					Add("branch", ":,:()")
 			},
-			want: "branch:(:,:($))",
+			want: "branch:($base64:Oiw6KCk)",
 		},
 		{
 			name: "injection attempt via closing paren",
@@ -153,7 +153,7 @@ func TestLocator(T *testing.T) {
 				return NewLocator().
 					Add("project", "Foo),status:FAILURE,tag:(bar")
 			},
-			want: "project:(Foo$),status:FAILURE,tag:(bar)",
+			want: "project:($base64:Rm9vKSxzdGF0dXM6RkFJTFVSRSx0YWc6KGJhcg)",
 		},
 		{
 			name: "negative int value is skipped",

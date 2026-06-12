@@ -37,6 +37,19 @@ func TestBuildsOptionsLocator(T *testing.T) {
 			},
 		},
 		{
+			name: "branch with locator metacharacters goes through the base64 name condition",
+			opts: BuildsOptions{
+				Branch: "release(2024)",
+			},
+			want: []string{
+				"branch:(name:(value:($base64:cmVsZWFzZSgyMDI0KQ)))",
+			},
+			reject: []string{
+				"branch:(release",
+				"branch:(default:any)",
+			},
+		},
+		{
 			name: "favorites use current user star tag locator",
 			opts: BuildsOptions{
 				BuildTypeID: "MyBuild",
