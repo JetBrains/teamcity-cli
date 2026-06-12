@@ -187,6 +187,10 @@ func convertGitHub(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 				fmt.Sprintf("VCS trigger (%s) → configure in TeamCity project settings", triggers))
 		}
 	}
+	if workflow.Concurrency != nil {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Workflow sets concurrency%s → recreate with \"Limit the number of simultaneously running builds\" in TeamCity", ghaConcurrencyGroup(workflow.Concurrency)))
+	}
 
 	result.Pipeline = p
 	return result, nil
@@ -296,6 +300,10 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 	if job.TimeoutMinutes != nil {
 		result.ManualSetup = append(result.ManualSetup,
 			fmt.Sprintf("Job %q sets timeout-minutes: %s → configure an execution timeout in TeamCity failure conditions", id, ghaFloatString(job.TimeoutMinutes)))
+	}
+	if job.Concurrency != nil {
+		result.ManualSetup = append(result.ManualSetup,
+			fmt.Sprintf("Job %q sets concurrency%s → recreate with \"Limit the number of simultaneously running builds\" in TeamCity", id, ghaConcurrencyGroup(job.Concurrency)))
 	}
 	if ghaBoolSet(job.ContinueOnError) {
 		result.ManualSetup = append(result.ManualSetup,
@@ -535,6 +543,14 @@ func detectGHASecrets(script string, result *ConversionResult) {
 }
 
 // ghaFloatString renders a numeric GHA field, falling back to its raw ${{ }} expression form.
+// ghaConcurrencyGroup renders the concurrency group suffix when one is set.
+func ghaConcurrencyGroup(c *actionlint.Concurrency) string {
+	if c.Group != nil && c.Group.Value != "" {
+		return fmt.Sprintf(" (group %s)", c.Group.Value)
+	}
+	return ""
+}
+
 // ghaBoolSet reports a bool field that is literally true or driven by a runtime expression.
 func ghaBoolSet(b *actionlint.Bool) bool {
 	return b != nil && (b.Value || b.Expression != nil)

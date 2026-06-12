@@ -441,3 +441,27 @@ func TestK8sDeployManifestsQuoted(t *testing.T) {
 	assert.Contains(t, script, "-f 'deploy/prod;rm'")
 	assert.Contains(t, script, "-f 'k8s/$(whoami).yml'")
 }
+
+func TestGHAConcurrencyFlagged(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency: production
+    steps:
+      - run: ./deploy.sh
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	manuals := strings.Join(result.ManualSetup, "\n")
+	assert.Contains(t, manuals, `Workflow sets concurrency (group deploy-${{ github.ref }})`)
+	assert.Contains(t, manuals, `Job "deploy" sets concurrency (group production)`)
+}

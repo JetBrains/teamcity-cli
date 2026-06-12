@@ -23,6 +23,7 @@ type migrateOptions struct {
 	file       string
 	noValidate bool
 	jsonOutput bool
+	force      bool
 }
 
 func NewCmd(f *cmdutil.Factory) *cobra.Command {
@@ -60,6 +61,7 @@ surfaced under "Manual setup needed" for follow-up.`,
 	cmd.Flags().StringVar(&opts.file, "file", "", "Convert a specific file only")
 	cmd.Flags().BoolVar(&opts.noValidate, "no-validate", false, "Skip schema validation")
 	cmd.Flags().BoolVar(&opts.jsonOutput, "json", false, "Output as JSON")
+	cmd.Flags().BoolVar(&opts.force, "force", false, "Overwrite existing output files")
 
 	cmdutil.MarkExperimental(f, cmd)
 
@@ -146,17 +148,24 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 	migrate.DeduplicateOutputNames(results)
 
 	// Write before branching on output format so --json changes only the report, not the behavior.
-	writtenFiles := []string{}
+	written := []writtenFile{}
+	var skippedExisting int
 	if !opts.dryRun {
 		for _, result := range results {
 			outPath := filepath.Join(opts.outputDir, result.OutputFile)
+			// Refuse to clobber user edits: identical content keeps reruns idempotent, anything else needs --force.
+			if existing, err := os.ReadFile(outPath); err == nil && !opts.force && string(existing) != result.YAML {
+				f.Printer.Warn("Skipping %s: file exists with different content (use --force to overwrite)", outPath)
+				skippedExisting++
+				continue
+			}
 			if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
 				return fmt.Errorf("creating output directory: %w", err)
 			}
 			if err := os.WriteFile(outPath, []byte(result.YAML), 0644); err != nil {
 				return fmt.Errorf("writing %s: %w", outPath, err)
 			}
-			writtenFiles = append(writtenFiles, outPath)
+			written = append(written, writtenFile{path: outPath, result: result})
 		}
 	}
 
@@ -165,16 +174,22 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 			return err
 		}
 	} else {
-		printMigrateReport(f, opts, configs, results, writtenFiles)
+		printMigrateReport(f, opts, configs, results, written)
 	}
 
-	if conversionErrors > 0 {
+	if conversionErrors > 0 || skippedExisting > 0 {
 		return &cmdutil.ExitError{Code: 1}
 	}
 	return validationExitError(results, opts.noValidate)
 }
 
-func printMigrateReport(f *cmdutil.Factory, opts *migrateOptions, configs []migrate.CIConfig, results []*migrate.ConversionResult, writtenFiles []string) {
+// writtenFile pairs an output path with its conversion so the report shows per-file validation state.
+type writtenFile struct {
+	path   string
+	result *migrate.ConversionResult
+}
+
+func printMigrateReport(f *cmdutil.Factory, opts *migrateOptions, configs []migrate.CIConfig, results []*migrate.ConversionResult, written []writtenFile) {
 	if !opts.dryRun {
 		_, _ = fmt.Fprintf(f.Printer.Out, "Detected %d CI configuration(s):\n\n", len(configs))
 	}
@@ -187,24 +202,24 @@ func printMigrateReport(f *cmdutil.Factory, opts *migrateOptions, configs []migr
 		printConversionResult(f, cfgByFile[result.SourceFile], result, opts.dryRun)
 	}
 
-	if len(writtenFiles) > 0 {
+	if len(written) > 0 {
 		_, _ = fmt.Fprintf(f.Printer.Out, "Written:\n")
-		for i, path := range writtenFiles {
-			if results[i].ValidationError != "" {
-				_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Green(path), output.Yellow("(schema validation failed — review before deploying)"))
+		for _, w := range written {
+			if w.result.ValidationError != "" {
+				_, _ = fmt.Fprintf(f.Printer.Out, "  %s %s\n", output.Green(w.path), output.Yellow("(schema validation failed — review before deploying)"))
 				continue
 			}
-			_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", output.Green(path))
+			_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", output.Green(w.path))
 		}
 	}
 
 	printItemList(f, "Needs review:", migrate.CollectNeedsReview(results))
 	printItemList(f, "Manual setup needed:", migrate.CollectManualSetup(results))
 
-	if len(writtenFiles) > 0 {
+	if len(written) > 0 {
 		_, _ = fmt.Fprintf(f.Printer.Out, "\nNext:\n")
-		_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline validate %s\n", writtenFiles[0])
-		_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline create <name> -p <project-id> -f %s\n", writtenFiles[0])
+		_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline validate %s\n", written[0].path)
+		_, _ = fmt.Fprintf(f.Printer.Out, "  teamcity pipeline create <name> -p <project-id> -f %s\n", written[0].path)
 	}
 
 	printMigrateTips(f)
