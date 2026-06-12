@@ -511,3 +511,34 @@ func TestDownloadArtifactDestinationFlagged(t *testing.T) {
 	r = transformer("", map[string]string{"name": "dist"})
 	assert.NotContains(t, strings.Join(r.ManualTasks, "\n"), "Artifact download into")
 }
+
+func TestGHReleaseStateAndAssetQuoting(t *testing.T) {
+	t.Parallel()
+
+	nc, ok := LookupActionTransformer("ncipollo/release-action@v1")
+	require.True(t, ok)
+	r := nc("Release", map[string]string{"tag": "v1.0.0", "draft": "true", "prerelease": "true"})
+	require.Len(t, r.Steps, 1)
+	assert.Contains(t, r.Steps[0].ScriptContent, " --draft")
+	assert.Contains(t, r.Steps[0].ScriptContent, " --prerelease")
+
+	sp, ok := LookupActionTransformer("softprops/action-gh-release@v2")
+	require.True(t, ok)
+	r = sp("Release", map[string]string{
+		"tag_name":   "v1.0.0",
+		"prerelease": "true",
+		"files":      "dist/*.zip\nmy file.zip\n$(evil).zip",
+	})
+	require.Len(t, r.Steps, 1)
+	script := r.Steps[0].ScriptContent
+	assert.Contains(t, script, " --prerelease")
+	assert.Contains(t, script, " dist/*.zip", "plain globs stay unquoted")
+	assert.Contains(t, script, ` 'my file.zip'`, "paths with spaces stay one operand")
+	assert.Contains(t, script, ` '$(evil).zip'`, "metacharacters stay inert")
+	assert.NotContains(t, script, "\n")
+
+	// Releases without state inputs stay regular.
+	r = sp("Release", map[string]string{"tag_name": "v1.0.0", "draft": "false"})
+	assert.NotContains(t, r.Steps[0].ScriptContent, "--draft")
+	assert.NotContains(t, r.Steps[0].ScriptContent, "--prerelease")
+}

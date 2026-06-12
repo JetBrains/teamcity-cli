@@ -3,6 +3,7 @@ package migrate
 import (
 	"cmp"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -244,7 +245,7 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 	m["ncipollo/release-action"] = func(name string, inputs map[string]string) StepResult {
 		tag := cmp.Or(inputs["tag"], "%teamcity.build.branch%")
-		cmd := fmt.Sprintf("gh release create %q --generate-notes", tag)
+		cmd := fmt.Sprintf("gh release create %q --generate-notes", tag) + ghReleaseStateFlags(inputs)
 		if body := inputs["body"]; body != "" {
 			cmd += " --notes " + shellQuote(body)
 		}
@@ -265,17 +266,20 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 
 	m["actions/create-release"] = func(name string, inputs map[string]string) StepResult {
-		r := Converted([]Step{{Name: cmp.Or(name, "Create release"), ScriptContent: fmt.Sprintf("gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))}})
+		r := Converted([]Step{{Name: cmp.Or(name, "Create release"), ScriptContent: fmt.Sprintf("gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%")) + ghReleaseStateFlags(inputs)}})
 		r.ManualTasks = ghReleaseAuthNote
 		return r
 	}
 	m["softprops/action-gh-release"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
 		fmt.Fprintf(&cmd, "gh release create %q --generate-notes", cmp.Or(inputs["tag_name"], "%teamcity.build.branch%"))
-		// `files:` is a whitespace/newline-separated glob list; split per token (left unquoted so globs still expand).
-		for f := range strings.FieldsSeq(inputs["files"]) {
-			cmd.WriteString(" ")
-			cmd.WriteString(f)
+		cmd.WriteString(ghReleaseStateFlags(inputs))
+		// `files:` is a newline-separated glob list; keep one asset per line so a multiline value can't become a new shell line.
+		for f := range strings.SplitSeq(inputs["files"], "\n") {
+			if f = strings.TrimSpace(f); f != "" {
+				cmd.WriteString(" ")
+				cmd.WriteString(quoteReleaseAsset(f))
+			}
 		}
 		r := Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd.String()}})
 		r.ManualTasks = ghReleaseAuthNote
@@ -300,6 +304,29 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 
 	return m
+}
+
+// ghReleaseStateFlags propagates draft/prerelease inputs so migrated releases keep their visibility.
+func ghReleaseStateFlags(inputs map[string]string) string {
+	var flags string
+	if inputs["draft"] == "true" {
+		flags += " --draft"
+	}
+	if inputs["prerelease"] == "true" {
+		flags += " --prerelease"
+	}
+	return flags
+}
+
+// releaseAssetSafe matches plain path/glob tokens that may stay unquoted so the shell expands them.
+var releaseAssetSafe = regexp.MustCompile(`^[A-Za-z0-9._/*?\[\]-]+$`)
+
+// quoteReleaseAsset keeps glob patterns expandable but quotes anything carrying other shell metacharacters.
+func quoteReleaseAsset(f string) string {
+	if releaseAssetSafe.MatchString(f) {
+		return f
+	}
+	return shellQuote(f)
 }
 
 // ghReleaseAuthNote flags that gh needs a token on the agent, which GHA injected automatically.
