@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,13 +60,27 @@ exec "$@"
 `), 0o755))
 
 	sandboxCmd := func(env []string, args ...string) *exec.Cmd {
-		// Pin the version so CI doesn't float with srt releases; SRT_DEBUG streams
-		// seatbelt violations to stderr so proxy EPERM failures are diagnosable.
+		// Pin the version so CI doesn't float with srt releases; SRT_DEBUG surfaces srt's init and proxy-filter decisions (kernel seatbelt denials are never streamed under npx).
 		full := []string{"-y", "@anthropic-ai/sandbox-runtime@0.0.54", "-s", settings, wrapper}
 		full = append(full, args...)
 		cmd := exec.Command(npx, full...)
 		cmd.Env = append(os.Environ(), append([]string{"SRT_DEBUG=1"}, env...)...)
 		return cmd
+	}
+
+	// macOS seatbelt intermittently denies the child's connect to srt's own proxy port (EPERM) even though the profile allows it — ~13% of Sonoma CI runs, uncorrelated with srt version or agent, not reproducible locally. Each attempt gets a fresh sandbox; any other failure returns immediately.
+	runSandboxed := func(t *testing.T, mk func() *exec.Cmd) (string, string, error) {
+		for attempt := 1; ; attempt++ {
+			var stdout, stderr bytes.Buffer
+			cmd := mk()
+			cmd.Stdout, cmd.Stderr = &stdout, &stderr
+			err := cmd.Run()
+			flaky := strings.Contains(stderr.String(), "proxyconnect") && strings.Contains(stderr.String(), "operation not permitted")
+			if err == nil || !flaky || attempt == 3 {
+				return stdout.String(), stderr.String(), err
+			}
+			t.Logf("retrying after seatbelt proxyconnect EPERM flake (attempt %d/3)", attempt)
+		}
 	}
 
 	// Probe: verify sandbox-runtime works on this host (bwrap may fail on restricted VMs).
@@ -75,29 +90,29 @@ exec "$@"
 	}
 
 	T.Run("guest API call", func(T *testing.T) {
-		cmd := sandboxCmd(
-			[]string{"TEAMCITY_URL=https://cli.teamcity.com", "TEAMCITY_GUEST=1", "NO_COLOR=1"},
-			binary, "api", "/app/rest/server",
-		)
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-		require.NoError(T, cmd.Run(), "sandbox command failed: stdout=%s stderr=%s", stdout.String(), stderr.String())
+		stdout, stderr, err := runSandboxed(T, func() *exec.Cmd {
+			return sandboxCmd(
+				[]string{"TEAMCITY_URL=https://cli.teamcity.com", "TEAMCITY_GUEST=1", "NO_COLOR=1"},
+				binary, "api", "/app/rest/server",
+			)
+		})
+		require.NoError(T, err, "sandbox command failed: stdout=%s stderr=%s", stdout, stderr)
 
 		var resp map[string]any
-		require.NoError(T, json.Unmarshal(stdout.Bytes(), &resp), "response is not JSON: %s", stdout.String())
+		require.NoError(T, json.Unmarshal([]byte(stdout), &resp), "response is not JSON: %s", stdout)
 		assert.NotEmpty(T, resp["buildNumber"], "expected buildNumber in server response")
 	})
 
 	T.Run("blocked domain", func(T *testing.T) {
-		cmd := sandboxCmd(
-			[]string{"TEAMCITY_URL=https://not-allowed.example.com", "TEAMCITY_GUEST=1", "NO_COLOR=1"},
-			binary, "api", "/app/rest/server",
-		)
-		out, _ := cmd.CombinedOutput()
+		stdout, stderr, _ := runSandboxed(T, func() *exec.Cmd {
+			return sandboxCmd(
+				[]string{"TEAMCITY_URL=https://not-allowed.example.com", "TEAMCITY_GUEST=1", "NO_COLOR=1"},
+				binary, "api", "/app/rest/server",
+			)
+		})
 		// The renderer surfaces the raw transport error plus the category-default
 		// sandbox hint. Assert on the hint phrasing — it's the signal that the
 		// CLI recognised this as a sandbox block rather than a generic network error.
-		assert.Contains(T, string(out), "sandbox allowlist")
+		assert.Contains(T, stdout+stderr, "sandbox allowlist")
 	})
 }
