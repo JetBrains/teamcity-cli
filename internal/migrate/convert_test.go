@@ -496,3 +496,18 @@ jobs:
 	assert.Contains(t, manuals, `Env "API_KEY" looks like a secret`)
 	assert.Contains(t, manuals, `Env "DB_PASSWORD" looks like a secret`)
 }
+
+func TestDownloadArtifactDestinationFlagged(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("actions/download-artifact@v4")
+	require.True(t, ok)
+	r := transformer("", map[string]string{"name": "dist", "path": "release"})
+	manuals := strings.Join(r.ManualTasks, "\n")
+	assert.Contains(t, manuals, `Artifact download "dist"`)
+	assert.Contains(t, manuals, `Artifact download into "release"`)
+
+	// No explicit destination: no destination note.
+	r = transformer("", map[string]string{"name": "dist"})
+	assert.NotContains(t, strings.Join(r.ManualTasks, "\n"), "Artifact download into")
+}

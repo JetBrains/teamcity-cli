@@ -190,7 +190,10 @@ func initActionRegistry() map[string]actionTransformer {
 	m["actions/download-artifact"] = func(_ string, inputs map[string]string) StepResult {
 		r := StepResult{Status: StatusSimplified, Note: "download-artifact → files-publication with share-with-jobs"}
 		if name := inputs["name"]; name != "" {
-			r.ManualTasks = []string{fmt.Sprintf("Artifact download %q → ensure upstream job publishes via files-publication with share-with-jobs: true", name)}
+			r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("Artifact download %q → ensure upstream job publishes via files-publication with share-with-jobs: true", name))
+		}
+		if path := inputs["path"]; path != "" {
+			r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("Artifact download into %q → TC delivers shared artifacts at the producer's published path; adjust downstream commands or move the files in a script step", path))
 		}
 		return r
 	}
