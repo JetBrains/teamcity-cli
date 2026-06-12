@@ -41,10 +41,10 @@ The **Converter emits** column is what `teamcity migrate` writes; **Your follow-
 | `actions/checkout` | Removed -- TC VCS checkout is automatic | |
 | `actions/cache` | `enable-dependency-cache: true` | |
 | `actions/upload-artifact` | `files-publication: [{path: "..."}]` | |
-| `actions/download-artifact` | Job dependencies with `share-with-jobs` | |
+| `actions/download-artifact` | Nothing (simplified out); named downloads get a manual note | Artifacts arrive via the job's `dependencies:` (from `needs:`) -- ensure the upstream job publishes with `share-with-jobs: true`, and add the dependency yourself if the workflow downloaded from a job it didn't `need` |
 | `actions/setup-node/java/go/python` | Removed -- pre-installed on TC Cloud agents | Pinned versions surface as manual notes; ensure the agent provides them |
 | `gradle/actions/setup-gradle` | Removed -- `./gradlew` runs directly | |
-| `docker/login-action` | Login script | Or use a TC Docker registry connection |
+| `docker/login-action` | Comment-only placeholder step | Configure a Docker registry connection in TC project settings -- required for private registries, no login command is generated |
 | `docker/build-push-action` | `docker build && docker push` script | |
 | `JetBrains/qodana-action` | Commented pointer to native integration | Add the Qodana build feature in TC settings |
 | `aws-actions/configure-aws-credentials` | `export AWS_*` env lines | Create `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` TC parameters (password type) |
@@ -53,7 +53,7 @@ The **Converter emits** column is what `teamcity migrate` writes; **Your follow-
 | `codecov/codecov-action` | `curl -Os https://cli.codecov.io/latest/linux/codecov && chmod +x codecov && ./codecov` | |
 | `goreleaser/goreleaser-action` | **Stub** (not in the registry) | Replace with `curl -sSfL https://goreleaser.com/static/run \| bash -s -- release --clean` (needs `GITHUB_TOKEN`) |
 | `aquasecurity/trivy-action` | `trivy <scan-type> <image-ref>` | Assumes trivy on the agent; install via the trivy install.sh if missing |
-| `github/codeql-action/*` | **Dropped** (listed under Needs review) -- requires GitHub security-events API | Consider the Qodana build feature instead |
+| `github/codeql-action/init`, `/analyze`, `/autobuild` | **Dropped** (listed under Needs review) -- requires GitHub security-events API | Consider the Qodana build feature instead. Other codeql-action subpaths (e.g. `/upload-sarif`) stub like unknown actions |
 | Unknown actions | Commented stub with original inputs | Read the action's source, write the equivalent shell |
 
 ### Fixing a stub
