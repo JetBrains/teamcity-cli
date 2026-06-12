@@ -175,6 +175,116 @@ jobs:
 	assert.Equal(t, 1, strings.Count(manuals, "runs on a Windows runner with no explicit shell"))
 }
 
+func TestGHAParseErrorsSurfacedInNeedsReview(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: broken
+        env:
+          FOO: bar
+      - run: echo hi
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	// A step with neither run: nor uses: must not silently produce a clean report.
+	require.NotEmpty(t, result.NeedsReview)
+	review := strings.Join(result.NeedsReview, "\n")
+	assert.Contains(t, review, "Workflow parse error at line 7")
+	assert.Contains(t, review, `step must run script with "run" section or run action with "uses" section`)
+	assert.Contains(t, review, `Step "broken" has neither run: nor uses: → dropped from output; rewrite it as a script step manually`)
+}
+
+func TestGHAParseErrorsCapped(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: b1
+      - name: b2
+      - name: b3
+      - name: b4
+      - name: b5
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	review := strings.Join(result.NeedsReview, "\n")
+	assert.Equal(t, 3, strings.Count(review, "Workflow parse error at line"))
+	assert.Contains(t, review, "...and 2 more parse errors → review the source workflow")
+}
+
+func TestGHAJobLevelFeaturesFlagged(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    outputs:
+      version: v1
+    steps:
+      - name: compile
+        run: echo hi
+        timeout-minutes: 5
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	manuals := strings.Join(result.ManualSetup, "\n")
+	assert.Contains(t, manuals, `Job "build" sets timeout-minutes: 30 → configure an execution timeout in TeamCity failure conditions`)
+	assert.Contains(t, manuals, `Job "build" has continue-on-error: true → its failure must not fail the pipeline; relax dependency failure conditions in TeamCity`)
+	assert.Contains(t, manuals, `Job "build" defines outputs (version) → expose them as TeamCity output parameters and rewire consumers of needs.build.outputs.<name> to %dep.build.<param>%`)
+	assert.Contains(t, manuals, `Step "compile" sets timeout-minutes: 5 → no per-step timeout in TeamCity; configure an execution timeout in the job's failure conditions`)
+}
+
+func TestGHAWindowsActionTransformerWarned(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on: push
+jobs:
+  win:
+    runs-on: windows-latest
+    steps:
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          tags: myapp:latest
+          push: 'true'
+  lin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build image linux
+        uses: docker/build-push-action@v5
+        with:
+          tags: myapp:latest
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	manuals := strings.Join(result.ManualSetup, "\n")
+	// Only the Windows job's converted action step warns, so exactly one note is expected.
+	assert.Equal(t, 1, strings.Count(manuals, "emits a POSIX shell script on a Windows runner"))
+	assert.Contains(t, manuals, `Step "Build image" converted from "docker/build-push-action@v5" emits a POSIX shell script on a Windows runner → provide Git Bash/WSL on the agent or rewrite for cmd/PowerShell`)
+}
+
 func TestMatrixRunsOnEmitsDefaultRunner(t *testing.T) {
 	t.Parallel()
 
