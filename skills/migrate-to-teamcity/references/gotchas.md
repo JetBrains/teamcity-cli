@@ -14,7 +14,7 @@ Some CI jobs depend on platform-specific infrastructure and cannot be meaningful
 | Bamboo plan permissions (`plan-permissions:`) | Configure project roles in TC Administration → Roles |
 | Bamboo notifications block | Configure as TC notification rules per user/project |
 
-The converter drops these steps (listed under "Needs review") and emits a no-op placeholder when a job ends up with no steps — delete the placeholders rather than trying to fill them in.
+The converter drops the steps it recognizes as non-portable (listed under "Needs review") and emits a no-op placeholder when a job ends up with no steps — delete those placeholders rather than trying to fill them in. Unrecognized variants (e.g. `github/codeql-action/upload-sarif`) become regular TODO stubs instead — decide per stub whether to replace or remove it.
 
 ## Expanding matrix strategies
 

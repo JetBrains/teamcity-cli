@@ -46,11 +46,12 @@ Copy this checklist and check off items as you complete them:
 Migration progress:
 - [ ] Convert: run `teamcity migrate` from the repo root
 - [ ] Fix every "Needs review" item in the generated YAML (stubs -> real commands, see mappings.md)
+- [ ] Wire up secrets in the YAML: the converter rewrites `${{ secrets.X }}` to `%X%` but does not define it -- store the value (`teamcity project token put <project> <value>`) and add `secrets: X: "credentialsJSON:<uuid>"`
 - [ ] Validate: `teamcity pipeline validate <file>` -- only proceed when it passes
 - [ ] Create VCS root (`teamcity project vcs create`), then `teamcity pipeline create <name> -p <project> -f <file> --vcs-root <id>`
-- [ ] Do the runtime "Manual setup needed" items now: secrets (`teamcity project token put`), registry/cloud connections -- generated steps already reference them, the first run fails without them
+- [ ] Set up the remaining runtime "Manual setup needed" items: registry/cloud connections the steps reference -- the first run fails without them
 - [ ] Run: `teamcity run start <id> --watch`; on failure read `teamcity run log <id> --failed --raw`, fix, `teamcity pipeline push`, re-run until green
-- [ ] Do the remaining "Manual setup needed" items: triggers, branch filters, notifications
+- [ ] Do the trigger-only "Manual setup needed" items: triggers, branch filters, notifications
 - [ ] Report: what migrated, step reduction, what remains manual
 ```
 
