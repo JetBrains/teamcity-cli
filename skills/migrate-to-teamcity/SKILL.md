@@ -22,7 +22,7 @@ Run `teamcity migrate` from the repo root -- detection scans `.github/workflows/
 ## Reading the report
 
 - **Needs review** -- problems inside the generated YAML: TODO stubs, dropped steps, reusable-workflow placeholders. Fix these in the file before creating the pipeline.
-- **Manual setup needed** -- configuration the YAML cannot express: triggers, branch filters, connections -- server-side work done after `pipeline create`. Secret items are the exception: besides storing the token on the server, add a matching entry under the top-level `secrets:` block in the YAML before creating or pushing the pipeline.
+- **Manual setup needed** -- work the converter could not do automatically; each item lands on one of two sides. YAML edits before `pipeline create`: secrets entries (see the checklist), matrix expansion, expression `runs-on`, `container:`/`services:` wiring (see gotchas.md). Server-side configuration after create: triggers, branch filters, connections. Read each item and sort it accordingly.
 - Exit code 1 means at least one source failed to convert *or* one generated file failed schema validation -- files that converted cleanly are still written. Read the per-file ✓/⚠/✗ lines instead of treating exit 1 as total failure.
 - `--json` prints `{"sources": [...], "results": [...]}` to stdout; each result carries `outputFile`, `yaml`, `needsReview`, `manualSetup`, and `validationError`.
 
@@ -45,7 +45,7 @@ Copy this checklist and check off items as you complete them:
 ```
 Migration progress:
 - [ ] Convert: run `teamcity migrate` from the repo root
-- [ ] Fix every "Needs review" item in the generated YAML (stubs -> real commands, see mappings.md)
+- [ ] Fix every "Needs review" item, plus "Manual setup" items needing YAML edits (matrix expansion, expression `runs-on`, container/services) -- see mappings.md and gotchas.md
 - [ ] Wire up secrets in the YAML: the converter rewrites `${{ secrets.X }}` to `%X%` but does not define it -- store the value (`teamcity project token put <project> <value>`) and add `X: "credentialsJSON:<uuid>"` under the top-level `secrets:` block (see schema.md)
 - [ ] Validate: `teamcity pipeline validate <file>` -- only proceed when it passes
 - [ ] Create VCS root (`teamcity project vcs create`), then `teamcity pipeline create <name> -p <project> -f <file> --vcs-root <id>`
