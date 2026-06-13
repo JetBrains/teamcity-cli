@@ -163,6 +163,10 @@ func initActionRegistry() map[string]actionTransformer {
 				r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("actions/checkout sets %s: %s → configure checkout rules / submodules / fetch depth on the TC VCS root", k, v))
 			}
 		}
+		// A `repository:` other than the build's own repo is a secondary checkout TC auto-checkout won't fetch.
+		if repo := inputs["repository"]; repo != "" {
+			r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("actions/checkout fetches a secondary repository %q → add a second TC VCS root with a checkout path or an explicit `git clone` step", repo))
+		}
 		return r
 	}
 
@@ -291,7 +295,12 @@ func initActionRegistry() map[string]actionTransformer {
 		if r := inputs["region"]; r != "" {
 			region = shellQuote(r)
 		}
-		cmd := fmt.Sprintf("gcloud run deploy %q --image %q --region %s", requiredInput(inputs, "service", "SERVICE"), requiredInput(inputs, "image", "IMAGE"), region)
+		// `source:` deploys from a directory (build-from-source) and is mutually exclusive with image.
+		deployTarget := fmt.Sprintf("--image %q", requiredInput(inputs, "image", "IMAGE"))
+		if src := inputs["source"]; src != "" {
+			deployTarget = "--source " + shellQuote(src)
+		}
+		cmd := fmt.Sprintf("gcloud run deploy %q %s --region %s", requiredInput(inputs, "service", "SERVICE"), deployTarget, region)
 		if pid := inputs["project_id"]; pid != "" {
 			cmd += " --project " + shellQuote(pid)
 		}
