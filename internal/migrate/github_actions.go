@@ -197,7 +197,7 @@ func initActionRegistry() map[string]actionTransformer {
 	m["docker/login-action"] = func(name string, inputs map[string]string) StepResult {
 		registry := cmp.Or(inputs["registry"], "Docker Hub")
 		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "Docker login"), ScriptContent: "# Configure Docker registry connection in TeamCity project settings\n# Registry: " + registry}},
+			Steps:       []Step{{Name: cmp.Or(name, "Docker login"), ScriptContent: "# Configure Docker registry connection in TeamCity project settings\n" + commentBlock("Registry: "+registry)}},
 			ManualTasks: []string{fmt.Sprintf("Docker registry %s → configure Docker connection in TeamCity project settings", registry)}}
 	}
 	m["docker/build-push-action"] = transformDockerBuild

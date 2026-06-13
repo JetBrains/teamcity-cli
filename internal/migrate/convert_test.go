@@ -770,3 +770,13 @@ func TestGHPagesPublishBranchHonored(t *testing.T) {
 	assert.Contains(t, script, "git push origin 'docs' --force")
 	assert.NotContains(t, script, "gh-pages")
 }
+
+func TestDockerLoginMultilineRegistryCommented(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("docker/login-action@v3")
+	r := transformer("", map[string]string{"registry": "ghcr.io\nrm -rf tmp"})
+	for _, line := range strings.Split(r.Steps[0].ScriptContent, "\n") {
+		assert.True(t, strings.HasPrefix(line, "#"), "placeholder line must be a comment: %q", line)
+	}
+}
