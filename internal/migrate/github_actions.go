@@ -461,6 +461,8 @@ func ghPagesScript(branch, folder string) string {
 		`SITE_TMP=$(mktemp -d)`,
 		// The dir/. form copies contents including dotfiles (.nojekyll etc.), which * would skip.
 		fmt.Sprintf(`cp -r %s/. "$SITE_TMP"/`, f),
+		// Publishing the repo root would stage .git and clobber the orphan branch on copy-back.
+		`rm -rf "$SITE_TMP"/.git`,
 		"git checkout --orphan " + b,
 		"git rm -rfq .",
 		"git clean -fdx",
