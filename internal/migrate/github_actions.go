@@ -247,16 +247,24 @@ func initActionRegistry() map[string]actionTransformer {
 			ManualTasks: []string{fmt.Sprintf("AWS credentials → add env.AWS_ACCESS_KEY_ID / env.AWS_SECRET_ACCESS_KEY under `secrets:` and `env.AWS_DEFAULT_REGION: %q` under the job's `parameters:` so every step sees them", region)}}
 	}
 	m["azure/webapps-deploy"] = func(name string, inputs map[string]string) StepResult {
+		app := requiredInput(inputs, "app-name", "APP_NAME")
+		slot := ""
+		// slot-name targets a non-production deployment slot; omitting --slot would deploy to production.
+		if s := inputs["slot-name"]; s != "" {
+			slot = " --slot " + shellQuote(s)
+		}
+		// `images:` means a container deploy; `az webapp deploy --src-path` (package mode) would ignore the built image.
+		if img := strings.TrimSpace(strings.ReplaceAll(inputs["images"], "\n", " ")); img != "" {
+			cmd := fmt.Sprintf("az webapp config container set --name %q --container-image-name %s", app, shellQuote(strings.Fields(img)[0])) + slot
+			r := Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: cmd}})
+			r.ManualTasks = []string{"azure/webapps-deploy container deploy → pass --resource-group and ensure the registry credentials/connection are configured on the agent"}
+			return r
+		}
 		srcPath := `"${PACKAGE:-.}"`
 		if pkg := inputs["package"]; pkg != "" {
 			srcPath = shellQuote(pkg)
 		}
-		cmd := fmt.Sprintf("az webapp deploy --name %q --src-path %s", requiredInput(inputs, "app-name", "APP_NAME"), srcPath)
-		// slot-name targets a non-production deployment slot; omitting --slot would deploy to production.
-		if slot := inputs["slot-name"]; slot != "" {
-			cmd += " --slot " + shellQuote(slot)
-		}
-		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: cmd}})
+		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: fmt.Sprintf("az webapp deploy --name %q --src-path %s", app, srcPath) + slot}})
 	}
 	m["azure/k8s-deploy"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
@@ -287,7 +295,15 @@ func initActionRegistry() map[string]actionTransformer {
 		if pid := inputs["project_id"]; pid != "" {
 			cmd += " --project " + shellQuote(pid)
 		}
-		return Converted([]Step{{Name: cmp.Or(name, "Cloud Run deploy"), ScriptContent: cmd}})
+		// no_traffic withholds traffic from the new revision (canary/manual rollout); without --no-traffic the deploy shifts production traffic immediately.
+		if inputs["no_traffic"] == "true" {
+			cmd += " --no-traffic"
+		}
+		r := Converted([]Step{{Name: cmp.Or(name, "Cloud Run deploy"), ScriptContent: cmd}})
+		if inputs["revision_traffic"] != "" || inputs["tag_traffic"] != "" {
+			r.ManualTasks = []string{"Cloud Run traffic split → run `gcloud run services update-traffic` for the revision_traffic/tag_traffic the action managed"}
+		}
+		return r
 	}
 	m["aws-actions/amazon-ecs-render-task-definition"] = func(name string, inputs map[string]string) StepResult {
 		// container-name selects which container's image to replace in multi-container task definitions.
