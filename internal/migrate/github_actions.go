@@ -445,6 +445,10 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	if pushViaBuildx {
 		buildCmd.WriteString(" --push")
 	}
+	// buildx leaves results in the build cache; --load keeps them visible to later docker run steps.
+	if platforms != "" && inputs["load"] == "true" {
+		buildCmd.WriteString(" --load")
+	}
 	buildCmd.WriteString(" " + shellQuote(context))
 	lines = append(lines, buildCmd.String())
 

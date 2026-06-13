@@ -780,3 +780,15 @@ func TestDockerLoginMultilineRegistryCommented(t *testing.T) {
 		assert.True(t, strings.HasPrefix(line, "#"), "placeholder line must be a comment: %q", line)
 	}
 }
+
+func TestDockerBuildxLoadPreserved(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("docker/build-push-action@v5")
+	r := transformer("", map[string]string{"tags": "repo/app:1", "platforms": "linux/amd64", "load": "true"})
+	assert.Contains(t, r.Steps[0].ScriptContent, " --load")
+
+	// Plain docker build loads into the local store by default; no flag needed.
+	r = transformer("", map[string]string{"tags": "repo/app:1", "load": "true"})
+	assert.NotContains(t, r.Steps[0].ScriptContent, "--load")
+}
