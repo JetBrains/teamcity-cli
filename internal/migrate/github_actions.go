@@ -263,15 +263,28 @@ func initActionRegistry() map[string]actionTransformer {
 		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '%s = %q' %s > new-task-def.json", selector, requiredInput(inputs, "image", "IMAGE"), shellQuote(cmp.Or(inputs["task-definition"], "task-definition.json")))}})
 	}
 	m["appleboy/scp-action"] = func(name string, inputs map[string]string) StepResult {
-		dest := requiredInput(inputs, "host", "DEPLOY_HOST")
-		if u := inputs["username"]; u != "" {
-			dest = u + "@" + dest
-		}
 		port := ""
 		if p := inputs["port"]; p != "" {
 			port = "-P " + shellQuote(p) + " "
 		}
-		r := Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: fmt.Sprintf("scp %s-r %s %s:%s", port, cmp.Or(inputs["source"], "."), dest, cmp.Or(inputs["target"], "~/"))}})
+		// source and host are comma-separated lists in the action; emit operands per source and one command per host.
+		var sources []string
+		for src := range strings.SplitSeq(cmp.Or(inputs["source"], "."), ",") {
+			if src = strings.TrimSpace(src); src != "" {
+				sources = append(sources, quoteReleaseAsset(src))
+			}
+		}
+		var cmds []string
+		for h := range strings.SplitSeq(requiredInput(inputs, "host", "DEPLOY_HOST"), ",") {
+			if h = strings.TrimSpace(h); h == "" {
+				continue
+			}
+			if u := inputs["username"]; u != "" {
+				h = u + "@" + h
+			}
+			cmds = append(cmds, fmt.Sprintf("scp %s-r %s %s:%s", port, strings.Join(sources, " "), h, cmp.Or(inputs["target"], "~/")))
+		}
+		r := Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: strings.Join(cmds, "\n")}})
 		if inputs["key"] != "" || inputs["password"] != "" {
 			r.ManualTasks = []string{"scp-action key/password auth → upload the SSH key with `teamcity project ssh upload` and enable the SSH Agent build feature (passwords cannot be inlined)"}
 		}
@@ -414,6 +427,9 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	}
 	if platforms := inputs["platforms"]; platforms != "" {
 		buildCmd.WriteString(" --platform " + shellQuote(platforms))
+	}
+	if target := inputs["target"]; target != "" {
+		buildCmd.WriteString(" --target " + shellQuote(target))
 	}
 	buildCmd.WriteString(` -t "$IMAGE"`)
 	// The action publishes every tag, so emit each extra as -t plus its own push.
