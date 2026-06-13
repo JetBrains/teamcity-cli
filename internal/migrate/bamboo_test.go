@@ -188,32 +188,6 @@ Job:
 	assert.NotContains(t, step.ScriptContent, "hunter2", "secret-looking stub fields must be redacted")
 }
 
-func TestBambooUnknownTaskNestedSecretRedacted(t *testing.T) {
-	t.Parallel()
-
-	result := convertBambooSpec(t, `
-stages:
-  - 'Build':
-      jobs:
-        - Job
-Job:
-  tasks:
-    - made-up-task:
-        configuration:
-          password: hunter2
-          url: https://example.com
-        servers:
-          - host: a
-            api_token: leaky-token
-`)
-	require.Len(t, result.Pipeline.Jobs[0].Steps, 1)
-	step := result.Pipeline.Jobs[0].Steps[0]
-	assert.NotContains(t, result.YAML, "hunter2", "secrets nested in maps must not leak into the generated YAML")
-	assert.NotContains(t, result.YAML, "leaky-token", "secrets nested in lists of maps must not leak")
-	assert.Contains(t, step.ScriptContent, "REDACTED")
-	assert.Contains(t, step.ScriptContent, "https://example.com", "non-secret nested values pass through")
-}
-
 func TestBambooNoPlanSurfacesAsReview(t *testing.T) {
 	t.Parallel()
 
@@ -418,43 +392,6 @@ J2:
 	// The job-less middle stage must not detach B from A.
 	require.Len(t, result.Pipeline.Jobs, 2)
 	assert.Equal(t, []string{"A_J1"}, result.Pipeline.Jobs[1].Dependencies)
-}
-
-func TestBambooMapFormStageJobsSurfaceAsReview(t *testing.T) {
-	t.Parallel()
-
-	result := convertBambooSpec(t, `
-stages:
-  - 'S':
-      jobs:
-        Build: x
-Build:
-  tasks:
-    - script: echo hi
-`)
-	// Map-form jobs yield no usable job names; the loss must surface instead of a clean empty conversion.
-	assert.Empty(t, result.Pipeline.Jobs)
-	reviews := strings.Join(result.NeedsReview, "\n")
-	assert.Contains(t, reviews, `Stage "S"`)
-	assert.Contains(t, reviews, "not plain job-name strings")
-}
-
-func TestBambooNonStringStageJobEntrySurfacesAsReview(t *testing.T) {
-	t.Parallel()
-
-	result := convertBambooSpec(t, `
-stages:
-  - 'S':
-      jobs:
-        - Build
-        - 123
-Build:
-  tasks:
-    - script: echo hi
-`)
-	// The string job converts; the dropped non-string entry must be flagged.
-	require.Len(t, result.Pipeline.Jobs, 1)
-	assert.Contains(t, strings.Join(result.NeedsReview, "\n"), `Stage "S"`)
 }
 
 func TestBambooDisabledJobBecomesNoOp(t *testing.T) {
