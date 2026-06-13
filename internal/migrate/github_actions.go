@@ -414,8 +414,15 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 		lines = append(lines, `IMAGE="${IMAGE:?Set IMAGE variable}"`)
 	}
 
+	// Multi-platform manifest lists require buildx; plain docker build only produces a single local image.
+	platforms := inputs["platforms"]
+	pushViaBuildx := platforms != "" && inputs["push"] == "true"
 	var buildCmd strings.Builder
-	buildCmd.WriteString("docker build")
+	if platforms != "" {
+		buildCmd.WriteString("docker buildx build --platform " + shellQuote(platforms))
+	} else {
+		buildCmd.WriteString("docker build")
+	}
 	if file != "" && file != "Dockerfile" {
 		buildCmd.WriteString(` -f "$DOCKERFILE"`)
 	}
@@ -426,9 +433,6 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 			}
 		}
 	}
-	if platforms := inputs["platforms"]; platforms != "" {
-		buildCmd.WriteString(" --platform " + shellQuote(platforms))
-	}
 	if target := inputs["target"]; target != "" {
 		buildCmd.WriteString(" --target " + shellQuote(target))
 	}
@@ -437,17 +441,20 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	for _, t := range extraTags {
 		buildCmd.WriteString(" -t " + shellQuote(t))
 	}
+	if pushViaBuildx {
+		buildCmd.WriteString(" --push")
+	}
 	buildCmd.WriteString(" " + shellQuote(context))
 	lines = append(lines, buildCmd.String())
 
-	if inputs["push"] == "true" {
+	if inputs["push"] == "true" && !pushViaBuildx {
 		lines = append(lines, `docker push "$IMAGE"`)
 		for _, t := range extraTags {
 			lines = append(lines, "docker push "+shellQuote(t))
 		}
 	}
 	r := Converted([]Step{{Name: cmp.Or(name, "Docker build and push"), ScriptContent: strings.Join(lines, "\n")}})
-	if platforms := inputs["platforms"]; platforms != "" {
+	if platforms != "" {
 		r.ManualTasks = []string{fmt.Sprintf("Multi-platform build (%s) → ensure the agent has docker buildx and QEMU configured", platforms)}
 	}
 	return r

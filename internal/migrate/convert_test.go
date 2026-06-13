@@ -571,9 +571,10 @@ func TestDockerBuildCSVTagsAndPlatforms(t *testing.T) {
 	script := r.Steps[0].ScriptContent
 	assert.Contains(t, script, "IMAGE='repo/app:latest'", "CSV tags split into separate references")
 	assert.Contains(t, script, "-t 'repo/app:abc123'")
-	assert.Contains(t, script, "docker push 'repo/app:abc123'")
 	assert.NotContains(t, script, "latest,repo", "no comma-joined single tag")
-	assert.Contains(t, script, "--platform 'linux/amd64,linux/arm64'")
+	assert.Contains(t, script, "docker buildx build --platform 'linux/amd64,linux/arm64'")
+	assert.Contains(t, script, " --push", "multi-platform publish goes through buildx --push")
+	assert.NotContains(t, script, "docker push", "no separate push of a single-arch local image")
 	assert.Contains(t, strings.Join(r.ManualTasks, "\n"), "buildx and QEMU")
 }
 

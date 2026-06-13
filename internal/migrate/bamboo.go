@@ -88,7 +88,7 @@ func convertBamboo(cfg CIConfig, data []byte, opts Options) (*ConversionResult, 
 		}
 		if boolFromAny(stageInfo["final"]) {
 			result.ManualSetup = append(result.ManualSetup,
-				fmt.Sprintf("Stage %q is final → set 'Even if some build steps have failed' on its job's steps in TeamCity", stageName))
+				fmt.Sprintf("Stage %q is final → TC skips dependent jobs when upstream fails; relax the dependency's on-failure behavior in TC UI and set 'Even if some build steps have failed' on its steps", stageName))
 		}
 
 		jobNames := stringSliceFromAny(stageInfo["jobs"])
