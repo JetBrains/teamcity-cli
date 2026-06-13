@@ -424,8 +424,13 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 		lines = append(lines, "DOCKERFILE="+shellQuote(file))
 	}
 	var extraTags []string
-	// `tags:` is documented as list/CSV, so split on commas as well as whitespace.
-	if tagList := strings.FieldsFunc(tags, func(r rune) bool { return r == ',' || unicode.IsSpace(r) }); len(tagList) > 0 {
+	var tagExpr bool
+	// An unresolved ${{ }} expression (e.g. from docker/metadata-action) has no TeamCity equivalent; tokenizing it would emit broken -t operands.
+	if strings.Contains(tags, "${{") {
+		tagExpr = true
+		lines = append(lines, `IMAGE="${IMAGE:?Set IMAGE variable}"`)
+	} else if tagList := strings.FieldsFunc(tags, func(r rune) bool { return r == ',' || unicode.IsSpace(r) }); len(tagList) > 0 {
+		// `tags:` is documented as list/CSV, so split on commas as well as whitespace.
 		lines = append(lines, "IMAGE="+shellQuote(tagList[0]))
 		extraTags = tagList[1:]
 	} else {
@@ -478,7 +483,10 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	}
 	r := Converted([]Step{{Name: cmp.Or(name, "Docker build and push"), ScriptContent: strings.Join(lines, "\n")}})
 	if platforms != "" {
-		r.ManualTasks = []string{fmt.Sprintf("Multi-platform build (%s) → ensure the agent has docker buildx and QEMU configured", platforms)}
+		r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("Multi-platform build (%s) → ensure the agent has docker buildx and QEMU configured", platforms))
+	}
+	if tagExpr {
+		r.ManualTasks = append(r.ManualTasks, fmt.Sprintf("Docker tags from expression %q → set the IMAGE variable (e.g. a TC parameter) to the desired tag(s)", condense(tags)))
 	}
 	return r
 }

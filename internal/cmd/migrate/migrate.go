@@ -50,6 +50,7 @@ surfaced under "Manual setup needed" for follow-up.`,
   teamcity migrate --file .github/workflows/ci.yml
   teamcity migrate --from github-actions --output-dir teamcity/
   teamcity migrate --json`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runMigrate(f, opts)
 		},
