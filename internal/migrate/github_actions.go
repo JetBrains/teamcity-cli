@@ -282,7 +282,8 @@ func initActionRegistry() map[string]actionTransformer {
 			if u := inputs["username"]; u != "" {
 				h = u + "@" + h
 			}
-			cmds = append(cmds, fmt.Sprintf("scp %s-r %s %s:%s", port, strings.Join(sources, " "), h, cmp.Or(inputs["target"], "~/")))
+			// host: stays unquoted so the ${DEPLOY_HOST:?} fallback expands; the target is quoted into the same operand.
+			cmds = append(cmds, fmt.Sprintf("scp %s-r %s %s:%s", port, strings.Join(sources, " "), h, shellQuote(cmp.Or(inputs["target"], "~/"))))
 		}
 		r := Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: strings.Join(cmds, "\n")}})
 		if inputs["key"] != "" || inputs["password"] != "" {

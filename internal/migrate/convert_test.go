@@ -726,10 +726,10 @@ func TestSCPActionKeepsUsernameAndPort(t *testing.T) {
 	t.Parallel()
 
 	transformer, _ := LookupActionTransformer("appleboy/scp-action@v0.1.7")
-	r := transformer("", map[string]string{"host": "h1.example.com,h2.example.com", "username": "deploy", "port": "2222", "source": "dist/app.zip, config.yml", "target": "/srv", "key": "${{ secrets.KEY }}"})
+	r := transformer("", map[string]string{"host": "h1.example.com,h2.example.com", "username": "deploy", "port": "2222", "source": "dist/app.zip, config.yml", "target": "/srv my dir", "key": "${{ secrets.KEY }}"})
 	script := r.Steps[0].ScriptContent
-	assert.Contains(t, script, "dist/app.zip config.yml deploy@h1.example.com:/srv")
-	assert.Contains(t, script, "deploy@h2.example.com:/srv", "comma-separated hosts each get a command")
+	assert.Contains(t, script, "dist/app.zip config.yml deploy@h1.example.com:'/srv my dir'", "quoted target stays one operand")
+	assert.Contains(t, script, "deploy@h2.example.com:'/srv my dir'", "comma-separated hosts each get a command")
 	assert.Contains(t, script, "-P '2222'")
 	assert.Contains(t, strings.Join(r.ManualTasks, "\n"), "SSH Agent build feature")
 }
