@@ -742,3 +742,20 @@ func TestDockerBuildTargetStage(t *testing.T) {
 	r := transformer("", map[string]string{"tags": "repo/app:1", "target": "builder"})
 	assert.Contains(t, r.Steps[0].ScriptContent, "--target 'builder'")
 }
+
+func TestDockerPlatformsNormalizedFromBlockList(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("docker/build-push-action@v5")
+	r := transformer("", map[string]string{"tags": "repo/app:1", "platforms": "linux/amd64\nlinux/arm64"})
+	assert.Contains(t, r.Steps[0].ScriptContent, "--platform 'linux/amd64,linux/arm64'")
+}
+
+func TestFTPDeployDirsQuoted(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("SamKirkland/FTP-Deploy-Action@v4")
+	r := transformer("", map[string]string{"server": "ftp.example.com", "local-dir": "dist/my app/", "server-dir": "/var/www site/"})
+	script := r.Steps[0].ScriptContent
+	assert.Contains(t, script, "mirror -R 'dist/my app/' '/var/www site/'")
+}

@@ -293,7 +293,7 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 	m["SamKirkland/FTP-Deploy-Action"] = func(name string, inputs map[string]string) StepResult {
 		return StepResult{Status: StatusConverted,
-			Steps:       []Step{{Name: cmp.Or(name, "FTP deploy"), ScriptContent: fmt.Sprintf("lftp -c \"open -u $FTP_USER,$FTP_PASSWORD %s; mirror -R %s %s\"", requiredInput(inputs, "server", "FTP_SERVER"), cmp.Or(inputs["local-dir"], "./"), cmp.Or(inputs["server-dir"], "/"))}},
+			Steps:       []Step{{Name: cmp.Or(name, "FTP deploy"), ScriptContent: fmt.Sprintf("lftp -c \"open -u $FTP_USER,$FTP_PASSWORD %s; mirror -R %s %s\"", requiredInput(inputs, "server", "FTP_SERVER"), shellQuote(cmp.Or(inputs["local-dir"], "./")), shellQuote(cmp.Or(inputs["server-dir"], "/")))}},
 			ManualTasks: []string{"FTP credentials → create TeamCity parameters FTP_USER, FTP_PASSWORD (type: password)"}}
 	}
 	m["ncipollo/release-action"] = func(name string, inputs map[string]string) StepResult {
@@ -415,7 +415,8 @@ func transformDockerBuild(name string, inputs map[string]string) StepResult {
 	}
 
 	// Multi-platform manifest lists require buildx; plain docker build only produces a single local image.
-	platforms := inputs["platforms"]
+	// `platforms:` is list/CSV like tags, so normalize newlines and spaces to the comma form buildx expects.
+	platforms := strings.Join(strings.FieldsFunc(inputs["platforms"], func(r rune) bool { return r == ',' || unicode.IsSpace(r) }), ",")
 	pushViaBuildx := platforms != "" && inputs["push"] == "true"
 	var buildCmd strings.Builder
 	if platforms != "" {
