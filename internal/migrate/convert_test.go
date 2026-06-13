@@ -647,6 +647,7 @@ jobs:
       region: eu-west-1
     secrets:
       DEPLOY_TOKEN: literalpass
+      license: abcd1234
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
 `
 	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
@@ -655,6 +656,7 @@ jobs:
 
 	assert.NotContains(t, result.YAML, "hunter2")
 	assert.NotContains(t, result.YAML, "literalpass")
+	assert.NotContains(t, result.YAML, "abcd1234", "secrets-block literals redact regardless of key name")
 	assert.Contains(t, result.YAML, "eu-west-1", "non-secret literals pass through")
 	assert.Contains(t, result.YAML, "${{ secrets.GH_TOKEN }}", "secret expressions stay visible as references")
 }

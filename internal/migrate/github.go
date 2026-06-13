@@ -405,7 +405,11 @@ func workflowCallStub(id string, call *actionlint.WorkflowCall, result *Conversi
 				val = sec.Value.Value
 			}
 			detectGHASecrets(val, result)
-			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, redactLiteralSecret(k, val))))
+			// Everything under secrets: is credential material regardless of key name; only ${{ }} references stay visible.
+			if val != "" && !strings.Contains(val, "${{") {
+				val = bambooSecretPlaceholder
+			}
+			fmt.Fprintf(&stub, "\n%s", commentBlock(fmt.Sprintf("  %s: %s", k, val)))
 		}
 	}
 	if call.InheritSecrets {
