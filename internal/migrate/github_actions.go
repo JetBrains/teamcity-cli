@@ -230,7 +230,11 @@ func initActionRegistry() map[string]actionTransformer {
 			ManualTasks: []string{fmt.Sprintf("AWS credentials → add env.AWS_ACCESS_KEY_ID / env.AWS_SECRET_ACCESS_KEY under `secrets:` and `env.AWS_DEFAULT_REGION: %q` under the job's `parameters:` so every step sees them", region)}}
 	}
 	m["azure/webapps-deploy"] = func(name string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: fmt.Sprintf("az webapp deploy --name %q --src-path \"${PACKAGE:-.}\"", requiredInput(inputs, "app-name", "APP_NAME"))}})
+		srcPath := `"${PACKAGE:-.}"`
+		if pkg := inputs["package"]; pkg != "" {
+			srcPath = shellQuote(pkg)
+		}
+		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: fmt.Sprintf("az webapp deploy --name %q --src-path %s", requiredInput(inputs, "app-name", "APP_NAME"), srcPath)}})
 	}
 	m["azure/k8s-deploy"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
@@ -259,7 +263,19 @@ func initActionRegistry() map[string]actionTransformer {
 		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '%s = %q' %s > new-task-def.json", selector, requiredInput(inputs, "image", "IMAGE"), shellQuote(cmp.Or(inputs["task-definition"], "task-definition.json")))}})
 	}
 	m["appleboy/scp-action"] = func(name string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: fmt.Sprintf("scp -r %s %s:%s", cmp.Or(inputs["source"], "."), requiredInput(inputs, "host", "DEPLOY_HOST"), cmp.Or(inputs["target"], "~/"))}})
+		dest := requiredInput(inputs, "host", "DEPLOY_HOST")
+		if u := inputs["username"]; u != "" {
+			dest = u + "@" + dest
+		}
+		port := ""
+		if p := inputs["port"]; p != "" {
+			port = "-P " + shellQuote(p) + " "
+		}
+		r := Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: fmt.Sprintf("scp %s-r %s %s:%s", port, cmp.Or(inputs["source"], "."), dest, cmp.Or(inputs["target"], "~/"))}})
+		if inputs["key"] != "" || inputs["password"] != "" {
+			r.ManualTasks = []string{"scp-action key/password auth → upload the SSH key with `teamcity project ssh upload` and enable the SSH Agent build feature (passwords cannot be inlined)"}
+		}
+		return r
 	}
 	m["SamKirkland/FTP-Deploy-Action"] = func(name string, inputs map[string]string) StepResult {
 		return StepResult{Status: StatusConverted,

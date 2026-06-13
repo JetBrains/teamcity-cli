@@ -709,3 +709,25 @@ func TestECSRenderTaskDefinitionPathQuoted(t *testing.T) {
 	r := transformer("", map[string]string{"image": "repo/app:1", "task-definition": "infra/task def.json"})
 	assert.Contains(t, r.Steps[0].ScriptContent, `'infra/task def.json'`)
 }
+
+func TestAzureWebappsDeployUsesPackageInput(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("azure/webapps-deploy@v3")
+	r := transformer("", map[string]string{"app-name": "myapp", "package": "dist/app.zip"})
+	assert.Contains(t, r.Steps[0].ScriptContent, "--src-path 'dist/app.zip'")
+
+	r = transformer("", map[string]string{"app-name": "myapp"})
+	assert.Contains(t, r.Steps[0].ScriptContent, `--src-path "${PACKAGE:-.}"`)
+}
+
+func TestSCPActionKeepsUsernameAndPort(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("appleboy/scp-action@v0.1.7")
+	r := transformer("", map[string]string{"host": "h.example.com", "username": "deploy", "port": "2222", "source": "dist", "target": "/srv", "key": "${{ secrets.KEY }}"})
+	script := r.Steps[0].ScriptContent
+	assert.Contains(t, script, "deploy@h.example.com:/srv")
+	assert.Contains(t, script, "-P '2222'")
+	assert.Contains(t, strings.Join(r.ManualTasks, "\n"), "SSH Agent build feature")
+}
