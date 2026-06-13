@@ -251,7 +251,12 @@ func initActionRegistry() map[string]actionTransformer {
 		if pkg := inputs["package"]; pkg != "" {
 			srcPath = shellQuote(pkg)
 		}
-		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: fmt.Sprintf("az webapp deploy --name %q --src-path %s", requiredInput(inputs, "app-name", "APP_NAME"), srcPath)}})
+		cmd := fmt.Sprintf("az webapp deploy --name %q --src-path %s", requiredInput(inputs, "app-name", "APP_NAME"), srcPath)
+		// slot-name targets a non-production deployment slot; omitting --slot would deploy to production.
+		if slot := inputs["slot-name"]; slot != "" {
+			cmd += " --slot " + shellQuote(slot)
+		}
+		return Converted([]Step{{Name: cmp.Or(name, "Azure Web App deploy"), ScriptContent: cmd}})
 	}
 	m["azure/k8s-deploy"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
@@ -269,7 +274,15 @@ func initActionRegistry() map[string]actionTransformer {
 		return Converted([]Step{{Name: cmp.Or(name, "K8s set context"), ScriptContent: fmt.Sprintf("az aks get-credentials --resource-group %q --name %q", requiredInput(inputs, "resource-group", "RESOURCE_GROUP"), requiredInput(inputs, "cluster-name", "CLUSTER_NAME"))}})
 	}
 	m["google-github-actions/deploy-cloudrun"] = func(name string, inputs map[string]string) StepResult {
-		return Converted([]Step{{Name: cmp.Or(name, "Cloud Run deploy"), ScriptContent: fmt.Sprintf("gcloud run deploy %q --image %q --region \"${REGION:-us-central1}\"", requiredInput(inputs, "service", "SERVICE"), requiredInput(inputs, "image", "IMAGE"))}})
+		region := "\"${REGION:-us-central1}\""
+		if r := inputs["region"]; r != "" {
+			region = shellQuote(r)
+		}
+		cmd := fmt.Sprintf("gcloud run deploy %q --image %q --region %s", requiredInput(inputs, "service", "SERVICE"), requiredInput(inputs, "image", "IMAGE"), region)
+		if pid := inputs["project_id"]; pid != "" {
+			cmd += " --project " + shellQuote(pid)
+		}
+		return Converted([]Step{{Name: cmp.Or(name, "Cloud Run deploy"), ScriptContent: cmd}})
 	}
 	m["aws-actions/amazon-ecs-render-task-definition"] = func(name string, inputs map[string]string) StepResult {
 		// container-name selects which container's image to replace in multi-container task definitions.
