@@ -102,6 +102,7 @@ tooling.
 | Variable             | Required | Description                                              |
 |----------------------|----------|----------------------------------------------------------|
 | `ANTHROPIC_API_KEY`  | Yes      | Claude API key (agent + judge)                           |
+| `ANTHROPIC_BASE_URL` | No       | Custom Anthropic API base URL to be used by Claude Code  |
 | `TEAMCITY_URL`       | Yes      | TeamCity server URL                                      |
 | `TEAMCITY_TOKEN`     | Yes      | TeamCity API token                                       |
 | `SENTRY_DSN`         | No       | Ingest-only — sends observability traces to Sentry       |
