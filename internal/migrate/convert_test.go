@@ -759,3 +759,14 @@ func TestFTPDeployDirsQuoted(t *testing.T) {
 	script := r.Steps[0].ScriptContent
 	assert.Contains(t, script, "mirror -R 'dist/my app/' '/var/www site/'")
 }
+
+func TestGHPagesPublishBranchHonored(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("peaceiris/actions-gh-pages@v4")
+	r := transformer("", map[string]string{"publish_dir": "./site", "publish_branch": "docs"})
+	script := r.Steps[0].ScriptContent
+	assert.Contains(t, script, "git checkout --orphan 'docs'")
+	assert.Contains(t, script, "git push origin 'docs' --force")
+	assert.NotContains(t, script, "gh-pages")
+}

@@ -346,7 +346,7 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 	m["peaceiris/actions-gh-pages"] = func(name string, inputs map[string]string) StepResult {
 		dir := cmp.Or(inputs["publish_dir"], "./public")
-		return Converted([]Step{{Name: cmp.Or(name, "Deploy to GitHub Pages"), ScriptContent: ghPagesScript("gh-pages", dir)}})
+		return Converted([]Step{{Name: cmp.Or(name, "Deploy to GitHub Pages"), ScriptContent: ghPagesScript(cmp.Or(inputs["publish_branch"], "gh-pages"), dir)}})
 	}
 	m["JamesIves/github-pages-deploy-action"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "Deploy to GitHub Pages"), ScriptContent: ghPagesScript(cmp.Or(inputs["branch"], "gh-pages"), cmp.Or(inputs["folder"], "."))}})
