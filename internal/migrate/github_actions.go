@@ -268,7 +268,12 @@ func initActionRegistry() map[string]actionTransformer {
 				cmd.WriteString(shellQuote(f))
 			}
 		}
-		return Converted([]Step{{Name: cmp.Or(name, "Kubernetes deploy"), ScriptContent: cmd.String()}})
+		r := Converted([]Step{{Name: cmp.Or(name, "Kubernetes deploy"), ScriptContent: cmd.String()}})
+		// The action substitutes `images:` into the manifests before applying; plain kubectl apply would deploy the manifest's stale image.
+		if imgs := strings.Join(strings.Fields(strings.ReplaceAll(inputs["images"], "\n", " ")), " "); imgs != "" {
+			r.ManualTasks = []string{fmt.Sprintf("k8s-deploy substitutes images (%s) into the manifests → run `kubectl set image` (or `kustomize edit set image`) before apply so the built image is deployed", imgs)}
+		}
+		return r
 	}
 	m["azure/k8s-set-context"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "K8s set context"), ScriptContent: fmt.Sprintf("az aks get-credentials --resource-group %q --name %q", requiredInput(inputs, "resource-group", "RESOURCE_GROUP"), requiredInput(inputs, "cluster-name", "CLUSTER_NAME"))}})
