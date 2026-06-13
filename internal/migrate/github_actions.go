@@ -235,10 +235,12 @@ func initActionRegistry() map[string]actionTransformer {
 	m["azure/k8s-deploy"] = func(name string, inputs map[string]string) StepResult {
 		var cmd strings.Builder
 		cmd.WriteString("kubectl apply")
-		// `manifests:` is a newline-separated list; emit one -f per entry so a multiline value can't spill onto a new shell line.
-		for f := range strings.FieldsSeq(cmp.Or(inputs["manifests"], "k8s/")) {
-			cmd.WriteString(" -f ")
-			cmd.WriteString(shellQuote(f))
+		// `manifests:` is a newline-separated list; split by line so paths with spaces stay one quoted -f operand.
+		for f := range strings.SplitSeq(cmp.Or(inputs["manifests"], "k8s/"), "\n") {
+			if f = strings.TrimSpace(f); f != "" {
+				cmd.WriteString(" -f ")
+				cmd.WriteString(shellQuote(f))
+			}
 		}
 		return Converted([]Step{{Name: cmp.Or(name, "Kubernetes deploy"), ScriptContent: cmd.String()}})
 	}

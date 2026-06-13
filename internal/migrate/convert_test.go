@@ -434,12 +434,13 @@ func TestK8sDeployManifestsQuoted(t *testing.T) {
 
 	transformer, ok := LookupActionTransformer("azure/k8s-deploy@v5")
 	require.True(t, ok)
-	r := transformer("Deploy", map[string]string{"manifests": "deploy/prod;rm\nk8s/$(whoami).yml"})
+	r := transformer("Deploy", map[string]string{"manifests": "deploy/prod;rm\nk8s/$(whoami).yml\ndeploy/prod app.yml"})
 	require.Len(t, r.Steps, 1)
 	script := r.Steps[0].ScriptContent
-	// Each manifest token must be an inert single-quoted shell word.
+	// Each manifest line must be one inert single-quoted -f operand.
 	assert.Contains(t, script, "-f 'deploy/prod;rm'")
 	assert.Contains(t, script, "-f 'k8s/$(whoami).yml'")
+	assert.Contains(t, script, "-f 'deploy/prod app.yml'", "paths with spaces stay one operand")
 }
 
 func TestGHAConcurrencyFlagged(t *testing.T) {
