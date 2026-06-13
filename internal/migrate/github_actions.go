@@ -315,17 +315,18 @@ func initActionRegistry() map[string]actionTransformer {
 	}
 	m["ncipollo/release-action"] = func(name string, inputs map[string]string) StepResult {
 		tag := cmp.Or(inputs["tag"], "%teamcity.build.branch%")
-		cmd := "gh release create " + shellQuote(tag) + " --generate-notes" + ghReleaseStateFlags(inputs)
+		var cmd strings.Builder
+		cmd.WriteString("gh release create " + shellQuote(tag) + " --generate-notes" + ghReleaseStateFlags(inputs))
 		if body := inputs["body"]; body != "" {
-			cmd += " --notes " + shellQuote(body)
+			cmd.WriteString(" --notes " + shellQuote(body))
 		}
 		// `artifacts:` is a comma-delimited path/glob list the action uploads to the release.
 		for a := range strings.SplitSeq(cmp.Or(inputs["artifacts"], inputs["artifact"]), ",") {
 			if a = strings.TrimSpace(a); a != "" {
-				cmd += " " + quoteReleaseAsset(a)
+				cmd.WriteString(" " + quoteReleaseAsset(a))
 			}
 		}
-		r := Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd}})
+		r := Converted([]Step{{Name: cmp.Or(name, "GitHub release"), ScriptContent: cmd.String()}})
 		r.ManualTasks = ghReleaseAuthNote
 		return r
 	}
