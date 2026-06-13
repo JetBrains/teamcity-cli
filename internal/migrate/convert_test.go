@@ -792,3 +792,20 @@ func TestDockerBuildxLoadPreserved(t *testing.T) {
 	r = transformer("", map[string]string{"tags": "repo/app:1", "load": "true"})
 	assert.NotContains(t, r.Steps[0].ScriptContent, "--load")
 }
+
+func TestFirebasePreviewChannelPreserved(t *testing.T) {
+	t.Parallel()
+
+	transformer, ok := LookupActionTransformer("FirebaseExtended/action-hosting-deploy@v0")
+	require.True(t, ok)
+
+	r := transformer("", map[string]string{"channelId": "pr-123", "projectId": "my-proj"})
+	script := r.Steps[0].ScriptContent
+	assert.Contains(t, script, "firebase hosting:channel:deploy 'pr-123'")
+	assert.Contains(t, script, "--project 'my-proj'")
+	assert.NotContains(t, script, "firebase deploy", "preview channels must not deploy production hosting")
+
+	// live or absent channelId keeps the production deploy.
+	r = transformer("", map[string]string{"channelId": "live"})
+	assert.Contains(t, r.Steps[0].ScriptContent, "firebase deploy --only hosting")
+}

@@ -82,9 +82,6 @@ var manualActions = []struct {
 	{"hashicorp/vault-action", "Vault secrets",
 		"# TODO: Fetch secrets from HashiCorp Vault\nexport VAULT_ADDR=\"$VAULT_ADDR\"\nvault kv get -format=json secret/data/ci",
 		[]string{"Vault → configure VAULT_ADDR and VAULT_TOKEN as TeamCity parameters"}},
-	{"FirebaseExtended/action-hosting-deploy", "Firebase deploy",
-		"firebase deploy --only hosting",
-		[]string{"Firebase → create TeamCity parameter FIREBASE_TOKEN (type: password)"}},
 	{"tj-actions/changed-files", "Get changed files",
 		"CHANGED_FILES=$(git diff --name-only HEAD~1)\necho \"$CHANGED_FILES\"",
 		[]string{"tj-actions/changed-files → TeamCity provides %teamcity.build.changedFiles.file%"}},
@@ -216,6 +213,26 @@ func initActionRegistry() map[string]actionTransformer {
 		}
 		r := Converted([]Step{{Name: cmp.Or(name, "ECS deploy"), ScriptContent: strings.Join(lines, "\n")}})
 		r.ManualTasks = []string{"ECS deploy → ensure AWS credentials are configured as TeamCity parameters"}
+		return r
+	}
+	m["FirebaseExtended/action-hosting-deploy"] = func(name string, inputs map[string]string) StepResult {
+		var cmd string
+		// Non-live channelIds are ephemeral preview deploys; plain `firebase deploy` would update production hosting.
+		if ch := inputs["channelId"]; ch != "" && ch != "live" {
+			cmd = "firebase hosting:channel:deploy " + shellQuote(ch)
+			if tg := inputs["target"]; tg != "" {
+				cmd += " --only " + shellQuote(tg)
+			}
+		} else if tg := inputs["target"]; tg != "" {
+			cmd = "firebase deploy --only " + shellQuote("hosting:"+tg)
+		} else {
+			cmd = "firebase deploy --only hosting"
+		}
+		if pid := inputs["projectId"]; pid != "" {
+			cmd += " --project " + shellQuote(pid)
+		}
+		r := Converted([]Step{{Name: cmp.Or(name, "Firebase deploy"), ScriptContent: cmd}})
+		r.ManualTasks = []string{"Firebase → create TeamCity parameter FIREBASE_TOKEN (type: password)"}
 		return r
 	}
 	m["webfactory/ssh-agent"] = func(name string, inputs map[string]string) StepResult {
