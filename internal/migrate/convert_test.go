@@ -671,3 +671,38 @@ func TestSSHAgentBecomesBuildFeatureNote(t *testing.T) {
 	assert.Contains(t, manuals, "teamcity project ssh upload")
 	assert.Contains(t, manuals, "SSH Agent build feature")
 }
+
+func TestGHATriggerFiltersInNote(t *testing.T) {
+	t.Parallel()
+
+	wf := `name: ci
+on:
+  push:
+    branches: [main, release/*]
+    paths: ['src/**']
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+jobs:
+  b:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+`
+	cfg := CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}
+	result, err := Convert(cfg, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	manuals := strings.Join(result.ManualSetup, "\n")
+	assert.Contains(t, manuals, "push (branches: main|release/*; paths: src/**)")
+	assert.Contains(t, manuals, "pull_request (types: opened|synchronize)")
+	assert.Contains(t, manuals, "workflow_dispatch")
+}
+
+func TestECSRenderTaskDefinitionPathQuoted(t *testing.T) {
+	t.Parallel()
+
+	transformer, _ := LookupActionTransformer("aws-actions/amazon-ecs-render-task-definition@v1")
+	r := transformer("", map[string]string{"image": "repo/app:1", "task-definition": "infra/task def.json"})
+	assert.Contains(t, r.Steps[0].ScriptContent, `'infra/task def.json'`)
+}

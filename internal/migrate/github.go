@@ -589,7 +589,42 @@ func ghaFloatString(f *actionlint.Float) string {
 func describeGHATriggers(events []actionlint.Event) string {
 	names := make([]string, len(events))
 	for i, e := range events {
-		names[i] = e.EventName()
+		name := e.EventName()
+		if w, ok := e.(*actionlint.WebhookEvent); ok {
+			if f := ghaEventFilters(w); f != "" {
+				name += " (" + f + ")"
+			}
+		}
+		names[i] = name
 	}
 	return strings.Join(names, ", ")
+}
+
+// ghaEventFilters compacts branch/path/tag/type filters so the trigger note carries the constraints to recreate.
+func ghaEventFilters(w *actionlint.WebhookEvent) string {
+	var parts []string
+	add := func(label string, f *actionlint.WebhookEventFilter) {
+		if f == nil || len(f.Values) == 0 {
+			return
+		}
+		vals := make([]string, len(f.Values))
+		for i, v := range f.Values {
+			vals[i] = v.Value
+		}
+		parts = append(parts, label+": "+strings.Join(vals, "|"))
+	}
+	add("branches", w.Branches)
+	add("branches-ignore", w.BranchesIgnore)
+	add("tags", w.Tags)
+	add("tags-ignore", w.TagsIgnore)
+	add("paths", w.Paths)
+	add("paths-ignore", w.PathsIgnore)
+	if len(w.Types) > 0 {
+		types := make([]string, len(w.Types))
+		for i, t := range w.Types {
+			types[i] = t.Value
+		}
+		parts = append(parts, "types: "+strings.Join(types, "|"))
+	}
+	return strings.Join(parts, "; ")
 }

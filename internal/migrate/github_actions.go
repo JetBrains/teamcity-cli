@@ -254,7 +254,7 @@ func initActionRegistry() map[string]actionTransformer {
 		if cn := inputs["container-name"]; cn != "" {
 			selector = fmt.Sprintf("(.containerDefinitions[] | select(.name == %q) | .image)", cn)
 		}
-		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '%s = %q' %s > new-task-def.json", selector, requiredInput(inputs, "image", "IMAGE"), cmp.Or(inputs["task-definition"], "task-definition.json"))}})
+		return Converted([]Step{{Name: cmp.Or(name, "ECS render task def"), ScriptContent: fmt.Sprintf("jq '%s = %q' %s > new-task-def.json", selector, requiredInput(inputs, "image", "IMAGE"), shellQuote(cmp.Or(inputs["task-definition"], "task-definition.json")))}})
 	}
 	m["appleboy/scp-action"] = func(name string, inputs map[string]string) StepResult {
 		return Converted([]Step{{Name: cmp.Or(name, "SCP deploy"), ScriptContent: fmt.Sprintf("scp -r %s %s:%s", cmp.Or(inputs["source"], "."), requiredInput(inputs, "host", "DEPLOY_HOST"), cmp.Or(inputs["target"], "~/"))}})
