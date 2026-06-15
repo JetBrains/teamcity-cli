@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from scaffold import sentry_log
+from scaffold import langfuse_log, sentry_log
 from scaffold.claude import CLAUDE_BIN, DEFAULT_MODEL
 from scaffold.tasks import TASKS_FILE, TaskConfig, list_tasks, load_task
 
@@ -193,6 +193,17 @@ def sentry_session():
     yield
     if active:
         sentry_log.flush(timeout=10.0)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def langfuse_session():
+    """Initialize Langfuse once per pytest session; flush at teardown."""
+    active = langfuse_log.init_if_configured() is not None
+    if active:
+        print("  Langfuse: enabled\n")
+    yield
+    if active:
+        langfuse_log.flush(timeout=10.0)
 
 
 @pytest.fixture(scope="session")

@@ -39,7 +39,8 @@ evals/
 │   ├── events.py        # stream-json → commands/tools/tokens/skills
 │   ├── runner.py        # EvalRunner: tokenized command matching, results
 │   ├── graders.py       # LLM judge (advisory, fails closed)
-│   └── sentry_log.py    # Observability traces (never used for gating)
+│   ├── sentry_log.py    # Sentry traces (never used for gating)
+│   └── langfuse_log.py  # Langfuse traces + scores (never used for gating)
 ├── scripts/compare.py   # Statistical gate: paired lift ± CI, pass^k
 ├── tests/test_tasks.py  # The eval runner (pytest parametrizes task×treatment)
 ├── tests/test_checks.py # Unit tests for the harness itself
@@ -106,6 +107,9 @@ tooling.
 | `TEAMCITY_TOKEN`     | Yes      | TeamCity API token                                       |
 | `SENTRY_DSN`         | No       | Ingest-only — sends observability traces to Sentry       |
 | `SENTRY_ENVIRONMENT` | No       | Sentry environment tag (default: `eval`)                 |
+| `LANGFUSE_PUBLIC_KEY`| No       | Ingest-only — enables Langfuse traces + scores           |
+| `LANGFUSE_SECRET_KEY`| No       | Langfuse secret key (paired with the public key)         |
+| `LANGFUSE_HOST`      | No       | Langfuse base URL (e.g. a self-hosted instance)          |
 | `BENCH_CC_MODEL`     | No       | Claude model (default: `claude-sonnet-4-5-20250929`)     |
 | `BENCH_TIMEOUT`      | No       | Task timeout in seconds (default: 300)                   |
 | `BENCH_LOCAL`        | No       | Set to `1` to skip Docker and run Claude locally         |
@@ -135,6 +139,18 @@ transaction (one `gen_ai.execute_tool` child span per tool call) tagged with
 `experiment_id`/`task`/`treatment`/`skill_available`/`skill_invoked` plus full
 provenance. Sentry is dashboards and drill-down only — gating always runs on
 the local `results/` artifacts, which are the authoritative record.
+
+## Langfuse
+
+When `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` are set, each run is pushed as a
+trace (name = task, `user_id` = treatment, `session_id` = experiment) with the
+agent root, a generation child carrying token usage, and one `tool` span per
+tool call. Quality signals are first-class **scores** — `pass_rate`, `passed`,
+`pass_bucket`, `skill_invoked`, `duration_sec`, `num_turns`, `total_tokens`, and
+`judge:<dim>` — so dashboards aggregate them natively without span-timing hacks.
+Sentry and Langfuse both emit when configured; each is a no-op when its keys are
+unset. Like Sentry, Langfuse is observability only — gating always runs on the
+local `results/` artifacts.
 
 ## Adding a task
 

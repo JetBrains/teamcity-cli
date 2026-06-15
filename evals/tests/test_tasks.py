@@ -23,7 +23,7 @@ from scaffold.claude import run_claude, run_claude_docker
 from scaffold.events import extract_events
 from scaffold.graders import grade_all
 from scaffold.runner import EvalRunner
-from scaffold import sentry_log
+from scaffold import langfuse_log, sentry_log
 from scaffold.tasks import TaskConfig
 from conftest import TreatmentConfig
 from checks import CHECK_REGISTRY
@@ -85,6 +85,29 @@ def test_task(
 
     # --- Log to Sentry (no-op if SENTRY_DSN unset) ---
     sentry_log.log_run(
+        task_name=task_config.name,
+        treatment_name=treatment_config.name,
+        instruction=task_config.instruction,
+        experiment_id=experiment_id,
+        response_text=runner.text,
+        pass_rate=runner.pass_rate,
+        duration_sec=result.duration_sec,
+        num_turns=events.num_turns,
+        input_tokens=events.input_tokens,
+        output_tokens=events.output_tokens,
+        skill_available=skill_available,
+        skill_invoked=skill_invoked,
+        check_results=runner.summary()["results"],
+        tool_calls=events.tool_calls,
+        tool_results=events.tool_results,
+        llm_grades=graded,
+        ungraded_dimensions=ungraded,
+        provenance=provenance,
+        run_id=run_id,
+    )
+
+    # --- Log to Langfuse (no-op if keys unset) ---
+    langfuse_log.log_run(
         task_name=task_config.name,
         treatment_name=treatment_config.name,
         instruction=task_config.instruction,
