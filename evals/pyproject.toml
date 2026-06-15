@@ -10,6 +10,7 @@ dependencies = [
     "pytest-timeout>=2.3",
     "pyyaml>=6.0",
     "sentry-sdk>=2.20",
+    "langfuse>=4,<5",
 ]
 
 [project.optional-dependencies]
