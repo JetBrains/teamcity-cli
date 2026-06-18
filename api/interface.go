@@ -146,6 +146,7 @@ type ClientInterface interface {
 	DeleteProjectFeature(projectID, featureID string) error
 
 	RawRequest(ctx context.Context, method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)
+	NormalizePaginationPath(href string) string
 
 	SetCommandName(name string)
 	ServerURL() string

@@ -384,6 +384,47 @@ func TestAPICommandPaginate(T *testing.T) {
 	assert.Equal(T, 2, pageNum, "request count")
 }
 
+func TestAPICommandPaginateContextPath(T *testing.T) {
+	var paths []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		if len(paths) == 1 {
+			json.NewEncoder(w).Encode(map[string]any{
+				"count":    1,
+				"nextHref": "/bs/app/rest/builds?start=2",
+				"build":    []map[string]int{{"id": 1}},
+			})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]any{
+			"count": 1,
+			"build": []map[string]int{{"id": 2}},
+		})
+	}))
+	originalURL := os.Getenv("TEAMCITY_URL")
+	originalToken := os.Getenv("TEAMCITY_TOKEN")
+	os.Setenv("TEAMCITY_URL", server.URL+"/bs")
+	os.Setenv("TEAMCITY_TOKEN", "test-token")
+	config.Init()
+	T.Cleanup(func() {
+		server.Close()
+		os.Setenv("TEAMCITY_URL", originalURL)
+		os.Setenv("TEAMCITY_TOKEN", originalToken)
+		config.Init()
+	})
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmd()
+	rootCmd.SetArgs([]string{"api", "/app/rest/builds", "--paginate"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	require.NoError(T, rootCmd.Execute())
+	assert.Equal(T, []string{"/bs/app/rest/builds", "/bs/app/rest/builds"}, paths,
+		"context path must appear exactly once per request, not doubled")
+}
+
 func TestAPICommandPaginatePreservesProxyErrorBody(T *testing.T) {
 	pageNum := 0
 	setupMockServerForAPI(T, func(w http.ResponseWriter, r *http.Request) {

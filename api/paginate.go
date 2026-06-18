@@ -26,18 +26,18 @@ func collectPages[T any](c *Client, path string, limit int, fetch func(string) (
 		}
 		all = append(all, items...)
 		if limit > 0 && len(all) >= limit {
-			truncated := len(all) > limit || c.normalizePaginationPath(nextHref) != ""
+			truncated := len(all) > limit || c.NormalizePaginationPath(nextHref) != ""
 			return all[:limit], truncated, nil
 		}
-		path = c.normalizePaginationPath(nextHref)
+		path = c.NormalizePaginationPath(nextHref)
 	}
 	return all, false, nil
 }
 
-// normalizePaginationPath converts a TeamCity NextHref value into a path
-// suitable for c.get. It strips the scheme/host, context path, guestAuth
-// prefix, and API version so that apiPath() can re-apply them consistently.
-func (c *Client) normalizePaginationPath(href string) string {
+// NormalizePaginationPath converts a TeamCity NextHref value into a path
+// suitable for c.get / RawRequest. It strips the scheme/host, context path,
+// guestAuth prefix, and API version so that apiPath() can re-apply them consistently.
+func (c *Client) NormalizePaginationPath(href string) string {
 	if href == "" {
 		return ""
 	}
