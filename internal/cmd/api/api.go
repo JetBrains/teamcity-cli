@@ -319,7 +319,8 @@ func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint str
 			return pages, lastStatus, nil
 		}
 
-		currentEndpoint = nextHref
+		// nextHref carries the server's context path (e.g. /bs); strip it so RawRequest's BaseURL doesn't double it.
+		currentEndpoint = client.NormalizePaginationPath(nextHref)
 	}
 
 	return nil, lastStatus, fmt.Errorf("--paginate hit the page cap of %d with more pages still available; refine your query (e.g. add a locator filter)", maxPaginationPages)

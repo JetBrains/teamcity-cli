@@ -173,7 +173,7 @@ func TestNormalizePaginationPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			c := &Client{BaseURL: tt.baseURL, APIVersion: tt.apiVersion}
-			got := c.normalizePaginationPath(tt.href)
+			got := c.NormalizePaginationPath(tt.href)
 			assert.Equal(t, tt.want, got)
 		})
 	}
