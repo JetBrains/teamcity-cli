@@ -129,7 +129,7 @@ func SortedServerURLs(c *Config) []string {
 	return urls
 }
 
-// NormalizeURL reduces a user-supplied URL to its origin (scheme + host + port), adding https:// if no scheme.
+// NormalizeURL canonicalizes a user-supplied URL to scheme + host + port + context path (preserving e.g. /bs), adding https:// if no scheme and dropping any query, fragment, and trailing slash.
 //
 //goland:noinspection HttpUrlsUsage
 func NormalizeURL(u string) string {
@@ -144,7 +144,7 @@ func NormalizeURL(u string) string {
 	if err != nil || parsed.Host == "" {
 		return strings.TrimSuffix(u, "/")
 	}
-	return parsed.Scheme + "://" + parsed.Host
+	return parsed.Scheme + "://" + parsed.Host + strings.TrimSuffix(parsed.Path, "/")
 }
 
 func keyringService(serverURL string) string {

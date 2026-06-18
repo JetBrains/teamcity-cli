@@ -58,6 +58,33 @@ func TestGetServerURLFromEnv(T *testing.T) {
 	assert.Equal(T, want, got)
 }
 
+func TestNormalizeURL(T *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"plain host", "https://tc.example.com", "https://tc.example.com"},
+		{"trailing slash", "https://tc.example.com/", "https://tc.example.com"},
+		{"no scheme", "tc.example.com", "https://tc.example.com"},
+		{"http scheme kept", "http://tc.example.com", "http://tc.example.com"},
+		{"port", "https://tc.example.com:8111", "https://tc.example.com:8111"},
+		{"context path", "https://tc.example.com/bs", "https://tc.example.com/bs"},
+		{"context path trailing slash", "https://tc.example.com/bs/", "https://tc.example.com/bs"},
+		{"context path with port", "https://tc.example.com:8111/bs", "https://tc.example.com:8111/bs"},
+		{"context path no scheme", "tc.example.com/bs", "https://tc.example.com/bs"},
+		{"nested context path", "https://tc.example.com/teamcity/bs", "https://tc.example.com/teamcity/bs"},
+		{"drops query and fragment", "https://tc.example.com/bs?foo=1#x", "https://tc.example.com/bs"},
+		{"whitespace", "  https://tc.example.com/bs  ", "https://tc.example.com/bs"},
+		{"empty", "", ""},
+	}
+	for _, tc := range tests {
+		T.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, NormalizeURL(tc.in))
+		})
+	}
+}
+
 func TestGetTokenFromEnv(T *testing.T) {
 	want := "test-token-123"
 	T.Setenv(EnvToken, want)
