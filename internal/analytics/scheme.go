@@ -22,6 +22,7 @@ const (
 	GroupPipeline  = "teamcity.cli.pipeline"
 	GroupSkill     = "teamcity.cli.skill"
 	GroupWorkspace = "teamcity.cli.workspace"
+	GroupMigrate   = "teamcity.cli.migrate"
 )
 
 // groupVersion maps each FUS group to its schema version.
@@ -29,7 +30,7 @@ const (
 // so AP can distinguish events from old vs new client versions.
 var groupVersion = map[string]int{
 	GroupSession:   1,
-	GroupCommand:   3, // "job.settings.*" commands added
+	GroupCommand:   3, // "migrate" and "job.settings.*" commands added
 	GroupAPI:       1,
 	GroupAuth:      1,
 	GroupBuild:     2, // "muted" filter value added (FUS-7820)
@@ -37,6 +38,7 @@ var groupVersion = map[string]int{
 	GroupPipeline:  1,
 	GroupSkill:     1,
 	GroupWorkspace: 1, // new group, initial version
+	GroupMigrate:   1, // new group, initial version
 }
 
 const (
@@ -97,6 +99,7 @@ var Scheme = &fus.Scheme{
 		pipelineGroup(),
 		skillGroup(),
 		workspaceGroup(),
+		migrateGroup(),
 	},
 }
 
@@ -129,7 +132,7 @@ func commandGroup() fus.GroupSchema {
 	return fus.GroupSchema{
 		ID:       GroupCommand,
 		Type:     fus.GroupTypeCounter,
-		Versions: []fus.SchemeRange{{From: "3"}}, // bumped for "job.settings.*" commands
+		Versions: []fus.SchemeRange{{From: "3"}}, // bumped for "migrate" and "job.settings.*" commands
 		Rules: &fus.SchemeRules{
 			EventID: []string{fus.EnumExpr(EventExecuted)},
 			EventData: map[string][]string{
@@ -266,6 +269,22 @@ func skillGroup() fus.GroupSchema {
 				"scope":            {fus.EnumExpr("global", "project")},
 				"is_auto_detected": {fus.EnumRefExpr(enumBoolean)},
 				"is_success":       {fus.EnumRefExpr(enumBoolean)},
+			},
+		},
+	}
+}
+
+func migrateGroup() fus.GroupSchema {
+	return fus.GroupSchema{
+		ID:   GroupMigrate,
+		Type: fus.GroupTypeCounter,
+		Rules: &fus.SchemeRules{
+			EventID: []string{fus.EnumExpr(EventCompleted)},
+			EventData: map[string][]string{
+				"source":            {fus.EnumExpr(MigrateSourceGitHubActions, MigrateSourceBamboo, MigrateSourceMixed, MigrateSourceOther, MigrateSourceNone)},
+				"outcome":           {fus.EnumExpr(MigrateOutcomeClean, MigrateOutcomePartial, MigrateOutcomeFailed, MigrateOutcomeNothingFound)},
+				"validation_status": {fus.EnumExpr(MigrateValidationValid, MigrateValidationInvalid, MigrateValidationSkipped)},
+				"is_dry_run":        {fus.EnumRefExpr(enumBoolean)},
 			},
 		},
 	}
