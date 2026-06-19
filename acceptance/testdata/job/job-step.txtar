@@ -33,7 +33,7 @@ stdout 'enabled'
 
 # Capture the first step id for view/delete
 exec teamcity job step list cli_step_$RANDOM_STRING --json --no-input
-extract '"id":"([^"]+)"' STEP_ID
+extract '"id":\s*"([^"]+)"' STEP_ID
 
 # View a single step
 exec teamcity job step view cli_step_$RANDOM_STRING $STEP_ID --no-input
