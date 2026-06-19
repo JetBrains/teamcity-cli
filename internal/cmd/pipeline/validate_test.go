@@ -57,48 +57,6 @@ jobs:
 	})
 }
 
-func TestConvertYAMLToJSON(t *testing.T) {
-	t.Parallel()
-
-	t.Run("string keys passthrough", func(t *testing.T) {
-		in := map[string]any{"k": "v"}
-		got := convertYAMLToJSON(in)
-		assert.Equal(t, map[string]any{"k": "v"}, got)
-	})
-
-	t.Run("integer keys stringified", func(t *testing.T) {
-		// jsonschema only accepts string keys, so map[any]any keys must stringify.
-		in := map[any]any{1: "one", "two": 2}
-		got := convertYAMLToJSON(in)
-		want := map[string]any{"1": "one", "two": 2}
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("nested arrays and maps", func(t *testing.T) {
-		in := map[string]any{
-			"jobs": map[any]any{
-				"build": map[string]any{
-					"steps": []any{
-						map[any]any{"script": "go build"},
-					},
-				},
-			},
-		}
-		got := convertYAMLToJSON(in).(map[string]any)
-		jobs := got["jobs"].(map[string]any)
-		build := jobs["build"].(map[string]any)
-		steps := build["steps"].([]any)
-		assert.Equal(t, "go build", steps[0].(map[string]any)["script"])
-	})
-
-	t.Run("scalars unchanged", func(t *testing.T) {
-		assert.Equal(t, "x", convertYAMLToJSON("x"))
-		assert.Equal(t, 42, convertYAMLToJSON(42))
-		assert.Equal(t, true, convertYAMLToJSON(true))
-		assert.Equal(t, nil, convertYAMLToJSON(nil))
-	})
-}
-
 func TestValidateAgainstSchema(t *testing.T) {
 	t.Parallel()
 

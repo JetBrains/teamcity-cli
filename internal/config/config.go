@@ -67,17 +67,24 @@ var (
 	dslServerURL  string
 )
 
-func Init() error {
+// ConfigDir returns the teamcity-cli config directory ($XDG_CONFIG_HOME/tc or ~/.config/tc).
+func ConfigDir() (string, error) {
 	home, err := userHomeDirFn()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
-
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if configHome == "" {
 		configHome = filepath.Join(home, ".config")
 	}
-	configDir := filepath.Join(configHome, "tc")
+	return filepath.Join(configHome, "tc"), nil
+}
+
+func Init() error {
+	configDir, err := ConfigDir()
+	if err != nil {
+		return err
+	}
 	configPath = filepath.Join(configDir, "config.yml")
 
 	if err := os.MkdirAll(configDir, 0700); err != nil {
