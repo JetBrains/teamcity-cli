@@ -108,6 +108,10 @@ func orderedCommands(rootCmd *cobra.Command, includeCompletion bool) ([]string, 
 		if c.Name() == "completion" && !includeCompletion {
 			continue
 		}
+		// Experimental commands are intentionally undocumented (see cmdutil.MarkExperimental).
+		if c.Annotations["experimental"] == "true" {
+			continue
+		}
 		cmds[c.Name()] = c
 	}
 
