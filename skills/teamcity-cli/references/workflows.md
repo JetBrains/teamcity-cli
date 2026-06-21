@@ -467,7 +467,7 @@ VCS roots and build features that reference the deleted connection break — cle
 
 **Gotchas:**
 - `vcs create --auth token` test connection returns "Malformed request" if the user hasn't authorized yet. The CLI prints a tip pointing at `connection authorize`. Run that, then retry.
-- The App's per-repo install (step 2) is mandatory; without it, clones return 404 even with a valid connection.
+- The App's per-repo install (step 3) is mandatory; without it, clones return 404 even with a valid connection.
 - Connections in a parent project are inherited by sub-projects — don't recreate the same connection in nested projects.
 - For Docker on AWS-managed ECR, prefer an AWS connection with role-based federation over Docker credentials.
 
