@@ -57,7 +57,7 @@ teamcity run list --status failure --plain --no-header | awk '{print $2}'
 
 **JSON with jq:**
 ```bash
-teamcity run list --json | jq '.[] | {id, status, branch}'
+teamcity run list --json | jq '.[] | {id, status, branchName}'
 ```
 
 **Get build IDs that failed (JSON):**
@@ -72,7 +72,7 @@ teamcity run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branc
 
 **Filter builds by pattern:**
 ```bash
-teamcity run list --json | jq '.[] | select(.branch | contains("feature"))'
+teamcity run list --json | jq '.[] | select(.branchName | contains("feature"))'
 ```
 
 **Count builds by status:**
