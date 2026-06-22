@@ -83,7 +83,7 @@ Shows all branches and all build states (including canceled, personal, composite
 - `-t, --tag <tag>` - Add tag (repeatable)
 - `-m, --comment <text>` - Run comment
 - `--watch` - Watch after starting
-- `-i, --interval <s>` - Refresh interval in seconds when watching (default: 3)
+- `-i, --interval <s>` - Refresh interval in seconds when watching (default: 5)
 - `--timeout <duration>` - Timeout when watching (e.g., 30m, 1h); implies --watch
 - `--clean` - Clean checkout
 - `--agent <id>` - Run on specific agent
@@ -160,7 +160,7 @@ the name once as a header, one row per build, and a pass-rate footer.
 ### Flags for `teamcity run restart`
 
 - `--watch` - Watch the new run after restarting
-- `-i, --interval <s>` - Refresh interval in seconds when watching (default: 3)
+- `-i, --interval <s>` - Refresh interval in seconds when watching (default: 5)
 - `--timeout <duration>` - Timeout when watching (e.g., 30m, 1h); implies --watch
 - `-w, --web` - Open run in browser
 

@@ -219,7 +219,7 @@ teamcity job view <job-id>
 
 **Search for a job by name:**
 ```bash
-teamcity job list --json | jq '.[] | select(.name | contains("deploy"))'
+teamcity job list --json | jq '.buildType[] | select(.name | contains("deploy"))'
 ```
 
 ## Working with Build Artifacts
