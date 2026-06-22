@@ -57,32 +57,32 @@ teamcity run list --status failure --plain --no-header | awk '{print $2}'
 
 **JSON with jq:**
 ```bash
-teamcity run list --json | jq '.[] | {id, status, branchName}'
+teamcity run list --json | jq '.build[] | {id, status, branchName}'
 ```
 
 **Get build IDs that failed (JSON):**
 ```bash
-teamcity run list --status failure --json=id | jq -r '.[].id'
+teamcity run list --status failure --json=id | jq -r '.build[].id'
 ```
 
 **Export runs to CSV:**
 ```bash
-teamcity run list --json=id,status,branchName | jq -r '.[] | [.id,.status,.branchName] | @csv'
+teamcity run list --json=id,status,branchName | jq -r '.build[] | [.id,.status,.branchName] | @csv'
 ```
 
 **Filter builds by pattern:**
 ```bash
-teamcity run list --json | jq '.[] | select(.branchName | contains("feature"))'
+teamcity run list --json | jq '.build[] | select(.branchName | contains("feature"))'
 ```
 
 **Count builds by status:**
 ```bash
-teamcity run list --json | jq 'group_by(.status) | map({status: .[0].status, count: length})'
+teamcity run list --json | jq '.build | group_by(.status) | map({status: .[0].status, count: length})'
 ```
 
 **Get web URLs for queued builds:**
 ```bash
-teamcity queue list --json=webUrl | jq -r '.[].webUrl'
+teamcity queue list --json=webUrl | jq -r '.build[].webUrl'
 ```
 
 ## Environment Variables
