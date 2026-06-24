@@ -85,7 +85,9 @@ func TestIsRetryableNetworkError(T *testing.T) {
 	assert.False(T, isRetryableNetworkError(nil))
 	assert.True(T, isRetryableNetworkError(&net.OpError{Op: "dial"}))
 	assert.True(T, isRetryableNetworkError(&net.DNSError{Err: "no such host"}))
-	assert.True(T, isRetryableNetworkError(&net.OpError{Op: "read", Err: timeoutErr{}}))
+	// Timeouts aren't retried — a retry just re-runs the same slow query (the 2-min hang).
+	assert.False(T, isRetryableNetworkError(&net.OpError{Op: "read", Err: timeoutErr{}}))
+	assert.False(T, isRetryableNetworkError(timeoutErr{}))
 }
 
 type timeoutErr struct{}

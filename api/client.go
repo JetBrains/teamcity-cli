@@ -189,7 +189,7 @@ func newClientBase(baseURL string) *Client {
 	return &Client{
 		BaseURL: strings.TrimSuffix(baseURL, "/"),
 		HTTPClient: &http.Client{
-			Timeout:   30 * time.Second,
+			// No request timeout (gh-style): ctx cancellation bounds requests; opt in via WithTimeout.
 			Transport: defaultTransport(),
 		},
 		serverInfo:   &serverInfoCache{},

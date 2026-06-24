@@ -9,7 +9,7 @@ func FormatTip(tip string) string {
 
 // Empty-state tip constants — one canonical copy per list surface.
 const (
-	TipNoRuns         = "Try --since 7d for a wider window, or --all for everything"
+	TipNoRuns         = "Try --since 7d for a wider window, or --job to scope to one config"
 	TipNoFavoriteRuns = "Pin a run with 'teamcity run pin <id>'"
 	TipNoAgents       = "Check connectivity or run 'teamcity auth status'"
 	TipNoProjects     = "Check your permissions or run 'teamcity auth status'"

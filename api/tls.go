@@ -10,21 +10,16 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
-const responseHeaderTimeout = 30 * time.Second
-
-// defaultTransport returns a transport with PEM fallback when the platform TLS verifier is blocked.
+// defaultTransport returns a transport with PEM fallback when the platform TLS verifier is blocked; no ResponseHeaderTimeout, so slow scans aren't cut off.
 var defaultTransport = sync.OnceValue(func() http.RoundTripper {
 	platform := http.DefaultTransport.(*http.Transport).Clone()
-	platform.ResponseHeaderTimeout = responseHeaderTimeout
 	pool := loadRootCAs()
 	if pool == nil {
 		return platform
 	}
 	pem := http.DefaultTransport.(*http.Transport).Clone()
-	pem.ResponseHeaderTimeout = responseHeaderTimeout
 	pem.TLSClientConfig = &tls.Config{RootCAs: pool}
 	return &pemFallbackTransport{platform: platform, pem: pem}
 })
