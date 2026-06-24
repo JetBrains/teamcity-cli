@@ -25,6 +25,7 @@ func TestBuildsOptionsLocator(T *testing.T) {
 			want: []string{
 				"defaultFilter:false",
 				"branch:(default:any)",
+				"lookupLimit:5000",
 			},
 		},
 		{
@@ -67,6 +68,17 @@ func TestBuildsOptionsLocator(T *testing.T) {
 			},
 			reject: []string{
 				"branch:(default:any)",
+				"lookupLimit",
+			},
+		},
+		{
+			name: "deep lookup (exact number) skips the unscoped lookup-limit cap",
+			opts: BuildsOptions{Number: "123", DeepLookup: true},
+			want: []string{
+				"number:123",
+			},
+			reject: []string{
+				"lookupLimit",
 			},
 		},
 	}
@@ -84,6 +96,49 @@ func TestBuildsOptionsLocator(T *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetBuildsStopsOnEmptyPageUnlessDeepLookup(T *testing.T) {
+	newServer := func() (*Client, *int) {
+		calls := new(int)
+		c := setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+			*calls++
+			w.Header().Set("Content-Type", "application/json")
+			if *calls == 1 {
+				// Empty window with a nextHref — TeamCity's lookupLimit-escalation signal.
+				_ = json.NewEncoder(w).Encode(BuildList{Count: 0, NextHref: "/app/rest/builds?cursor=2", Builds: []Build{}})
+				return
+			}
+			_ = json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 42}}})
+		})
+		return c, calls
+	}
+
+	T.Run("list query stops at the first empty page", func(t *testing.T) {
+		c, calls := newServer()
+		builds, _, err := c.GetBuilds(t.Context(), BuildsOptions{Number: "123", Limit: 1})
+		require.NoError(t, err)
+		assert.Equal(t, 1, *calls, "must not chase the lookupLimit escalation")
+		assert.Equal(t, 0, builds.Count)
+	})
+
+	T.Run("deep lookup follows nextHref to find an old build", func(t *testing.T) {
+		c, calls := newServer()
+		builds, _, err := c.GetBuilds(t.Context(), BuildsOptions{Number: "123", Limit: 1, DeepLookup: true})
+		require.NoError(t, err)
+		assert.Equal(t, 2, *calls, "must follow nextHref past the empty page")
+		require.Equal(t, 1, builds.Count)
+		assert.Equal(t, 42, builds.Builds[0].ID)
+	})
+}
+
+func TestUnscopedLookupLimitEnvOverride(T *testing.T) {
+	T.Setenv(envLookupLimit, "250")
+	assert.Equal(T, 250, unscopedLookupLimit(), "positive override applies")
+	T.Setenv(envLookupLimit, "nope")
+	assert.Equal(T, 5000, unscopedLookupLimit(), "invalid value falls back to default")
+	T.Setenv(envLookupLimit, "0")
+	assert.Equal(T, 5000, unscopedLookupLimit(), "non-positive falls back to default")
 }
 
 func TestGetBuildsUsesFavoritesLocator(T *testing.T) {

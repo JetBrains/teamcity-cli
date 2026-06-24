@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -27,9 +28,21 @@ type BuildsOptions struct {
 	SinceDate   string
 	UntilDate   string
 	Fields      []string
+	// DeepLookup marks a point lookup (e.g. resolving an exact #number) that must scan deep: it skips the unscoped lookup-limit cap and keeps following nextHref past empty pages so old builds are still found.
+	DeepLookup bool
 }
 
 const favoriteBuildTag = ".teamcity.star"
+
+const envLookupLimit = "TEAMCITY_LOOKUP_LIMIT"
+
+// unscopedLookupLimit caps the build scan when no buildType narrows the query; 5000 is TeamCity's stock default (rest.request.builds.defaultLookupLimit), overridable via TEAMCITY_LOOKUP_LIMIT, without which defaultFilter:false lets an unselective filter (user on a busy branch) scan deep history for minutes.
+func unscopedLookupLimit() int {
+	if v, err := strconv.Atoi(os.Getenv(envLookupLimit)); err == nil && v > 0 {
+		return v
+	}
+	return 5000
+}
 
 // Locator builds the TeamCity locator used to fetch builds.
 func (opts BuildsOptions) Locator() *Locator {
@@ -56,6 +69,9 @@ func (opts BuildsOptions) Locator() *Locator {
 		Add("untilDate", opts.UntilDate)
 	if opts.Favorites {
 		locator.AddLocator("tag", currentUserFavoriteBuildsTagLocator())
+	}
+	if opts.BuildTypeID == "" && !opts.DeepLookup {
+		locator.AddInt("lookupLimit", unscopedLookupLimit())
 	}
 	return locator
 }
@@ -86,6 +102,10 @@ func (c *Client) GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList,
 		var page BuildList
 		if err := c.get(ctx, p, &page); err != nil {
 			return nil, "", err
+		}
+		if len(page.Builds) == 0 && !opts.DeepLookup {
+			// Empty page: TeamCity's nextHref only escalates lookupLimit to scan deeper history, so drop it and stop rather than chase the unbounded scan behind run-list hangs. Point lookups (DeepLookup) keep chasing to find old builds.
+			return nil, "", nil
 		}
 		return page.Builds, page.NextHref, nil
 	})
@@ -118,7 +138,7 @@ func (c *Client) ResolveBuildID(ctx context.Context, ref string) (string, error)
 	if !ok {
 		return ref, nil
 	}
-	builds, _, err := c.GetBuilds(ctx, BuildsOptions{Limit: 1, Number: number})
+	builds, _, err := c.GetBuilds(ctx, BuildsOptions{Limit: 1, Number: number, DeepLookup: true})
 	if err != nil {
 		return "", err
 	}

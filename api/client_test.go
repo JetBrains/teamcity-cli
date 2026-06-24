@@ -172,14 +172,14 @@ func TestClientOptions(T *testing.T) {
 	assert.Equal(T, 60*time.Second, client.HTTPClient.Timeout)
 }
 
-func TestDefaultHTTPClientHasWallClockTimeout(T *testing.T) {
+func TestDefaultHTTPClientHasNoWallClockTimeout(T *testing.T) {
 	T.Parallel()
 
 	client := NewClient("https://example.com", "token")
-	assert.Equal(T, 30*time.Second, client.HTTPClient.Timeout)
+	assert.Zero(T, client.HTTPClient.Timeout, "no request timeout; ctx cancels instead")
 }
 
-func TestDefaultTransportSetsResponseHeaderTimeout(T *testing.T) {
+func TestDefaultTransportBoundsConnectionNotResponse(T *testing.T) {
 	T.Parallel()
 
 	rt := defaultTransport()
@@ -192,7 +192,8 @@ func TestDefaultTransportSetsResponseHeaderTimeout(T *testing.T) {
 	default:
 		T.Fatalf("unexpected transport type %T", rt)
 	}
-	assert.Equal(T, responseHeaderTimeout, tr.ResponseHeaderTimeout)
+	assert.Zero(T, tr.ResponseHeaderTimeout, "no response-header timeout; scans can take tens of seconds")
+	assert.Positive(T, tr.TLSHandshakeTimeout, "connection setup stays bounded")
 }
 
 func TestCheckVersion(T *testing.T) {

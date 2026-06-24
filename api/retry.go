@@ -24,7 +24,7 @@ type RetryConfig struct {
 //goland:noinspection GoUnusedGlobalVariable
 var (
 	// ReadRetry is the default for idempotent read operations (GET).
-	// Retries on network errors, 429, and 5xx responses.
+	// Retries on transient network errors (not timeouts), 429, and 5xx responses.
 	ReadRetry = RetryConfig{MaxRetries: 3, Interval: 200 * time.Millisecond}
 
 	// NoRetry disables retries. Use for non-idempotent operations (POST to queue, etc.).
@@ -38,7 +38,7 @@ var (
 // maxRetryDrain caps how much of a discarded response body is read to enable connection reuse.
 const maxRetryDrain = 4 << 10
 
-// withRetry retries op on network errors, 429, and 5xx (except 501/505), honoring Retry-After and ctx cancellation.
+// withRetry retries op on transient network errors, 429, and 5xx (except 501/505), honoring Retry-After and ctx cancellation. Timeouts are not retried.
 func withRetry(ctx context.Context, cfg RetryConfig, op func() (*http.Response, error)) (*http.Response, error) {
 	if cfg.MaxRetries == 0 {
 		return op()
@@ -75,7 +75,7 @@ func withRetry(ctx context.Context, cfg RetryConfig, op func() (*http.Response, 
 	}, backoff.WithBackOff(expo), backoff.WithMaxTries(cfg.MaxRetries+1), backoff.WithMaxElapsedTime(0))
 }
 
-// isRetryableNetworkError reports whether err is a transient network issue (not ctx cancellation).
+// isRetryableNetworkError reports whether err is a transient network issue worth retrying; timeouts are excluded since retrying just re-runs the same slow op.
 func isRetryableNetworkError(err error) bool {
 	if err == nil {
 		return false
@@ -84,7 +84,7 @@ func isRetryableNetworkError(err error) bool {
 		return false
 	}
 	if netErr, ok := errors.AsType[net.Error](err); ok && netErr.Timeout() {
-		return true
+		return false
 	}
 	if _, ok := errors.AsType[*net.OpError](err); ok {
 		return true
