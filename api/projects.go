@@ -121,7 +121,7 @@ func (c *Client) CreateSecureToken(projectID, value string) (string, error) {
 }
 
 // GetSecureValue retrieves the original value for a secure token.
-// Requires CHANGE_SERVER_SETTINGS permission (System Administrator only).
+// Requires VIEW_SERVER_SETTINGS permission (System Administrator only).
 func (c *Client) GetSecureValue(projectID, token string) (string, error) {
 	path := fmt.Sprintf("/app/rest/projects/%s/secure/values/%s", url.PathEscape(projectID), url.PathEscape(token))
 
