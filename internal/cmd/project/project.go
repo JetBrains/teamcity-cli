@@ -293,7 +293,7 @@ func newProjectTokenGetCmd(f *cmdutil.Factory) *cobra.Command {
 		ValidArgsFunction: cmdutil.CompleteOwnerID(completion.LinkedProjects()),
 		Long: `Retrieve the original value for a secure token.
 
-This operation requires CHANGE_SERVER_SETTINGS permission,
+This operation requires VIEW_SERVER_SETTINGS permission,
 which is only available to System Administrators.`,
 		Example: `  teamcity project token get Falcon "credentialsJSON:abc123..."
   teamcity project token get Falcon "abc123..."`,

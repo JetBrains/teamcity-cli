@@ -26,15 +26,22 @@ var fallbackScopes = []string{
 	// Read
 	"VIEW_PROJECT",
 	"VIEW_BUILD_CONFIGURATION_SETTINGS",
+	"VIEW_BUILD_RUNTIME_DATA",
 	"VIEW_AGENT_DETAILS",
+	"VIEW_AGENT_DETAILS_FOR_PROJECT",
+	"VIEW_AGENT_CLOUDS",
 
 	// Build actions (daily developer workflow)
 	"RUN_BUILD",
 	"CANCEL_BUILD",
 	"TAG_BUILD",
 	"COMMENT_BUILD",
+	"ASSIGN_INVESTIGATION",
+	"MANAGE_BUILD_PROBLEMS",
 	"PIN_UNPIN_BUILD",
 	"PATCH_BUILD_SOURCES",
+	"CUSTOMIZE_BUILD_PARAMETERS",
+	"CUSTOMIZE_BUILD_REVISIONS",
 	"REORDER_BUILD_QUEUE",
 
 	// Project administration
@@ -49,6 +56,7 @@ var fallbackScopes = []string{
 	"AUTHORIZE_AGENT",
 	"ADMINISTER_AGENT",
 	"MANAGE_AGENT_POOLS",
+	"START_STOP_CLOUD_AGENT",
 }
 
 // TokenResponse is TeamCity's reply to a successful PKCE token exchange.
