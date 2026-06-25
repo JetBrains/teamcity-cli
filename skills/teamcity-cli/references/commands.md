@@ -94,6 +94,7 @@ Shows all branches and all build states (including canceled, personal, composite
 - `--rebuild-failed-deps` - Rebuild failed/incomplete dependencies
 - `--reuse-deps <id,...>` - Reuse existing builds as snapshot dependencies (comma-separated IDs)
 - `--top` - Add to top of queue
+- `--settings <vcs|current>` - Versioned-settings source: `vcs` loads settings from VCS, `current` uses the settings on the server (default: the job's configured mode)
 - `--dry-run` - Show what would be triggered without running
 - `--json` - Output as JSON (for scripting)
 - `-w, --web` - Open run in browser

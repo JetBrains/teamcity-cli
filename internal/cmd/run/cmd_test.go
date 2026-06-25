@@ -229,6 +229,39 @@ func TestRunStartDryRunNonExistentJob(T *testing.T) {
 	assert.Contains(T, err.Error(), "not found")
 }
 
+func TestRunStartSettingsSendsFreezeSettings(T *testing.T) {
+	cases := []struct {
+		flag string
+		want bool
+	}{
+		{"vcs", true},
+		{"current", false},
+	}
+	for _, tc := range cases {
+		T.Run(tc.flag, func(T *testing.T) {
+			ts := cmdtest.SetupMockClient(T)
+			var captured api.TriggerBuildRequest
+			ts.Handle("POST /app/rest/buildQueue", func(w http.ResponseWriter, r *http.Request) {
+				body, _ := io.ReadAll(r.Body)
+				require.NoError(T, json.Unmarshal(body, &captured))
+				cmdtest.JSON(w, api.Build{ID: 777, BuildTypeID: testJob, WebURL: "https://example/build/777"})
+			})
+
+			cmdtest.RunCmdWithFactory(T, ts.Factory, "run", "start", testJob, "--settings", tc.flag)
+
+			require.NotNil(T, captured.TriggeringOptions)
+			require.NotNil(T, captured.TriggeringOptions.FreezeSettings)
+			assert.Equal(T, tc.want, *captured.TriggeringOptions.FreezeSettings)
+		})
+	}
+}
+
+func TestRunStartSettingsInvalid(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "start", testJob, "--settings", "bogus")
+	assert.Contains(T, err.Error(), "invalid --settings value")
+}
+
 func TestRunCancel(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 

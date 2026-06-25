@@ -261,6 +261,8 @@ type TriggeringOptions struct {
 	RebuildAllDependencies    bool `json:"rebuildAllDependencies,omitempty"`
 	QueueAtTop                bool `json:"queueAtTop,omitempty"`
 	RebuildFailedOrIncomplete bool `json:"rebuildFailedOrIncompleteDependencies,omitempty"`
+	// FreezeSettings overrides the versioned-settings source: true loads settings from VCS, false uses current server settings, nil keeps the build configuration default.
+	FreezeSettings *bool `json:"freezeSettings,omitempty"`
 }
 
 // AgentRef is a reference to an agent

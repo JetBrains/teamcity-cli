@@ -368,6 +368,18 @@ teamcity run start MyProject_Build --top
 teamcity run start MyProject_Build --agent 5
 ```
 
+### Versioned settings source
+
+When a build configuration uses versioned settings, `--settings` chooses where the run's settings come from. Without the flag, the job's configured mode applies.
+
+```Shell
+# Load settings from the VCS revision
+teamcity run start MyProject_Build --settings vcs
+
+# Use the settings currently on the server
+teamcity run start MyProject_Build --settings current
+```
+
 ### Tags and comments
 
 ```Shell
