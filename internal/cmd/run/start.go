@@ -126,6 +126,35 @@ func afterQueue(f *cmdutil.Factory, build *api.Build, web bool, wf *watchFlags) 
 	return nil
 }
 
+// buildSettingsModes maps the --settings flag value to its freezeSettings override and display label: vcs loads versioned settings from the build's VCS revision, current uses the settings on the server, and unset keeps the job's configured default.
+var buildSettingsModes = map[string]struct {
+	freeze bool
+	label  string
+}{
+	"vcs":     {true, "from VCS"},
+	"current": {false, "current on server"},
+}
+
+// resolveSettingsFlag turns --settings into the freezeSettings triggering option: nil when unset (job default), else a pointer to the mode's freeze value.
+func resolveSettingsFlag(settings string) (*bool, error) {
+	if settings == "" {
+		return nil, nil
+	}
+	mode, ok := buildSettingsModes[settings]
+	if !ok {
+		return nil, api.Validation(
+			fmt.Sprintf("invalid --settings value %q", settings),
+			"Use 'vcs' to load settings from VCS, or 'current' to use the settings on the server",
+		)
+	}
+	return &mode.freeze, nil
+}
+
+// settingsLabel returns the human-readable settings source, or "" when unset/unknown.
+func settingsLabel(settings string) string {
+	return buildSettingsModes[settings].label
+}
+
 type runStartOptions struct {
 	branch            string
 	revision          string
@@ -143,6 +172,7 @@ type runStartOptions struct {
 	agent             int
 	tags              []string
 	reuseDeps         []int
+	settings          string
 	watchFlags
 	web    bool
 	dryRun bool
@@ -173,6 +203,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run start Falcon_Build --local-changes changes.patch  # from file
   teamcity run start Falcon_Build --revision abc123def --branch main
   teamcity run start Falcon_Build --revision @head --branch @this
+  teamcity run start Falcon_Build --settings vcs    # load versioned settings from VCS
   teamcity run start Falcon_Build --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobID, _, err := cmdutil.ResolveOwnerID("job", args, 0, f.ResolveDefaultJob)
@@ -200,6 +231,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().IntSliceVar(&opts.reuseDeps, "reuse-deps", nil, "Reuse existing as snapshot dependencies (IDs, comma-separated or repeated)")
 	cmd.Flags().BoolVar(&opts.queueAtTop, "top", false, "Add to top of queue")
 	cmd.Flags().IntVar(&opts.agent, "agent", 0, "Use specific agent (by ID)")
+	cmd.Flags().StringVar(&opts.settings, "settings", "", "Settings source: 'vcs' or 'current' (default: job's configured mode)")
 	opts.addToCmd(cmd)
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open in browser")
 	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", false, "Preview without triggering")
@@ -209,6 +241,9 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	_ = cmd.RegisterFlagCompletionFunc("revision", completion.AtHead())
 	_ = cmd.RegisterFlagCompletionFunc("local-changes", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"git", "-"}, cobra.ShellCompDirectiveDefault
+	})
+	_ = cmd.RegisterFlagCompletionFunc("settings", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"vcs", "current"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
 	return cmd
@@ -227,6 +262,10 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		return err
 	}
 	opts.revision = revision
+	freezeSettings, err := resolveSettingsFlag(opts.settings)
+	if err != nil {
+		return err
+	}
 	if opts.dryRun {
 		client, err := f.Client()
 		if err != nil {
@@ -267,6 +306,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 				QueueAtTop        bool              `json:"queue_at_top,omitempty"`
 				Agent             int               `json:"agent_id,omitempty"`
 				ReuseDeps         []int             `json:"reuse_deps,omitempty"`
+				Settings          string            `json:"settings,omitempty"`
 			}{
 				DryRun:            true,
 				Job:               jobID,
@@ -285,6 +325,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 				QueueAtTop:        opts.queueAtTop,
 				Agent:             opts.agent,
 				ReuseDeps:         opts.reuseDeps,
+				Settings:          opts.settings,
 			})
 		}
 
@@ -342,6 +383,9 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		}
 		if opts.agent > 0 {
 			_, _ = fmt.Fprintf(p.Out, "  Agent ID: %d\n", opts.agent)
+		}
+		if l := settingsLabel(opts.settings); l != "" {
+			_, _ = fmt.Fprintf(p.Out, "  Settings: %s\n", l)
 		}
 		return nil
 	}
@@ -424,6 +468,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		PersonalChangeID:          personalChangeID,
 		Revision:                  opts.revision,
 		SnapshotDependencies:      opts.reuseDeps,
+		FreezeSettings:            freezeSettings,
 	})
 	if err != nil {
 		return err
@@ -465,6 +510,9 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	}
 	if len(opts.tags) > 0 {
 		p.Info("  Tags: %s", strings.Join(opts.tags, ", "))
+	}
+	if l := settingsLabel(opts.settings); l != "" {
+		p.Info("  Settings: %s", l)
 	}
 	if len(opts.reuseDeps) > 0 {
 		printReuseDeps(p, fetchReuseDeps(f.Context(), client, opts.reuseDeps))

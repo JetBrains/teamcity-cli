@@ -270,6 +270,7 @@ type RunBuildOptions struct {
 	PersonalChangeID          string
 	Revision                  string
 	SnapshotDependencies      []int
+	FreezeSettings            *bool // nil = build configuration default; true = settings from VCS; false = current server settings
 }
 
 // RunBuild runs a new build with full options
@@ -302,12 +303,13 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 
 	req.Personal = opts.Personal
 
-	if opts.CleanSources || opts.RebuildDependencies || opts.QueueAtTop || opts.RebuildFailedDependencies {
+	if opts.CleanSources || opts.RebuildDependencies || opts.QueueAtTop || opts.RebuildFailedDependencies || opts.FreezeSettings != nil {
 		req.TriggeringOptions = &TriggeringOptions{
 			CleanSources:              opts.CleanSources,
 			RebuildAllDependencies:    opts.RebuildDependencies,
 			QueueAtTop:                opts.QueueAtTop,
 			RebuildFailedOrIncomplete: opts.RebuildFailedDependencies,
+			FreezeSettings:            opts.FreezeSettings,
 		}
 	}
 

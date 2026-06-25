@@ -28,6 +28,10 @@ exec teamcity run start $JOB_ID --dry-run --no-input
 stdout 'dry-run'
 ! stderr 'Error'
 
+# --settings (dry-run, shows the versioned-settings source)
+exec teamcity run start $JOB_ID --settings vcs --dry-run --no-input
+stdout 'Settings: from VCS'
+
 exec teamcity run start $JOB_ID --comment 'acceptance test' --tag acceptance-$RANDOM_STRING --json --no-input
 stdout '"id"'
 
