@@ -2,16 +2,34 @@
 
 <show-structure for="chapter" depth="2"/>
 
-Jobs represent build configurations in TeamCity. The `teamcity job` command group lets you list and view build configurations, pause and resume them, and manage their parameters.
+Jobs represent build configurations in TeamCity. The `teamcity job` command group lets you create, list, and view build configurations, manage their build steps, pause and resume them, and manage their parameters.
 
 > In TeamCity CLI, "job" is equivalent to "build configuration" in the TeamCity web interface. See the [Glossary](teamcity-cli-glossary.md) for the full terminology mapping.
 
+## Creating a job
+
+Create a new build configuration in a project. The parent project comes from `--project`, the `TEAMCITY_PROJECT` environment variable, or the linked project (see [Linking](teamcity-cli-linking.md)):
+
+```Shell
+teamcity job create Build --project MyProject
+```
+
+By default TeamCity derives the job ID from the name. Set an explicit ID with `--id`, or base the new job on an existing template with `--template`:
+
+```Shell
+teamcity job create Build --project MyProject --id MyProject_Build
+teamcity job create Build --project MyProject --template MyTemplate
+```
+
+Add `--web` to open the new job in your browser, or `--json` for machine-readable output.
+
 ## Listing jobs
 
-View all build configurations:
+List build configurations across all projects. Jobs backed by pipelines are hidden by default — pass `--all` to include them:
 
 ```Shell
 teamcity job list
+teamcity job list --all
 ```
 
 <img src="job-list.gif" alt="Listing and filtering jobs" border-effect="rounded"/>
@@ -60,6 +78,18 @@ Description
 <td>
 
 Filter by project ID
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--all`
+
+</td>
+<td>
+
+Include jobs backed by pipelines (hidden by default)
 
 </td>
 </tr>
@@ -172,6 +202,32 @@ Show only `dependents` or `dependencies`
 </td>
 </tr>
 </table>
+
+## Managing build steps
+
+Build steps are the individual runners a job executes in order. List the steps on a job:
+
+```Shell
+teamcity job step list MyBuild
+```
+
+View one step's full configuration, including its parameter keys:
+
+```Shell
+teamcity job step view MyBuild RUNNER_1
+```
+
+Add a step. `--type` is the runner type ID used by TeamCity's REST API, which differs from the display name in the UI — Command Line is `simpleRunner`, Gradle is `gradle-runner`, Maven is `Maven2`. Repeat `--param key=value` for each runner setting:
+
+```Shell
+teamcity job step add MyBuild --type simpleRunner --name "Run Tests" --param use.custom.script=true --param script.content="./gradlew test"
+```
+
+Delete a step by its ID:
+
+```Shell
+teamcity job step delete MyBuild RUNNER_1
+```
 
 ## Pausing and resuming jobs
 

@@ -117,7 +117,7 @@ Guest authentication provides read-only access. It uses the `/guestAuth/` API pr
 
 <img src="auth-login.gif" alt="Authenticating with guest access" border-effect="rounded"/>
 
-> Guest access must be [enabled in the TeamCity server settings](enabling-guest-login.md). Otherwise, the login will fail.
+> Guest access must be [enabled in the TeamCity server settings](https://www.jetbrains.com/help/teamcity/enabling-guest-login.html). Otherwise, the login will fail.
 >
 {style="note"}
 

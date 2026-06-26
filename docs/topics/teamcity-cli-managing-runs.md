@@ -659,7 +659,7 @@ Watch the build after starting it
 </td>
 <td>
 
-Refresh interval in seconds when watching (default: 3)
+Refresh interval in seconds when watching (default: 5)
 
 </td>
 </tr>

@@ -65,7 +65,7 @@ A TeamCity feature that synchronizes a project's configuration (jobs, parameters
 
 ```Shell
 teamcity project settings status MyProject
-teamcity project settings export MyProject --format kotlin
+teamcity project settings export MyProject --kotlin
 ```
 
 ## Build Queue

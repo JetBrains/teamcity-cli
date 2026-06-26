@@ -2,7 +2,7 @@
 
 <show-structure for="chapter" depth="2"/>
 
-`teamcity link` binds a repository to one or more TeamCity projects and jobs by writing a small `teamcity.toml` file at the repo root. Once linked, commands like `teamcity run start`, `teamcity run watch`, and `teamcity job list` pick up the default project and job automatically — no `--project`/`--job` flags required.
+`teamcity link` binds a repository to one or more TeamCity projects and jobs by writing a small `teamcity.toml` file at the repo root. Once linked, commands like `teamcity run start`, `teamcity run list`, and `teamcity job list` pick up the default project and job automatically — no `--project`/`--job` flags required.
 
 `teamcity.toml` is meant to be committed alongside your code. It is portable across machines, CI agents, and AI coding agents, and it supports monorepos with per-path bindings and multi-server setups.
 
@@ -140,10 +140,10 @@ This means `teamcity.toml` provides the *defaults*, but any explicit flag or env
 Once `teamcity.toml` is in place, the following commands accept the linked defaults instead of requiring identifiers on every invocation:
 
 - `teamcity run start` — uses the default `job`
-- `teamcity run list`, `teamcity run watch`, `teamcity run log` — accept `--job` from the link
-- `teamcity job list`, `teamcity job tree` — scope to the linked `project`
+- `teamcity run list`, `teamcity run log` — accept `--job` from the link
+- `teamcity job list` — scopes to the linked `project`
+- `teamcity job tree`, `teamcity job view` — use the linked default `job`
 - `teamcity project view`, `teamcity project tree` — open the linked `project`
-- `teamcity pipeline pull`, `teamcity pipeline validate` — use the linked `project`
 
 Run `teamcity <command> --help` to see which flags accept the linked default.
 

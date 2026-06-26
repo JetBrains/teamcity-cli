@@ -10,6 +10,14 @@ You can also integrate TeamCity with AI agents via the [MCP server](ai-agent-int
 
 </tip>
 
+## Listing skills
+
+List the skills bundled with your `teamcity` release, with each one's version and which is installed by default:
+
+```Shell
+teamcity skill list
+```
+
 ## Installing the skill
 
 Install the skill for all detected AI agents:
@@ -109,6 +117,18 @@ Target agent(s). Can be repeated. Auto-detects installed agents if omitted.
 <td>
 
 Install to the current project instead of globally
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--all`
+
+</td>
+<td>
+
+Apply to every bundled skill instead of only the default
 
 </td>
 </tr>
