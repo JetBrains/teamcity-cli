@@ -349,6 +349,12 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 				fmt.Sprintf("Step %q sets timeout-minutes: %s → no per-step timeout in TeamCity; configure an execution timeout in the job's failure conditions", stepName, ghaFloatString(step.TimeoutMinutes)))
 		}
 		stepResults = append(stepResults, transformGHAStep(step, acc)...)
+		if javaHome := setupJavaHome(step); javaHome != "" {
+			if j.Parameters == nil {
+				j.Parameters = map[string]string{}
+			}
+			j.Parameters["JAVA_HOME"] = javaHome
+		}
 	}
 
 	steps, artifacts, cache := applyResults(stepResults, result)
@@ -361,11 +367,30 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 
 	if job.Env != nil {
 		if params := extractGHAEnvParams(job.Env, result); len(params) > 0 {
-			j.Parameters = params
+			if j.Parameters == nil {
+				j.Parameters = map[string]string{}
+			}
+			maps.Copy(j.Parameters, params)
 		}
 	}
 
 	return j
+}
+
+var javaVersionRe = regexp.MustCompile(`^\s*(\d+)`)
+
+// setupJavaHome maps a literal setup-java version to TeamCity's conventional JDK parameter.
+func setupJavaHome(step *actionlint.Step) string {
+	exec, ok := step.Exec.(*actionlint.ExecAction)
+	if !ok || exec.Uses == nil || !strings.HasPrefix(exec.Uses.Value, "actions/setup-java@") {
+		return ""
+	}
+	version := collectActionInputs(exec)["java-version"]
+	match := javaVersionRe.FindStringSubmatch(version)
+	if len(match) == 0 {
+		return ""
+	}
+	return "%env.JDK_" + match[1] + "_0%"
 }
 
 // redactLiteralSecret replaces a literal value under a secret-looking key; expressions stay so mapping/flagging see them.
