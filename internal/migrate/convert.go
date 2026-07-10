@@ -153,6 +153,9 @@ func condense(s string) string {
 }
 
 func (o Options) MapRunner(label string) string {
+	if o.RunnerMap != nil {
+		return o.RunnerMap[label]
+	}
 	mapped, _ := o.ResolveRunner(label)
 	return mapped
 }
@@ -161,6 +164,9 @@ func (o Options) MapRunner(label string) string {
 func (o Options) ResolveRunner(label string) (mapped string, ok bool) {
 	if mapped, ok := o.RunnerMap[label]; ok {
 		return mapped, true
+	}
+	if o.RunnerMap != nil {
+		return "", true
 	}
 	if mapped, ok := RunnerMap[label]; ok {
 		return mapped, true

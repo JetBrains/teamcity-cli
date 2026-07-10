@@ -145,6 +145,16 @@ jobs:
 	assert.Equal(t, 1, strings.Count(manuals, "runs on a Windows runner with no explicit shell"))
 }
 
+func TestEmptyRunnerMapOmitsRunsOn(t *testing.T) {
+	t.Parallel()
+
+	wf := "on: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n"
+	result, err := Convert(CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}, []byte(wf), Options{RunnerMap: map[string]string{}})
+	require.NoError(t, err)
+
+	assert.NotContains(t, result.YAML, "runs-on:")
+}
+
 func TestMapGHAExpressions(t *testing.T) {
 	t.Parallel()
 	tests := []struct{ input, want string }{
