@@ -155,6 +155,27 @@ func TestEmptyRunnerMapOmitsRunsOn(t *testing.T) {
 	assert.NotContains(t, result.YAML, "runs-on:")
 }
 
+func TestSetupJavaPinsJavaHome(t *testing.T) {
+	t.Parallel()
+
+	wf := `on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: ./mvnw verify
+`
+	result, err := Convert(CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}, []byte(wf), Options{})
+	require.NoError(t, err)
+
+	assert.Contains(t, result.YAML, `env.JAVA_HOME: "%env.JDK_17_0%"`)
+	assert.Contains(t, result.YAML, "./mvnw verify")
+}
+
 func TestMapGHAExpressions(t *testing.T) {
 	t.Parallel()
 	tests := []struct{ input, want string }{
