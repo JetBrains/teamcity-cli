@@ -96,6 +96,9 @@ func runMigrate(f *cmdutil.Factory, opts *migrateOptions) error {
 			return fmt.Errorf("scanning for CI configurations: %w", err)
 		}
 		configs = detected
+		for _, path := range migrate.DetectUnsupported(".") {
+			f.Printer.Warn("Detected unsupported CI configuration %s; it was not migrated", path)
+		}
 	}
 
 	if len(configs) == 0 {
