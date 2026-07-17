@@ -227,7 +227,7 @@ func runAgentView(f *cmdutil.Factory, nameOrID string, opts *cmdutil.ViewOptions
 
 	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), output.Green(agent.WebURL))
 
-	if agent.Connected && agent.Authorized && agent.Enabled {
+	if agent.Connected {
 		_, _ = fmt.Fprintf(p.Out, "%s teamcity agent term %d\n", output.Faint("Open terminal:"), agent.ID)
 	}
 

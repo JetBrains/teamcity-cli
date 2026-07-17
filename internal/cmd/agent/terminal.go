@@ -24,9 +24,11 @@ func newAgentTerminalCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "Open interactive terminal to agent",
 		Long: `Open an interactive shell session to a TeamCity build agent.
 
-Requires the agent to be connected, authorized, and enabled. The
-session runs over a WebSocket and exits when the remote shell exits
-or the connection drops.`,
+Requires the agent to be connected and your account to have the
+CONNECT_TO_AGENT permission. Terminal access is independent of agent
+authorization, so an unauthorized or disabled agent can still be
+reached. The session runs over a WebSocket and exits when the remote
+shell exits or the connection drops.`,
 		Args: cobra.ExactArgs(1),
 		Example: `  teamcity agent term 1
   teamcity agent term Agent-Linux-01`,
@@ -124,18 +126,6 @@ func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, sh
 		return nil, api.Validation(
 			fmt.Sprintf("Agent %s is not connected", agent.Name),
 			"Wait for the agent to connect or check agent status with 'teamcity agent view'",
-		)
-	}
-	if !agent.Authorized {
-		return nil, api.Validation(
-			fmt.Sprintf("Agent %s is not authorized", agent.Name),
-			"Authorize the agent in TeamCity or use 'teamcity agent authorize'",
-		)
-	}
-	if !agent.Enabled {
-		return nil, api.Validation(
-			fmt.Sprintf("Agent %s is disabled", agent.Name),
-			"Enable the agent in TeamCity or use 'teamcity agent enable'",
 		)
 	}
 
