@@ -153,9 +153,6 @@ func condense(s string) string {
 }
 
 func (o Options) MapRunner(label string) string {
-	if o.RunnerMap != nil {
-		return o.RunnerMap[label]
-	}
 	mapped, _ := o.ResolveRunner(label)
 	return mapped
 }
@@ -165,10 +162,11 @@ func (o Options) ResolveRunner(label string) (mapped string, ok bool) {
 	if mapped, ok := o.RunnerMap[label]; ok {
 		return mapped, true
 	}
-	if o.RunnerMap != nil {
-		return "", true
-	}
 	if mapped, ok := RunnerMap[label]; ok {
+		// A non-nil RunnerMap is server truth: a hosted label missing there has no matching agent, so omit runs-on rather than emit a name the server can't run.
+		if o.RunnerMap != nil {
+			return "", true
+		}
 		return mapped, true
 	}
 	if label == "self-hosted" {

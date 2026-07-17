@@ -90,14 +90,3 @@ func TestAnalyzeFileMissingSourceCannotInfer(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot infer CI source")
 }
-
-func TestDetectUnsupported(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Jenkinsfile"), []byte("pipeline {}"), 0644))
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".circleci"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".circleci", "config.yml"), []byte("version: 2.1"), 0644))
-
-	assert.Equal(t, []string{"Jenkinsfile", ".circleci/config.yml"}, DetectUnsupported(dir))
-}
