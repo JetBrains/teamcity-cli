@@ -90,7 +90,7 @@ Secrets referenced by the original inputs become `%PARAM%` references -- create 
 | `windows-latest` / `windows-2022` | `Windows-Medium` |
 | Self-hosted labels | `self-hosted` with agent requirements |
 
-Hosted agent names come from the server's pipeline schema (`runs-on` enum: `Linux-Small/Medium/Large/XLarge`, `Mac-Medium`, `Windows-Small/Medium` as of 2026.2). When connected, the CLI derives this mapping from the live schema — check `teamcity pipeline schema` if a name is rejected.
+Hosted agent names come from the server's pipeline schema (`runs-on` enum, e.g. `Linux-Small/Medium/Large/XLarge`, `Mac-Medium`, `Windows-Small/Medium`). When connected, the CLI derives this mapping from the live schema — check `teamcity pipeline schema` if a name is rejected.
 
 ## Bamboo Specs to TeamCity Pipeline YAML
 

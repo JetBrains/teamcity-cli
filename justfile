@@ -42,9 +42,10 @@ acceptance:
 sandbox:
     gotestsum --format {{gotestsum_format}} -- -tags=sandbox ./api -run TestSandbox -timeout 2m
 
-# Validate the bundled Claude skill against Anthropic's official limits (500 lines)
+# Validate the bundled Claude skills against Anthropic's official limits (500 lines)
 skill:
     npx --yes claude-skills-cli@0.0.22 validate --loose skills/teamcity-cli
+    npx --yes claude-skills-cli@0.0.22 validate --loose skills/migrate-to-teamcity
 
 # Remove build artifacts
 [confirm]

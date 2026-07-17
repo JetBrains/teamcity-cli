@@ -11,8 +11,6 @@ Some CI jobs depend on platform-specific infrastructure and cannot be meaningful
 | GitHub Pages deploy (`actions/deploy-pages`) | GitHub-specific hosting; use TC artifact publishing or separate deploy |
 | GitHub release creation (`on: release`) | The trigger is GitHub-specific; use tag-based VCS trigger in TC instead |
 | Bamboo deployment plans (`bamboo-specs/deployment.yml`) | No TC pipeline equivalent; model as a separate pipeline triggered on build success |
-| Bamboo plan permissions (`plan-permissions:`) | Configure project roles in TC Administration → Roles |
-| Bamboo notifications block | Configure as TC notification rules per user/project |
 
 The converter drops the steps it recognizes as non-portable (listed under "Needs review") and emits a no-op placeholder when a job ends up with no steps — delete those placeholders rather than trying to fill them in. Unrecognized variants (e.g. `github/codeql-action/upload-sarif`) become regular TODO stubs instead — decide per stub whether to replace or remove it.
 
@@ -88,8 +86,6 @@ build_oldstable:
 | Branch filters (GHA `if:`, Bamboo `branches:`) | Add to VCS trigger for conditional jobs |
 | Cloud auth (AWS / GCP / Azure) | TC Connection in project settings |
 | GHA `concurrency:`, `timeout-minutes:`, `fail-fast: false` | Build configuration settings in TC UI |
-| GHA `continue-on-error: true` | Wrap the command (`cmd || true`) or override the step's failure condition — the UI step policy won't ignore the step's own exit code |
-| GHA step outputs / Bamboo plan vars | TC `output-parameters:` + cross-job `%dep.X.Y%` references |
 | Bamboo `final-tasks:` | Set "Even if some build steps have failed" on each step (UI) |
 | Bamboo `stages[].manual: true` | Manual trigger on the downstream pipeline (UI) |
 | Bamboo plan permissions | TC project roles in Administration → Roles |
