@@ -1,6 +1,6 @@
 ---
 name: migrate-to-teamcity
-version: "0.2.0"
+version: "0.3.0"
 description: Migrating CI/CD pipelines to TeamCity. Use when the user wants to migrate, convert, or switch to TeamCity from GitHub Actions (.github/workflows/) or Bamboo (bamboo-specs/*.yml), even if they only say "move our CI". Other CI systems (GitLab, Jenkins, CircleCI, Azure DevOps, Travis, Bitbucket) are not supported yet.
 ---
 
