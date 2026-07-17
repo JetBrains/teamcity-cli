@@ -21,19 +21,6 @@ var ciPatterns = map[SourceCI][]string{
 	},
 }
 
-var unsupportedCIFiles = []string{"Jenkinsfile", ".gitlab-ci.yml", ".circleci/config.yml"}
-
-// DetectUnsupported returns CI configurations present in the repository that migrate does not convert.
-func DetectUnsupported(dir string) []string {
-	found := []string{}
-	for _, name := range unsupportedCIFiles {
-		if info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(name))); err == nil && !info.IsDir() {
-			found = append(found, name)
-		}
-	}
-	return found
-}
-
 func Detect(dir string, filterSource SourceCI) ([]CIConfig, error) {
 	configs := []CIConfig{}
 
