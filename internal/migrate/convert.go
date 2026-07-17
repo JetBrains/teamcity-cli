@@ -157,7 +157,7 @@ func (o Options) MapRunner(label string) string {
 	return mapped
 }
 
-// ResolveRunner maps a CI runner label to a TC agent name; unknown labels resolve to "self-hosted" with ok=false (non-GitHub-hosted labels name self-hosted runners).
+// ResolveRunner maps a CI runner label to a TC agent name; ok=false flags labels needing manual setup — "" for hosted labels the server has no image for, "self-hosted" for custom labels.
 func (o Options) ResolveRunner(label string) (mapped string, ok bool) {
 	if mapped, ok := o.RunnerMap[label]; ok {
 		return mapped, true
@@ -165,7 +165,7 @@ func (o Options) ResolveRunner(label string) (mapped string, ok bool) {
 	if mapped, ok := RunnerMap[label]; ok {
 		// A non-nil RunnerMap is server truth: a hosted label missing there has no matching agent, so omit runs-on rather than emit a name the server can't run.
 		if o.RunnerMap != nil {
-			return "", true
+			return "", false
 		}
 		return mapped, true
 	}
@@ -174,11 +174,11 @@ func (o Options) ResolveRunner(label string) (mapped string, ok bool) {
 	}
 	switch classifyOS(label) {
 	case "linux":
-		return o.MapRunner("ubuntu-latest"), true
+		return o.ResolveRunner("ubuntu-latest")
 	case "mac":
-		return o.MapRunner("macos-latest"), true
+		return o.ResolveRunner("macos-latest")
 	case "windows":
-		return o.MapRunner("windows-latest"), true
+		return o.ResolveRunner("windows-latest")
 	}
 	return "self-hosted", false
 }

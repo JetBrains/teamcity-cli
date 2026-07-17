@@ -258,7 +258,11 @@ func convertGHAJob(id string, job *actionlint.Job, result *ConversionResult, opt
 		} else {
 			mapped, known := opts.ResolveRunner(raw)
 			j.RunsOn = mapped
-			if !known {
+			switch {
+			case !known && mapped == "":
+				result.ManualSetup = append(result.ManualSetup,
+					fmt.Sprintf("Job %q runs-on %q has no matching agent image on the server → runs-on omitted; add a matching image or set runs-on manually", id, raw))
+			case !known:
 				result.ManualSetup = append(result.ManualSetup,
 					fmt.Sprintf("Job %q runs-on %q is not a GitHub-hosted runner → emitted `self-hosted`; configure matching agent requirements in TeamCity", id, raw))
 			}

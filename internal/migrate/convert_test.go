@@ -155,6 +155,17 @@ func TestEmptyRunnerMapOmitsRunsOn(t *testing.T) {
 	assert.NotContains(t, result.YAML, "runs-on:")
 }
 
+func TestPartialRunnerMapFlagsUnmatchedHostedLabel(t *testing.T) {
+	t.Parallel()
+
+	wf := "on: push\njobs:\n  test:\n    runs-on: windows-latest\n    steps:\n      - run: echo hi\n"
+	result, err := Convert(CIConfig{Source: GitHubActions, File: ".github/workflows/ci.yml"}, []byte(wf), Options{RunnerMap: map[string]string{"ubuntu-latest": "linux-large"}})
+	require.NoError(t, err)
+
+	assert.NotContains(t, result.YAML, "runs-on:")
+	assert.Contains(t, strings.Join(result.ManualSetup, "\n"), `Job "test" runs-on "windows-latest" has no matching agent image`)
+}
+
 func TestSetupJavaPinsJavaHome(t *testing.T) {
 	t.Parallel()
 
