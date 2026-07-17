@@ -447,6 +447,25 @@ teamcity-iap() {
 teamcity-iap run list
 ```
 
+#### Reverse-proxy SSO (SiteMinder, Kerberos/SPNEGO)
+
+If the proxy enforces SSO (for example, **CA/Broadcom SiteMinder**), it expects its own session cookie — a TeamCity token in the `Authorization` header means nothing to the proxy, so requests without the cookie get a `302` to the login IDP and never reach TeamCity. Send the session cookie as a header; the cookie name is whatever your proxy uses (`SMSESSION` for SiteMinder), not a fixed default.
+
+Mint the cookie with a tool that speaks your SSO handshake, then feed it in. `curl --negotiate` performs SPNEGO/Kerberos against your existing ticket (run `kinit` first):
+
+```Shell
+teamcity-sso() {
+  export TEAMCITY_HEADER_COOKIE="SMSESSION=$(
+    curl -s --negotiate -u : -c - "$TC_URL/app/rest/server" | awk '$6=="SMSESSION"{print $7}'
+  )"
+  teamcity "$@"
+}
+
+teamcity-sso run list
+```
+
+Adjust the fetch to your IDP (any command that yields the cookie works). Note: a stale cookie triggers the proxy's `302`, and Go strips `Cookie` on cross-host redirects — refreshing the cookie (as the wrapper does per call) avoids this.
+
 For repository-scoped configuration, set these in [direnv](https://direnv.net/) `.envrc` so they're only present when you `cd` into the project directory.
 
 ## Global flags
