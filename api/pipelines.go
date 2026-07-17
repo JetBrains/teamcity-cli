@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -111,20 +112,27 @@ func (c *Client) UpdatePipelineYAML(id string, yamlContent string) error {
 		return fmt.Errorf("failed to get pipeline: %w", err)
 	}
 
-	update := map[string]any{
+	pipeline := map[string]any{
 		"name": raw["name"],
 		"yaml": yamlContent,
 	}
+
 	if vcsRoot, ok := raw["vcsRoot"].(map[string]any); ok {
 		if vcsID, ok := vcsRoot["id"].(string); ok {
-			update["vcsRoot"] = map[string]any{"externalVcsRootId": vcsID}
+			pipeline["vcsRoot"] = map[string]any{"externalVcsRootId": vcsID}
 		}
 	}
 	for _, key := range []string{"additionalVcsRoots", "triggers", "integrations", "notifications"} {
 		if v, ok := raw[key]; ok {
-			update[key] = v
+			pipeline[key] = v
 		}
 	}
+
+	// Support both versions with a single body:
+	// pre-2026.2 reads the top-level fields, 2026.2+ reads the nested "pipeline" object.
+	// Each server ignores the fields it does not recognize.
+	update := map[string]any{"pipeline": pipeline}
+	maps.Copy(update, pipeline)
 
 	body, err := json.Marshal(update)
 	if err != nil {
