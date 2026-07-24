@@ -45,17 +45,31 @@ _PROPAGATE_KEYS = (
 def _setup_workspace(
     work_dir: Path,
     treatment: Treatment,
+    setup_files: dict[str, str] | None = None,
 ) -> None:
     """Create a pristine .claude dir with only the treatment's skill.
 
     Nothing is copied from the real ~/.claude/ — user settings, plugins,
     and hooks (or a local API proxy config) would leak into both arms.
     Auth comes from ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN env vars.
+
+    A task's `setup_files` (path -> content) are written into the workspace
+    root — the agent's CWD — with ${VAR} references expanded from the
+    environment, so a task can seed files like teamcity.toml that it depends
+    on. Both treatment arms get the same files; only the skill differs.
     """
     (work_dir / ".claude").mkdir(parents=True, exist_ok=True)
     if treatment.skill_dir and treatment.skill_dir.exists():
         dest = work_dir / ".claude" / "skills" / "teamcity-cli"
         shutil.copytree(treatment.skill_dir, dest)
+
+    root = work_dir.resolve()
+    for rel_path, content in (setup_files or {}).items():
+        dest = (work_dir / rel_path).resolve()
+        if not dest.is_relative_to(root):
+            raise ValueError(f"setup_files path escapes workspace: {rel_path!r}")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(os.path.expandvars(content))
 
 
 def _build_isolated_env(work_dir: Path) -> dict[str, str]:
@@ -97,13 +111,14 @@ def run_claude(
     *,
     model: str | None = None,
     timeout: int = 600,
+    setup_files: dict[str, str] | None = None,
 ) -> ClaudeResult:
     """Run Claude Code CLI locally in a temp directory with isolated config."""
     model = model or os.environ.get("BENCH_CC_MODEL", DEFAULT_MODEL)
 
     with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
         work_dir = Path(tmp)
-        _setup_workspace(work_dir, treatment)
+        _setup_workspace(work_dir, treatment, setup_files)
         env = _build_isolated_env(work_dir)
 
         cmd = [
@@ -147,13 +162,14 @@ def run_claude_docker(
     model: str | None = None,
     timeout: int = 600,
     image: str = "tc-skill-eval",
+    setup_files: dict[str, str] | None = None,
 ) -> ClaudeResult:
     """Run Claude Code CLI inside a Docker container (fully isolated)."""
     model = model or os.environ.get("BENCH_CC_MODEL", DEFAULT_MODEL)
 
     with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
         work_dir = Path(tmp)
-        _setup_workspace(work_dir, treatment)
+        _setup_workspace(work_dir, treatment, setup_files)
 
         env_flags: list[str] = []
         for key in _PROPAGATE_KEYS:
