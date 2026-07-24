@@ -153,6 +153,64 @@ def test_runner_resets_current_check_after_run():
 
 
 # ---------------------------------------------------------------------------
+# repository binding
+# ---------------------------------------------------------------------------
+
+def test_checked_repository_link():
+    assert run_check(checks.checked_repository_link, runner_for(["cat teamcity.toml"]))
+    # Fails cleanly on real signal — not a masked AttributeError (has_command bug).
+    r = runner_for(["teamcity run list"])
+    assert not run_check(checks.checked_repository_link, r)
+    assert "Exception" not in r._results[-1].message
+
+
+def test_added_repository_link():
+    # Grades the attempt, not its exit status — a binding call is a pass.
+    assert run_check(checks.added_repository_link, runner_for(["teamcity link --project Foo"]))
+    # Usage-only (bare / --help) is not a binding attempt.
+    assert not run_check(checks.added_repository_link, runner_for(["teamcity link --help"]))
+
+
+def test_added_repository_link_with_project_and_without_job():
+    assert run_check(checks.added_repository_link_with_project_and_without_job,
+                     runner_for(["teamcity link --project Foo"]))
+    assert not run_check(checks.added_repository_link_with_project_and_without_job,
+                         runner_for(["teamcity link --project Foo --job Bar"]))
+
+
+def test_mentioned_teamcity_toml():
+    assert run_check(checks.mentioned_teamcity_toml,
+                     runner_for(text="I updated teamcity.toml with the binding."))
+    assert not run_check(checks.mentioned_teamcity_toml,
+                         runner_for(text="I ran the link command."))
+
+
+def test_did_not_add_repository_link():
+    assert run_check(checks.did_not_add_repository_link, runner_for(["teamcity run list"]))
+    # Any link touch is off-task drift — including help-only.
+    assert not run_check(checks.did_not_add_repository_link, runner_for(["teamcity link --help"]))
+
+
+def test_did_not_modify_teamcity_toml():
+    assert run_check(checks.did_not_modify_teamcity_toml, runner_for(["cat teamcity.toml"]))
+    assert not run_check(checks.did_not_modify_teamcity_toml,
+                         runner_for(files_modified=["/tmp/teamcity.toml"]))
+
+
+def test_used_project_from_repository_link():
+    # Relied on the binding: no project/job, or the linked one named explicitly.
+    assert run_check(checks.used_project_from_repository_link,
+                     runner_for(["teamcity run list -n 1"]))
+    assert run_check(checks.used_project_from_repository_link,
+                     runner_for(["teamcity run view --job FooJob"]))
+    # Overriding to a different project, or never running a build query, fails.
+    assert not run_check(checks.used_project_from_repository_link,
+                         runner_for(["teamcity run list --project SomethingElse"]))
+    assert not run_check(checks.used_project_from_repository_link,
+                         runner_for(["teamcity project list"]))
+
+
+# ---------------------------------------------------------------------------
 # Gate statistics
 # ---------------------------------------------------------------------------
 

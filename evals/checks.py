@@ -323,6 +323,152 @@ def uses_run_not_build(runner: EvalRunner) -> None:
 
 
 # ---------------------------------------------------------------------------
+# repository binding
+# ---------------------------------------------------------------------------
+
+def checked_repository_link(runner: EvalRunner) -> None:
+    read_files = [p for p in runner.events.files_read if p.endswith("teamcity.toml")]
+    inspected_via_shell = any("teamcity.toml" in c for c in runner.commands)
+    if read_files or inspected_via_shell:
+        runner.passed("Checked teamcity.toml")
+    else:
+        runner.failed("Did not check for an existing teamcity.toml binding")
+
+
+def added_repository_link(runner: EvalRunner) -> None:
+    if _attempted_repository_link(runner):
+        runner.passed("Attempted to link the repository to a TeamCity job / project")
+    else:
+        runner.failed("Did not attempt to link the repository to a TeamCity job / project")
+
+
+# Flags that make `teamcity link` a genuine binding attempt (vs. bare/usage-only).
+_LINK_BINDING_FLAGS = frozenset({"--auto", "-a", "--project", "-p", "--job", "-j", "--jobs"})
+
+
+def _attempted_repository_link(runner: EvalRunner) -> bool:
+    """True if the agent invoked `teamcity link` with real binding arguments.
+
+    Whether the call succeeded is intentionally ignored: a link can fail for
+    server or connectivity reasons unrelated to agent quality, and this is a
+    skill eval. What we grade is that the agent issued a genuine binding attempt
+    — not a bare, usage-only, or --help invocation.
+    """
+    for argv in runner.teamcity_argvs():
+        if EvalRunner.subcommand_tokens(argv)[:1] != ["link"]:
+            continue
+        flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
+        if flags & _LINK_BINDING_FLAGS:
+            return True
+    return False
+
+
+def added_repository_link_with_project_and_without_job(runner: EvalRunner) -> None:
+    project_flag = re.compile(r"(^|\s)(--project|-p)(\s|=)")
+    job_flag = re.compile(r"(^|\s)(--job|-j)(\s|=)")
+    for cmd in runner.commands:
+        if (
+            _has_repository_link_command(cmd) and
+            project_flag.search(cmd) and
+            not job_flag.search(cmd)
+        ):
+            runner.passed("Linked the repository using only the project argument")
+            return
+    runner.failed("Did not link the repository using only the project argument")
+
+
+_LINK_INVOCATION = re.compile(r"(?:^|[;&|]\s*)(teamcity\s+link(?:\s+[^;&|]+)*)", re.IGNORECASE)
+_HELP_FLAG = re.compile(r"(^|\s)(--help|-h)(\s|$)")
+
+
+def _has_repository_link_command(cmd: str) -> bool:
+    return any(
+        not _HELP_FLAG.search(match.group(1))
+        for match in _LINK_INVOCATION.finditer(cmd)
+    )
+
+
+def did_not_add_repository_link(runner: EvalRunner) -> None:
+    """Guardrail: must not touch `link` on work that shouldn't bind a repo.
+    Any invocation counts — even `link --help` — as off-task drift."""
+    if runner.has_subcommand("link"):
+        runner.failed("Invoked 'teamcity link' where no repo binding was warranted")
+    else:
+        runner.passed("Did not invoke 'teamcity link'")
+
+
+def mentioned_teamcity_toml(runner: EvalRunner) -> None:
+    if runner.has_text("teamcity.toml"):
+        runner.passed("Mentioned teamcity.toml")
+    else:
+        runner.failed("Did not mention the teamcity.toml binding file")
+
+
+def did_not_modify_teamcity_toml(runner: EvalRunner) -> None:
+    modified = [
+        p for p in runner.events.files_created + runner.events.files_modified
+        if p.endswith("teamcity.toml")
+    ]
+    obvious_writes = (
+        "> teamcity.toml",
+        "> ./teamcity.toml",
+        ">teamcity.toml",
+        ">./teamcity.toml",
+        ">> teamcity.toml",
+        ">> ./teamcity.toml",
+        ">>teamcity.toml",
+        ">>./teamcity.toml",
+        "tee teamcity.toml",
+        "tee ./teamcity.toml",
+        "tee -a teamcity.toml",
+        "tee -a ./teamcity.toml",
+        "sed -i",
+        "perl -pi",
+    )
+    suspicious_shell = [
+        c for c in runner.commands
+        if "teamcity.toml" in c.lower() and any(pattern in c.lower() for pattern in obvious_writes)
+    ]
+    if modified or suspicious_shell:
+        runner.failed("Modified the teamcity.toml file manually")
+    else:
+        runner.passed("Did not modify teamcity.toml")
+
+
+def used_project_from_repository_link(runner: EvalRunner) -> None:
+    """Pass if a build query relied on the teamcity.toml binding — no project/job
+    given, or the linked one named explicitly. An override to a different
+    project/job does not count. Grades the command, not server output, so it
+    doesn't depend on a specific error message or on the IDs being nonexistent."""
+    for argv in runner.teamcity_argvs():
+        if EvalRunner.subcommand_tokens(argv)[:2] not in (["run", "list"], ["run", "view"]):
+            continue
+        proj = _flag_value(argv, "--project", "-p")
+        job = _flag_value(argv, "--job", "-j")
+        if proj in (None, _LINKED_PROJECT_ID) and job in (None, _LINKED_JOB_ID):
+            runner.passed("Ran a build query that relied on the linked project/job")
+            return
+    runner.failed("Did not use the linked project/job from teamcity.toml")
+
+
+# Linked IDs seeded by the use-repository-link task's setup_files. Checks
+# receive only the runner, so these must be kept in sync with tasks.json.
+_LINKED_PROJECT_ID = "Project_uipBGpvQua"
+_LINKED_JOB_ID = "FooJob"
+
+
+def _flag_value(argv: list[str], *names: str) -> str | None:
+    """Value of --flag=x / --flag x / -f x in an argv, or None if the flag is absent."""
+    toks = argv[1:]
+    for i, tok in enumerate(toks):
+        if tok.split("=", 1)[0] in names:
+            if "=" in tok:
+                return tok.split("=", 1)[1]
+            return toks[i + 1] if i + 1 < len(toks) else ""
+    return None
+
+
+# ---------------------------------------------------------------------------
 # cross-project
 # ---------------------------------------------------------------------------
 
@@ -526,6 +672,14 @@ CHECK_REGISTRY: dict[str, callable] = {
     "filters_by_project": filters_by_project,
     "uses_json": uses_json,
     "uses_run_not_build": uses_run_not_build,
+    # repository binding
+    "checked_repository_link": checked_repository_link,
+    "added_repository_link": added_repository_link,
+    "added_repository_link_with_project_and_without_job": added_repository_link_with_project_and_without_job,
+    "mentioned_teamcity_toml": mentioned_teamcity_toml,
+    "did_not_add_repository_link": did_not_add_repository_link,
+    "did_not_modify_teamcity_toml": did_not_modify_teamcity_toml,
+    "used_project_from_repository_link": used_project_from_repository_link,
     # cross-project
     "finds_subprojects": finds_subprojects,
     "lists_jobs": lists_jobs,
