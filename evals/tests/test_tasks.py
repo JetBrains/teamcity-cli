@@ -53,7 +53,6 @@ def test_task(
         treatment=treatment_config,
         model=model,
         timeout=timeout,
-        setup_files=task_config.setup_files,
     )
 
     # --- Parse events ---
