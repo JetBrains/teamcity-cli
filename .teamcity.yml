@@ -85,6 +85,11 @@ jobs:
         script-content: |-
           go mod download
           go install gotest.tools/gotestsum@latest
+      # Keeps the tested binary's embedded skill in sync with the source of truth.
+      # TODO(TW-101969): drop --ref once the split is merged to TeamCitySkills main.
+      - type: script
+        name: Fetch skills from TeamCitySkills
+        script-content: go run scripts/fetch-skills.go --ref vbedrosova/tw-101969-101970-skills
       - type: script
         name: Integration Tests
         script-content: >-
@@ -145,6 +150,11 @@ jobs:
         script-content: |-
           go mod download
           go install gotest.tools/gotestsum@latest
+      # Keeps the tested binary's embedded skill in sync with the source of truth.
+      # TODO(TW-101969): drop --ref once the split is merged to TeamCitySkills main.
+      - type: script
+        name: Fetch skills from TeamCitySkills
+        script-content: go run scripts/fetch-skills.go --ref vbedrosova/tw-101969-101970-skills
       - type: script
         name: Integration Tests
         script-content: >-
@@ -178,6 +188,14 @@ jobs:
     name: GoReleaser
     allow-reuse: true
     steps:
+      # Must run before goreleaser: //go:embed all:skills bakes skills/ into the
+      # shipped binary, so this step is what makes the released CLI carry the
+      # source-of-truth skill. TODO(TW-101969): drop --ref once the split is
+      # merged to TeamCitySkills main.
+      - type: script
+        name: Fetch skills from TeamCitySkills
+        docker-image: golang:1.26
+        script-content: go run scripts/fetch-skills.go --ref vbedrosova/tw-101969-101970-skills
       - type: script
         name: Build & Test
         docker-image: goreleaser/goreleaser-pro:latest

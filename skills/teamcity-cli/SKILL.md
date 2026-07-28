@@ -59,5 +59,5 @@ See [Workflows](references/workflows.md) for full details on each.
 ## References
 
 - [Command reference](references/commands.md) — all commands and flags
-- [Workflows](references/workflows.md) — failure investigation, build chains, connections, pipelines
+- [Workflows](references/workflows.md) — index of granular, per-task workflow docs (failure investigation, build chains, connections, pipelines, …)
 - [Output formats](references/output.md) — JSON, plain text, scripting

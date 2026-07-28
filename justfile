@@ -42,6 +42,12 @@ acceptance:
 sandbox:
     gotestsum --format {{gotestsum_format}} -- -tags=sandbox ./api -run TestSandbox -timeout 2m
 
+# Vendor the teamcity-cli skill from the single source repo (JetBrains/TeamCitySkills).
+# skills/teamcity-cli/ is a build-refreshed cache — do NOT hand-edit it; edit it in
+# TeamCitySkills instead. skills/migrate-to-teamcity/ is CLI-local and stays untouched.
+skills-pull *args:
+    go run scripts/fetch-skills.go {{args}}
+
 # Validate the bundled Claude skills against Anthropic's official limits (500 lines)
 skill:
     npx --yes claude-skills-cli@0.0.22 validate --loose skills/teamcity-cli
