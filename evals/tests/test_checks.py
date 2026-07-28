@@ -198,16 +198,23 @@ def test_did_not_modify_teamcity_toml():
 
 
 def test_used_project_from_repository_link():
-    # Relied on the binding: no project/job, or the linked one named explicitly.
+    # Must inspect teamcity.toml AND query within the linked project — via shell...
     assert run_check(checks.used_project_from_repository_link,
-                     runner_for(["teamcity run list -n 1"]))
+                     runner_for(["cat teamcity.toml", "teamcity run list -n 1"]))
+    # ...or via a file read, with the linked project named explicitly.
     assert run_check(checks.used_project_from_repository_link,
-                     runner_for(["teamcity run view --job FooJob"]))
-    # Overriding to a different project, or never running a build query, fails.
+                     runner_for(commands=["teamcity run list --project JBR -n 1"],
+                                files_read=["/repo/teamcity.toml"]))
+    # A no-skill agent that never consults the binding fails — even though the
+    # bare query is auto-scoped by the CLI. This is what isolates the skill.
     assert not run_check(checks.used_project_from_repository_link,
-                         runner_for(["teamcity run list --project SomethingElse"]))
+                         runner_for(["teamcity run list -n 1"]))
+    # Inspected, but overrode to a different project → fail.
     assert not run_check(checks.used_project_from_repository_link,
-                         runner_for(["teamcity project list"]))
+                         runner_for(["cat teamcity.toml", "teamcity run list --project SomethingElse"]))
+    # Inspected, but never ran a build query → fail.
+    assert not run_check(checks.used_project_from_repository_link,
+                         runner_for(["cat teamcity.toml", "teamcity project list"]))
 
 
 def test_located_project_before_link():

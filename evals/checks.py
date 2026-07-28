@@ -436,25 +436,30 @@ def did_not_modify_teamcity_toml(runner: EvalRunner) -> None:
 
 
 def used_project_from_repository_link(runner: EvalRunner) -> None:
-    """Pass if a build query relied on the teamcity.toml binding — no project/job
-    given, or the linked one named explicitly. An override to a different
-    project/job does not count. Grades the command, not server output, so it
-    doesn't depend on a specific error message or on the IDs being nonexistent."""
+    inspected = (
+        any(p.endswith("teamcity.toml") for p in runner.events.files_read)
+        or any("teamcity.toml" in c for c in runner.commands)
+    )
+    if not inspected:
+        runner.failed("Did not inspect the teamcity.toml binding")
+        return
+    relied = False
     for argv in runner.teamcity_argvs():
         if EvalRunner.subcommand_tokens(argv)[:2] not in (["run", "list"], ["run", "view"]):
             continue
-        proj = _flag_value(argv, "--project", "-p")
-        job = _flag_value(argv, "--job", "-j")
-        if proj in (None, _LINKED_PROJECT_ID) and job in (None, _LINKED_JOB_ID):
-            runner.passed("Ran a build query that relied on the linked project/job")
+        if _flag_value(argv, "--project", "-p") not in (None, _LINKED_PROJECT_ID):
+            runner.failed("Overrode the build query with a project other than the linked one")
             return
-    runner.failed("Did not use the linked project/job from teamcity.toml")
+        relied = True
+    if relied:
+        runner.passed("Inspected the binding and queried within the linked project")
+    else:
+        runner.failed("Did not run a build query relying on the linked project")
 
 
-# Linked IDs seeded by the use-repository-link task's setup_files. Checks
-# receive only the runner, so these must be kept in sync with tasks.json.
-_LINKED_PROJECT_ID = "Project_uipBGpvQua"
-_LINKED_JOB_ID = "FooJob"
+# Linked project seeded by the use-repository-link task's setup_files. Checks
+# receive only the runner, so this must be kept in sync with tasks.json.
+_LINKED_PROJECT_ID = "JBR"
 
 
 def _flag_value(argv: list[str], *names: str) -> str | None:
