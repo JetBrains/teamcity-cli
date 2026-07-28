@@ -32,7 +32,7 @@
     "prompt": "When did the last build finish?",
     "checks": ["ran_teamcity_commands", "no_auth_failure", "checked_repository_link", "used_project_from_repository_link", "did_not_add_repository_link", "did_not_modify_teamcity_toml", "valid_commands", "no_hallucinations"],
     "setup_files": {
-      "teamcity.toml": "[[server]]\nurl = \"${TEAMCITY_URL}\"\nproject = \"Project_uipBGpvQua\"\njob = \"FooJob\"\n"
+      "teamcity.toml": "[[server]]\nurl = \"${TEAMCITY_URL}\"\nproject = \"JBR\"\n"
     }
   },
   {
