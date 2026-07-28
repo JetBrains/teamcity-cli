@@ -36,6 +36,11 @@
     }
   },
   {
+    "id": "locate-and-link",
+    "prompt": "I want this repository to track CI for the JetBrains Runtime project. Set that up for me.",
+    "checks": ["ran_teamcity_commands", "no_auth_failure", "located_project_before_link", "added_repository_link", "mentioned_teamcity_toml", "did_not_modify_teamcity_toml", "valid_commands", "no_hallucinations"]
+  },
+  {
     "id": "cross-project",
     "prompt": "I'm trying to understand the CI setup for the CEF/JCEF part of JetBrains Runtime. Can you:\n\n1. Find the JCEF-related subprojects under JetBrains Runtime\n2. List the build jobs in those projects\n3. Show me the recent build history — are things generally green or are there frequent failures?\n4. Find if there are any builds currently in the queue for these projects\n\nGive me a summary of the CI health for this area.",
     "checks": ["ran_teamcity_commands", "no_auth_failure", "finds_subprojects", "lists_jobs", "views_build_history", "checks_queue", "provides_health_summary", "checked_repository_link", "did_not_add_repository_link", "did_not_modify_teamcity_toml", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],

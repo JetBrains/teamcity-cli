@@ -210,6 +210,17 @@ def test_used_project_from_repository_link():
                          runner_for(["teamcity project list"]))
 
 
+def test_located_project_before_link():
+    assert run_check(checks.located_project_before_link,
+                     runner_for(["teamcity project list", "teamcity link --project JBR"]))
+    assert not run_check(checks.located_project_before_link,
+                         runner_for(["teamcity link --project JBR", "teamcity project list"]))
+    assert not run_check(checks.located_project_before_link,
+                         runner_for(["teamcity project list"]))
+    assert not run_check(checks.located_project_before_link,
+                         runner_for(["teamcity project list", "teamcity link --help"]))
+
+
 # ---------------------------------------------------------------------------
 # Gate statistics
 # ---------------------------------------------------------------------------

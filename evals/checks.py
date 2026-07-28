@@ -468,6 +468,32 @@ def _flag_value(argv: list[str], *names: str) -> str | None:
     return None
 
 
+# Project-discovery commands that resolve a name to an id before binding.
+_PROJECT_DISCOVERY = (("project", "list"), ("project", "view"), ("project", "tree"))
+
+
+def located_project_before_link(runner: EvalRunner) -> None:
+    """Pass if the agent discovered a project before binding to it.
+
+    The prompt names a project but gives no id, so a genuine `teamcity link`
+    binding attempt must be preceded — in execution order — by a project
+    discovery command (`project list/view/tree`). Linking first, or never
+    running discovery, fails. Grades the command sequence, not server output,
+    so it doesn't depend on the located id or on the link succeeding."""
+    discovered = False
+    for argv in runner.teamcity_argvs():
+        sub = EvalRunner.subcommand_tokens(argv)
+        if tuple(sub[:2]) in _PROJECT_DISCOVERY:
+            discovered = True
+            continue
+        if sub[:1] == ["link"]:
+            flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
+            if discovered and flags & _LINK_BINDING_FLAGS:
+                runner.passed("Located the project before linking")
+                return
+    runner.failed("Did not locate the project before linking")
+
+
 # ---------------------------------------------------------------------------
 # cross-project
 # ---------------------------------------------------------------------------
@@ -680,6 +706,7 @@ CHECK_REGISTRY: dict[str, callable] = {
     "did_not_add_repository_link": did_not_add_repository_link,
     "did_not_modify_teamcity_toml": did_not_modify_teamcity_toml,
     "used_project_from_repository_link": used_project_from_repository_link,
+    "located_project_before_link": located_project_before_link,
     # cross-project
     "finds_subprojects": finds_subprojects,
     "lists_jobs": lists_jobs,
