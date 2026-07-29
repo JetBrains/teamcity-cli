@@ -176,6 +176,8 @@ def test_added_repository_link_with_project_and_without_job():
                      runner_for(["teamcity link --project Foo"]))
     assert not run_check(checks.added_repository_link_with_project_and_without_job,
                          runner_for(["teamcity link --project Foo --job Bar"]))
+    assert run_check(checks.added_repository_link_with_project_and_without_job,
+                     runner_for(["bin/teamcity link -p Foo"]))
 
 
 def test_mentioned_teamcity_toml():
@@ -226,6 +228,9 @@ def test_located_project_before_link():
                          runner_for(["teamcity project list"]))
     assert not run_check(checks.located_project_before_link,
                          runner_for(["teamcity project list", "teamcity link --help"]))
+    # --auto binds from git remotes, not the located project → not "located then linked".
+    assert not run_check(checks.located_project_before_link,
+                         runner_for(["teamcity project list", "teamcity link --auto"]))
 
 
 # ---------------------------------------------------------------------------

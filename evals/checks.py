@@ -364,28 +364,14 @@ def _attempted_repository_link(runner: EvalRunner) -> bool:
 
 
 def added_repository_link_with_project_and_without_job(runner: EvalRunner) -> None:
-    project_flag = re.compile(r"(^|\s)(--project|-p)(\s|=)")
-    job_flag = re.compile(r"(^|\s)(--job|-j)(\s|=)")
-    for cmd in runner.commands:
-        if (
-            _has_repository_link_command(cmd) and
-            project_flag.search(cmd) and
-            not job_flag.search(cmd)
-        ):
+    for argv in runner.teamcity_argvs():
+        if EvalRunner.subcommand_tokens(argv)[:1] != ["link"]:
+            continue
+        flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
+        if (flags & {"--project", "-p"}) and not (flags & {"--job", "-j"}):
             runner.passed("Linked the repository using only the project argument")
             return
     runner.failed("Did not link the repository using only the project argument")
-
-
-_LINK_INVOCATION = re.compile(r"(?:^|[;&|]\s*)(teamcity\s+link(?:\s+[^;&|]+)*)", re.IGNORECASE)
-_HELP_FLAG = re.compile(r"(^|\s)(--help|-h)(\s|$)")
-
-
-def _has_repository_link_command(cmd: str) -> bool:
-    return any(
-        not _HELP_FLAG.search(match.group(1))
-        for match in _LINK_INVOCATION.finditer(cmd)
-    )
 
 
 def did_not_add_repository_link(runner: EvalRunner) -> None:
@@ -482,9 +468,10 @@ def located_project_before_link(runner: EvalRunner) -> None:
 
     The prompt names a project but gives no id, so a genuine `teamcity link`
     binding attempt must be preceded — in execution order — by a project
-    discovery command (`project list/view/tree`). Linking first, or never
-    running discovery, fails. Grades the command sequence, not server output,
-    so it doesn't depend on the located id or on the link succeeding."""
+    discovery command (`project list/view/tree`). The link must bind the located
+    project with `--project` — `--auto` binds from git remotes, not the located
+    project. Linking first, or never running discovery, fails. Grades the command
+    sequence, not server output, so it doesn't depend on the id or on success."""
     discovered = False
     for argv in runner.teamcity_argvs():
         sub = EvalRunner.subcommand_tokens(argv)
@@ -493,7 +480,7 @@ def located_project_before_link(runner: EvalRunner) -> None:
             continue
         if sub[:1] == ["link"]:
             flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
-            if discovered and flags & _LINK_BINDING_FLAGS:
+            if discovered and flags & {"--project", "-p"}:
                 runner.passed("Located the project before linking")
                 return
     runner.failed("Did not locate the project before linking")
