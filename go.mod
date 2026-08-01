@@ -16,11 +16,11 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
-	github.com/magiconair/properties v1.8.10
-	github.com/mattn/go-runewidth v0.0.24
+	github.com/magiconair/properties v1.18.11
+	github.com/mattn/go-runewidth v0.0.27
 	github.com/moby/moby/api v1.55.0
 	github.com/muesli/termenv v0.16.0
-	github.com/pelletier/go-toml/v2 v2.4.2
+	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/rhysd/actionlint v1.7.12
 	github.com/rogpeppe/go-internal v1.15.0
@@ -32,8 +32,8 @@ require (
 	github.com/testcontainers/testcontainers-go v0.43.0
 	github.com/tiulpin/instill v0.0.0-20260521174322-b563ba2627d7
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/sys v0.46.0
-	golang.org/x/term v0.44.0
+	golang.org/x/sys v0.47.0
+	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
