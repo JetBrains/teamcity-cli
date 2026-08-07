@@ -95,6 +95,7 @@ func TestAcceptance(t *testing.T) {
 		"job",
 		"agent",
 		"pool",
+		"server",
 		"api",
 		"queue",
 		"alias",

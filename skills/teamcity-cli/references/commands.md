@@ -10,6 +10,7 @@
 - Agents (`teamcity agent`)
 - Agent Pools (`teamcity pool`)
 - Pipelines (`teamcity pipeline`)
+- Server (`teamcity server`)
 - Configuration (`teamcity config`)
 - Direct API (`teamcity api`)
 - Global Flags
@@ -460,6 +461,20 @@ Pipelines are YAML-first build configurations. Each pipeline is a project that c
 ### Flags for `teamcity pipeline delete`
 
 - `-y, --yes` - Skip confirmation prompt
+
+## Server (`teamcity server`)
+
+| Command                                      | Description                      |
+|----------------------------------------------|----------------------------------|
+| `teamcity server plugin upload <plugin.zip>` | Upload a TeamCity plugin archive |
+
+### Flags for `teamcity server plugin upload`
+
+- `--hot-reload` - Apply the uploaded update without restarting the server
+- `--json` - Output the upload result as JSON
+
+Hot reload requires an already loaded plugin that supports runtime reload. The
+command reports TeamCity unload or load errors when the update cannot be applied.
 
 ## Configuration (`teamcity config`)
 

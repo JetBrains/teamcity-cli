@@ -21,6 +21,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmd/project"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/queue"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/run"
+	"github.com/JetBrains/teamcity-cli/internal/cmd/server"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/skill"
 	updatecmd "github.com/JetBrains/teamcity-cli/internal/cmd/update"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -105,6 +106,7 @@ Report issues:  https://jb.gg/tc/issues`,
 		link.NewCmd(f),
 		alias.NewCmd(f),
 		apicmd.NewCmd(f),
+		server.NewCmd(f),
 		skill.NewCmd(f),
 		updatecmd.NewCmd(f),
 	)
