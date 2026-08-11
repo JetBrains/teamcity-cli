@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -21,7 +22,12 @@ func TestPinBuild(t *testing.T) {
 			return
 		}
 		assert.Equal(t, "PUT", r.Method)
-		assert.Contains(t, r.URL.Path, "/pin")
+		assert.Equal(t, "/app/rest/builds/id:1/pinInfo", r.URL.Path)
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"status":true,"comment":{"text":"pinned for release"}}`, string(body))
+
 		w.WriteHeader(http.StatusNoContent)
 	})
 
@@ -37,8 +43,13 @@ func TestUnpinBuild(t *testing.T) {
 			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
 			return
 		}
-		assert.Equal(t, "DELETE", r.Method)
-		assert.Contains(t, r.URL.Path, "/pin")
+		assert.Equal(t, "PUT", r.Method)
+		assert.Equal(t, "/app/rest/builds/id:1/pinInfo", r.URL.Path)
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"status":false}`, string(body))
+
 		w.WriteHeader(http.StatusNoContent)
 	})
 
