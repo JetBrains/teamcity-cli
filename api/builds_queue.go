@@ -7,6 +7,11 @@ import (
 	"net/url"
 )
 
+type buildCancelRequest struct {
+	Comment        string `json:"comment"`
+	ReaddIntoQueue bool   `json:"readdIntoQueue"`
+}
+
 // QueueOptions represents options for listing queued builds
 type QueueOptions struct {
 	BuildTypeID string
@@ -46,10 +51,17 @@ func (c *Client) GetBuildQueue(opts QueueOptions) (*BuildQueue, bool, error) {
 	return &BuildQueue{Count: len(builds), Builds: builds}, truncated, nil
 }
 
-// RemoveFromQueue removes a build from the queue
+// RemoveFromQueue cancels a queued build; DELETE would also erase its history entry, which needs far stronger permissions than canceling.
 func (c *Client) RemoveFromQueue(id string) error {
-	path := "/app/rest/buildQueue/id:" + id
-	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
+	return c.cancelQueued(id, "")
+}
+
+func (c *Client) cancelQueued(id, comment string) error {
+	body, err := json.Marshal(buildCancelRequest{Comment: comment})
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+	return c.doNoContent(c.ctx(), "POST", "/app/rest/buildQueue/id:"+id, bytes.NewReader(body), "application/json")
 }
 
 // MoveQueuedBuildToTop moves a queued build to the top of the queue; the path takes the position ("first", "last" or "after:<ids>"), the body the build.

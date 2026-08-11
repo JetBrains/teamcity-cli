@@ -42,9 +42,14 @@ func TestGetBuildQueueWithFilter(t *testing.T) {
 func TestRemoveFromQueue(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "DELETE", r.Method)
-		assert.Contains(t, r.URL.Path, "/app/rest/buildQueue/id:100")
-		w.WriteHeader(http.StatusNoContent)
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/app/rest/buildQueue/id:100", r.URL.Path)
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"comment":"","readdIntoQueue":false}`, string(body))
+
+		w.WriteHeader(http.StatusOK)
 	})
 
 	err := client.RemoveFromQueue("100")
