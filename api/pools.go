@@ -60,10 +60,12 @@ func (c *Client) RemoveProjectFromPool(poolID int, projectID string) error {
 	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
 }
 
-// SetAgentPool moves an agent to a different pool
+// SetAgentPool moves an agent to a different pool; the payload is not Pool, whose id is omitempty, because pool 0 is the Default pool and must stay on the wire.
 func (c *Client) SetAgentPool(agentID int, poolID int) error {
 	path := fmt.Sprintf("/app/rest/agents/id:%d/pool", agentID)
-	body, err := json.Marshal(Pool{ID: poolID})
+	body, err := json.Marshal(struct {
+		ID int `json:"id"`
+	}{ID: poolID})
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}

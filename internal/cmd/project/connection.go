@@ -84,7 +84,7 @@ func (opts *connectionListOptions) fetch(client api.ClientInterface, fields []st
 	}
 
 	return &cmdutil.ListResult{
-		JSON:      filterJSONList(items, fields, connectionToMap),
+		JSON:      cmdutil.FilterJSONList(items, fields, connectionToMap),
 		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
 		EmptyMsg:  "No connections found",
 		EmptyTip:  output.TipNoConnections,
@@ -113,21 +113,6 @@ func maskSecure(name, value string) string {
 		return "********"
 	}
 	return value
-}
-
-func filterJSONList[T any](items []T, fields []string, toMap func(T) map[string]any) any {
-	result := make([]map[string]any, 0, len(items))
-	for _, item := range items {
-		full := toMap(item)
-		filtered := make(map[string]any, len(fields))
-		for _, f := range fields {
-			if v, ok := full[f]; ok {
-				filtered[f] = v
-			}
-		}
-		result = append(result, filtered)
-	}
-	return result
 }
 
 func connectionDisplayInfo(feat api.ProjectFeature) (name, providerType string) {

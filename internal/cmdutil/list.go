@@ -121,3 +121,19 @@ func WarnListTruncated(f *Factory, truncated bool, limit int) {
 	_, _ = fmt.Fprintln(f.Printer.ErrOut)
 	f.Printer.Warn("Showing only the first %d results - use --limit 0 to fetch all", limit)
 }
+
+// FilterJSONList renders items as maps holding only the requested fields, so a zero value the caller asked for is emitted and one they did not is left out.
+func FilterJSONList[T any](items []T, fields []string, toMap func(T) map[string]any) any {
+	result := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		full := toMap(item)
+		filtered := make(map[string]any, len(fields))
+		for _, f := range fields {
+			if v, ok := full[f]; ok {
+				filtered[f] = v
+			}
+		}
+		result = append(result, filtered)
+	}
+	return result
+}
