@@ -245,6 +245,7 @@ func TestInit(T *testing.T) {
 	tmpDir := T.TempDir()
 	T.Setenv("HOME", tmpDir)
 	T.Setenv("USERPROFILE", tmpDir) // Required for Windows
+	T.Setenv("XDG_CONFIG_HOME", "")
 
 	cfg = nil
 	configPath = ""
@@ -539,6 +540,7 @@ func TestInitMkdirFails(T *testing.T) {
 
 	T.Setenv("HOME", tmpDir)
 	T.Setenv("USERPROFILE", tmpDir)
+	T.Setenv("XDG_CONFIG_HOME", "")
 
 	err := Init()
 	require.Error(T, err)
@@ -551,6 +553,7 @@ func TestInitInvalidConfig(T *testing.T) {
 	tmpDir := T.TempDir()
 	T.Setenv("HOME", tmpDir)
 	T.Setenv("USERPROFILE", tmpDir)
+	T.Setenv("XDG_CONFIG_HOME", "")
 
 	configDir := filepath.Join(tmpDir, ".config", "tc")
 	require.NoError(T, os.MkdirAll(configDir, 0700))
@@ -567,6 +570,7 @@ func TestInitUnmarshalError(T *testing.T) {
 	tmpDir := T.TempDir()
 	T.Setenv("HOME", tmpDir)
 	T.Setenv("USERPROFILE", tmpDir)
+	T.Setenv("XDG_CONFIG_HOME", "")
 
 	configDir := filepath.Join(tmpDir, ".config", "tc")
 	require.NoError(T, os.MkdirAll(configDir, 0700))
