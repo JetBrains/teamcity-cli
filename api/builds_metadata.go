@@ -13,25 +13,36 @@ import (
 
 // PinBuild pins a build to prevent it from being cleaned up (accepts ID or #number)
 func (c *Client) PinBuild(buildID string, comment string) error {
-	id, err := c.ResolveBuildID(c.ctx(), buildID)
-	if err != nil {
-		return err
-	}
-	path := fmt.Sprintf("/app/rest/builds/id:%s/pin", id)
-
-	body := cmp.Or(comment, "Pinned via teamcity CLI")
-
-	return c.doNoContent(c.ctx(), "PUT", path, strings.NewReader(body), "text/plain")
+	return c.setPinned(buildID, true, cmp.Or(comment, "Pinned via teamcity CLI"))
 }
 
 // UnpinBuild removes the pin from a build (accepts ID or #number)
 func (c *Client) UnpinBuild(buildID string) error {
+	return c.setPinned(buildID, false, "")
+}
+
+// setPinned writes the pin state via pinInfo; the older /pin route is hidden from the API spec and takes the comment as a bare text/plain body.
+func (c *Client) setPinned(buildID string, pinned bool, comment string) error {
 	id, err := c.ResolveBuildID(c.ctx(), buildID)
 	if err != nil {
 		return err
 	}
-	path := fmt.Sprintf("/app/rest/builds/id:%s/pin", id)
-	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
+
+	body := struct {
+		Status  bool          `json:"status"`
+		Comment *BuildComment `json:"comment,omitempty"`
+	}{Status: pinned}
+	if comment != "" {
+		body.Comment = &BuildComment{Text: comment}
+	}
+
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	path := fmt.Sprintf("/app/rest/builds/id:%s/pinInfo", id)
+	return c.doNoContent(c.ctx(), "PUT", path, bytes.NewReader(bodyBytes), "application/json")
 }
 
 // AddBuildTags adds tags to a build (accepts ID or #number)
