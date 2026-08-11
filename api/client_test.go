@@ -731,12 +731,8 @@ func TestApproveQueuedBuild(T *testing.T) {
 		t.Parallel()
 
 		client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "PUT", r.Method)
-			assert.Equal(t, "/app/rest/buildQueue/id:456/approval/status", r.URL.Path)
-
-			body, err := io.ReadAll(r.Body)
-			require.NoError(t, err)
-			assert.Equal(t, `"approved"`, string(body))
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/app/rest/buildQueue/id:456/approve", r.URL.Path)
 
 			w.WriteHeader(http.StatusOK)
 		})

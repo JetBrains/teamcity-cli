@@ -65,13 +65,13 @@ func (c *Client) MoveQueuedBuildToTop(buildID string) error {
 
 // ApproveQueuedBuild approves a queued build that requires approval
 func (c *Client) ApproveQueuedBuild(buildID string) error {
-	path := fmt.Sprintf("/app/rest/buildQueue/id:%s/approval/status", buildID)
-	return c.doNoContent(c.ctx(), "PUT", path, strings.NewReader(`"approved"`), "application/json")
+	path := fmt.Sprintf("/app/rest/buildQueue/id:%s/approve", buildID)
+	return c.doNoContent(c.ctx(), "POST", path, nil, "")
 }
 
 // GetQueuedBuildApprovalInfo returns approval information for a queued build
 func (c *Client) GetQueuedBuildApprovalInfo(buildID string) (*ApprovalInfo, error) {
-	path := fmt.Sprintf("/app/rest/buildQueue/id:%s/approval", buildID)
+	path := fmt.Sprintf("/app/rest/buildQueue/id:%s/approvalInfo", buildID)
 
 	var info ApprovalInfo
 	if err := c.get(c.ctx(), path, &info); err != nil {
