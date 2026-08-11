@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
@@ -73,5 +74,18 @@ func TestSetAgentPool(t *testing.T) {
 	})
 
 	err := client.SetAgentPool(5, 1)
+	require.NoError(t, err)
+}
+
+func TestSetAgentPoolDefaultPool(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"id":0}`, string(body), "pool 0 is the Default pool, not an absent id")
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	err := client.SetAgentPool(5, 0)
 	require.NoError(t, err)
 }

@@ -118,7 +118,7 @@ type AgentList struct {
 
 // Pool represents an agent pool
 type Pool struct {
-	ID        int          `json:"id,omitempty"`
+	ID        int          `json:"id"` // never omitempty: pool 0 is the Default pool, and dropping it silently empties both list output and move-to-pool requests
 	Name      string       `json:"name,omitempty"`
 	Href      string       `json:"href,omitempty"`
 	MaxAgents int          `json:"maxAgents,omitempty"`
