@@ -34,8 +34,6 @@ type BuildMessagesResponse struct {
 type BuildMessagesOptions struct {
 	// Count is the number of messages to fetch. Negative values fetch from the tail.
 	Count int
-	// SinceID skips messages up to this ID (used as the first param of messagesCount).
-	SinceID int
 	// Tail mode fetches from the end of the log.
 	Tail bool
 	// ExpandAll looks inside block messages.
@@ -51,7 +49,7 @@ func (c *Client) GetBuildMessages(ctx context.Context, buildID string, opts Buil
 
 	params := url.Values{}
 	params.Set("buildId", id)
-	params.Set("messagesCount", fmt.Sprintf("%d,%d", opts.SinceID, opts.Count))
+	params.Set("messagesCount", fmt.Sprintf("0,%d", opts.Count))
 	if opts.Tail {
 		params.Set("target", "tail")
 	}
