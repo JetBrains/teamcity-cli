@@ -406,20 +406,12 @@ func (c *Client) CancelBuild(buildID string, comment string) error {
 	}
 
 	if build.State == "queued" {
-		return c.RemoveFromQueue(id)
+		return c.cancelQueued(id, comment)
 	}
 
 	path := "/app/rest/builds/id:" + id
 
-	body := struct {
-		Comment        string `json:"comment"`
-		ReaddIntoQueue bool   `json:"readdIntoQueue"`
-	}{
-		Comment:        comment,
-		ReaddIntoQueue: false,
-	}
-
-	bodyBytes, err := json.Marshal(body)
+	bodyBytes, err := json.Marshal(buildCancelRequest{Comment: comment})
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
