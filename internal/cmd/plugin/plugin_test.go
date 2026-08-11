@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,6 +50,7 @@ BS.Plugins.registerPlugin('demo-plugin', '/demo-new', true, '1.2.3', 'new-uuid')
 	ts.Handle("POST /admin/plugins.html", func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
 		assert.Equal(t, "setEnabled", r.FormValue("action"))
+		assert.Equal(t, "true", r.FormValue("enabled"))
 		assert.Equal(t, "true", r.FormValue("reload"))
 		assert.Equal(t, "demo-uuid", r.FormValue("uuid"))
 		w.Header().Set("Content-Type", "application/xml")
@@ -103,20 +105,45 @@ func TestPluginHotReloadSurfacesServerError(t *testing.T) {
 	assert.ErrorContains(t, err, "Cannot unload plugin: another plugin depends on it")
 }
 
-func TestPluginUploadRejectsArchiveWithoutDescriptor(t *testing.T) {
-	archivePath := filepath.Join(t.TempDir(), "invalid.zip")
-	file, err := os.Create(archivePath)
-	require.NoError(t, err)
-	writer := zip.NewWriter(file)
-	entry, err := writer.Create("readme.txt")
-	require.NoError(t, err)
-	_, err = entry.Write([]byte("not a plugin"))
-	require.NoError(t, err)
-	require.NoError(t, writer.Close())
-	require.NoError(t, file.Close())
+func TestPluginUploadClassifiesInvalidArchivesAsValidationErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		archivePath func(*testing.T) string
+		wantError   string
+	}{
+		{
+			name: "missing archive",
+			archivePath: func(t *testing.T) string {
+				return filepath.Join(t.TempDir(), "missing.zip")
+			},
+			wantError: "failed to open plugin archive",
+		},
+		{
+			name: "malformed archive",
+			archivePath: func(t *testing.T) string {
+				path := filepath.Join(t.TempDir(), "invalid.zip")
+				require.NoError(t, os.WriteFile(path, []byte("not a ZIP archive"), 0o600))
+				return path
+			},
+			wantError: "failed to open plugin archive",
+		},
+		{
+			name: "non-plugin archive",
+			archivePath: func(t *testing.T) string {
+				return writeArchive(t, "readme.txt", "not a plugin")
+			},
+			wantError: "plugin archive does not contain teamcity-plugin.xml",
+		},
+	}
 
-	err = cmdtest.CaptureErr(t, cmdtest.NewTestServer(t).Factory, "server", "plugin", "upload", archivePath)
-	assert.ErrorContains(t, err, "plugin archive does not contain teamcity-plugin.xml")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := cmdtest.CaptureErr(t, cmdtest.NewTestServer(t).Factory, "server", "plugin", "upload", test.archivePath(t), "--json")
+			assert.ErrorContains(t, err, test.wantError)
+			code, _, _ := output.ClassifyError(err)
+			assert.Equal(t, output.ErrCodeValidation, code)
+		})
+	}
 }
 
 func successfulUpload(w http.ResponseWriter, r *http.Request) {
@@ -125,13 +152,18 @@ func successfulUpload(w http.ResponseWriter, r *http.Request) {
 
 func writePluginArchive(t *testing.T, name, version string) string {
 	t.Helper()
+	return writeArchive(t, "teamcity-plugin.xml", `<teamcity-plugin><info><name>`+name+`</name><version>`+version+`</version></info><deployment allow-runtime-reload="true"/></teamcity-plugin>`)
+}
+
+func writeArchive(t *testing.T, entryName, contents string) string {
+	t.Helper()
 	archivePath := filepath.Join(t.TempDir(), "demo-plugin.zip")
 	file, err := os.Create(archivePath)
 	require.NoError(t, err)
 	writer := zip.NewWriter(file)
-	entry, err := writer.Create("teamcity-plugin.xml")
+	entry, err := writer.Create(entryName)
 	require.NoError(t, err)
-	_, err = entry.Write([]byte(`<teamcity-plugin><info><name>` + name + `</name><version>` + version + `</version></info><deployment allow-runtime-reload="true"/></teamcity-plugin>`))
+	_, err = entry.Write([]byte(contents))
 	require.NoError(t, err)
 	require.NoError(t, writer.Close())
 	require.NoError(t, file.Close())

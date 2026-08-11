@@ -140,7 +140,10 @@ func runUpload(f *cmdutil.Factory, archivePath string, opts *uploadOptions) erro
 func readPluginDescriptor(archivePath string) (*pluginDescriptor, error) {
 	archive, err := zip.OpenReader(archivePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open plugin archive: %w", err)
+		return nil, api.Validation(
+			fmt.Sprintf("failed to open plugin archive: %v", err),
+			"Provide a readable TeamCity plugin ZIP archive",
+		)
 	}
 	defer func() { _ = archive.Close() }()
 
@@ -151,14 +154,20 @@ func readPluginDescriptor(archivePath string) (*pluginDescriptor, error) {
 
 		reader, err := file.Open()
 		if err != nil {
-			return nil, fmt.Errorf("failed to read %s: %w", pluginDescriptorPath, err)
+			return nil, api.Validation(
+				fmt.Sprintf("failed to read %s: %v", pluginDescriptorPath, err),
+				"Provide a valid TeamCity plugin ZIP archive",
+			)
 		}
 
 		var descriptor pluginDescriptor
 		decodeErr := xml.NewDecoder(reader).Decode(&descriptor)
 		closeErr := reader.Close()
 		if decodeErr != nil {
-			return nil, fmt.Errorf("failed to parse %s: %w", pluginDescriptorPath, decodeErr)
+			return nil, api.Validation(
+				fmt.Sprintf("failed to parse %s: %v", pluginDescriptorPath, decodeErr),
+				"Provide a valid TeamCity plugin ZIP archive",
+			)
 		}
 		if closeErr != nil {
 			return nil, fmt.Errorf("failed to close %s: %w", pluginDescriptorPath, closeErr)
@@ -166,12 +175,18 @@ func readPluginDescriptor(archivePath string) (*pluginDescriptor, error) {
 		descriptor.Info.Name = strings.TrimSpace(descriptor.Info.Name)
 		descriptor.Info.Version = strings.TrimSpace(descriptor.Info.Version)
 		if descriptor.Info.Name == "" {
-			return nil, fmt.Errorf("%s does not declare a plugin name", pluginDescriptorPath)
+			return nil, api.Validation(
+				fmt.Sprintf("%s does not declare a plugin name", pluginDescriptorPath),
+				"Provide a descriptor that declares info/name",
+			)
 		}
 		return &descriptor, nil
 	}
 
-	return nil, fmt.Errorf("plugin archive does not contain %s", pluginDescriptorPath)
+	return nil, api.Validation(
+		fmt.Sprintf("plugin archive does not contain %s", pluginDescriptorPath),
+		"Provide a TeamCity plugin ZIP archive",
+	)
 }
 
 func uploadPlugin(client api.ClientInterface, ctx context.Context, archivePath string) error {
@@ -245,9 +260,10 @@ func findPluginUUID(client api.ClientInterface, ctx context.Context, pluginName 
 
 func hotReloadPlugin(client api.ClientInterface, ctx context.Context, uuid string) error {
 	form := url.Values{
-		"action": {"setEnabled"},
-		"reload": {"true"},
-		"uuid":   {uuid},
+		"action":  {"setEnabled"},
+		"enabled": {"true"},
+		"reload":  {"true"},
+		"uuid":    {uuid},
 	}
 	response, err := client.RawRequest(ctx, http.MethodPost, pluginsActionPath, strings.NewReader(form.Encode()), map[string]string{
 		"Accept":       "application/xml",
