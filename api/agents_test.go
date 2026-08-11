@@ -198,7 +198,7 @@ func TestGetAgentBuildTypeCompatibility_match(t *testing.T) {
 			},
 		})
 	})
-	c, err := client.GetAgentBuildTypeCompatibility(5, "Target_BT")
+	c, err := client.GetAgentBuildTypeCompatibility(5, "Target_BT", 100)
 	require.NoError(t, err)
 	require.NotNil(t, c)
 	assert.Equal(t, "Target_BT", c.BuildType.ID)
@@ -211,7 +211,7 @@ func TestGetAgentBuildTypeCompatibility_noMatch(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(CompatibilityList{Count: 1, Compatibility: []Compatibility{{BuildType: &BuildType{ID: "Other_BT"}}}})
 	})
-	c, err := client.GetAgentBuildTypeCompatibility(5, "Target_BT")
+	c, err := client.GetAgentBuildTypeCompatibility(5, "Target_BT", 100)
 	require.NoError(t, err)
 	assert.Nil(t, c)
 }
