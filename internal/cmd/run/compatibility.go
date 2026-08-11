@@ -15,9 +15,6 @@ import (
 // agentListInlineLimit is the max agents listed before we collapse to a pool summary.
 const agentListInlineLimit = 20
 
-// reasonProbeLimit caps how many incompatibleBuildTypes entries to scan per agent when fetching reasons.
-const reasonProbeLimit = 20000
-
 // reasonProbeAgents caps how many incompatible agents we probe for reasons to avoid long waits.
 const reasonProbeAgents = 5
 
@@ -151,7 +148,7 @@ func renderIncompatibilityReasons(w io.Writer, client api.ClientInterface, build
 	for i := range limit {
 		a := agents[i]
 		wg.Go(func() {
-			compat, err := client.GetAgentBuildTypeCompatibility(a.ID, buildTypeID, reasonProbeLimit)
+			compat, err := client.GetAgentBuildTypeCompatibility(a.ID, buildTypeID)
 			if err != nil || compat == nil {
 				return
 			}

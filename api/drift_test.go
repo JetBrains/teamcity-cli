@@ -415,7 +415,7 @@ func TestAPIDriftAgentEndpoints(t *testing.T) {
 		{"GetAgentCompatibleBuildTypes", func() (any, error) { return client.GetAgentCompatibleBuildTypes(agentID) }},
 		{"GetAgentIncompatibleBuildTypes", func() (any, error) { return client.GetAgentIncompatibleBuildTypes(agentID) }},
 		{"GetAgentBuildTypeCompatibility", func() (any, error) {
-			return client.GetAgentBuildTypeCompatibility(agentID, testConfig, 0)
+			return client.GetAgentBuildTypeCompatibility(agentID, testConfig)
 		}},
 	}
 	for _, tc := range cases {

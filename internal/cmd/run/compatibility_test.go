@@ -20,7 +20,7 @@ type mockCompatClient struct {
 	calls atomic.Int32
 }
 
-func (m *mockCompatClient) GetAgentBuildTypeCompatibility(agentID int, _ string, _ int) (*api.Compatibility, error) {
+func (m *mockCompatClient) GetAgentBuildTypeCompatibility(agentID int, _ string) (*api.Compatibility, error) {
 	m.calls.Add(1)
 	time.Sleep(m.delay)
 	return &api.Compatibility{

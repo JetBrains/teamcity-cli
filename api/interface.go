@@ -104,7 +104,7 @@ type ClientInterface interface {
 	GetAgentIncompatibleBuildTypes(id int) (*CompatibilityList, error)
 	GetBuildCompatibleAgents(buildID int) (*AgentList, error)
 	GetBuildIncompatibleAgents(buildID int) (*AgentList, error)
-	GetAgentBuildTypeCompatibility(agentID int, buildTypeID string, maxScan int) (*Compatibility, error)
+	GetAgentBuildTypeCompatibility(agentID int, buildTypeID string) (*Compatibility, error)
 
 	GetAgentPools(fields []string) (*PoolList, error)
 	GetAgentPool(id int) (*Pool, error)
