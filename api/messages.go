@@ -34,6 +34,8 @@ type BuildMessagesResponse struct {
 type BuildMessagesOptions struct {
 	// Count is the number of messages to fetch. Negative values fetch from the tail.
 	Count int
+	// Deprecated: ignored; the server reads the start index from messageId, not from messagesCount.
+	SinceID int
 	// Tail mode fetches from the end of the log.
 	Tail bool
 	// ExpandAll looks inside block messages.

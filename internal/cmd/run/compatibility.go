@@ -148,7 +148,7 @@ func renderIncompatibilityReasons(w io.Writer, client api.ClientInterface, build
 	for i := range limit {
 		a := agents[i]
 		wg.Go(func() {
-			compat, err := client.GetAgentBuildTypeCompatibility(a.ID, buildTypeID)
+			compat, err := client.GetAgentBuildTypeCompatibility(a.ID, buildTypeID, 0)
 			if err != nil || compat == nil {
 				return
 			}

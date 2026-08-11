@@ -169,8 +169,8 @@ func (c *Client) GetBuildIncompatibleAgents(buildID int) (*AgentList, error) {
 	return &result, nil
 }
 
-// GetAgentBuildTypeCompatibility finds the (agent, buildType) entry in incompatibleBuildTypes; the endpoint takes no locator, so the full list is scanned client-side.
-func (c *Client) GetAgentBuildTypeCompatibility(agentID int, buildTypeID string) (*Compatibility, error) {
+// GetAgentBuildTypeCompatibility finds the (agent, buildType) entry in incompatibleBuildTypes; maxScan is ignored because the endpoint takes no locator, so the full list is scanned client-side.
+func (c *Client) GetAgentBuildTypeCompatibility(agentID int, buildTypeID string, _ int) (*Compatibility, error) {
 	fields := "count,compatibility(buildType(id),compatible,incompatibleReasons(reason),unmetRequirements(description))"
 	path := fmt.Sprintf("/app/rest/agents/id:%d/incompatibleBuildTypes?fields=%s", agentID, url.QueryEscape(fields))
 
