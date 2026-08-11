@@ -49,6 +49,7 @@ func newSSHListCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:     "list",
 		Short:   "List SSH keys",
 		Aliases: []string{"ls"},
+		Args:    cobra.NoArgs,
 		Example: `  teamcity project ssh list
   teamcity project ssh list --project MyProject
   teamcity project ssh list --project MyProject --json
