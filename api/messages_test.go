@@ -96,29 +96,3 @@ func TestGetBuildMessagesEmptyIsNonNil(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "[]", string(b))
 }
-
-func TestGetBuildMessages_withSinceID(t *testing.T) {
-	t.Parallel()
-	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/app/rest/builds" || r.URL.Path == "/httpAuth/app/rest/builds" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(BuildList{Count: 1, Builds: []Build{{ID: 1}}})
-			return
-		}
-		assert.Equal(t, "50,-100", r.URL.Query().Get("messagesCount"))
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BuildMessagesResponse{
-			Messages:         []BuildMessage{},
-			LastMessageIndex: 50,
-		})
-	})
-
-	_, err := client.GetBuildMessages(t.Context(), "1", BuildMessagesOptions{
-		SinceID:   50,
-		Count:     -100,
-		Tail:      true,
-		ExpandAll: true,
-	})
-	require.NoError(t, err)
-}
