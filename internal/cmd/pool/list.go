@@ -62,7 +62,7 @@ func fetchPools(client api.ClientInterface, fields []string) (*cmdutil.ListResul
 	}
 
 	return &cmdutil.ListResult{
-		JSON:     pools,
+		JSON:     map[string]any{"count": len(pools.Pools), "agentPool": cmdutil.FilterJSONList(pools.Pools, fields, poolToMap)},
 		Table:    cmdutil.ListTable{Headers: headers, Rows: rows},
 		EmptyMsg: "No agent pools found",
 		EmptyTip: output.TipNoPools,
@@ -146,4 +146,13 @@ func runPoolView(f *cmdutil.Factory, poolID int, opts *cmdutil.ViewOptions) erro
 	_, _ = fmt.Fprintf(p.Out, "\n%s %s\n", output.Faint("View in browser:"), output.Green(url))
 
 	return nil
+}
+
+func poolToMap(p api.Pool) map[string]any {
+	return map[string]any{
+		"id":        p.ID,
+		"name":      p.Name,
+		"maxAgents": p.MaxAgents,
+		"href":      p.Href,
+	}
 }

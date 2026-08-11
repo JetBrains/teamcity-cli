@@ -101,7 +101,7 @@ func (opts *sshListOptions) fetch(client api.ClientInterface, fields []string) (
 	}
 
 	return &cmdutil.ListResult{
-		JSON:      filterJSONList(items, fields, sshKeyToMap),
+		JSON:      cmdutil.FilterJSONList(items, fields, sshKeyToMap),
 		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 2}},
 		EmptyMsg:  "No SSH keys found",
 		Truncated: truncated,
