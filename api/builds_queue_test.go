@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
@@ -50,22 +51,17 @@ func TestRemoveFromQueue(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestSetQueuedBuildPosition(t *testing.T) {
-	t.Parallel()
-	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "PUT", r.Method)
-		assert.Contains(t, r.URL.Path, "/app/rest/buildQueue/order/100")
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	err := client.SetQueuedBuildPosition("100", 5)
-	require.NoError(t, err)
-}
-
 func TestMoveQueuedBuildToTop(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Contains(t, r.URL.Path, "/app/rest/buildQueue/order/100")
+		assert.Equal(t, "PUT", r.Method)
+		assert.Equal(t, "/app/rest/buildQueue/order/first", r.URL.Path)
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"id":"100"}`, string(body))
+
 		w.WriteHeader(http.StatusNoContent)
 	})
 

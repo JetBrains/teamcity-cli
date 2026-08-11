@@ -79,7 +79,6 @@ type ClientInterface interface {
 
 	GetBuildQueue(opts QueueOptions) (*BuildQueue, bool, error)
 	RemoveFromQueue(id string) error
-	SetQueuedBuildPosition(buildID string, position int) error
 	MoveQueuedBuildToTop(buildID string) error
 	ApproveQueuedBuild(buildID string) error
 	GetQueuedBuildApprovalInfo(buildID string) (*ApprovalInfo, error)
