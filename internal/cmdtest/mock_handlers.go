@@ -369,8 +369,12 @@ func SetupMockClient(t *testing.T) *TestServer {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	ts.Handle("POST /app/rest/buildQueue/id:", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, api.ApprovalInfo{Status: "approved"})
+	})
+
 	ts.Handle("GET /app/rest/buildQueue/id:", func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/approval") {
+		if strings.Contains(r.URL.Path, "/approvalInfo") {
 			JSON(w, api.ApprovalInfo{Status: "waitingForApproval", CanBeApprovedByCurrentUser: true})
 			return
 		}
