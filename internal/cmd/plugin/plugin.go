@@ -198,6 +198,7 @@ func uploadPlugin(client api.ClientInterface, ctx context.Context, archivePath s
 	response, err := client.RawRequest(ctx, http.MethodPost, pluginUploadPath, body, map[string]string{
 		"Accept":       "text/html",
 		"Content-Type": contentType,
+		"Origin":       client.ServerURL(),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload plugin: %w", err)
@@ -268,6 +269,7 @@ func hotReloadPlugin(client api.ClientInterface, ctx context.Context, uuid strin
 	response, err := client.RawRequest(ctx, http.MethodPost, pluginsActionPath, strings.NewReader(form.Encode()), map[string]string{
 		"Accept":       "application/xml",
 		"Content-Type": "application/x-www-form-urlencoded",
+		"Origin":       client.ServerURL(),
 	})
 	if err != nil {
 		return err

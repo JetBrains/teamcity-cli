@@ -18,6 +18,7 @@ func TestPluginUpload(t *testing.T) {
 	archivePath := writePluginArchive(t, "demo-plugin", "1.2.3")
 	ts := cmdtest.NewTestServer(t)
 	ts.Handle("POST /admin/pluginUpload.html", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, ts.URL, r.Header.Get("Origin"))
 		require.NoError(t, r.ParseMultipartForm(1<<20))
 		assert.Equal(t, filepath.Base(archivePath), r.FormValue("fileName"))
 
@@ -48,6 +49,7 @@ BS.Plugins.registerPlugin('demo-plugin', '/demo', false, '1.2.2', 'demo-uuid');
 BS.Plugins.registerPlugin('demo-plugin', '/demo-new', true, '1.2.3', 'new-uuid');`)
 	})
 	ts.Handle("POST /admin/plugins.html", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, ts.URL, r.Header.Get("Origin"))
 		require.NoError(t, r.ParseForm())
 		assert.Equal(t, "setEnabled", r.FormValue("action"))
 		assert.Equal(t, "true", r.FormValue("enabled"))
