@@ -1,10 +1,10 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/url"
-	"strconv"
-	"strings"
 )
 
 // QueueOptions represents options for listing queued builds
@@ -52,15 +52,13 @@ func (c *Client) RemoveFromQueue(id string) error {
 	return c.doNoContent(c.ctx(), "DELETE", path, nil, "")
 }
 
-// SetQueuedBuildPosition moves a queued build to a specific position in the queue
-func (c *Client) SetQueuedBuildPosition(buildID string, position int) error {
-	path := "/app/rest/buildQueue/order/" + buildID
-	return c.doNoContent(c.ctx(), "PUT", path, strings.NewReader(strconv.Itoa(position)), "text/plain")
-}
-
-// MoveQueuedBuildToTop moves a queued build to the top of the queue
+// MoveQueuedBuildToTop moves a queued build to the top of the queue; the path takes the position ("first", "last" or "after:<ids>"), the body the build.
 func (c *Client) MoveQueuedBuildToTop(buildID string) error {
-	return c.SetQueuedBuildPosition(buildID, 0)
+	body, err := json.Marshal(map[string]string{"id": buildID})
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+	return c.doNoContent(c.ctx(), "PUT", "/app/rest/buildQueue/order/first", bytes.NewReader(body), "application/json")
 }
 
 // ApproveQueuedBuild approves a queued build that requires approval
