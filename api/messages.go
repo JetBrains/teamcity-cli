@@ -34,7 +34,7 @@ type BuildMessagesResponse struct {
 type BuildMessagesOptions struct {
 	// Count is the number of messages to fetch. Negative values fetch from the tail.
 	Count int
-	// Deprecated: ignored; the server reads the start index from messageId, not from messagesCount.
+	// Deprecated: misnamed, this is the server's messagesAfter count, not a since-ID; the start index comes from the messageId param, which this client never sends.
 	SinceID int
 	// Tail mode fetches from the end of the log.
 	Tail bool
@@ -51,7 +51,7 @@ func (c *Client) GetBuildMessages(ctx context.Context, buildID string, opts Buil
 
 	params := url.Values{}
 	params.Set("buildId", id)
-	params.Set("messagesCount", fmt.Sprintf("0,%d", opts.Count))
+	params.Set("messagesCount", fmt.Sprintf("%d,%d", opts.SinceID, opts.Count))
 	if opts.Tail {
 		params.Set("target", "tail")
 	}
