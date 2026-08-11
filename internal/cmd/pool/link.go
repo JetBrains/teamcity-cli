@@ -14,6 +14,7 @@ type poolProjectAction struct {
 	short   string
 	long    string
 	verb    string
+	prep    string
 	execute func(api.ClientInterface, int, string) error
 }
 
@@ -23,6 +24,7 @@ var poolProjectActions = map[string]poolProjectAction{
 		short: "Link a project to an agent pool",
 		long:  "Link a project to an agent pool, allowing the project's builds to run on agents in that pool.",
 		verb:  "Linked",
+		prep:  "to",
 		execute: func(c api.ClientInterface, poolID int, projectID string) error {
 			return c.AddProjectToPool(poolID, projectID)
 		},
@@ -32,6 +34,7 @@ var poolProjectActions = map[string]poolProjectAction{
 		short: "Unlink a project from an agent pool",
 		long:  "Unlink a project from an agent pool, removing the project's access to agents in that pool.",
 		verb:  "Unlinked",
+		prep:  "from",
 		execute: func(c api.ClientInterface, poolID int, projectID string) error {
 			return c.RemoveProjectFromPool(poolID, projectID)
 		},
@@ -63,7 +66,7 @@ func newPoolProjectCmd(f *cmdutil.Factory, a poolProjectAction) *cobra.Command {
 			if err := a.execute(client, poolID, args[1]); err != nil {
 				return fmt.Errorf("failed to %s project: %w", a.use, err)
 			}
-			f.Printer.Success("%s project %s to pool %d", a.verb, args[1], poolID)
+			f.Printer.Success("%s project %s %s pool %d", a.verb, args[1], a.prep, poolID)
 			return nil
 		},
 	}
