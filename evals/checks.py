@@ -368,7 +368,7 @@ def added_repository_link_with_project_and_without_job(runner: EvalRunner) -> No
         if EvalRunner.subcommand_tokens(argv)[:1] != ["link"]:
             continue
         flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
-        if (flags & {"--project", "-p"}) and not (flags & {"--job", "-j"}):
+        if (flags & {"--project", "-p"}) and not (flags & {"--job", "-j", "--jobs"}):
             runner.passed("Linked the repository using only the project argument")
             return
     runner.failed("Did not link the repository using only the project argument")
@@ -431,7 +431,7 @@ def used_project_from_repository_link(runner: EvalRunner) -> None:
         return
     relied = False
     for argv in runner.teamcity_argvs():
-        if EvalRunner.subcommand_tokens(argv)[:2] not in (["run", "list"], ["run", "view"]):
+        if EvalRunner.subcommand_tokens(argv)[:2] not in (["run", "list"], ["run", "log"]):
             continue
         if _flag_value(argv, "--project", "-p") not in (None, _LINKED_PROJECT_ID):
             runner.failed("Overrode the build query with a project other than the linked one")
