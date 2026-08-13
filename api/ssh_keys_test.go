@@ -48,3 +48,17 @@ func TestGenerateSSHKey(t *testing.T) {
 	assert.Equal(t, "my-key", key.Name)
 	assert.Equal(t, "ssh-ed25519 GENERATED", key.PublicKey)
 }
+
+func TestUploadSSHKey(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/app/rest/projects/id:MyProject/sshKeys?fileName=my-key", r.URL.String())
+		assert.Equal(t, "text/plain", r.Header.Get("Content-Type"))
+		w.WriteHeader(http.StatusOK)
+	})
+
+	err := client.UploadSSHKey("MyProject", "my-key", []byte("dummy-key-content"))
+	require.NoError(t, err)
+}
+

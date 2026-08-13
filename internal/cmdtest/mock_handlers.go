@@ -775,7 +775,7 @@ func SetupMockClient(t *testing.T) *TestServer {
 		})
 	})
 
-	ts.Handle("POST /app/rest/projects/id:TestProject/sshKeys/", func(w http.ResponseWriter, r *http.Request) {
+	ts.Handle("POST /app/rest/projects/id:TestProject/sshKeys", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
