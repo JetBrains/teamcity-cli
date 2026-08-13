@@ -60,12 +60,6 @@ irm https://jb.gg/tc/install.ps1 | iex
 
 </snippet>
 
-**npm (cross-platform):**
-
-```bash
-npm install -g @jetbrains/teamcity-cli
-```
-
 For other methods (Scoop, Chocolatey, deb/rpm packages, building from source), see the [getting started guide](teamcity-cli-get-started.md).
 
 ## Quick start

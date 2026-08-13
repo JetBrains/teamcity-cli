@@ -84,25 +84,25 @@ nfpms:
       - src: README.md
         dst: /usr/share/doc/teamcity/README.md
 
-npms:
-  - name: "@jetbrains/teamcity-cli"
-    description: A command-line interface for TeamCity CI/CD server
-    homepage: https://github.com/JetBrains/teamcity-cli
-    license: Apache-2.0
-    author: JetBrains <teamcity-support@jetbrains.com>
-    repository: https://github.com/JetBrains/teamcity-cli
-    bugs: https://github.com/JetBrains/teamcity-cli/issues
-    keywords:
-      - teamcity
-      - ci
-      - cd
-      - cli
-      - jetbrains
-      - devops
-      - build
-      - automation
-    access: public
-    tag: latest
+#npms:
+#  - name: "@jetbrains/teamcity-cli"
+#    description: A command-line interface for TeamCity CI/CD server
+#    homepage: https://github.com/JetBrains/teamcity-cli
+#    license: Apache-2.0
+#    author: JetBrains <teamcity-support@jetbrains.com>
+#    repository: https://github.com/JetBrains/teamcity-cli
+#    bugs: https://github.com/JetBrains/teamcity-cli/issues
+#    keywords:
+#      - teamcity
+#      - ci
+#      - cd
+#      - cli
+#      - jetbrains
+#      - devops
+#      - build
+#      - automation
+#    access: public
+#    tag: latest
 
 aurs:
   - name: teamcity-bin
@@ -323,12 +323,6 @@ release:
 
     **Manual:**
     Download `teamcity_{{ .Version }}_windows_x86_64.zip`, extract, and add to PATH.
-
-    ### npm
-
-    ```bash
-    npm install -g @jetbrains/teamcity-cli
-    ```
 
     ### Go Install
 

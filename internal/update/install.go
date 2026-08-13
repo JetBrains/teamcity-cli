@@ -18,7 +18,6 @@ const (
 	InstallScoop
 	InstallChocolatey
 	InstallWinGet
-	InstallNPM
 	InstallGoInstall
 	InstallScript
 )
@@ -45,9 +44,6 @@ func detectFromPath(exe string) InstallMethod {
 	}
 	if strings.Contains(exeLower, `\windowsapps\`) || strings.Contains(exeLower, `\winget\`) {
 		return InstallWinGet
-	}
-	if strings.Contains(exeLower, "node_modules") {
-		return InstallNPM
 	}
 	if isGoBin(exeLower) {
 		return InstallGoInstall
@@ -112,8 +108,6 @@ func (m InstallMethod) UpdateCommand() string {
 		return "choco upgrade TeamCityCLI"
 	case InstallWinGet:
 		return "winget upgrade JetBrains.TeamCityCLI"
-	case InstallNPM:
-		return "npm update -g @jetbrains/teamcity-cli"
 	case InstallGoInstall:
 		return "go install github.com/JetBrains/teamcity-cli/tc@latest"
 	case InstallScript:
@@ -142,8 +136,6 @@ func (m InstallMethod) String() string {
 		return "Chocolatey"
 	case InstallWinGet:
 		return "WinGet"
-	case InstallNPM:
-		return "npm"
 	case InstallGoInstall:
 		return "go install"
 	case InstallScript:

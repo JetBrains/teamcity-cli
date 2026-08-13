@@ -27,11 +27,6 @@ curl -fsSL https://jb.gg/tc/install | bash
 winget install JetBrains.TeamCityCLI
 ```
 
-**npm:**
-```bash
-npm install -g @jetbrains/teamcity-cli
-```
-
 <details>
 <summary>More installation methods (deb, rpm, Chocolatey, Scoop, build from source)</summary>
 
