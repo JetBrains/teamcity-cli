@@ -19,7 +19,7 @@ func (c *Client) GetSSHKeys(projectID string) (*SSHKeyList, error) {
 
 // UploadSSHKey uploads a private SSH key to a project
 func (c *Client) UploadSSHKey(projectID, name string, privateKey []byte) error {
-	path := fmt.Sprintf("/app/rest/projects/id:%s/sshKeys/?fileName=%s", url.PathEscape(projectID), url.QueryEscape(name))
+	path := fmt.Sprintf("/app/rest/projects/id:%s/sshKeys?fileName=%s", url.PathEscape(projectID), url.QueryEscape(name))
 	return c.doNoContent(c.ctx(), "POST", path, bytes.NewReader(privateKey), "text/plain")
 }
 
