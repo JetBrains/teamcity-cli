@@ -335,6 +335,26 @@ teamcity run start MyProject_Build --branch main --revision abc123def
 teamcity run start MyProject_Build --branch @this --revision @head
 ```
 
+For jobs with multiple VCS roots, pin roots individually with `--revision ROOT=SHA[@BRANCH]`
+(repeatable). Use `ROOT=@BRANCH` to build the latest revision TeamCity has fetched for
+that branch:
+
+```Shell
+# Pin one VCS root to a commit, leave the others as usual
+teamcity run start MyProject_Build --revision GameRepo=abc123def
+
+# Pin a root to a commit on a specific branch
+teamcity run start MyProject_Build --revision GameRepo=abc123def@feature/x
+
+# Build one root from another branch (resolved to its latest known revision)
+teamcity run start MyProject_Build --revision GameRepo=@feature/x
+
+# Pin several roots at once
+teamcity run start MyProject_Build \
+  --revision GameRepo=abc123def@feature/x \
+  --revision ToolsRepo=def456abc
+```
+
 ### Build parameters
 
 Pass custom parameters, system properties, and environment variables:

@@ -76,7 +76,8 @@ Shows all branches and all build states (including canceled, personal, composite
 ### Flags for `teamcity run start`
 
 - `-b, --branch <name>` - Branch to build
-- `--revision <sha>` - Pin build to a specific Git commit SHA
+- `--revision <sha>` - Pin build to a specific Git commit SHA (all VCS roots)
+- `--revision <root>=<sha>[@<branch>]` - Pin one VCS root (repeatable); `<root>=@<branch>` builds the branch head TeamCity has fetched
 - `-P, --param <k=v>` - Build parameter (repeatable)
 - `-S, --system <k=v>` - System property (repeatable)
 - `-E, --env <k=v>` - Environment variable (repeatable)

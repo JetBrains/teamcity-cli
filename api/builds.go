@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -49,14 +50,10 @@ func (opts BuildsOptions) Locator() *Locator {
 	locator := NewLocator().
 		Add("buildType", opts.BuildTypeID).
 		Add("defaultFilter", "false")
-	switch {
-	case opts.Branch == "":
+	if opts.Branch == "" {
 		locator.AddLocator("branch", NewLocator().Add("default", "any"))
-	case strings.ContainsAny(opts.Branch, ":,()$"):
-		// branch's value is a nested locator, so the server re-parses even a base64-decoded bare value; route the name through the value condition (verified live against TeamCity 2026.1).
-		locator.AddRaw("branch", "("+nameValueLocator(opts.Branch)+")")
-	default:
-		locator.Add("branch", opts.Branch)
+	} else {
+		locator.AddBranchName(opts.Branch)
 	}
 	locator.
 		AddUpper("status", opts.Status).
@@ -253,6 +250,13 @@ func (c *Client) getFinishedBuild(ctx context.Context, id string) (*Build, error
 	return c.GetBuild(ctx, id) // final attempt
 }
 
+// RevisionSpec pins VCS roots to a revision when triggering a build.
+type RevisionSpec struct {
+	VcsRootID string `json:"vcs_root,omitempty"` // VCS root ID to pin; empty = every VCS root of the job
+	Version   string `json:"version,omitempty"`  // commit SHA; empty = resolve the head of Branch via the changes endpoint
+	Branch    string `json:"branch,omitempty"`   // VCS branch name recorded on the revision
+}
+
 // RunBuildOptions represents options for running a build
 type RunBuildOptions struct {
 	Branch                    string
@@ -268,7 +272,7 @@ type RunBuildOptions struct {
 	AgentID                   int
 	Tags                      []string
 	PersonalChangeID          string
-	Revision                  string
+	Revisions                 []RevisionSpec // revision pins; a spec with empty VcsRootID applies to every VCS root
 	SnapshotDependencies      []int
 	FreezeSettings            *bool // nil = build configuration default; true = settings from VCS; false = current server settings
 }
@@ -341,39 +345,12 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 		req.SnapshotDependencies = &SnapshotDepBuilds{Build: refs}
 	}
 
-	if opts.Revision != "" {
-		entries, err := c.GetVcsRootEntries(buildTypeID)
+	if len(opts.Revisions) > 0 {
+		revisions, err := c.resolveRevisionSpecs(buildTypeID, opts.Revisions, opts.Branch)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get VCS root entries: %w", err)
+			return nil, err
 		}
-		if entries.Count == 0 {
-			return nil, fmt.Errorf("build configuration %s has no VCS roots; cannot pin revision", buildTypeID)
-		}
-
-		branch := opts.Branch
-		if branch != "" && !strings.HasPrefix(branch, "refs/") {
-			branch = "refs/heads/" + branch
-		}
-
-		var revisions []Revision
-		for _, entry := range entries.VcsRootEntry {
-			vcsRootID := ""
-			if entry.VcsRoot != nil {
-				vcsRootID = entry.VcsRoot.ID
-			}
-			if vcsRootID == "" {
-				continue
-			}
-			rev := Revision{
-				Version:         opts.Revision,
-				VcsBranchName:   branch,
-				VcsRootInstance: &VcsRootInstanceRef{VcsRootID: vcsRootID},
-			}
-			revisions = append(revisions, rev)
-		}
-		if len(revisions) > 0 {
-			req.Revisions = &Revisions{Revision: revisions}
-		}
+		req.Revisions = &Revisions{Revision: revisions}
 	}
 
 	body, err := json.Marshal(req)
@@ -387,6 +364,113 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 	}
 
 	return &build, nil
+}
+
+// refBranch qualifies a branch name as a full Git ref for revision payloads.
+func refBranch(branch string) string {
+	if branch == "" || strings.HasPrefix(branch, "refs/") {
+		return branch
+	}
+	return "refs/heads/" + branch
+}
+
+// resolveRevisionSpecs expands revision specs into per-root payloads, validating root IDs and resolving branch-only specs to the branch head TeamCity knows.
+func (c *Client) resolveRevisionSpecs(buildTypeID string, specs []RevisionSpec, defaultBranch string) ([]Revision, error) {
+	entries, err := c.GetVcsRootEntries(buildTypeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get VCS root entries: %w", err)
+	}
+	roots := make([]string, 0, len(entries.VcsRootEntry))
+	for _, entry := range entries.VcsRootEntry {
+		if entry.VcsRoot != nil && entry.VcsRoot.ID != "" {
+			roots = append(roots, entry.VcsRoot.ID)
+		}
+	}
+	if len(roots) == 0 {
+		return nil, fmt.Errorf("build configuration %s has no VCS roots; cannot pin revision", buildTypeID)
+	}
+
+	var revisions []Revision
+	for _, spec := range specs {
+		switch {
+		case spec.VcsRootID == "":
+			for _, rootID := range roots {
+				revisions = append(revisions, Revision{
+					Version:         spec.Version,
+					VcsBranchName:   refBranch(defaultBranch),
+					VcsRootInstance: &VcsRootInstanceRef{VcsRootID: rootID},
+				})
+			}
+		case !slices.Contains(roots, spec.VcsRootID):
+			return nil, Validation(
+				fmt.Sprintf("VCS root %q is not attached to %s", spec.VcsRootID, buildTypeID),
+				"Available VCS roots: "+strings.Join(roots, ", "),
+			)
+		default:
+			version := spec.Version
+			if version == "" {
+				if version, err = c.latestBranchRevision(buildTypeID, spec.VcsRootID, spec.Branch); err != nil {
+					return nil, err
+				}
+			}
+			revisions = append(revisions, Revision{
+				Version:         version,
+				VcsBranchName:   refBranch(spec.Branch),
+				VcsRootInstance: &VcsRootInstanceRef{VcsRootID: spec.VcsRootID},
+			})
+		}
+	}
+	return revisions, nil
+}
+
+// latestBranchRevision resolves a branch to its current revision from the repository state fetched by the job's VCS root instance.
+func (c *Client) latestBranchRevision(buildTypeID, vcsRootID, branch string) (string, error) {
+	state, err := c.vcsRootRepositoryState(buildTypeID, vcsRootID)
+	if err != nil {
+		return "", err
+	}
+	ref := refBranch(branch)
+	for _, b := range state.Branch {
+		if (b.Name == ref || b.Name == branch) && b.Version != "" {
+			return b.Version, nil
+		}
+	}
+	return "", Validation(
+		fmt.Sprintf("branch %q not found in VCS root %s", branch, vcsRootID),
+		"TeamCity has not fetched this branch (check the branch specification), or pass an explicit SHA: ROOT=SHA@BRANCH",
+	)
+}
+
+// vcsRootRepositoryState returns the branch heads fetched by the instance of vcsRootID in the build configuration.
+func (c *Client) vcsRootRepositoryState(buildTypeID, vcsRootID string) (*RepositoryState, error) {
+	path := fmt.Sprintf("/app/rest/buildTypes/id:%s/vcs-root-instances?fields=vcs-root-instance(id,vcs-root-id)", url.PathEscape(buildTypeID))
+	var instances VcsRootInstanceList
+	if err := c.get(c.ctx(), path, &instances); err != nil {
+		return nil, err
+	}
+	instanceID := ""
+	for _, inst := range instances.VcsRootInstance {
+		if inst.VcsRootID == vcsRootID {
+			instanceID = inst.ID
+			break
+		}
+	}
+	if instanceID == "" {
+		return nil, fmt.Errorf("no VCS root instance for %s in %s", vcsRootID, buildTypeID)
+	}
+
+	path = fmt.Sprintf("/app/rest/vcs-root-instances/id:%s?fields=repositoryState(branch(name,version))", url.PathEscape(instanceID))
+	var inst VcsRootInstance
+	if err := c.get(c.ctx(), path, &inst); err != nil {
+		return nil, err
+	}
+	if inst.RepositoryState == nil || len(inst.RepositoryState.Branch) == 0 {
+		return nil, Validation(
+			"repository state unavailable for VCS root instance "+instanceID,
+			"Pass an explicit SHA instead: ROOT=SHA@BRANCH",
+		)
+	}
+	return inst.RepositoryState, nil
 }
 
 // CancelBuild cancels a running or queued build (accepts ID or #number)
