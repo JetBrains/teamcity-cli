@@ -273,8 +273,10 @@ type RunBuildOptions struct {
 	Tags                      []string
 	PersonalChangeID          string
 	Revisions                 []RevisionSpec // revision pins; a spec with empty VcsRootID applies to every VCS root
-	SnapshotDependencies      []int
-	FreezeSettings            *bool // nil = build configuration default; true = settings from VCS; false = current server settings
+	// Deprecated: use Revisions. Revision pins every VCS root to one SHA; ignored when Revisions is set.
+	Revision             string
+	SnapshotDependencies []int
+	FreezeSettings       *bool // nil = build configuration default; true = settings from VCS; false = current server settings
 }
 
 // RunBuild runs a new build with full options
@@ -345,8 +347,12 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 		req.SnapshotDependencies = &SnapshotDepBuilds{Build: refs}
 	}
 
-	if len(opts.Revisions) > 0 {
-		revisions, err := c.resolveRevisionSpecs(buildTypeID, opts.Revisions, opts.Branch)
+	revSpecs := opts.Revisions
+	if len(revSpecs) == 0 && opts.Revision != "" {
+		revSpecs = []RevisionSpec{{Version: opts.Revision}}
+	}
+	if len(revSpecs) > 0 {
+		revisions, err := c.resolveRevisionSpecs(buildTypeID, revSpecs, opts.Branch)
 		if err != nil {
 			return nil, err
 		}

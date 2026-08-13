@@ -276,6 +276,29 @@ func TestRunBuildBareRevisionAppliesToAllRoots(T *testing.T) {
 	}
 }
 
+func TestRunBuildDeprecatedRevisionField(T *testing.T) {
+	T.Parallel()
+
+	var captured TriggerBuildRequest
+	client := revisionTestClient(T, []string{"Repo1", "Repo2"}, nil, &captured)
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{
+		Branch:   "main",
+		Revision: "abc123", //nolint:staticcheck // the deprecated field must keep working
+	})
+	require.NoError(T, err)
+
+	require.NotNil(T, captured.Revisions)
+	require.Len(T, captured.Revisions.Revision, 2)
+	for i, rootID := range []string{"Repo1", "Repo2"} {
+		rev := captured.Revisions.Revision[i]
+		assert.Equal(T, "abc123", rev.Version)
+		assert.Equal(T, "refs/heads/main", rev.VcsBranchName)
+		require.NotNil(T, rev.VcsRootInstance)
+		assert.Equal(T, rootID, rev.VcsRootInstance.VcsRootID)
+	}
+}
+
 func TestRunBuildRejectsUnknownVcsRoot(T *testing.T) {
 	T.Parallel()
 
