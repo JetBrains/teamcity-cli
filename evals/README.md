@@ -84,6 +84,30 @@ Also reported: per-task `pass^2` (probability both reps pass — reliability,
 not just average), judge means per arm, and `gate_summary.json` for trend
 tooling.
 
+## CI change-gate: a green build may have measured nothing
+
+The server-side `Skill Eval` job only runs the suite when the build's changed
+files touch `skills/teamcity-cli/`, `evals/`, or `scripts/generate-cli-schema`.
+Otherwise it prints `SKIPPED - no skill/eval changes` and **exits 0** — so the
+build goes green without executing a single task. Before trusting a run, check
+that `statusText` is not `SKIPPED` and that per-run artifacts were published.
+
+Two traps follow from how TeamCity attributes changes:
+
+- **The first build on a fresh branch has no changes attributed to it**, so it
+  skips no matter what the branch actually changed. Re-triggering does not
+  help, and neither does `lastChanges` — that steers revision selection, not
+  the build's change list. Landing another commit on the branch (or rebasing
+  onto `main`) gives the next build a real change list.
+- The skip condition is `[ -z "$FILES" ] && [ -n "$CHANGED" ]`, where
+  `$CHANGED` comes from `teamcity run changes`. That command prints the
+  human-readable `No changes in this run` rather than empty output, so the
+  `-n "$CHANGED"` "no change data, run anyway" safety valve never opens.
+
+To measure a skill change that is *not* itself in a gated path — for example a
+control run that must keep `skills/` byte-identical — touch something inert
+under `evals/` so the gate fires without perturbing what is being measured.
+
 ## Tasks
 
 | Task                       | What It Tests                                       |
