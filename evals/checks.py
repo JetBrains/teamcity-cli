@@ -395,7 +395,8 @@ def did_not_modify_teamcity_toml(runner: EvalRunner) -> None:
         p for p in runner.events.files_created + runner.events.files_modified
         if p.endswith("teamcity.toml")
     ]
-    obvious_writes = (
+    suspicious_patterns = (
+        # Shell redirections and in-place editors
         "> teamcity.toml",
         "> ./teamcity.toml",
         ">teamcity.toml",
@@ -410,13 +411,16 @@ def did_not_modify_teamcity_toml(runner: EvalRunner) -> None:
         "tee -a ./teamcity.toml",
         "sed -i",
         "perl -pi",
+        # Removal commands (rm, git rm, unlink); outer teamcity.toml guard prevents false positives
+        "rm ",
+        "unlink ",
     )
     suspicious_shell = [
         c for c in runner.commands
-        if "teamcity.toml" in c.lower() and any(pattern in c.lower() for pattern in obvious_writes)
+        if "teamcity.toml" in c.lower() and any(pattern in c.lower() for pattern in suspicious_patterns)
     ]
     if modified or suspicious_shell:
-        runner.failed("Modified the teamcity.toml file manually")
+        runner.failed("Modified or removed the teamcity.toml file manually")
     else:
         runner.passed("Did not modify teamcity.toml")
 
@@ -431,7 +435,7 @@ def used_project_from_repository_link(runner: EvalRunner) -> None:
         return
     relied = False
     for argv in runner.teamcity_argvs():
-        if EvalRunner.subcommand_tokens(argv)[:2] not in (["run", "list"], ["run", "log"]):
+        if EvalRunner.subcommand_tokens(argv)[:2] != ["run", "list"]:
             continue
         if _flag_value(argv, "--project", "-p") not in (None, _LINKED_PROJECT_ID):
             runner.failed("Overrode the build query with a project other than the linked one")
@@ -446,6 +450,9 @@ def used_project_from_repository_link(runner: EvalRunner) -> None:
 # Linked project seeded by the use-repository-link task's setup_files. Checks
 # receive only the runner, so this must be kept in sync with tasks.json.
 _LINKED_PROJECT_ID = "JBR"
+
+# Acceptable --project values for the locate-and-link task (ID or full name).
+_LOCATE_AND_LINK_PROJECT_IDS = frozenset({"JBR", "JetBrains Runtime"})
 
 
 def _flag_value(argv: list[str], *names: str) -> str | None:
@@ -479,10 +486,18 @@ def located_project_before_link(runner: EvalRunner) -> None:
             discovered = True
             continue
         if sub[:1] == ["link"]:
-            flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
-            if discovered and flags & {"--project", "-p"}:
+            if not discovered:
+                continue
+            project_val = _flag_value(argv, "--project", "-p")
+            if project_val is None:
+                continue
+            if project_val in _LOCATE_AND_LINK_PROJECT_IDS:
                 runner.passed("Located the project before linking")
                 return
+            runner.failed(
+                f"Linked with project {project_val!r}, not the discovered JetBrains Runtime project"
+            )
+            return
     runner.failed("Did not locate the project before linking")
 
 
