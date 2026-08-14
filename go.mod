@@ -4,6 +4,7 @@ go 1.26
 
 require (
 	github.com/JetBrains/fus-reporting-api-go v0.2.0
+	github.com/JetBrains/teamcity-skills v0.0.0-20260910090547-6ea39e8beb98
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
 	github.com/aymanbagabas/go-udiff v0.4.1
 	github.com/buildkite/shellwords v1.0.1

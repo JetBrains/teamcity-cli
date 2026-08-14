@@ -48,7 +48,7 @@ func newSkillListCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "List available skills bundled with this release",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			skills := instill.ListSkills(teamcitycli.SkillsFS)
+			skills := teamcitycli.ListSkills()
 			if len(skills) == 0 {
 				f.Printer.Info("No skills bundled")
 				return nil
@@ -187,7 +187,7 @@ func runSkillInstall(f *cmdutil.Factory, opts *skillOptions, args []string, chec
 		}
 	}
 
-	results, err := instill.Install(teamcitycli.SkillsFS, instillOpts)
+	results, err := teamcitycli.InstallSkills(instillOpts)
 	if err != nil {
 		for _, ag := range agents {
 			trackSkill(f, action, ag, scope, autoDetected, false)
@@ -286,7 +286,7 @@ func resolveSkillNames(all bool, args []string) ([]string, error) {
 		return nil, errors.New("cannot specify both --all and skill names")
 	}
 	if all {
-		skills := instill.ListSkills(teamcitycli.SkillsFS)
+		skills := teamcitycli.ListSkills()
 		names := make([]string, len(skills))
 		for i, s := range skills {
 			names[i] = s.Name
@@ -300,7 +300,7 @@ func resolveSkillNames(all bool, args []string) ([]string, error) {
 }
 
 func bundledVersions() map[string]string {
-	skills := instill.ListSkills(teamcitycli.SkillsFS)
+	skills := teamcitycli.ListSkills()
 	m := make(map[string]string, len(skills))
 	for _, s := range skills {
 		m[s.Name] = s.Version
