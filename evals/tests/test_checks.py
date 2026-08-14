@@ -195,8 +195,19 @@ def test_did_not_add_repository_link():
 
 def test_did_not_modify_teamcity_toml():
     assert run_check(checks.did_not_modify_teamcity_toml, runner_for(["cat teamcity.toml"]))
+    # files_modified path (Edit tool)
     assert not run_check(checks.did_not_modify_teamcity_toml,
                          runner_for(files_modified=["/tmp/teamcity.toml"]))
+    # files_created path (Write tool)
+    assert not run_check(checks.did_not_modify_teamcity_toml,
+                         runner_for(files_created=["/repo/teamcity.toml"]))
+    # suspicious_shell path — shell redirects
+    assert not run_check(checks.did_not_modify_teamcity_toml,
+                         runner_for(["echo '[server]' > teamcity.toml"]))
+    assert not run_check(checks.did_not_modify_teamcity_toml,
+                         runner_for(["tee teamcity.toml < config.txt"]))
+    assert not run_check(checks.did_not_modify_teamcity_toml,
+                         runner_for(["sed -i 's/old/new/' teamcity.toml"]))
 
 
 def test_used_project_from_repository_link():

@@ -14,18 +14,18 @@
   {
     "id": "composite-failure",
     "prompt": "The job `ijplatform_master_Idea_Test_Ultimate_Aggregator` is a composite build with many snapshot dependencies. Find its most recent failed run, then:\n\n1. Show me the dependency tree for this job\n2. Find which child build(s) actually failed\n3. Get the test failures from those child builds",
-    "checks": ["ran_teamcity_commands", "no_auth_failure", "finds_composite", "explores_dependencies", "drills_into_child", "provides_diagnosis", "added_repository_link", "mentioned_teamcity_toml", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],
+    "checks": ["ran_teamcity_commands", "no_auth_failure", "finds_composite", "explores_dependencies", "drills_into_child", "provides_diagnosis", "added_repository_link", "mentioned_teamcity_toml", "did_not_modify_teamcity_toml", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],
     "llm_grade": true
   },
   {
     "id": "inspect-url",
     "prompt": "What's going on with this build configuration? Show me recent builds and their status.\n\nhttps://buildserver.labs.intellij.net/buildConfiguration/ijplatform_master_CIDR_CLion_CLionTrunkHeavyTests_TestsUbuntu2404x86_64",
-    "checks": ["ran_teamcity_commands", "no_auth_failure", "extracts_config_id", "lists_config_builds", "provides_answer", "added_repository_link", "mentioned_teamcity_toml", "executes_commands", "valid_commands", "no_hallucinations"]
+    "checks": ["ran_teamcity_commands", "no_auth_failure", "extracts_config_id", "lists_config_builds", "provides_answer", "added_repository_link", "mentioned_teamcity_toml", "did_not_modify_teamcity_toml", "executes_commands", "valid_commands", "no_hallucinations"]
   },
   {
     "id": "find-builds",
     "prompt": "Find the 10 most recent failed builds in the JetBrains Runtime project (project ID: JBR). Give me their IDs, statuses, and branch names in JSON format.",
-    "checks": ["ran_teamcity_commands", "no_auth_failure", "uses_run_list", "filters_by_status", "filters_by_project", "uses_json", "uses_run_not_build", "added_repository_link", "added_repository_link_with_project_and_without_job", "mentioned_teamcity_toml", "valid_commands", "no_hallucinations"]
+    "checks": ["ran_teamcity_commands", "no_auth_failure", "uses_run_list", "filters_by_status", "filters_by_project", "uses_json", "uses_run_not_build", "added_repository_link", "added_repository_link_with_project_and_without_job", "mentioned_teamcity_toml", "did_not_modify_teamcity_toml", "valid_commands", "no_hallucinations"]
   },
   {
     "id": "use-repository-link",
