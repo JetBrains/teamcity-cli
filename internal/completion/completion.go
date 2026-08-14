@@ -71,7 +71,7 @@ func AliasNames() CompFunc {
 // SkillNames completes skill names from the bundled skills FS.
 func SkillNames() CompFunc {
 	return func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		skills := instill.ListSkills(teamcitycli.SkillsFS)
+		skills := teamcitycli.ListSkills()
 		names := make([]string, len(skills))
 		for i, s := range skills {
 			names[i] = s.Name

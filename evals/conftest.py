@@ -19,8 +19,41 @@ from scaffold.tasks import TASKS_FILE, TaskConfig, list_tasks, load_task
 EVALS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = EVALS_DIR.parent
 SKILLS_DIR = REPO_ROOT / "skills"
-SKILL_MD = SKILLS_DIR / "teamcity-cli" / "SKILL.md"
 SCHEMA_PATH = EVALS_DIR / "cli_schema.json"
+
+SKILLS_MODULE = "github.com/JetBrains/teamcity-skills"
+
+
+def _skill_dir() -> Path:
+    """Locate the teamcity-cli skill the binary under test actually ships.
+
+    The skill is no longer vendored here — it comes from the SKILLS_MODULE
+    dependency (TW-101970). Resolving it through `go list` rather than a fixed
+    path means the eval measures exactly the revision go.mod pins, so a
+    dependency bump is reflected without touching the harness.
+
+    Falls back to the in-repo copy so this still works on revisions from before
+    the move (e.g. bisecting, or comparing against an older branch).
+    """
+    vendored = SKILLS_DIR / "teamcity-cli"
+    if vendored.exists():
+        return vendored
+    out = subprocess.run(
+        ["go", "list", "-m", "-f", "{{.Dir}}", SKILLS_MODULE],
+        cwd=REPO_ROOT, capture_output=True, text=True, timeout=120,
+    )
+    module_dir = out.stdout.strip()
+    if out.returncode != 0 or not module_dir:
+        raise RuntimeError(
+            f"cannot locate the {SKILLS_MODULE} module — the skill under test is "
+            f"unavailable, so CURRENT would silently equal CONTROL.\n"
+            f"Run `go mod download` first.\n{out.stdout}{out.stderr}"
+        )
+    return Path(module_dir) / "skills" / "teamcity-cli"
+
+
+SKILL_DIR = _skill_dir()
+SKILL_MD = SKILL_DIR / "SKILL.md"
 
 
 @dataclass
@@ -31,7 +64,7 @@ class TreatmentConfig:
 
 TREATMENTS = {
     "CONTROL": TreatmentConfig(name="CONTROL", skill_dir=None),
-    "CURRENT": TreatmentConfig(name="CURRENT", skill_dir=SKILLS_DIR / "teamcity-cli"),
+    "CURRENT": TreatmentConfig(name="CURRENT", skill_dir=SKILL_DIR),
 }
 
 # Rough historical durations, longest first, so xdist doesn't park the slow
