@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -197,4 +198,153 @@ func TestRunBuildOmitsEmptySnapshotDependencies(T *testing.T) {
 	_, err := client.RunBuild("MyBuild", RunBuildOptions{})
 	require.NoError(T, err)
 	assert.NotContains(T, string(rawBody), "snapshot-dependencies")
+}
+
+// revisionTestClient serves vcs-root entries/instances for roots, branchHeads as each instance's fetched repository state, and captures the buildQueue POST.
+func revisionTestClient(T *testing.T, roots []string, branchHeads map[string]string, captured *TriggerBuildRequest) *Client {
+	T.Helper()
+	return setupTestServer(T, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case strings.Contains(r.URL.Path, "/vcs-root-entries"):
+			entries := VcsRootEntries{Count: len(roots)}
+			for _, id := range roots {
+				entries.VcsRootEntry = append(entries.VcsRootEntry, VcsRootEntry{VcsRoot: &VcsRoot{ID: id}})
+			}
+			_ = json.NewEncoder(w).Encode(entries)
+		case strings.Contains(r.URL.Path, "/buildTypes/") && strings.Contains(r.URL.Path, "/vcs-root-instances"):
+			list := VcsRootInstanceList{}
+			for _, id := range roots {
+				list.VcsRootInstance = append(list.VcsRootInstance, VcsRootInstance{ID: "i-" + id, VcsRootID: id})
+			}
+			_ = json.NewEncoder(w).Encode(list)
+		case strings.Contains(r.URL.Path, "/vcs-root-instances/id:"):
+			state := &RepositoryState{}
+			for name, version := range branchHeads {
+				state.Branch = append(state.Branch, RepositoryBranch{Name: name, Version: version})
+			}
+			_ = json.NewEncoder(w).Encode(VcsRootInstance{RepositoryState: state})
+		default:
+			body, err := io.ReadAll(r.Body)
+			require.NoError(T, err)
+			require.NoError(T, json.Unmarshal(body, captured))
+			_ = json.NewEncoder(w).Encode(Build{ID: 1})
+		}
+	})
+}
+
+func TestRunBuildPinsSingleVcsRoot(T *testing.T) {
+	T.Parallel()
+
+	var captured TriggerBuildRequest
+	client := revisionTestClient(T, []string{"Repo1", "Repo2"}, nil, &captured)
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{
+		Revisions: []RevisionSpec{{VcsRootID: "Repo2", Version: "abc123", Branch: "feature/x"}},
+	})
+	require.NoError(T, err)
+
+	require.NotNil(T, captured.Revisions)
+	require.Len(T, captured.Revisions.Revision, 1)
+	rev := captured.Revisions.Revision[0]
+	assert.Equal(T, "abc123", rev.Version)
+	assert.Equal(T, "refs/heads/feature/x", rev.VcsBranchName)
+	require.NotNil(T, rev.VcsRootInstance)
+	assert.Equal(T, "Repo2", rev.VcsRootInstance.VcsRootID)
+}
+
+func TestRunBuildBareRevisionAppliesToAllRoots(T *testing.T) {
+	T.Parallel()
+
+	var captured TriggerBuildRequest
+	client := revisionTestClient(T, []string{"Repo1", "Repo2"}, nil, &captured)
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{
+		Branch:    "main",
+		Revisions: []RevisionSpec{{Version: "abc123"}},
+	})
+	require.NoError(T, err)
+
+	require.NotNil(T, captured.Revisions)
+	require.Len(T, captured.Revisions.Revision, 2)
+	for i, rootID := range []string{"Repo1", "Repo2"} {
+		rev := captured.Revisions.Revision[i]
+		assert.Equal(T, "abc123", rev.Version)
+		assert.Equal(T, "refs/heads/main", rev.VcsBranchName)
+		require.NotNil(T, rev.VcsRootInstance)
+		assert.Equal(T, rootID, rev.VcsRootInstance.VcsRootID)
+	}
+}
+
+func TestRunBuildDeprecatedRevisionField(T *testing.T) {
+	T.Parallel()
+
+	var captured TriggerBuildRequest
+	client := revisionTestClient(T, []string{"Repo1", "Repo2"}, nil, &captured)
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{
+		Branch:   "main",
+		Revision: "abc123", //nolint:staticcheck // the deprecated field must keep working
+	})
+	require.NoError(T, err)
+
+	require.NotNil(T, captured.Revisions)
+	require.Len(T, captured.Revisions.Revision, 2)
+	for i, rootID := range []string{"Repo1", "Repo2"} {
+		rev := captured.Revisions.Revision[i]
+		assert.Equal(T, "abc123", rev.Version)
+		assert.Equal(T, "refs/heads/main", rev.VcsBranchName)
+		require.NotNil(T, rev.VcsRootInstance)
+		assert.Equal(T, rootID, rev.VcsRootInstance.VcsRootID)
+	}
+}
+
+func TestRunBuildRejectsUnknownVcsRoot(T *testing.T) {
+	T.Parallel()
+
+	var captured TriggerBuildRequest
+	client := revisionTestClient(T, []string{"Repo1", "Repo2"}, nil, &captured)
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{
+		Revisions: []RevisionSpec{{VcsRootID: "Nope", Version: "abc123"}},
+	})
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), `"Nope"`)
+	var verr *ValidationError
+	require.ErrorAs(T, err, &verr)
+	assert.Contains(T, verr.Tip, "Repo1, Repo2")
+	assert.Empty(T, captured.BuildType.ID, "must not trigger on validation failure")
+}
+
+func TestRunBuildResolvesBranchHeadFromRepositoryState(T *testing.T) {
+	T.Parallel()
+
+	var captured TriggerBuildRequest
+	client := revisionTestClient(T, []string{"Repo1"},
+		map[string]string{"refs/heads/feature/x": "deadbeef1234"}, &captured)
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{
+		Revisions: []RevisionSpec{{VcsRootID: "Repo1", Branch: "feature/x"}},
+	})
+	require.NoError(T, err)
+
+	require.NotNil(T, captured.Revisions)
+	require.Len(T, captured.Revisions.Revision, 1)
+	assert.Equal(T, "deadbeef1234", captured.Revisions.Revision[0].Version)
+	assert.Equal(T, "refs/heads/feature/x", captured.Revisions.Revision[0].VcsBranchName)
+}
+
+func TestRunBuildBranchHeadNotFound(T *testing.T) {
+	T.Parallel()
+
+	var captured TriggerBuildRequest
+	client := revisionTestClient(T, []string{"Repo1"},
+		map[string]string{"refs/heads/main": "aaa111"}, &captured)
+
+	_, err := client.RunBuild("MyBuild", RunBuildOptions{
+		Revisions: []RevisionSpec{{VcsRootID: "Repo1", Branch: "ghost"}},
+	})
+	require.Error(T, err)
+	assert.Contains(T, err.Error(), "not found in VCS root")
+	assert.Empty(T, captured.BuildType.ID, "must not trigger when resolution fails")
 }
