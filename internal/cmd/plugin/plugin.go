@@ -176,7 +176,7 @@ func readPluginDescriptor(archivePath string) (*pluginDescriptor, error) {
 		descriptor.Info.Version = strings.TrimSpace(descriptor.Info.Version)
 		if descriptor.Info.Name == "" {
 			return nil, api.Validation(
-				fmt.Sprintf("%s does not declare a plugin name", pluginDescriptorPath),
+				pluginDescriptorPath+" does not declare a plugin name",
 				"Provide a descriptor that declares info/name",
 			)
 		}
@@ -184,7 +184,7 @@ func readPluginDescriptor(archivePath string) (*pluginDescriptor, error) {
 	}
 
 	return nil, api.Validation(
-		fmt.Sprintf("plugin archive does not contain %s", pluginDescriptorPath),
+		"plugin archive does not contain"+pluginDescriptorPath,
 		"Provide a TeamCity plugin ZIP archive",
 	)
 }
