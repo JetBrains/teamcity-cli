@@ -173,11 +173,14 @@ def test_added_repository_link():
 
 def test_added_repository_link_with_project_and_without_job():
     assert run_check(checks.added_repository_link_with_project_and_without_job,
-                     runner_for(["teamcity link --project Foo"]))
-    assert not run_check(checks.added_repository_link_with_project_and_without_job,
-                         runner_for(["teamcity link --project Foo --job Bar"]))
+                     runner_for(["teamcity link --project JBR"]))
     assert run_check(checks.added_repository_link_with_project_and_without_job,
-                     runner_for(["bin/teamcity link -p Foo"]))
+                     runner_for(["bin/teamcity link -p JBR"]))
+    assert not run_check(checks.added_repository_link_with_project_and_without_job,
+                         runner_for(["teamcity link --project JBR --job Bar"]))
+    # Linking a different project than requested must not earn the check.
+    assert not run_check(checks.added_repository_link_with_project_and_without_job,
+                         runner_for(["teamcity link --project Foo"]))
 
 
 def test_mentioned_teamcity_toml():
@@ -242,6 +245,9 @@ def test_located_project_before_link():
     # --auto binds from git remotes, not the located project → not "located then linked".
     assert not run_check(checks.located_project_before_link,
                          runner_for(["teamcity project list", "teamcity link --auto"]))
+    # Display name is not the ID that link expects → fail.
+    assert not run_check(checks.located_project_before_link,
+                         runner_for(["teamcity project list", 'teamcity link --project "JetBrains Runtime"']))
 
 
 # ---------------------------------------------------------------------------

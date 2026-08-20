@@ -8,7 +8,7 @@
   {
     "id": "daily-loop",
     "prompt": "Show me the last 5 builds on the `master` branch and check if any of them failed.\n\nFor any failure you find:\n1. Show me the failure details and what tests broke\n2. Tell me what changes went into that build",
-    "checks": ["ran_teamcity_commands", "no_auth_failure", "checked_repository_link", "did_not_add_repository_link", "did_not_modify_teamcity_toml", "lists_builds", "investigates_failure", "views_changes", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],
+    "checks": ["ran_teamcity_commands", "no_auth_failure", "checked_repository_link", "did_not_modify_teamcity_toml", "lists_builds", "investigates_failure", "views_changes", "multi_step", "no_thrashing", "valid_commands", "no_hallucinations"],
     "llm_grade": true
   },
   {

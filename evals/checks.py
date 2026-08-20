@@ -342,10 +342,6 @@ def added_repository_link(runner: EvalRunner) -> None:
         runner.failed("Did not attempt to link the repository to a TeamCity job / project")
 
 
-# Flags that make `teamcity link` a genuine binding attempt (vs. bare/usage-only).
-_LINK_BINDING_FLAGS = frozenset({"--auto", "-a", "--project", "-p", "--job", "-j", "--jobs"})
-
-
 def _attempted_repository_link(runner: EvalRunner) -> bool:
     """True if the agent invoked `teamcity link` with real binding arguments.
 
@@ -358,7 +354,7 @@ def _attempted_repository_link(runner: EvalRunner) -> bool:
         if EvalRunner.subcommand_tokens(argv)[:1] != ["link"]:
             continue
         flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
-        if flags & _LINK_BINDING_FLAGS:
+        if flags & {"--auto", "-a"} or _flag_value(argv, "--project", "-p", "--job", "-j", "--jobs"):
             return True
     return False
 
@@ -368,10 +364,12 @@ def added_repository_link_with_project_and_without_job(runner: EvalRunner) -> No
         if EvalRunner.subcommand_tokens(argv)[:1] != ["link"]:
             continue
         flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
-        if (flags & {"--project", "-p"}) and not (flags & {"--job", "-j", "--jobs"}):
-            runner.passed("Linked the repository using only the project argument")
+        if flags & {"--job", "-j", "--jobs", "--auto", "-a"}:
+            continue
+        if _flag_value(argv, "--project", "-p") == _LINKED_PROJECT_ID:
+            runner.passed(f"Linked the repository to the {_LINKED_PROJECT_ID} project only")
             return
-    runner.failed("Did not link the repository using only the project argument")
+    runner.failed(f"Did not link the repository to the {_LINKED_PROJECT_ID} project (project-only)")
 
 
 def did_not_add_repository_link(runner: EvalRunner) -> None:
@@ -447,12 +445,11 @@ def used_project_from_repository_link(runner: EvalRunner) -> None:
         runner.failed("Did not run a build query relying on the linked project")
 
 
-# Linked project seeded by the use-repository-link task's setup_files. Checks
-# receive only the runner, so this must be kept in sync with tasks.json.
+# JBR project id: used by use-repository-link and find-builds.
 _LINKED_PROJECT_ID = "JBR"
 
-# Acceptable --project values for the locate-and-link task (ID or full name).
-_LOCATE_AND_LINK_PROJECT_IDS = frozenset({"JBR", "JetBrains Runtime"})
+# link --project takes an ID, not the display name.
+_LOCATE_AND_LINK_PROJECT_IDS = frozenset({"JBR"})
 
 
 def _flag_value(argv: list[str], *names: str) -> str | None:
