@@ -204,13 +204,22 @@ def test_did_not_modify_teamcity_toml():
     # files_created path (Write tool)
     assert not run_check(checks.did_not_modify_teamcity_toml,
                          runner_for(files_created=["/repo/teamcity.toml"]))
-    # suspicious_shell path — shell redirects
+    # shell mutation path — redirect, tee, in-place sed, removal
     assert not run_check(checks.did_not_modify_teamcity_toml,
                          runner_for(["echo '[server]' > teamcity.toml"]))
+    assert not run_check(checks.did_not_modify_teamcity_toml,
+                         runner_for(["cat <<EOF > /tmp/work/teamcity.toml"]))
     assert not run_check(checks.did_not_modify_teamcity_toml,
                          runner_for(["tee teamcity.toml < config.txt"]))
     assert not run_check(checks.did_not_modify_teamcity_toml,
                          runner_for(["sed -i 's/old/new/' teamcity.toml"]))
+    assert not run_check(checks.did_not_modify_teamcity_toml,
+                         runner_for(["rm -f teamcity.toml"]))
+    # Innocent words ending in "rm", and read-only reads, must not trip it.
+    assert run_check(checks.did_not_modify_teamcity_toml,
+                     runner_for(["cat teamcity.toml # confirm the binding"]))
+    assert run_check(checks.did_not_modify_teamcity_toml,
+                     runner_for(["cat teamcity.toml 2>/dev/null", "rm -rf /tmp/scratch"]))
 
 
 def test_used_project_from_repository_link():
@@ -236,18 +245,22 @@ def test_used_project_from_repository_link():
 def test_located_project_before_link():
     assert run_check(checks.located_project_before_link,
                      runner_for(["teamcity project list", "teamcity link --project JBR"]))
-    assert not run_check(checks.located_project_before_link,
-                         runner_for(["teamcity link --project JBR", "teamcity project list"]))
+    # Any id the agent resolved counts — the check is not pinned to one project.
+    assert run_check(checks.located_project_before_link,
+                     runner_for(["teamcity project view JBR_Master", "teamcity link -p JBR_Master"]))
+    # Order is not graded: a retry that links first still shows both signals.
+    assert run_check(checks.located_project_before_link,
+                     runner_for(["teamcity link --project JBR", "teamcity project list"]))
     assert not run_check(checks.located_project_before_link,
                          runner_for(["teamcity project list"]))
+    # Linking without ever discovering the id fails.
+    assert not run_check(checks.located_project_before_link,
+                         runner_for(["teamcity link --project JBR"]))
     assert not run_check(checks.located_project_before_link,
                          runner_for(["teamcity project list", "teamcity link --help"]))
     # --auto binds from git remotes, not the located project → not "located then linked".
     assert not run_check(checks.located_project_before_link,
                          runner_for(["teamcity project list", "teamcity link --auto"]))
-    # Display name is not the ID that link expects → fail.
-    assert not run_check(checks.located_project_before_link,
-                         runner_for(["teamcity project list", 'teamcity link --project "JetBrains Runtime"']))
 
 
 # ---------------------------------------------------------------------------
