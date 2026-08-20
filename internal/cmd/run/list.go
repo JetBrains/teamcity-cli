@@ -69,7 +69,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running, queued, error, unknown)")
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
 	cmd.Flags().StringVar(&opts.revision, "revision", "", "Filter by VCS revision/commit SHA (or '@head' for current HEAD)")
-	cmd.Flags().StringSliceVarP(&opts.tags, "tag", "t", nil, "Filter by tag (can be repeated, matches runs with all given tags)")
+	cmd.Flags().StringArrayVarP(&opts.tags, "tag", "t", nil, "Filter by tag (can be repeated, matches runs with all given tags)")
 	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorites for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of items (0 for all)")
