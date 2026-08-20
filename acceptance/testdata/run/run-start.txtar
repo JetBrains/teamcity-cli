@@ -1,8 +1,7 @@
 # Test run start subcommand.
 [!has_token] skip 'requires authentication token'
 
-exec teamcity api '/app/rest/buildTypes?locator=count:1&fields=buildType(id)' --raw --no-input
-extract '"id":"([^"]+)"' JOB_ID
+env JOB_ID=Sandbox_Test
 
 exec teamcity run start $JOB_ID --json --no-input
 extract '"id":\s*(\d+)' BUILD_ID

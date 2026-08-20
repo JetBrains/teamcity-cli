@@ -248,7 +248,7 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 				case buf.Len() > 0:
 					resultCh <- result{output: extractExecOutput(buf.String())}
 				case !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway):
-					resultCh <- result{err: fmt.Errorf("connection error: %w", err)}
+					resultCh <- result{err: sessionError(err)}
 				default:
 					resultCh <- result{}
 				}
@@ -277,6 +277,11 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 	case <-ctx.Done():
 		return errors.New("command timed out")
 	case <-readyCh:
+	case res := <-resultCh:
+		if res.err != nil {
+			return res.err
+		}
+		return errors.New("connection closed before command started")
 	}
 
 	time.Sleep(100 * time.Millisecond)
@@ -303,6 +308,17 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 		}
 		return nil
 	}
+}
+
+// sessionError explains the server's session-user rejection: since TW-101729 (TeamCity 2026.1.2+) token auth gets a fake HTTP session, so the terminal WebSocket handshake resolves no user.
+func sessionError(err error) error {
+	if strings.Contains(err.Error(), "is not the one who requested the session") {
+		return api.Validation(
+			"Server rejected the terminal session: the agent terminal needs a browser-style session, which token authentication no longer provides on TeamCity 2026.1.2+",
+			"Known server-side regression, tracked in https://github.com/JetBrains/teamcity-cli/issues/402 – please use the agent terminal in the TeamCity web UI for now",
+		)
+	}
+	return fmt.Errorf("connection error: %w", err)
 }
 
 func normalizeLineEndings(s string) string {
