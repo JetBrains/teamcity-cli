@@ -666,6 +666,31 @@ func TestRunListFavoritesLocator(T *testing.T) {
 	assert.Contains(T, capturedQuery, "count%3A1")
 }
 
+func TestRunListTagFlagDoesNotSplitOnComma(T *testing.T) {
+	var capturedQuery string
+	ts := cmdtest.NewTestServer(T)
+	ts.Handle("GET /app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Server{VersionMajor: 2025, VersionMinor: 7, BuildNumber: "197398"})
+	})
+	ts.Handle("HEAD /app/rest/server", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
+		capturedQuery = r.URL.RawQuery
+		cmdtest.JSON(w, api.BuildList{Count: 0, Builds: []api.Build{}})
+	})
+
+	rootCmd := cmd.NewCommand(ts.Factory)
+	rootCmd.SetArgs([]string{"run", "list", "--tag", "release,prod", "--limit", "1"})
+	var out bytes.Buffer
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+	err := rootCmd.Execute()
+	require.NoError(T, err)
+
+	assert.Contains(T, capturedQuery, api.BuildsOptions{Tags: []string{"release,prod"}}.Locator().Encode())
+}
+
 func TestRunList_plain(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "list", "--plain")

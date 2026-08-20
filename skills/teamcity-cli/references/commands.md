@@ -64,6 +64,7 @@ Shows all branches and all build states (including canceled, personal, composite
 - `-b, --branch <name>` - Filter by branch (`@this` = current git branch)
 - `--status <status>` - Filter: success, failure, running, queued, error, unknown
 - `-u, --user <name>` - Filter by user
+- `-t, --tag <tag>` - Filter by tag (repeatable, matches runs with all given tags)
 - `--favorites` - Show favorite builds for the current user
 - `-p, --project <id>` - Filter by project
 - `-n, --limit <n>` - Limit results (default: 30)

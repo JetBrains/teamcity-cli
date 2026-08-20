@@ -21,6 +21,16 @@ func TestResolveRunListRequestFavorites(T *testing.T) {
 	assert.Equal(T, 30, req.builds.Limit)
 }
 
+func TestResolveRunListRequestTags(T *testing.T) {
+	req, err := resolveRunListRequest(nil, &runListOptions{
+		tags:  []string{"release", "v1.0"},
+		limit: 30,
+	}, nil)
+	require.NoError(T, err)
+
+	assert.Equal(T, []string{"release", "v1.0"}, req.builds.Tags)
+}
+
 func TestResolveRunListRequestAtMeUsesConfigUser(T *testing.T) {
 	oldConfigUser := runListConfigCurrentUserFn
 	T.Cleanup(func() {

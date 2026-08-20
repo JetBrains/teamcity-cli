@@ -72,6 +72,16 @@ func TestBuildsOptionsLocator(T *testing.T) {
 			},
 		},
 		{
+			name: "tag filter adds a tag dimension per tag",
+			opts: BuildsOptions{
+				Tags: []string{"release", "v1.0"},
+			},
+			want: []string{
+				"tag:release",
+				"tag:v1.0",
+			},
+		},
+		{
 			name: "deep lookup (exact number) skips the unscoped lookup-limit cap",
 			opts: BuildsOptions{Number: "123", DeepLookup: true},
 			want: []string{

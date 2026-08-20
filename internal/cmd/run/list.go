@@ -25,6 +25,7 @@ type runListOptions struct {
 	status     string
 	user       string
 	revision   string
+	tags       []string
 	favorites  bool
 	project    string
 	limit      int
@@ -52,6 +53,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
   teamcity run list --branch @this
   teamcity run list --revision abc1234
   teamcity run list --revision @head --job Falcon_Build
+  teamcity run list --tag release
   teamcity run list --since 24h
   teamcity run list --json
   teamcity run list --json=id,status,webUrl
@@ -67,6 +69,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&opts.status, "status", "", "Filter by status (success, failure, running, queued, error, unknown)")
 	cmd.Flags().StringVarP(&opts.user, "user", "u", "", "Filter by user who triggered")
 	cmd.Flags().StringVar(&opts.revision, "revision", "", "Filter by VCS revision/commit SHA (or '@head' for current HEAD)")
+	cmd.Flags().StringArrayVarP(&opts.tags, "tag", "t", nil, "Filter by tag (can be repeated, matches runs with all given tags)")
 	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorites for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of items (0 for all)")
@@ -264,6 +267,7 @@ func resolveRunListRequest(client api.ClientInterface, opts *runListOptions, fie
 			User:        user,
 			Project:     opts.project,
 			Revision:    revision,
+			Tags:        opts.tags,
 			Favorites:   opts.favorites,
 			Limit:       opts.limit,
 			SinceDate:   sinceDate,
