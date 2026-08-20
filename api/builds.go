@@ -23,6 +23,7 @@ type BuildsOptions struct {
 	Project     string
 	Number      string
 	Revision    string
+	Tags        []string
 	Favorites   bool
 	Limit       int
 	SinceDate   string
@@ -67,6 +68,9 @@ func (opts BuildsOptions) Locator() *Locator {
 		Add("revision", opts.Revision).
 		Add("sinceDate", opts.SinceDate).
 		Add("untilDate", opts.UntilDate)
+	for _, tag := range opts.Tags {
+		locator.Add("tag", tag)
+	}
 	if opts.Favorites {
 		locator.AddLocator("tag", currentUserFavoriteBuildsTagLocator())
 	}

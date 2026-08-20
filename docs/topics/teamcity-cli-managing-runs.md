@@ -62,6 +62,10 @@ teamcity run list --user @me
 
 # Combine filters
 teamcity run list --job MyProject_Build --status failure --branch main
+
+# Filter by tag (repeat --tag to require all of them)
+teamcity run list --tag release
+teamcity run list --tag release --tag v1.0
 ```
 
 > The `@me` shortcut substitutes the currently authenticated username.
@@ -222,6 +226,18 @@ Filter by the user who triggered the build. Use `@me` for the current user.
 <td>
 
 Filter by VCS revision (commit SHA). Use `@head` to resolve the current git HEAD.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`-t`, `--tag`
+
+</td>
+<td>
+
+Filter by tag (can be repeated, matches runs with all given tags)
 
 </td>
 </tr>
