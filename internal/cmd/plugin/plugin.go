@@ -184,7 +184,7 @@ func readPluginDescriptor(archivePath string) (*pluginDescriptor, error) {
 	}
 
 	return nil, api.Validation(
-		"plugin archive does not contain"+pluginDescriptorPath,
+		"plugin archive does not contain "+pluginDescriptorPath,
 		"Provide a TeamCity plugin ZIP archive",
 	)
 }
