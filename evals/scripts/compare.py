@@ -93,6 +93,7 @@ def load_runs(exp_dir: Path) -> list[dict]:
             "all_passed": passed == len(checks),
             "failed_checks": [r["check"] for r in checks if not r.get("passed")],
             "llm_grades": data.get("llm_grades") or [],
+            "events": data.get("events") or {},
         })
     return runs
 
@@ -153,6 +154,32 @@ def pass_k(all_passed: list[bool], k: int = PASS_K) -> float | None:
     if n < k:
         return None
     return math.comb(c, k) / math.comb(n, k)
+
+
+# What an agent spent to reach its answer. Advisory, like the judge — a skill
+# that documents more can legitimately cost more, so this never gates. It exists
+# because pass rate alone cannot see a change that only alters how much context
+# the agent must load (e.g. splitting one large reference into per-task docs).
+EFFICIENCY_METRICS = (
+    ("total_tokens", "Total tokens", 0),
+    ("num_turns", "Turns", 1),
+    ("tool_calls_count", "Tool calls", 1),
+)
+
+
+def efficiency_summary(runs: list[dict]) -> dict[str, dict[str, float]]:
+    """metric → arm → mean, over runs that recorded it (advisory)."""
+    vals: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for r in runs:
+        for key, _, _ in EFFICIENCY_METRICS:
+            v = r["events"].get(key)
+            if isinstance(v, (int, float)):
+                vals[key][r["treatment"]].append(v)
+    return {
+        key: {arm: round(mean(v), nd) for arm, v in arms.items()}
+        for key, _, nd in EFFICIENCY_METRICS
+        if (arms := vals.get(key))
+    }
 
 
 def judge_summary(runs: list[dict]) -> dict[str, dict[str, float]]:
@@ -224,6 +251,22 @@ def analyze(exp_dir: Path) -> dict | None:
             arm_s = "  ".join(f"{a}={v}" for a, v in sorted(arms.items()))
             print(f"    {dim:<24s} {arm_s}")
         summary["judge"] = judges
+
+    efficiency = efficiency_summary(runs)
+    if efficiency:
+        print("\n  Efficiency (advisory, per run):")
+        labels = {key: label for key, label, _ in EFFICIENCY_METRICS}
+        for key, _, _ in EFFICIENCY_METRICS:
+            arms = efficiency.get(key)
+            if not arms:
+                continue
+            arm_s = "  ".join(f"{a}={v:,}" for a, v in sorted(arms.items()))
+            delta = ""
+            if {"CONTROL", "CURRENT"} <= arms.keys() and arms["CONTROL"]:
+                pct = arms["CURRENT"] / arms["CONTROL"] - 1
+                delta = f"  ({pct:+.0%} vs CONTROL)"
+            print(f"    {labels[key]:<24s} {arm_s}{delta}")
+        summary["efficiency"] = efficiency
 
     breaches = []
     floor = float(os.environ.get("GATE_LIFT_FLOOR", "-0.05"))

@@ -296,6 +296,34 @@ def test_bootstrap_ci_widens_with_noise():
     assert low <= sum(lifts.values()) / len(lifts) <= high
 
 
+def test_efficiency_summary_averages_per_arm():
+    runs = [
+        {"treatment": "CONTROL", "events": {"total_tokens": 1000, "num_turns": 10,
+                                            "tool_calls_count": 20}},
+        {"treatment": "CONTROL", "events": {"total_tokens": 2000, "num_turns": 12,
+                                            "tool_calls_count": 22}},
+        {"treatment": "CURRENT", "events": {"total_tokens": 500, "num_turns": 6,
+                                            "tool_calls_count": 8}},
+    ]
+    eff = compare.efficiency_summary(runs)
+    assert eff["total_tokens"] == {"CONTROL": 1500, "CURRENT": 500}
+    assert eff["num_turns"] == {"CONTROL": 11.0, "CURRENT": 6.0}
+
+
+def test_efficiency_summary_tolerates_missing_and_malformed_events():
+    # Legacy artifacts have no "events"; a partial one must not invent zeros for
+    # metrics it never recorded, and non-numeric values must be ignored.
+    runs = [
+        {"treatment": "CONTROL", "events": {}},
+        {"treatment": "CURRENT", "events": {"num_turns": 4}},
+        {"treatment": "CURRENT", "events": {"num_turns": "n/a", "total_tokens": None}},
+    ]
+    eff = compare.efficiency_summary(runs)
+    assert "total_tokens" not in eff
+    assert eff["num_turns"] == {"CURRENT": 4.0}
+    assert compare.efficiency_summary([{"treatment": "CONTROL", "events": {}}]) == {}
+
+
 def test_load_runs_sanitizes_legacy_artifacts(tmp_path):
     legacy = {
         "task": "find-builds/CURRENT",

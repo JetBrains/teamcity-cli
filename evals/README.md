@@ -84,6 +84,30 @@ Also reported: per-task `pass^2` (probability both reps pass — reliability,
 not just average), judge means per arm, and `gate_summary.json` for trend
 tooling.
 
+## Efficiency (advisory)
+
+Alongside the judge, the report prints mean **total tokens**, **turns**, and
+**tool calls** per arm, with `CURRENT` as a percentage of `CONTROL`:
+
+```
+  Efficiency (advisory, per run):
+    Total tokens             CONTROL=46,150  CURRENT=31,150  (-33% vs CONTROL)
+```
+
+Like the judge, this **never gates** — a skill that documents more can
+legitimately cost more, and cheap-but-wrong is not the goal.
+
+It exists because pass rate is blind to a whole class of change. A skill edit
+that only alters *how much context an agent must load* — splitting one large
+reference into per-task docs, say — cannot move a pass rate that is already at
+the ceiling, so the deterministic checks report "no change" while real work was
+done. Tokens and turns make that visible. Read it as a trend across runs, not
+as a target: per-run token counts vary with how many times the agent retried a
+live call.
+
+Runs from before this was added have no `events` block; those metrics are simply
+omitted rather than counted as zero.
+
 ## Tasks
 
 | Task                       | What It Tests                                       |
