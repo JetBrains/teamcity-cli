@@ -1,0 +1,9 @@
+exec teamcity server --help
+stdout 'Manage the TeamCity server'
+
+exec teamcity server plugin --help
+stdout 'Manage TeamCity server plugins'
+
+exec teamcity server plugin upload --help
+stdout 'Upload a TeamCity plugin ZIP archive'
+stdout '--hot-reload'

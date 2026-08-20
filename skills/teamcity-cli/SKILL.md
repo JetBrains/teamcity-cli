@@ -41,6 +41,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 | Queue     | `queue list`, `approve`, `remove`, `top`                                                          |
 | Agents    | `agent list`, `view`, `enable/disable`, `authorize/deauthorize`, `exec`, `term`, `reboot`, `move` |
 | Pools     | `pool list`, `view`, `link/unlink`                                                                |
+| Server    | `server plugin upload` (optionally with `--hot-reload`)                                            |
 | Pipelines | `pipeline list`, `view`, `create`, `validate`, `pull`, `push`, `schema`, `delete`                 |
 | API       | `teamcity api <endpoint>` — raw REST access                                                       |
 | Link      | `teamcity link` — bind repo via `teamcity.toml`                                                   |

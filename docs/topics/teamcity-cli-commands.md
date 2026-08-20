@@ -1464,6 +1464,35 @@ View pipeline details
 </tr>
 </table>
 
+## Servers
+
+<table>
+<tr>
+<td>
+
+Command
+
+</td>
+<td>
+
+Description
+
+</td>
+</tr>
+<tr>
+<td>
+
+`teamcity server plugin upload`
+
+</td>
+<td>
+
+Upload a TeamCity plugin archive
+
+</td>
+</tr>
+</table>
+
 ## Skills
 
 Manage AI agent integration. See [AI agent integration](teamcity-cli-ai-agent-integration.md) for details.
