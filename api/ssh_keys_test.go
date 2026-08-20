@@ -61,4 +61,3 @@ func TestUploadSSHKey(t *testing.T) {
 	err := client.UploadSSHKey("MyProject", "my-key", []byte("dummy-key-content"))
 	require.NoError(t, err)
 }
-
