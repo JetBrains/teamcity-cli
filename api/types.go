@@ -239,6 +239,26 @@ type VcsRootEntry struct {
 	VcsRoot *VcsRoot `json:"vcs-root,omitempty"`
 }
 
+type VcsRootInstanceList struct {
+	VcsRootInstance []VcsRootInstance `json:"vcs-root-instance"`
+}
+
+// VcsRootInstance is a VCS root resolved for a build configuration, including the branch heads it fetched.
+type VcsRootInstance struct {
+	ID              string           `json:"id,omitempty"`
+	VcsRootID       string           `json:"vcs-root-id,omitempty"`
+	RepositoryState *RepositoryState `json:"repositoryState,omitempty"`
+}
+
+type RepositoryState struct {
+	Branch []RepositoryBranch `json:"branch"`
+}
+
+type RepositoryBranch struct {
+	Name    string `json:"name"`
+	Version string `json:"version,omitempty"`
+}
+
 // LastChanges represents the changes to include in a build
 type LastChanges struct {
 	Change []PersonalChange `json:"change"`

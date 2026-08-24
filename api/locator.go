@@ -38,6 +38,17 @@ func nameValueLocator(value string) string {
 	return "name:(value:($base64:" + base64.RawURLEncoding.EncodeToString([]byte(value)) + "))"
 }
 
+// AddBranchName adds a branch dimension by name, routing metacharacter names through the value condition because the server re-parses branch values as locators (verified live against TeamCity 2026.1).
+func (l *Locator) AddBranchName(name string) *Locator {
+	if name == "" {
+		return l
+	}
+	if strings.ContainsAny(name, ":,()$") {
+		return l.AddRaw("branch", "("+nameValueLocator(name)+")")
+	}
+	return l.Add("branch", name)
+}
+
 // AddRaw adds a key:value pair without escaping the value.
 // Use for values that are already valid locator syntax (e.g. sub-locators).
 func (l *Locator) AddRaw(key, value string) *Locator {

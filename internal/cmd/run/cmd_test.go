@@ -223,6 +223,48 @@ func TestRunStartReuseDepsSendsIDs(T *testing.T) {
 	assert.Equal(T, 6917, captured.SnapshotDependencies.Build[1].ID)
 }
 
+func TestRunStartPerRootRevisionsSendsPayload(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	ts.Handle("GET /app/rest/buildTypes/id:"+testJob+"/vcs-root-entries", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.VcsRootEntries{Count: 2, VcsRootEntry: []api.VcsRootEntry{
+			{VcsRoot: &api.VcsRoot{ID: "Repo1"}},
+			{VcsRoot: &api.VcsRoot{ID: "Repo2"}},
+		}})
+	})
+	var captured api.TriggerBuildRequest
+	ts.Handle("POST /app/rest/buildQueue", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		require.NoError(T, json.Unmarshal(body, &captured))
+		cmdtest.JSON(w, api.Build{ID: 999, BuildTypeID: testJob, WebURL: "https://example/build/999"})
+	})
+
+	cmdtest.RunCmdWithFactory(T, ts.Factory, "run", "start", testJob,
+		"--revision", "Repo1=abc123@feature/x")
+
+	require.NotNil(T, captured.Revisions)
+	require.Len(T, captured.Revisions.Revision, 1)
+	rev := captured.Revisions.Revision[0]
+	assert.Equal(T, "abc123", rev.Version)
+	assert.Equal(T, "refs/heads/feature/x", rev.VcsBranchName)
+	require.NotNil(T, rev.VcsRootInstance)
+	assert.Equal(T, "Repo1", rev.VcsRootInstance.VcsRootID)
+}
+
+func TestRunStartPerRootRevisionsDryRun(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	got := cmdtest.CaptureOutput(T, ts.Factory, "run", "start", testJob, "--dry-run",
+		"--revision", "Repo1=abc123@feature/x", "--revision", "Repo2=@main")
+	assert.Contains(T, got, "Repo1=abc123@feature/x")
+	assert.Contains(T, got, "Repo2=@main")
+}
+
+func TestRunStartRevisionMixedFormsRejected(T *testing.T) {
+	ts := cmdtest.SetupMockClient(T)
+	err := cmdtest.CaptureErr(T, ts.Factory, "run", "start", testJob, "--dry-run",
+		"--revision", "abc123def4567890abc123def4567890abc12345", "--revision", "Repo1=def456")
+	assert.Contains(T, err.Error(), "cannot mix")
+}
+
 func TestRunStartDryRunNonExistentJob(T *testing.T) {
 	ts := cmdtest.SetupMockClient(T)
 	err := cmdtest.CaptureErr(T, ts.Factory, "run", "start", "NonExistentJob123456", "--dry-run")
