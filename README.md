@@ -110,6 +110,8 @@ teamcity agent term Agent-Linux-01
 
 One naming note: TeamCity says *build* and *build configuration*; the CLI says `run` and `job`. The [glossary](https://www.jetbrains.com/help/teamcity/teamcity-cli-glossary.html) has the full mapping.
 
+Redirects never downgrade HTTPS or forward request headers to another origin; cross-origin artifact downloads remain supported without credentials.
+
 Every command takes `--json` or `--plain` for [scripting](https://www.jetbrains.com/help/teamcity/teamcity-cli-scripting.html), and `--web` opens the matching page in the TeamCity UI. When no command covers what you need, `teamcity api` calls the REST API directly with your stored credentials. You can also log in to several servers and switch between them — see [configuration](https://www.jetbrains.com/help/teamcity/teamcity-cli-configuration.html).
 
 ## Commands
