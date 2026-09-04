@@ -48,6 +48,8 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 
 ## Quick Workflows
 
+Artifact downloads stay within `--output`: escaping directory symlinks are rejected, and failed transfers preserve existing files.
+
 See [Workflows](references/workflows.md) for full details on each.
 
 - **Investigate failure**: `run list --status failure` → `run log <id> --failed --raw` → `run tests <id> --failed`

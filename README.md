@@ -114,6 +114,8 @@ Every command takes `--json` or `--plain` for [scripting](https://www.jetbrains.
 
 ## Commands
 
+Artifact downloads are confined to `--output`; failed or incomplete transfers preserve existing files.
+
 | Group        | Commands                                                                                                                                                                                                                                                                                                        |
 |--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **auth**     | `login`, `logout`, `status`                                                                                                                                                                                                                                                                                     |
