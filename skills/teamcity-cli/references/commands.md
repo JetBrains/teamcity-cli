@@ -151,6 +151,8 @@ the name once as a header, one row per build, and a pass-rate footer.
 
 ### Flags for `teamcity run download`
 
+Downloads confine writes to `--output`, replace destination file symlinks rather than following them, and preserve existing files on failed transfers.
+
 - `-a, --artifact <pattern>` - Artifact name pattern to filter (matches full path and basename)
 - `-p, --path <subdir>` - Download artifacts under this subdirectory
 - `-o, --output <path>` - Local directory to save artifacts to

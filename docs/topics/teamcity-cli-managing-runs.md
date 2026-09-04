@@ -1009,6 +1009,8 @@ teamcity run artifacts 12345 --json
 
 ### Downloading artifacts
 
+Downloads stay within the selected output directory, including when existing directories contain symlinks. Each file is staged before replacing its destination, so a failed or incomplete download preserves the previous file. A destination file symlink is replaced, not followed.
+
 Download artifacts from a completed run:
 
 ```Shell

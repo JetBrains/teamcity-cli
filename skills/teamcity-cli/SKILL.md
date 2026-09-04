@@ -22,6 +22,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 - **Build chains fail bottom-up** — deepest failed dependency is the root cause. Use `teamcity run tree <id>`.
 - **`--local-changes` excludes Kotlin DSL** — push `.teamcity/` changes before running.
 - **`TEAMCITY_URL` alone bypasses stored auth** — set both `TEAMCITY_URL` and `TEAMCITY_TOKEN`, or leave unset.
+- **Artifact downloads stay within `--output`** — escaping directory symlinks are rejected; failed transfers preserve existing files.
 - **Logs**: use `--raw` and dump to a temp file. **Builds**: use `--watch` when starting them.
 - **VCS triggers aren't always wired up** — after pushing a fix you may need to start builds manually.
 - **`pipeline push` does not validate** — always `teamcity pipeline validate` first.
