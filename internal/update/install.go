@@ -3,6 +3,7 @@ package update
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -27,6 +28,9 @@ func DetectInstallMethod() InstallMethod {
 	exe, err := os.Executable()
 	if err != nil {
 		return InstallUnknown
+	}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = resolved
 	}
 	return detectFromPath(exe)
 }

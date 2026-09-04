@@ -130,7 +130,7 @@ Every command takes `--json` or `--plain` for [scripting](https://www.jetbrains.
 | **config**   | `list`, `get`, `set`                                                                                                                                                                                                                                                                                            |
 | **alias**    | `set`, `list`, `delete`                                                                                                                                                                                                                                                                                         |
 | **skill**    | `list`, `install`, `remove`, `update`                                                                                                                                                                                                                                                                           |
-| **update**   | Check for CLI updates                                                                                                                                                                                                                                                                                           |
+| **update**   | Check for and install CLI updates (`--check`/`--json` for status only, `--yes` for non-interactive installation) |
 
 Run `teamcity <command> --help` for usage, or see the [command reference](https://www.jetbrains.com/help/teamcity/teamcity-cli-commands.html).
 
