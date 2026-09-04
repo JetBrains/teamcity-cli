@@ -1,10 +1,29 @@
 package terminal
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestOpenSessionRejectsCrossOriginRedirect(t *testing.T) {
+	t.Setenv("TEAMCITY_HEADER_X_API_KEY", "proxy-secret")
+	destination := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		t.Error("terminal credentials and cookies must not reach another origin")
+	}))
+	defer destination.Close()
+	origin := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		http.SetCookie(writer, &http.Cookie{Name: "session", Value: "secret"})
+		http.Redirect(writer, request, destination.URL, http.StatusFound)
+	}))
+	defer origin.Close()
+	client := NewClient(origin.URL, "user", "token", func(string, ...any) {})
+	_, err := client.OpenSession(1)
+	require.ErrorContains(t, err, "refusing cross-origin redirect")
+}
 
 func TestNewClient(t *testing.T) {
 	c := NewClient("https://tc.example.com/", "admin", "token123", func(string, ...any) {})

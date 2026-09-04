@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/JetBrains/teamcity-cli/internal/httpclient"
 )
 
 // Minimum supported TeamCity version
@@ -190,7 +192,8 @@ func newClientBase(baseURL string) *Client {
 		BaseURL: strings.TrimSuffix(baseURL, "/"),
 		HTTPClient: &http.Client{
 			// No request timeout (gh-style): ctx cancellation bounds requests; opt in via WithTimeout.
-			Transport: defaultTransport(),
+			Transport:     defaultTransport(),
+			CheckRedirect: httpclient.RedirectPolicy(true),
 		},
 		serverInfo:   &serverInfoCache{},
 		extraHeaders: EnvHeaders(),

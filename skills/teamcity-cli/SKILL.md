@@ -29,6 +29,8 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 
 ## Core Commands
 
+Cross-origin downloads drop request headers; HTTPS downgrades and cross-origin terminal redirects are rejected.
+
 | Area      | Commands                                                                                          |
 |-----------|---------------------------------------------------------------------------------------------------|
 | Auth      | `auth login`, `logout`, `status`                                                                  |

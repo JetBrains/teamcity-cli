@@ -83,6 +83,8 @@ See the [getting started guide](https://www.jetbrains.com/help/teamcity/teamcity
 
 ## Usage
 
+For security, redirects never downgrade HTTPS or forward request headers to another origin. Cross-origin artifact downloads remain supported without credentials.
+
 Log in once and the CLI remembers the server:
 
 ```bash
