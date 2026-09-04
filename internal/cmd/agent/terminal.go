@@ -106,6 +106,10 @@ agent-side commands from teamcity flags.`,
 }
 
 func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, showProgress bool) (*terminal.Conn, error) {
+	if config.IsReadOnly() {
+		return nil, fmt.Errorf("%w: agent terminal access", api.ErrReadOnly)
+	}
+
 	serverURL := config.GetServerURL()
 	token, _, keyringErr := config.GetTokenWithSource()
 	if serverURL == "" || token == "" {

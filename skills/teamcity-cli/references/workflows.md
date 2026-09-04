@@ -607,6 +607,8 @@ teamcity agent reboot <agent-id> --graceful
 
 ## Remote Agent Access
 
+`TEAMCITY_RO=1` or per-server `ro: true` blocks both commands below before connecting. Use server-side permissions, rather than this local guard alone, to restrict credential access.
+
 **Open interactive shell on an agent:**
 ```bash
 teamcity agent term <agent-id>
