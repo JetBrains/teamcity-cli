@@ -1,5 +1,7 @@
 # Command Reference
 
+Unix installation: `curl -fsSL https://jb.gg/tc/install | bash` installs to `~/.local/bin` without sudo, or updates the existing unmanaged install on PATH. An explicit directory is the second positional argument: `bash -s -- "" "$HOME/custom/bin"`.
+
 ## Contents
 
 - Authentication (`teamcity auth`)
