@@ -22,6 +22,8 @@ brew install jetbrains/utils/teamcity
 curl -fsSL https://jb.gg/tc/install | bash
 ```
 
+The install script also works on macOS. New installs use `~/.local/bin` without sudo; rerunning it updates an existing unmanaged installation in place. Missing Bash/Zsh PATH entries are added automatically. Restart your shell afterward, or use the printed PATH command.
+
 **Windows (Winget):**
 ```powershell
 winget install JetBrains.TeamCityCLI

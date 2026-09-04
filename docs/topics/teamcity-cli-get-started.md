@@ -33,7 +33,7 @@ brew upgrade teamcity
 curl -fsSL https://jb.gg/tc/install | bash
 ```
 
-The script detects your operating system and architecture automatically and installs the `teamcity` binary to a directory on your PATH.
+The script detects your operating system and architecture. New installs go to `~/.local/bin` without sudo; rerunning it updates an existing unmanaged installation in place. Missing Bash/Zsh PATH entries are added automatically. Restart your shell or run the printed PATH command. To choose a directory explicitly, use `bash -s -- "" "$HOME/custom/bin"`. Package-managed or symlinked installs should use their original update method.
 
 > If your environment disallows piping scripts to a shell, use the platform packages or download a release artifact instead.
 >
@@ -48,7 +48,7 @@ The script detects your operating system and architecture automatically and inst
 curl -fsSL https://jb.gg/tc/install | bash
 ```
 
-The script detects your operating system and architecture automatically and installs the `teamcity` binary to a directory on your PATH.
+The script detects your operating system and architecture. New installs go to `~/.local/bin` without sudo; rerunning it updates an existing unmanaged installation in place. Missing Bash/Zsh PATH entries are added automatically. Restart your shell or run the printed PATH command. To choose a directory explicitly, use `bash -s -- "" "$HOME/custom/bin"`. Package-managed or symlinked installs should use their original update method.
 
 > If your environment disallows piping scripts to a shell, use the platform packages instead.
 >

@@ -8,6 +8,8 @@ description: Use when working with TeamCity CI/CD or when a user provides a Team
 
 ## Quick Start
 
+The Unix installer defaults to `~/.local/bin`, reuses existing unmanaged install directories, and adds missing Bash/Zsh PATH entries. Restart the shell after a fresh install; use the original package manager for managed installs.
+
 ```bash
 teamcity auth status                    # Check authentication
 teamcity run list --status failure      # Find failed builds
