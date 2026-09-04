@@ -607,6 +607,10 @@ teamcity agent reboot <agent-id>
 teamcity agent reboot <agent-id> --graceful
 ```
 
+## Updating the CLI
+
+Use `teamcity update --check` to inspect availability or `teamcity update --json` for structured status. To actually install, run `teamcity update` interactively or `teamcity update --yes` in a script. Do not call the installer in a different directory to update an unmanaged Unix binary; the updater replaces its current location after checksum and version verification. Managed installs use their package manager where supported.
+
 ## Remote Agent Access
 
 `TEAMCITY_RO=1` or per-server `ro: true` blocks both commands below before connecting. Use server-side permissions, rather than this local guard alone, to restrict credential access.

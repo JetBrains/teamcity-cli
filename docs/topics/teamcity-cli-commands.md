@@ -1583,7 +1583,7 @@ Description
 </td>
 <td>
 
-Check for CLI updates
+Check for and install CLI updates
 
 </td>
 </tr>

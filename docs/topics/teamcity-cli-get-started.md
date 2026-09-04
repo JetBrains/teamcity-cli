@@ -158,6 +158,16 @@ After installing, verify that the CLI is available:
 teamcity --version
 ```
 
+## Update TeamCity CLI
+
+Run `teamcity update` to check for a newer release and confirm installation. Use `teamcity update --yes` to install without prompting, including in non-interactive scripts. Use `teamcity update --check` or `teamcity update --json` to report status without installing.
+
+Homebrew, Scoop, Winget, Chocolatey, and npm installations update through their package manager. Unmanaged macOS/Linux binaries update at the current executable's location, including custom directories and symlink targets. The updater checks the release archive's SHA-256 against the published checksum, verifies the new binary's version, then replaces the old file. Failed downloads and verification leave the installed binary unchanged; the updater never runs sudo or a downloaded shell script.
+
+Go installs, Linux distro packages, and unmanaged Windows binaries currently show manual update instructions. A package-manager release may lag the GitHub release; run `teamcity --version` after updating to check what was installed.
+
+`--json` emits `current_version`, `latest_version`, `update_available`, `install_method`, and `release_url`. It cannot be combined with `--yes`.
+
 ## Authenticate with your server {id="authenticate"}
 
 1. Run the login command:
