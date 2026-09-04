@@ -24,6 +24,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 - **`TEAMCITY_URL` alone bypasses stored auth** — set both `TEAMCITY_URL` and `TEAMCITY_TOKEN`, or leave unset.
 - **Logs**: use `--raw` and dump to a temp file. **Builds**: use `--watch` when starting them.
 - **VCS triggers aren't always wired up** — after pushing a fix you may need to start builds manually.
+- **Update explicitly** — `teamcity update` asks before installing; use `--yes` for non-interactive installation, or `--check`/`--json` for status only.
 - **`pipeline push` does not validate** — always `teamcity pipeline validate` first.
 - **GitHub VCS roots: use a GitHub App connection.** Never paste a PAT via `--auth password`. See [workflows](references/workflows.md).
 

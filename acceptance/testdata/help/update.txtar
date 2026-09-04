@@ -1,0 +1,12 @@
+# Update flags are available and check-only modes cannot also install.
+exec teamcity update --help
+stdout '--check'
+stdout '--yes'
+stdout '--json'
+stdout 'checksum and version verification'
+
+! exec teamcity update --check --yes
+stderr 'none of the others'
+
+! exec teamcity update --json --yes
+stderr 'none of the others'
