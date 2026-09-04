@@ -371,6 +371,8 @@ The `<id>` (job) positional is optional when the repo is linked; `delete` accept
 | `teamcity agent term <id>`        | Open interactive shell on agent   |
 | `teamcity agent reboot <id>`      | Reboot a build agent              |
 
+`agent exec` and `agent term` are blocked by `TEAMCITY_RO=1` or per-server `ro: true`.
+
 ### Flags for `teamcity agent list`
 
 - `-p, --pool <name>` - Filter by agent pool
