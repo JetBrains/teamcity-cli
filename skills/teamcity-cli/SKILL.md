@@ -58,7 +58,7 @@ See [Workflows](references/workflows.md) for full details on each.
 - **Investigate failure**: `run list --status failure` → `run log <id> --failed --raw` → `run tests <id> --failed`
 - **Debug build chain**: `run tree <id>` → drill to deepest failed child
 - **Fix and verify**: edit → push → `run start --watch` (use `--local-changes` for personal builds)
-- **Pipeline lifecycle**: `pipeline pull <id>` → edit → `pipeline validate` → `pipeline push <id>`, `pipeline schema` to get the actual schema from the server
+- **Pipeline lifecycle**: `pipeline pull <id>` → edit → `pipeline validate` → `pipeline push <id>`, `pipeline schema` to get the complete schema with enabled runners and features from the server
 - **GitHub VCS**: `connection create github-app` → `connection authorize` → install App on repo → `vcs create --auth token --connection-id <id>`
 - **Docker registry**: `echo $TOKEN | connection create docker -p <id> --name X --url https://ghcr.io --username U --stdin`
 
