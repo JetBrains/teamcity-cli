@@ -163,3 +163,5 @@ See [AI agent integration](https://www.jetbrains.com/help/teamcity/teamcity-cli-
 ## Contributing
 
 TeamCity CLI is open source under the Apache-2.0 license. Bug reports and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers how the project is built and tested.
+
+Connections listed or selected with `--project` include connections inherited from parent projects, including `_Root`. Use the owning project when deleting an inherited connection.

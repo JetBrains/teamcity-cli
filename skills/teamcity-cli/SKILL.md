@@ -62,3 +62,5 @@ See [Workflows](references/workflows.md) for full details on each.
 - [Command reference](references/commands.md) — all commands and flags
 - [Workflows](references/workflows.md) — failure investigation, build chains, connections, pipelines
 - [Output formats](references/output.md) — JSON, plain text, scripting
+
+Connections listed or selected with `--project` include connections inherited from parent projects, including `_Root`. Use the owning project when deleting an inherited connection.

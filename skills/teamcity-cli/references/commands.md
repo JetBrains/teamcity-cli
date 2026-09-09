@@ -559,3 +559,5 @@ Available on all list commands (`run list`, `agent list`, `job list`, `pool list
 
 - `--plain` - Tab-separated plain text output for scripting (mutually exclusive with `--json`)
 - `--no-header` - Omit header row (use with `--plain`)
+
+Connections listed or selected with `--project` include connections inherited from parent projects, including `_Root`. Use the owning project when deleting an inherited connection.
