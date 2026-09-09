@@ -433,7 +433,7 @@ Pipelines are YAML-first build configurations. Each pipeline is a project that c
 | `teamcity pipeline create <name>`        | Create pipeline from YAML                |
 | `teamcity pipeline validate [file]`      | Validate pipeline YAML against complete server schema    |
 | `teamcity pipeline pull <id>`            | Download pipeline YAML                   |
-| `teamcity pipeline push <id> [file]`     | Upload pipeline YAML                     |
+| `teamcity pipeline push <id> [file]`     | Upload YAML; `-f file` is an alternative to `[file] |
 | `teamcity pipeline delete <id>`          | Delete a pipeline                        |
 
 ### Flags for `teamcity pipeline list`

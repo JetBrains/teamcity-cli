@@ -12,6 +12,7 @@ import (
 )
 
 func newPipelinePushCmd(f *cmdutil.Factory) *cobra.Command {
+	var file string
 	cmd := &cobra.Command{
 		Use:   "push <pipeline-id> [file]",
 		Short: "Upload pipeline YAML",
@@ -24,16 +25,21 @@ func newPipelinePushCmd(f *cmdutil.Factory) *cobra.Command {
 		},
 		Example: `  teamcity pipeline push CLI_CiCd
   teamcity pipeline push CLI_CiCd .teamcity.yml
-  teamcity pipeline push CLI_CiCd pipeline.yml`,
+  teamcity pipeline push CLI_CiCd pipeline.yml
+  teamcity pipeline push CLI_CiCd -f pipeline.yml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			file := ".teamcity.yml"
 			if len(args) > 1 {
+				if cmd.Flags().Changed("file") {
+					return api.MutuallyExclusive("file", "file")
+				}
 				file = args[1]
 			}
 			return runPipelinePush(f, args[0], file)
 		},
 	}
 
+	cmd.Flags().StringVarP(&file, "file", "f", ".teamcity.yml", "Path to pipeline YAML file")
+	_ = cmd.MarkFlagFilename("file", "yml", "yaml")
 	return cmd
 }
 
