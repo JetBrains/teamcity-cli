@@ -911,7 +911,7 @@ teamcity pipeline pull <pipeline-id> -o .teamcity.yml
 teamcity pipeline validate .teamcity.yml
 
 # Upload changes
-teamcity pipeline push <pipeline-id> .teamcity.yml
+teamcity pipeline push <pipeline-id> -f .teamcity.yml
 ```
 
 **Delete a pipeline:**

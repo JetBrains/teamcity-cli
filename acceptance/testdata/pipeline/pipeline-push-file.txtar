@@ -1,0 +1,9 @@
+# File selection and conflicts fail locally, before any server request.
+env TEAMCITY_URL=http://127.0.0.1:1
+env TEAMCITY_TOKEN=test
+! exec teamcity pipeline push Example -f missing.yml --no-input
+stderr 'failed to read missing.yml'
+! exec teamcity pipeline push Example --file missing-long.yml --no-input
+stderr 'failed to read missing-long.yml'
+! exec teamcity pipeline push Example positional.yml --file flag.yml --no-input
+stderr 'cannot specify both file argument and --file flag'

@@ -248,6 +248,8 @@ teamcity pipeline push CLI_CiCd pipeline.yml
 
 When no file is specified, the CLI reads `.teamcity.yml` from the current directory.
 
+`pipeline push <id> --file pipeline.yml` (or `-f`) selects the YAML file, as with `pipeline create`. The existing positional file argument remains supported; do not combine it with `--file`.
+
 ## Deleting a pipeline
 
 ```Shell
