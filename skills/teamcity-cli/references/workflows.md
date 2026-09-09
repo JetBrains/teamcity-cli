@@ -408,7 +408,8 @@ The output prints `Next steps:` with follow-up commands and the install link. Ca
 
 ```bash
 teamcity project connection authorize PROJECT_EXT_NN -p <project-id>
-# browser opens TeamCity's OAuth page → click Authorize on GitHub → tab self-closes.
+# Prints the URL and opens the browser; add --no-input to print it without opening.
+# Complete authorization in the browser; the tab closes on success.
 ```
 
 **3. Install the App on a repo** (one-time, per repo, on github.com):

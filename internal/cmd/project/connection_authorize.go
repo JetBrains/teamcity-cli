@@ -7,7 +7,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
-	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 )
@@ -40,8 +39,10 @@ func newConnectionAuthorizeCmd(f *cmdutil.Factory) *cobra.Command {
 		Long: `Run the per-user OAuth flow against an existing OAuth-style connection.
 
 After this completes, the current user has a token stored in TeamCity for the connection.
-This is required before the VCS root test-connection endpoint can verify access using
-the connection (TeamCity calls upstream as the current user via the App's user OAuth).
+The repository preflight used by vcs create accesses the connection as the current user.
+
+The authorization URL is always printed so it can be opened from another machine.
+With --no-input, print the URL without opening a browser.
 
 Connection types that don't have a per-user OAuth flow (Docker, AWS) error out.`,
 		Example: `  teamcity project connection authorize PROJECT_EXT_42 -p Sandbox`,
@@ -89,10 +90,12 @@ func openConnectionAuthorize(f *cmdutil.Factory, client api.ClientInterface, pro
 	authorizeURL := fmt.Sprintf("%s/oauth/%s/repositories.html?projectId=%s&connectionId=%s&updateToken=true&showMode=popup",
 		client.ServerURL(), seg, url.QueryEscape(projectID), url.QueryEscape(id))
 
-	f.Printer.Info("Opening browser to authorize (connection %s)...", id)
-	if err := openBrowser(authorizeURL); err != nil {
-		f.Printer.Warn("Could not open browser automatically: %v", err)
-		_, _ = fmt.Fprintf(f.Printer.Out, "  Open this URL:\n  %s\n", output.Cyan(authorizeURL))
+	_, _ = fmt.Fprintln(f.Printer.Out, authorizeURL)
+	if !f.NoInput {
+		f.Printer.Info("Opening browser to authorize (connection %s)...", id)
+		if err := openBrowser(authorizeURL); err != nil {
+			f.Printer.Warn("Could not open browser automatically: %v", err)
+		}
 	}
 	f.Printer.Tip("Complete the flow in your browser. The tab closes on success; you can return here then.")
 	return nil
