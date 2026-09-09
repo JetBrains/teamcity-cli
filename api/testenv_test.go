@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -239,7 +240,7 @@ func startContainers() (*testEnv, error) {
 		return nil, fmt.Errorf("accept license: %w", err)
 	}
 
-	env.Token, err = setupServer(env.URL, superToken, env.ProjectID, env.ConfigID)
+	env.Token, err = setupServer(ctx, env.URL, superToken, env.ProjectID, env.ConfigID)
 	if err != nil {
 		env.Cleanup()
 		return nil, fmt.Errorf("setup server: %w", err)
@@ -385,8 +386,8 @@ func acceptLicense(serverURL, superToken string) error {
 	return nil
 }
 
-func setupServer(serverURL, superToken, projectID, configID string) (string, error) {
-	client := api.NewClientWithBasicAuth(serverURL, "", superToken)
+func setupServer(ctx context.Context, serverURL, superToken, projectID, configID string) (string, error) {
+	client := api.NewClientWithBasicAuth(serverURL, "", superToken).WithContext(ctx)
 
 	deadline := time.Now().Add(2 * time.Minute)
 	for time.Now().Before(deadline) {
@@ -422,6 +423,31 @@ func setupServer(serverURL, superToken, projectID, configID string) (string, err
 		client.SetBuildTypeSetting(configID, "artifactRules", "result.txt\nreports => reports")
 	}
 
+	// Role assignments require per-project permissions; preserve the configured login modules.
+	authSettings, err := client.RawRequest(ctx, http.MethodGet, "/app/rest/server/authSettings", nil, nil)
+	if err != nil {
+		return "", fmt.Errorf("get authentication settings: %w", err)
+	}
+	if authSettings.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("get authentication settings: HTTP %d", authSettings.StatusCode)
+	}
+	var settings map[string]json.RawMessage
+	if err := json.Unmarshal(authSettings.Body, &settings); err != nil {
+		return "", fmt.Errorf("decode authentication settings: %w", err)
+	}
+	settings["perProjectPermissions"] = json.RawMessage("true")
+	body, err := json.Marshal(settings)
+	if err != nil {
+		return "", fmt.Errorf("encode authentication settings: %w", err)
+	}
+	updated, err := client.RawRequest(ctx, http.MethodPut, "/app/rest/server/authSettings", bytes.NewReader(body), nil)
+	if err != nil {
+		return "", fmt.Errorf("enable per-project permissions: %w", err)
+	}
+	if updated.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("enable per-project permissions: HTTP %d", updated.StatusCode)
+	}
+
 	if !client.UserExists("admin") {
 		if _, err := client.CreateUser(api.CreateUserRequest{
 			Username: "admin",
@@ -432,7 +458,7 @@ func setupServer(serverURL, superToken, projectID, configID string) (string, err
 		}
 	}
 
-	adminClient := api.NewClientWithBasicAuth(serverURL, "admin", "admin123")
+	adminClient := api.NewClientWithBasicAuth(serverURL, "admin", "admin123").WithContext(ctx)
 	_ = adminClient.DeleteAPIToken("tc-cli-test")
 	token, err := adminClient.CreateAPIToken("tc-cli-test")
 	if err != nil {
