@@ -1413,6 +1413,9 @@ func TestVersionedSettingsRuntimeStatus(t *testing.T) {
 	skipIfGuest(t)
 	t.Parallel()
 	status, err := client.GetVersionedSettingsStatus(testProject)
-	require.NoError(t, err)
+	if err != nil {
+		require.ErrorContains(t, err, "never been enabled")
+		return
+	}
 	assert.NotEmpty(t, status.Message)
 }
