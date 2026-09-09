@@ -380,6 +380,8 @@ mvn teamcity-configs:generate -f .teamcity/pom.xml       # fallback
 
 Connections give jobs credentials for external services (GitHub, Docker registries, AWS, ...) without storing secrets per-job. Required before creating a VCS root that authenticates via OAuth.
 
+Connections listed or selected with `--project` include parent projects, including `_Root`. Delete an inherited connection from its owning project.
+
 **Inspect existing connections in a project:**
 ```bash
 teamcity project connection list --project <project-id>
