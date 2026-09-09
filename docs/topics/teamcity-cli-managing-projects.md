@@ -351,7 +351,9 @@ To reference an existing stored VCS token, use `project vcs create --auth token 
 
 ### Testing a VCS root connection
 
-Test whether an existing VCS root can connect to the repository:
+Test an existing VCS root with its saved settings and credentials using the
+server's **Test connection** action. This requires permission to edit the root.
+If a proxy blocks the web UI endpoint, follow the printed link and test in the browser:
 
 ```Shell
 teamcity project vcs test MyProject_GitHubRepo

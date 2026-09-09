@@ -46,3 +46,10 @@ stdout '"properties"'
 
 ! exec teamcity project vcs view NonExistentVcsRoot123456 --no-input
 stderr '.'
+
+# Test a Sandbox root using its saved credentials, without changing settings.
+exec teamcity project vcs test Sandbox_HttpsGithubComJetBrainsTeamcityCliRefsHeadsMain --no-input
+stdout 'Connection to .* is working'
+! stderr 'Error'
+exec teamcity project vcs test Sandbox_HttpsGithubComJetBrainsTeamcityCliRefsHeadsMain --connection-id ignored --no-input
+stdout 'Connection to .* is working'
