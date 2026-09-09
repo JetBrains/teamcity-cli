@@ -389,7 +389,7 @@ teamcity project connection list --project <project-id>
 
 ### Connecting a GitHub repository (GitHub App)
 
-> **Always use this path for GitHub.** Don't `vcs create --auth password` with a personal access token — PATs tie infrastructure to one human, leak in job logs, and can't be revoked centrally. The four-step flow below produces a non-personal "Refreshable access token" tied to a service-identity App, which is what the TeamCity UI's "Sign in to GitHub App" button creates.
+> **Prefer a GitHub App connection for GitHub.** Authorization is per TeamCity user. TeamCity may copy a permanent token or reference a refreshable token; this flow does not guarantee a service identity.
 
 Creates a fresh GitHub App via GitHub's manifest flow — credentials are captured automatically, no PAT involved. Lets jobs clone, post commit statuses, and comment on PRs.
 
@@ -426,7 +426,7 @@ teamcity project vcs create -p <project-id> \
   --url https://github.com/<owner>/<repo>.git
 ```
 
-TeamCity auto-fills `authMethod=ACCESS_TOKEN`, `username=oauth2`, and the proper `tokenId` from the connection's stored token. No manual property setup needed; the resulting VCS root uses a non-personal "Refreshable access token" — exactly what the UI's "Sign in to GitHub App" produces.
+To reference an existing stored token explicitly, replace `--connection-id` with `--token-id <full-token-id>`. The token must be permitted in this project; use `--username` if the provider requires a value other than `oauth2`. This writes `ACCESS_TOKEN` and `tokenId` without copying a secret; test the root in the TeamCity UI.
 
 **Non-interactive (agent) variant — bring your own GitHub App credentials:**
 
@@ -952,7 +952,7 @@ teamcity pipeline delete <pipeline-id> --yes   # skip confirmation
 | `403 Forbidden`              | Insufficient permissions  | Build config may require different access rights; check with TeamCity admin             |
 | `404 Not Found`              | Build deleted or wrong ID | Verify the build ID/URL; the build may have been cleaned up                             |
 | Connection refused / timeout | Server unreachable        | Check if TeamCity instance is accessible; verify server URL with `teamcity auth status` |
-| `Not authenticated`          | `TEAMCITY_URL` set without matching token, or no auth configured | Unset `TEAMCITY_URL` to use stored auth from `teamcity auth login`, or set both `TEAMCITY_URL` and `TEAMCITY_TOKEN` |
+| `Not authenticated`          | Missing or invalid credentials for the selected server | Run `teamcity auth login -s <url>` or override credentials with `TEAMCITY_TOKEN` |
 | `No server configured`       | Missing auth config       | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars  |
 | `Network access blocked by sandbox` | Sandbox proxy blocking outbound requests | Add the server domain to the sandbox `allowedDomains`, or exclude `teamcity` from sandboxing |
 

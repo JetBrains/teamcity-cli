@@ -21,7 +21,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 - **Composite builds have empty logs** — drill into child builds for the actual failure.
 - **Build chains fail bottom-up** — deepest failed dependency is the root cause. Use `teamcity run tree <id>`.
 - **`--local-changes` excludes Kotlin DSL** — push `.teamcity/` changes before running.
-- **`TEAMCITY_URL` alone bypasses stored auth** — set both `TEAMCITY_URL` and `TEAMCITY_TOKEN`, or leave unset.
+- **Select a server per command with `TEAMCITY_URL`** — `TEAMCITY_URL=https://cli.teamcity.com teamcity run list` uses stored credentials for that server; set `TEAMCITY_TOKEN` to override them.
 - **Read-only mode blocks remote shells** — `TEAMCITY_RO=1` or per-server `ro: true` rejects `agent exec` and `agent term` before connecting.
 - **Logs**: use `--raw` and dump to a temp file. **Builds**: use `--watch` when starting them.
 - **VCS triggers aren't always wired up** — after pushing a fix you may need to start builds manually.

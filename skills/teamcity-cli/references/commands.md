@@ -307,6 +307,10 @@ The `<id>` (job) positional is optional when the repo is linked; `delete` accept
 - `--json` - Output as JSON
 - `-w, --web` - Open in browser
 
+### Flags for `teamcity project vcs create`
+
+- `--token-id <id>` - Reference a stored token; requires `--auth token`, excludes `--connection-id`
+
 ### Flags for `teamcity project vcs delete`
 
 - `-y, --yes` - Skip confirmation prompt

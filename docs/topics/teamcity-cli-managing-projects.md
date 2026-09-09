@@ -333,17 +333,20 @@ teamcity project vcs create --url https://github.com/org/repo.git --auth anonymo
 <tr><td><code>--name</code></td><td>Display name (auto-generated from URL if omitted)</td></tr>
 <tr><td><code>-p</code>, <code>--project</code></td><td>Project ID (default: _Root)</td></tr>
 <tr><td><code>--auth</code></td><td>Auth method: <code>password</code>, <code>ssh-key</code>, <code>ssh-agent</code>, <code>ssh-file</code>, <code>token</code>, <code>anonymous</code></td></tr>
-<tr><td><code>--username</code></td><td>Username (for password auth)</td></tr>
+<tr><td><code>--username</code></td><td>Username (for password or stored token auth)</td></tr>
 <tr><td><code>--password</code></td><td>Password or personal access token</td></tr>
 <tr><td><code>--stdin</code></td><td>Read password from stdin</td></tr>
 <tr><td><code>--ssh-key-name</code></td><td>Name of SSH key uploaded to TeamCity</td></tr>
 <tr><td><code>--key-path</code></td><td>Path to SSH key file on the build agent</td></tr>
 <tr><td><code>--passphrase</code></td><td>SSH key passphrase</td></tr>
 <tr><td><code>--connection-id</code></td><td>OAuth connection ID</td></tr>
+<tr><td><code>--token-id</code></td><td>Existing stored token ID; requires <code>--auth token</code>, excludes <code>--connection-id</code></td></tr>
 <tr><td><code>--branch</code></td><td>Default branch (default: <code>refs/heads/main</code>)</td></tr>
 <tr><td><code>--branch-spec</code></td><td>Branch specification</td></tr>
 <tr><td><code>--no-test</code></td><td>Skip connection test before creating</td></tr>
 </table>
+
+To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.
 
 ### Testing a VCS root connection
 
