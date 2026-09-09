@@ -36,6 +36,7 @@ See: https://www.jetbrains.com/help/teamcity/storing-project-settings-in-version
 	}
 
 	cmd.AddCommand(newProjectSettingsStatusCmd(f))
+	cmd.AddCommand(newProjectSettingsEnableCmd(f))
 	cmd.AddCommand(newProjectSettingsExportCmd(f))
 	cmd.AddCommand(newProjectSettingsValidateCmd(f))
 

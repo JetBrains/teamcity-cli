@@ -26,7 +26,7 @@ func allCommands() []string {
 		"project.connection.list", "project.connection.view", "project.connection.authorize", "project.connection.delete",
 		"project.connection.create.docker", "project.connection.create.github-app",
 		"project.token.put", "project.token.get",
-		"project.settings.status", "project.settings.export", "project.settings.validate",
+		"project.settings.enable", "project.settings.status", "project.settings.export", "project.settings.validate",
 		"project.param.list", "project.param.get", "project.param.set", "project.param.delete",
 		"queue.list", "queue.remove", "queue.top", "queue.approve",
 		"agent.list", "agent.view", "agent.jobs", "agent.move", "agent.enable",

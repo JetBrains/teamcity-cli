@@ -1,0 +1,8 @@
+# Settings enable validates input before accessing the server.
+exec teamcity project settings enable --help
+stdout 'Imports configuration'
+stdout '\-\-json'
+! exec teamcity project settings enable Project --vcs-root Root --format invalid --no-input
+stderr 'invalid settings format'
+! exec teamcity project settings enable Project --no-input
+stderr 'vcs-root'
