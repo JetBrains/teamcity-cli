@@ -158,6 +158,7 @@ func settingsLabel(settings string) string {
 type runStartOptions struct {
 	branch            string
 	revision          string
+	revisions         []string
 	params            map[string]string
 	systemProps       map[string]string
 	envVars           map[string]string
@@ -215,7 +216,7 @@ func newRunStartCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "Branch to build (or '@this' for current git branch)")
-	cmd.Flags().StringVar(&opts.revision, "revision", "", "Pin to a specific Git commit SHA (or '@head' for current HEAD)")
+	cmd.Flags().StringArrayVar(&opts.revisions, "revision", nil, "Pin SHA or @head for all roots; ROOT=SHA[@BRANCH] or ROOT=@BRANCH for one root (repeatable)")
 	cmd.Flags().StringToStringVarP(&opts.params, "param", "P", nil, "Parameters (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.systemProps, "system", "S", nil, "System properties (key=value)")
 	cmd.Flags().StringToStringVarP(&opts.envVars, "env", "E", nil, "Environment variables (key=value)")
@@ -257,7 +258,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		return err
 	}
 	opts.branch = branch
-	revision, err := resolveRevisionFlag(opts.revision)
+	revision, rootRevisions, err := parseRevisionFlags(opts.revisions)
 	if err != nil {
 		return err
 	}
@@ -281,7 +282,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 			"is_personal":       opts.personal,
 			"has_local_changes": opts.localChanges != "",
 			"has_branch":        opts.branch != "",
-			"has_revision":      opts.revision != "",
+			"has_revision":      opts.revision != "" || len(rootRevisions) > 0,
 			"param_count":       len(opts.params) + len(opts.systemProps) + len(opts.envVars),
 			"is_watched":        false,
 			"is_dry_run":        true,
@@ -289,29 +290,31 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 
 		if opts.json {
 			return p.PrintJSON(struct {
-				DryRun            bool              `json:"dry_run"`
-				Job               string            `json:"job"`
-				Branch            string            `json:"branch,omitempty"`
-				Revision          string            `json:"revision,omitempty"`
-				Personal          bool              `json:"personal"`
-				LocalChanges      string            `json:"local_changes,omitempty"`
-				Params            map[string]string `json:"params,omitempty"`
-				SystemProps       map[string]string `json:"system_properties,omitempty"`
-				EnvVars           map[string]string `json:"environment_variables,omitempty"`
-				Comment           string            `json:"comment,omitempty"`
-				Tags              []string          `json:"tags,omitempty"`
-				CleanSources      bool              `json:"clean_sources,omitempty"`
-				RebuildDeps       bool              `json:"rebuild_deps,omitempty"`
-				RebuildFailedDeps bool              `json:"rebuild_failed_deps,omitempty"`
-				QueueAtTop        bool              `json:"queue_at_top,omitempty"`
-				Agent             int               `json:"agent_id,omitempty"`
-				ReuseDeps         []int             `json:"reuse_deps,omitempty"`
-				Settings          string            `json:"settings,omitempty"`
+				DryRun            bool               `json:"dry_run"`
+				Job               string             `json:"job"`
+				Branch            string             `json:"branch,omitempty"`
+				Revision          string             `json:"revision,omitempty"`
+				Revisions         []api.RevisionSpec `json:"revisions,omitempty"`
+				Personal          bool               `json:"personal"`
+				LocalChanges      string             `json:"local_changes,omitempty"`
+				Params            map[string]string  `json:"params,omitempty"`
+				SystemProps       map[string]string  `json:"system_properties,omitempty"`
+				EnvVars           map[string]string  `json:"environment_variables,omitempty"`
+				Comment           string             `json:"comment,omitempty"`
+				Tags              []string           `json:"tags,omitempty"`
+				CleanSources      bool               `json:"clean_sources,omitzero"`
+				RebuildDeps       bool               `json:"rebuild_deps,omitzero"`
+				RebuildFailedDeps bool               `json:"rebuild_failed_deps,omitzero"`
+				QueueAtTop        bool               `json:"queue_at_top,omitzero"`
+				Agent             int                `json:"agent_id,omitzero"`
+				ReuseDeps         []int              `json:"reuse_deps,omitempty"`
+				Settings          string             `json:"settings,omitempty"`
 			}{
 				DryRun:            true,
 				Job:               jobID,
 				Branch:            opts.branch,
 				Revision:          opts.revision,
+				Revisions:         rootRevisions,
 				Personal:          opts.personal || opts.localChanges != "",
 				LocalChanges:      opts.localChanges,
 				Params:            opts.params,
@@ -335,6 +338,11 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		}
 		if opts.revision != "" {
 			_, _ = fmt.Fprintf(p.Out, "  Revision: %s\n", opts.revision)
+		}
+		for _, raw := range opts.revisions {
+			if strings.Contains(raw, "=") {
+				_, _ = fmt.Fprintf(p.Out, "  Revision: %s\n", raw)
+			}
 		}
 		if len(opts.params) > 0 {
 			_, _ = fmt.Fprintln(p.Out, "  Parameters:")
@@ -467,6 +475,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		Tags:                      opts.tags,
 		PersonalChangeID:          personalChangeID,
 		Revision:                  opts.revision,
+		Revisions:                 rootRevisions,
 		SnapshotDependencies:      opts.reuseDeps,
 		FreezeSettings:            freezeSettings,
 	})
@@ -478,7 +487,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		"is_personal":       opts.personal,
 		"has_local_changes": opts.localChanges != "",
 		"has_branch":        opts.branch != "",
-		"has_revision":      opts.revision != "",
+		"has_revision":      opts.revision != "" || len(rootRevisions) > 0,
 		"param_count":       len(opts.params) + len(opts.systemProps) + len(opts.envVars),
 		"is_watched":        opts.watch,
 		"is_dry_run":        false,
@@ -505,6 +514,12 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 	if opts.branch != "" {
 		p.Info("  Branch: %s", opts.branch)
 	}
+	for _, raw := range opts.revisions {
+		if strings.Contains(raw, "=") {
+			p.Info("  Revision: %s", raw)
+		}
+	}
+
 	if opts.comment != "" {
 		p.Info("  Comment: %s", opts.comment)
 	}

@@ -113,6 +113,17 @@ teamcity run start <job-id> --watch
 teamcity run start <job-id> --branch feature/my-branch --watch
 ```
 
+For jobs with unrelated VCS roots, pin each root independently (use VCS root IDs):
+
+```bash
+teamcity run start <job-id> --branch feature/game \
+  --revision GameRepo=<sha>@feature/game --revision AssetsRepo=@main
+```
+
+Unspecified roots keep normal TeamCity selection. Branch-only pins use the latest
+head TeamCity has fetched; explicit per-root SHAs are not resolved in local Git.
+
+
 **Start with parameters:**
 ```bash
 teamcity run start <job-id> -P "param1=value1" -P "param2=value2"

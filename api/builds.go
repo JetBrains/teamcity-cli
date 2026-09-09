@@ -273,6 +273,7 @@ type RunBuildOptions struct {
 	Tags                      []string
 	PersonalChangeID          string
 	Revision                  string
+	Revisions                 []RevisionSpec // Per-root pins; cannot be combined with Revision.
 	SnapshotDependencies      []int
 	FreezeSettings            *bool // nil = build configuration default; true = settings from VCS; false = current server settings
 }
@@ -345,39 +346,12 @@ func (c *Client) RunBuild(buildTypeID string, opts RunBuildOptions) (*Build, err
 		req.SnapshotDependencies = &SnapshotDepBuilds{Build: refs}
 	}
 
-	if opts.Revision != "" {
-		entries, err := c.GetVcsRootEntries(buildTypeID)
+	if opts.Revision != "" || len(opts.Revisions) > 0 {
+		revisions, err := c.resolveBuildRevisions(buildTypeID, opts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get VCS root entries: %w", err)
+			return nil, err
 		}
-		if entries.Count == 0 {
-			return nil, fmt.Errorf("build configuration %s has no VCS roots; cannot pin revision", buildTypeID)
-		}
-
-		branch := opts.Branch
-		if branch != "" && !strings.HasPrefix(branch, "refs/") {
-			branch = "refs/heads/" + branch
-		}
-
-		var revisions []Revision
-		for _, entry := range entries.VcsRootEntry {
-			vcsRootID := ""
-			if entry.VcsRoot != nil {
-				vcsRootID = entry.VcsRoot.ID
-			}
-			if vcsRootID == "" {
-				continue
-			}
-			rev := Revision{
-				Version:         opts.Revision,
-				VcsBranchName:   branch,
-				VcsRootInstance: &VcsRootInstanceRef{VcsRootID: vcsRootID},
-			}
-			revisions = append(revisions, rev)
-		}
-		if len(revisions) > 0 {
-			req.Revisions = &Revisions{Revision: revisions}
-		}
+		req.Revisions = &Revisions{Revision: revisions}
 	}
 
 	body, err := json.Marshal(req)
