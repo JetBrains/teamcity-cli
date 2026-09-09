@@ -269,6 +269,7 @@ type vcsCreateOptions struct {
 	connectionID string
 	tokenID      string
 	noTest       bool
+	json         bool
 }
 
 func newVcsCreateCmd(f *cmdutil.Factory) *cobra.Command {
@@ -317,6 +318,7 @@ Stored --token-id credentials must be tested in the TeamCity UI.`,
 	cmd.Flags().StringVar(&opts.connectionID, "connection-id", "", "OAuth connection ID")
 	cmd.Flags().StringVar(&opts.tokenID, "token-id", "", "Stored token ID (requires --auth token; excludes --connection-id)")
 	cmd.MarkFlagsMutuallyExclusive("connection-id", "token-id")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output the created VCS root as JSON")
 	cmd.Flags().BoolVar(&opts.noTest, "no-test", false, "Skip connection test before creating")
 
 	_ = cmd.RegisterFlagCompletionFunc("auth", completion.VCSAuthMethods())
@@ -331,7 +333,7 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 		return err
 	}
 
-	interactive := f.IsInteractive()
+	interactive := !opts.json && f.IsInteractive()
 
 	if interactive {
 		if err := runInteractiveForm(f, &opts.project, api.PermissionEditProject, formField{title: "Repository URL", value: &opts.repoURL}); err != nil {
@@ -397,11 +399,11 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	testReq.URL = repoURL
 	testReq.VcsName = "jetbrains.git"
 
-	if opts.tokenID != "" && !opts.noTest && !f.JSONOutput {
+	if opts.tokenID != "" && !opts.noTest && !f.JSONOutput && !opts.json {
 		f.Printer.Tip("Test the stored token connection in the TeamCity UI after creating the VCS root")
 	}
 	if opts.tokenID == "" && !opts.noTest && client.SupportsFeature("vcs_test_connection") {
-		if err := runConnectionTest(f, client, testReq, projectID); err != nil {
+		if err := runConnectionTest(f, client, testReq, projectID, opts.json); err != nil {
 			return err
 		}
 	}
@@ -421,6 +423,9 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 		return fmt.Errorf("failed to create VCS root: %w", err)
 	}
 
+	if opts.json {
+		return f.Printer.PrintJSON(created)
+	}
 	f.Printer.Success("Created VCS root %q (%s) in project %s", created.Name, created.ID, projectID)
 	return nil
 }
@@ -653,33 +658,41 @@ func runVcsTest(f *cmdutil.Factory, id, overrideConnID string) error {
 			"Pass --connection-id <id> to test, or test from the TeamCity UI",
 		)
 	}
-	if err := runConnectionTest(f, client, req, projectID); err != nil {
+	if err := runConnectionTest(f, client, req, projectID, false); err != nil {
 		return err
 	}
 	f.Printer.Success("Connection to %q is working", root.Name)
 	return nil
 }
 
-func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.TestConnectionRequest, projectID string) error {
-	_, _ = fmt.Fprint(f.Printer.ErrOut, "Testing connection... ")
+func runConnectionTest(f *cmdutil.Factory, client api.ClientInterface, req api.TestConnectionRequest, projectID string, jsonOutput bool) error {
+	if !jsonOutput {
+		_, _ = fmt.Fprint(f.Printer.ErrOut, "Testing connection... ")
+	}
 	result, err := client.TestVcsConnection(req, projectID)
 	if err != nil {
-		_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Red(output.Sym().Cross))
+		if !jsonOutput {
+			_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Red(output.Sym().Cross))
+		}
 		return fmt.Errorf("connection test failed: %w", err)
 	}
 	if result.Status != "OK" {
-		_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Red(output.Sym().Cross))
+		if !jsonOutput {
+			_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Red(output.Sym().Cross))
+		}
 		msg := "connection test failed"
 		if len(result.Errors) > 0 {
 			msg = result.Errors[0].Message
 		}
-		if req.ConnectionID != "" && strings.Contains(msg, "Malformed request") {
+		if !jsonOutput && req.ConnectionID != "" && strings.Contains(msg, "Malformed request") {
 			f.Printer.Tip("First-time use of this connection requires authorization. Run: %s",
 				output.Cyan(fmt.Sprintf("teamcity project connection authorize %s -p %s", req.ConnectionID, projectID)))
 		}
 		return fmt.Errorf("%s", msg)
 	}
-	_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Green(output.Sym().Check))
+	if !jsonOutput {
+		_, _ = fmt.Fprintln(f.Printer.ErrOut, output.Green(output.Sym().Check))
+	}
 	return nil
 }
 

@@ -344,6 +344,7 @@ teamcity project vcs create --url https://github.com/org/repo.git --auth anonymo
 <tr><td><code>--branch</code></td><td>Default branch (default: <code>refs/heads/main</code>)</td></tr>
 <tr><td><code>--branch-spec</code></td><td>Branch specification</td></tr>
 <tr><td><code>--no-test</code></td><td>Skip connection test before creating</td></tr>
+<tr><td><code>--json</code></td><td>Output the created VCS root as JSON</td></tr>
 </table>
 
 To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.
