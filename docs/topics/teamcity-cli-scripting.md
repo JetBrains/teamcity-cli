@@ -272,6 +272,8 @@ teamcity run start MyBuild     # blocked — would trigger a build
 
 This is useful for monitoring dashboards, reporting scripts, and shared environments where accidental modifications must be prevented. The flag also blocks write operations through `teamcity api` with non-GET methods.
 
+`agent exec` and `agent term` are also blocked before connecting, because a remote shell can modify the agent. This applies to both `TEAMCITY_RO=1` and per-server `ro: true`. Read-only mode is an accidental-write guard, not a security sandbox; use server-side permissions to restrict credentials.
+
 See [Configuration](teamcity-cli-configuration.md#Environment+variables) for accepted values.
 
 ### Quiet mode

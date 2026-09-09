@@ -127,6 +127,10 @@ func SampleEvents() []fus.LogEvent {
 		mk(GroupWorkspace, EventLinked, false, map[string]any{
 			"source": WorkspaceSourceFlag, "is_ambiguous": false, "is_subdir": true,
 		}),
+		mk(GroupMigrate, EventCompleted, false, map[string]any{
+			"source": MigrateSourceGitHubActions, "outcome": MigrateOutcomeClean,
+			"validation_status": MigrateValidationValid, "is_dry_run": false,
+		}),
 	}
 }
 

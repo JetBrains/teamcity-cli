@@ -382,10 +382,20 @@ func ParseTeamCityTime(s string) (time.Time, error) {
 
 // VersionedSettingsStatus represents the sync status of versioned settings
 type VersionedSettingsStatus struct {
-	Type        string `json:"type,omitempty"`        // info, warning, error
-	Message     string `json:"message,omitempty"`     // Human-readable status message
-	Timestamp   string `json:"timestamp,omitempty"`   // When the status was recorded
-	DslOutdated bool   `json:"dslOutdated,omitempty"` // DSL scripts need regeneration
+	MissingContextParameters []string                 `json:"missingContextParameters,omitempty"`
+	VersionedSettingsError   []VersionedSettingsError `json:"versionedSettingsError,omitempty"`
+	Type                     string                   `json:"type,omitempty"`        // info, warning, error
+	Message                  string                   `json:"message,omitempty"`     // Human-readable status message
+	Timestamp                string                   `json:"timestamp,omitempty"`   // When the status was recorded
+	DslOutdated              bool                     `json:"dslOutdated,omitempty"` // DSL scripts need regeneration
+}
+
+// VersionedSettingsError describes a failure processing versioned settings.
+type VersionedSettingsError struct {
+	Message         string   `json:"message,omitempty"`
+	Type            string   `json:"type,omitempty"`
+	File            string   `json:"file,omitempty"`
+	StackTraceLines []string `json:"stackTraceLines,omitempty"`
 }
 
 // VersionedSettingsConfig represents the configuration of versioned settings

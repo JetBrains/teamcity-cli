@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"os"
@@ -71,6 +72,11 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 	if err := os.MkdirAll(absOutput, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
+	root, err := os.OpenRoot(absOutput)
+	if err != nil {
+		return fmt.Errorf("failed to open output directory: %w", err)
+	}
+	defer func() { _ = root.Close() }()
 
 	ctx, cancel := context.WithTimeout(f.Context(), opts.timeout)
 	defer cancel()
@@ -120,10 +126,9 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 			_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s path escapes output directory\n", nameWidth, artifact.Name, "", output.Red("   "+output.Sym().Cross))
 			continue
 		}
-		outputPath := filepath.Join(absOutput, rel)
 		size := humanize.IBytes(uint64(artifact.Size))
 
-		if err := downloadArtifact(ctx, client, runID, artifact, outputPath, nameWidth, p.Quiet, p.Out); err != nil {
+		if err := downloadArtifact(ctx, client, runID, artifact, root, rel, nameWidth, p.Quiet, p.Out); err != nil {
 			_, _ = fmt.Fprintf(p.Out, "%-*s  %10s  %s %v\n", nameWidth, artifact.Name, size, output.Red("   "+output.Sym().Cross), err)
 			continue
 		}
@@ -139,17 +144,19 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 	return nil
 }
 
-func downloadArtifact(ctx context.Context, client api.ClientInterface, runID string, artifact api.Artifact, outputPath string, nameWidth int, quiet bool, out io.Writer) error {
+func downloadArtifact(ctx context.Context, client api.ClientInterface, runID string, artifact api.Artifact, root *os.Root, outputPath string, nameWidth int, quiet bool, out io.Writer) error {
 	if dir := filepath.Dir(outputPath); dir != "." {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := root.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
 	}
 
-	f, err := os.Create(outputPath)
+	tempPath := filepath.Join(filepath.Dir(outputPath), ".teamcity-download-"+rand.Text())
+	f, err := root.OpenFile(tempPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = root.Remove(tempPath) }()
 
 	var w io.Writer = f
 	if output.IsTerminal() && !quiet && artifact.Size > 0 {
@@ -161,15 +168,16 @@ func downloadArtifact(ctx context.Context, client api.ClientInterface, runID str
 	written, err := client.DownloadArtifactTo(ctx, runID, artifact.Name, w)
 	if err != nil {
 		_ = f.Close()
-		_ = os.Remove(outputPath)
 		return err
 	}
 
 	if artifact.Size > 0 && written != artifact.Size {
 		_ = f.Close()
-		_ = os.Remove(outputPath)
 		return fmt.Errorf("incomplete: got %d/%d bytes", written, artifact.Size)
 	}
 
-	return f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return root.Rename(tempPath, outputPath)
 }

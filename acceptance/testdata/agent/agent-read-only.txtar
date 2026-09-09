@@ -1,0 +1,12 @@
+# Terminal commands must fail locally, even without a reachable server or credentials.
+env TEAMCITY_URL=http://127.0.0.1:1
+env TEAMCITY_TOKEN=
+env TEAMCITY_RO=1
+
+! exec teamcity agent exec 1 whoami --no-input
+stderr 'read-only mode: writes are blocked'
+! stderr 'connection refused'
+
+! exec teamcity agent term 1 --no-input
+stderr 'read-only mode: writes are blocked'
+! stderr 'connection refused'

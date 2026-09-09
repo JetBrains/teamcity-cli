@@ -15,10 +15,11 @@ func newPipelineSchemaCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "schema",
 		Short: "Print the pipeline JSON schema for the current server",
-		Long: `Fetch the per-instance pipeline JSON schema and print it to stdout.
+		Long: `Fetch the complete pipeline JSON schema, including enabled runners and features,
+and print it to stdout.
 
 The schema is cached locally for 24 hours. When the server does not support
-the schema endpoint (TeamCity < 2026.1), an embedded fallback is printed and
+the complete schema endpoint, an embedded fallback is printed and
 a warning is written to stderr; pass --refresh to require a live server fetch.`,
 		Example: `  teamcity pipeline schema
   teamcity pipeline schema > schema.json
@@ -40,7 +41,7 @@ a warning is written to stderr; pass --refresh to require a live server fetch.`,
 			}
 			if fallback {
 				_, _ = fmt.Fprintln(f.Printer.ErrOut,
-					"warning: server did not return a schema (server may predate TeamCity 2026.1)")
+					"warning: complete schema endpoint is unavailable; using limited embedded schema")
 			}
 			_, err = f.Printer.Out.Write(data)
 			return err

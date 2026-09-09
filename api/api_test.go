@@ -1408,3 +1408,14 @@ func TestRequestHeadersServerSide(T *testing.T) {
 	assert.Contains(T, logs, "user-agent")
 	assert.Contains(T, logs, "client: teamcity-cli/42.0.0-test")
 }
+
+func TestVersionedSettingsRuntimeStatus(t *testing.T) {
+	skipIfGuest(t)
+	t.Parallel()
+	status, err := client.GetVersionedSettingsStatus(testProject)
+	if err != nil {
+		require.ErrorContains(t, err, "never been enabled")
+		return
+	}
+	assert.NotEmpty(t, status.Message)
+}

@@ -22,12 +22,15 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 - **Build chains fail bottom-up** — deepest failed dependency is the root cause. Use `teamcity run tree <id>`.
 - **`--local-changes` excludes Kotlin DSL** — push `.teamcity/` changes before running.
 - **Select a server per command with `TEAMCITY_URL`** — `TEAMCITY_URL=https://cli.teamcity.com teamcity run list` uses stored credentials for that server; set `TEAMCITY_TOKEN` to override them.
+- **Read-only mode blocks remote shells** — `TEAMCITY_RO=1` or per-server `ro: true` rejects `agent exec` and `agent term` before connecting.
 - **Logs**: use `--raw` and dump to a temp file. **Builds**: use `--watch` when starting them.
 - **VCS triggers aren't always wired up** — after pushing a fix you may need to start builds manually.
 - **`pipeline push` does not validate** — always `teamcity pipeline validate` first.
 - **GitHub VCS roots: use a GitHub App connection.** Never paste a PAT via `--auth password`. See [workflows](references/workflows.md).
 
 ## Core Commands
+
+Cross-origin downloads drop request headers; HTTPS downgrades and cross-origin terminal redirects are rejected.
 
 | Area      | Commands                                                                                          |
 |-----------|---------------------------------------------------------------------------------------------------|
@@ -48,12 +51,14 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 
 ## Quick Workflows
 
+Artifact downloads stay within `--output`: escaping directory symlinks are rejected, and failed transfers preserve existing files.
+
 See [Workflows](references/workflows.md) for full details on each.
 
 - **Investigate failure**: `run list --status failure` → `run log <id> --failed --raw` → `run tests <id> --failed`
 - **Debug build chain**: `run tree <id>` → drill to deepest failed child
 - **Fix and verify**: edit → push → `run start --watch` (use `--local-changes` for personal builds)
-- **Pipeline lifecycle**: `pipeline pull <id>` → edit → `pipeline validate` → `pipeline push <id>`, `pipeline schema` to get the actual schema from the server
+- **Pipeline lifecycle**: `pipeline pull <id>` → edit → `pipeline validate` → `pipeline push <id>`, `pipeline schema` to get the complete schema with enabled runners and features from the server
 - **GitHub VCS**: `connection create github-app` → `connection authorize` → install App on repo → `vcs create --auth token --connection-id <id>`
 - **Docker registry**: `echo $TOKEN | connection create docker -p <id> --name X --url https://ghcr.io --username U --stdin`
 
@@ -63,4 +68,4 @@ See [Workflows](references/workflows.md) for full details on each.
 - [Workflows](references/workflows.md) — failure investigation, build chains, connections, pipelines
 - [Output formats](references/output.md) — JSON, plain text, scripting
 
-To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.
+`project settings status` reports the server’s runtime message and missing DSL context parameters. Its “Recorded” timestamp is when the status was recorded, not the last successful sync.

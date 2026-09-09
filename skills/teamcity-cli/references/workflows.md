@@ -387,7 +387,7 @@ teamcity project connection list --project <project-id>
 
 ### Connecting a GitHub repository (GitHub App)
 
-> **Prefer a GitHub App connection for GitHub.** Authorization is per TeamCity user. TeamCity chooses the stored credential for `--connection-id`; it may copy a permanent token or reference a refreshable token. This flow does not guarantee a service identity.
+> **Prefer a GitHub App connection for GitHub.** Authorization is per TeamCity user. TeamCity may copy a permanent token or reference a refreshable token; this flow does not guarantee a service identity.
 
 Creates a fresh GitHub App via GitHub's manifest flow — credentials are captured automatically, no PAT involved. Lets jobs clone, post commit statuses, and comment on PRs.
 
@@ -424,7 +424,7 @@ teamcity project vcs create -p <project-id> \
   --url https://github.com/<owner>/<repo>.git
 ```
 
-TeamCity chooses credentials from the current user's connection tokens. For an explicit reference to an already-stored token, use `--auth token --token-id <full-token-id>` instead of `--connection-id`. The CLI writes `ACCESS_TOKEN` and `tokenId` without copying a secret. Token lifetime, repository access, and identity remain properties of that stored token; this command does not mint installation tokens.
+To reference an existing stored token explicitly, replace `--connection-id` with `--token-id <full-token-id>`. The token must be permitted in this project; use `--username` if the provider requires a value other than `oauth2`. This writes `ACCESS_TOKEN` and `tokenId` without copying a secret; test the root in the TeamCity UI.
 
 **Non-interactive (agent) variant — bring your own GitHub App credentials:**
 
@@ -606,6 +606,8 @@ teamcity agent reboot <agent-id> --graceful
 ```
 
 ## Remote Agent Access
+
+`TEAMCITY_RO=1` or per-server `ro: true` blocks both commands below before connecting. Use server-side permissions, rather than this local guard alone, to restrict credential access.
 
 **Open interactive shell on an agent:**
 ```bash
@@ -890,7 +892,7 @@ teamcity pipeline create my-pipeline --project <project-id> --vcs-root <vcs-root
 
 **Validate pipeline YAML before pushing:**
 ```bash
-# Validates against server schema (cached locally for 24h)
+# Validates against the complete server schema with enabled runners/features (cached for 24h)
 teamcity pipeline validate
 
 # Validate a specific file
@@ -948,8 +950,8 @@ teamcity pipeline delete <pipeline-id> --yes   # skip confirmation
 | `403 Forbidden`              | Insufficient permissions  | Build config may require different access rights; check with TeamCity admin             |
 | `404 Not Found`              | Build deleted or wrong ID | Verify the build ID/URL; the build may have been cleaned up                             |
 | Connection refused / timeout | Server unreachable        | Check if TeamCity instance is accessible; verify server URL with `teamcity auth status` |
-| `Not authenticated`          | `TEAMCITY_URL` set without matching token, or no auth configured | Unset `TEAMCITY_URL` to use stored auth from `teamcity auth login`, or set both `TEAMCITY_URL` and `TEAMCITY_TOKEN` |
+| `Not authenticated`          | Missing or invalid credentials for the selected server | Run `teamcity auth login -s <url>` or override credentials with `TEAMCITY_TOKEN` |
 | `No server configured`       | Missing auth config       | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars  |
 | `Network access blocked by sandbox` | Sandbox proxy blocking outbound requests | Add the server domain to the sandbox `allowedDomains`, or exclude `teamcity` from sandboxing |
 
-To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.
+`project settings status` reports the server’s runtime message and missing DSL context parameters. Its “Recorded” timestamp is when the status was recorded, not the last successful sync.
