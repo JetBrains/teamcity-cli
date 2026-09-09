@@ -15,10 +15,10 @@ func EnvHeaders() map[string]string {
 	var headers map[string]string
 	for _, e := range os.Environ() {
 		key, value, ok := strings.Cut(e, "=")
-		if !ok || !strings.HasPrefix(key, EnvHeaderPrefix) {
+		suffix, hasPrefix := strings.CutPrefix(key, EnvHeaderPrefix)
+		if !ok || !hasPrefix {
 			continue
 		}
-		suffix := key[len(EnvHeaderPrefix):]
 		if suffix == "" || value == "" || strings.ContainsAny(value, "\r\n\x00") {
 			continue
 		}

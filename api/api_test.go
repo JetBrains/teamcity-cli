@@ -1194,7 +1194,7 @@ func TestRebootAgentCancelledContext(T *testing.T) {
 	skipIfGuest(T)
 	T.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(T.Context())
 	cancel() // Cancel immediately
 
 	// Bogus ID: the request must never be sent, and must never reboot the real agent.

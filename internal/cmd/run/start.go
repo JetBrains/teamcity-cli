@@ -300,11 +300,11 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 				EnvVars           map[string]string `json:"environment_variables,omitempty"`
 				Comment           string            `json:"comment,omitempty"`
 				Tags              []string          `json:"tags,omitempty"`
-				CleanSources      bool              `json:"clean_sources,omitempty"`
-				RebuildDeps       bool              `json:"rebuild_deps,omitempty"`
-				RebuildFailedDeps bool              `json:"rebuild_failed_deps,omitempty"`
-				QueueAtTop        bool              `json:"queue_at_top,omitempty"`
-				Agent             int               `json:"agent_id,omitempty"`
+				CleanSources      bool              `json:"clean_sources,omitzero"`
+				RebuildDeps       bool              `json:"rebuild_deps,omitzero"`
+				RebuildFailedDeps bool              `json:"rebuild_failed_deps,omitzero"`
+				QueueAtTop        bool              `json:"queue_at_top,omitzero"`
+				Agent             int               `json:"agent_id,omitzero"`
 				ReuseDeps         []int             `json:"reuse_deps,omitempty"`
 				Settings          string            `json:"settings,omitempty"`
 			}{

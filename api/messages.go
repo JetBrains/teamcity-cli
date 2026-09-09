@@ -15,11 +15,11 @@ type BuildMessage struct {
 	Status           int    `json:"status"`
 	Timestamp        string `json:"timestamp,omitempty"`
 	ServerTimestamp  string `json:"serverTimestamp,omitempty"`
-	FlowID           int    `json:"flowId,omitempty"`
-	ParentID         int    `json:"parentId,omitempty"`
+	FlowID           int    `json:"flowId,omitzero"`
+	ParentID         int    `json:"parentId,omitzero"`
 	BlockType        string `json:"blockType,omitempty"`
-	ContainsMessages bool   `json:"containsMessages,omitempty"`
-	Verbose          bool   `json:"verbose,omitempty"`
+	ContainsMessages bool   `json:"containsMessages,omitzero"`
+	Verbose          bool   `json:"verbose,omitzero"`
 }
 
 // BuildMessagesResponse is the response from the /app/messages endpoint.
