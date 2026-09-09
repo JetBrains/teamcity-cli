@@ -15,6 +15,13 @@
 - Direct API (`teamcity api`)
 - Global Flags
 - List Output Flags
+- CLI Updates (`teamcity update`)
+
+## CLI Updates (`teamcity update`)
+
+- `teamcity update` checks the release feed and asks before installing.
+- `--yes`, `-y` installs without prompting; required for non-interactive installation.
+- `--check` or `--json` reports status without installing; neither combines with `--yes`.
 
 ## Authentication (`teamcity auth`)
 
