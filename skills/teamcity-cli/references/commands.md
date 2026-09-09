@@ -256,7 +256,7 @@ The `<id>` (job) positional is optional when the repo is linked; `delete` accept
 | `teamcity project tree [id]`                   | Show project hierarchy tree  |
 | `teamcity project vcs list --project <id>`     | List VCS roots               |
 | `teamcity project vcs view <id>`              | View VCS root details        |
-| `teamcity project vcs create --project <id>`  | Create VCS root (interactive or flag-driven) |
+| `teamcity project vcs create --project <id>`  | Create a VCS root; `--json` returns the created object |
 | `teamcity project vcs delete <id>`            | Delete a VCS root            |
 | `teamcity project connection list -p <id>`    | List project connections     |
 | `teamcity project connection create github-app -p <id>` | Register GitHub App (manifest flow) |

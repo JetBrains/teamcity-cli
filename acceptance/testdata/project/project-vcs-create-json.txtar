@@ -1,0 +1,11 @@
+# VCS creation supports the machine-readable output contract.
+exec teamcity project vcs create --help
+stdout '\-\-json'
+
+[!has_token] skip 'requires authentication token'
+exec teamcity project vcs create --project Sandbox --url https://github.com/JetBrains/teamcity-cli --name cli-json-$RANDOM_STRING --auth anonymous --no-test --json --no-input
+stdout '"id"'
+! stdout 'Created VCS root'
+extract '"id":\s*"([^"]+)"' ROOT_ID
+exec teamcity project vcs delete $ROOT_ID --yes --no-input
+stdout 'Deleted VCS root'

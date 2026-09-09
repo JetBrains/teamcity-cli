@@ -1,6 +1,9 @@
 package project_test
 
 import (
+	"encoding/json"
+	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
@@ -146,4 +149,22 @@ func TestVcsStoredTokenSkipsPreflightHintForJSON(t *testing.T) {
 	assert.NotContains(t, out, "Test the stored token")
 	assert.NotContains(t, out, "Testing connection")
 	assert.Contains(t, out, "Created VCS root")
+}
+
+func TestVcsCreateJSON(t *testing.T) {
+	for _, auth := range []string{"anonymous", "token"} {
+		t.Run(auth, func(t *testing.T) {
+			ts := cmdtest.SetupMockClient(t)
+			args := []string{"project", "vcs", "create", "--project", "TestProject", "--url", "https://github.com/org/repo.git", "--auth", auth, "--json"}
+			if auth == "token" {
+				args = append(args, "--token-id", "tc_token_id:CID_test:-1:uuid")
+			}
+			out := cmdtest.CaptureOutput(t, ts.Factory, args...)
+			var root api.VcsRoot
+			require.NoError(t, json.Unmarshal([]byte(out), &root))
+			assert.Equal(t, "TestProject_NewRoot", root.ID)
+			assert.NotContains(t, out, "Created VCS root")
+			assert.NotContains(t, out, "Test the stored token")
+		})
+	}
 }
