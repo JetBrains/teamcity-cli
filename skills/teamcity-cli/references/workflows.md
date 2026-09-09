@@ -890,7 +890,7 @@ teamcity pipeline create my-pipeline --project <project-id> --vcs-root <vcs-root
 
 **Validate pipeline YAML before pushing:**
 ```bash
-# Validates against server schema (cached locally for 24h)
+# Validates against the complete server schema with enabled runners/features (cached for 24h)
 teamcity pipeline validate
 
 # Validate a specific file

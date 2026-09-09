@@ -879,7 +879,7 @@ func SetupMockClient(t *testing.T) *TestServer {
 		})
 	})
 
-	ts.Handle("POST /app/pipeline/schema/generate", func(w http.ResponseWriter, r *http.Request) {
+	ts.Handle("GET /app/pipeline/schema/complete", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},
