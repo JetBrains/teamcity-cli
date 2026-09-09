@@ -397,7 +397,7 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	testReq.URL = repoURL
 	testReq.VcsName = "jetbrains.git"
 
-	if opts.tokenID != "" && !opts.noTest {
+	if opts.tokenID != "" && !opts.noTest && !f.JSONOutput {
 		f.Printer.Tip("Test the stored token connection in the TeamCity UI after creating the VCS root")
 	}
 	if opts.tokenID == "" && !opts.noTest && client.SupportsFeature("vcs_test_connection") {

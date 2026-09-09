@@ -138,3 +138,12 @@ func TestVcsTest(T *testing.T) {
 	assert.Contains(T, out, "Testing connection...")
 	assert.Contains(T, out, "Connection to")
 }
+
+func TestVcsStoredTokenSkipsPreflightHintForJSON(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Factory.JSONOutput = true
+	out := cmdtest.CaptureOutput(t, ts.Factory, "project", "vcs", "create", "--project", "TestProject", "--url", "https://github.com/org/repo.git", "--auth", "token", "--token-id", "tc_token_id:CID_test:-1:uuid", "--no-input")
+	assert.NotContains(t, out, "Test the stored token")
+	assert.NotContains(t, out, "Testing connection")
+	assert.Contains(t, out, "Created VCS root")
+}
