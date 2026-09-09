@@ -32,7 +32,7 @@ for _arg in "$@"; do
     esac
 done
 RELEASE="${_POSITIONAL[0]:-}"
-OUT_DIR="${_POSITIONAL[1]:-/usr/local/bin}"
+OUT_DIR="${_POSITIONAL[1]:-}"
 unset _arg _POSITIONAL
 
 cleanup() {
@@ -57,6 +57,57 @@ fail() {
 
 need_cmd() {
     command -v "$1" >/dev/null 2>&1 || fail "$1 is not installed"
+}
+
+choose_install_dir() {
+    [[ -z "$OUT_DIR" ]] || return 0
+    local existing
+    existing="$(type -P "$PROG" || true)"
+    if [[ -n "$existing" ]]; then
+        if [[ -L "$existing" ]]; then
+            fail "existing $PROG is a symlink ($existing); update through its original install method or specify a destination explicitly"
+        fi
+        case "$existing" in
+            */Cellar/*|*/homebrew/*|*/node_modules/*|*/go/bin/*|/usr/bin/*|/bin/*)
+                fail "existing $PROG appears package-managed ($existing); update through its original install method or specify a destination explicitly" ;;
+        esac
+        OUT_DIR="$(dirname "$existing")"
+    else
+        OUT_DIR="$HOME/.local/bin"
+    fi
+}
+
+configure_path() {
+    case ":$PATH:" in
+        *":$OUT_DIR:"*) return 0 ;;
+    esac
+
+    local path_line profile
+    local profiles=()
+    printf -v path_line 'export PATH=%q:"$PATH"' "$OUT_DIR"
+    case "${SHELL:-}" in
+        */zsh) profiles=("${ZDOTDIR:-$HOME}/.zshrc") ;;
+        */bash)
+            profiles=("$HOME/.bashrc")
+            if [[ -f "$HOME/.bash_profile" ]]; then
+                profiles+=("$HOME/.bash_profile")
+            elif [[ -f "$HOME/.bash_login" ]]; then
+                profiles+=("$HOME/.bash_login")
+            else
+                profiles+=("$HOME/.profile")
+            fi ;;
+        *) printf '\nAdd %s to your shell PATH to run %s.\n' "$OUT_DIR" "$PROG"; return 0 ;;
+    esac
+    for profile in "${profiles[@]}"; do
+        if ! grep -Fqx -- "$path_line" "$profile" 2>/dev/null; then
+            if mkdir -p "$(dirname "$profile")" && printf '\n%s\n' "$path_line" >> "$profile"; then
+                printf 'Added %s to PATH in %s\n' "$OUT_DIR" "$profile"
+            else
+                printf 'Could not update %s; add the PATH entry manually.\n' "$profile" >&2
+            fi
+        fi
+    done
+    printf '\nRestart your shell, or update PATH in your current shell:\n  %s\n\n' "$path_line"
 }
 
 detect_os() {
@@ -141,13 +192,14 @@ install_teamcity() {
     version="${RELEASE#v}"
     gh_url="https://github.com/JetBrains/teamcity-cli/releases/download/${RELEASE}/${PROG}_${version}_${os}_${arch}.tar.gz"
     jb_url="https://download.jetbrains.com/resources/teamcity-cli/${version}/${PROG}_${version}_${os}_${arch}.tar.gz"
-    target="${OUT_DIR}/${PROG}"
 
     echo -e "\033[0;90m\nInstalling $PROG ($RELEASE)\033[0m\n"
 
     mkdir -p "$OUT_DIR" || fail "failed to create output directory: $OUT_DIR"
     [[ -d "$OUT_DIR" ]] || fail "output path is not a directory: $OUT_DIR"
     [[ -w "$OUT_DIR" ]] || fail "output directory is not writable: $OUT_DIR"
+    OUT_DIR="$(cd "$OUT_DIR" && pwd -L)"
+    target="${OUT_DIR}/${PROG}"
 
     TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/${PROG}.XXXXXX")" || fail "failed to create temp directory"
     cd "$TMP_DIR"
@@ -173,6 +225,8 @@ If GitHub is unreachable, retry using the JetBrains CDN:
     echo -e "${CHECK_MARK} Installed at $target\n"
     "$target" --version || fail "installed binary failed to run"
 
+    configure_path
+
     header "Next steps"
     echo -e ""
     echo -e "  \033[1mAuthenticate with TeamCity\033[0m"
@@ -186,6 +240,8 @@ If GitHub is unreachable, retry using the JetBrains CDN:
 trap cleanup EXIT
 trap 'fail "interrupted"' INT TERM
 
+choose_install_dir
+
 echo -e '
  ████████╗ ██████╗
  ╚══██╔══╝██╔════╝   TeamCity CLI (installer)
@@ -198,9 +254,9 @@ echo -e '
 echo -e "
 This script will download TeamCity CLI to \033[4m$OUT_DIR/teamcity\033[0m
 
-If you get 'permission denied' error:
-  - Specify other dir: \033[4mcurl -fsSL https://jb.gg/tc/install | bash -s -- \"\" \$HOME/.local/bin\033[0m
-  - Or run with sudo
+New installs use ~/.local/bin without sudo. Existing unmanaged installs are updated in place.
+To choose a different directory:
+  \033[4mcurl -fsSL https://jb.gg/tc/install | bash -s -- \"\" \"\$HOME/.local/bin\"\033[0m
 
 To install a specific version:
   \033[4mcurl -fsSL https://jb.gg/tc/install | bash -s -- v0.8.3\033[0m
