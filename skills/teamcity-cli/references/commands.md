@@ -22,7 +22,6 @@
 - `teamcity update` checks the release feed and asks before installing.
 - `--yes`, `-y` installs without prompting; required for non-interactive installation.
 - `--check` or `--json` reports status without installing; neither combines with `--yes`.
-- Supported package managers update only TeamCity CLI. Unmanaged macOS/Linux binaries update in place after checksum and version verification; other methods print manual instructions.
 
 ## Authentication (`teamcity auth`)
 
