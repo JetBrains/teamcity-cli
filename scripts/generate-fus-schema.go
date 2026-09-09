@@ -1,17 +1,6 @@
 //go:build ignore
 
-// Script to generate FUS schema files from the in-Go FUS scheme.
-//
-// Produces two files:
-//   - internal/analytics/schema.json: the AP metadata format (EventGroupRemoteDescriptors),
-//     used at runtime by fus.NewValidator as the embedded fallback scheme.
-//   - internal/analytics/events-scheme.json: the events scheme format (EventsScheme),
-//     used by the FUS metadata team to generate metadata entries. Attach this to
-//     YT issues in the FUS project when requesting metadata changes.
-//
-// Run with:
-//
-//	go run scripts/generate-fus-schema.go
+// Run go run scripts/generate-fus-schema.go to generate fallback and registration JSON.
 package main
 
 import (
@@ -36,7 +25,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	es, err := fus.BuildEventsScheme(analytics.Scheme, fus.RecorderConfig{
+	es, err := analytics.Definition.BuildEventsScheme(fus.RecorderConfig{
 		RecorderID:      analytics.RecorderID,
 		RecorderVersion: analytics.RecorderVersion,
 		ProductCode:     analytics.ProductCode,

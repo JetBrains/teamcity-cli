@@ -42,7 +42,7 @@ func schemaCachePath(serverURL string) (string, error) {
 		return "", err
 	}
 	h := sha256.Sum256([]byte(serverURL))
-	return filepath.Join(dir, fmt.Sprintf("pipeline-schema-%x.json", h[:4])), nil
+	return filepath.Join(dir, fmt.Sprintf("pipeline-complete-schema-%x.json", h[:4])), nil
 }
 
 func loadSchemaCache(serverURL string) ([]byte, error) {

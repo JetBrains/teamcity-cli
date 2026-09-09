@@ -607,6 +607,8 @@ teamcity agent reboot <agent-id> --graceful
 
 ## Remote Agent Access
 
+`TEAMCITY_RO=1` or per-server `ro: true` blocks both commands below before connecting. Use server-side permissions, rather than this local guard alone, to restrict credential access.
+
 **Open interactive shell on an agent:**
 ```bash
 teamcity agent term <agent-id>
@@ -890,7 +892,7 @@ teamcity pipeline create my-pipeline --project <project-id> --vcs-root <vcs-root
 
 **Validate pipeline YAML before pushing:**
 ```bash
-# Validates against server schema (cached locally for 24h)
+# Validates against the complete server schema with enabled runners/features (cached for 24h)
 teamcity pipeline validate
 
 # Validate a specific file
@@ -911,7 +913,7 @@ teamcity pipeline pull <pipeline-id> -o .teamcity.yml
 teamcity pipeline validate .teamcity.yml
 
 # Upload changes
-teamcity pipeline push <pipeline-id> -f .teamcity.yml
+teamcity pipeline push <pipeline-id> .teamcity.yml
 ```
 
 **Delete a pipeline:**
@@ -951,3 +953,5 @@ teamcity pipeline delete <pipeline-id> --yes   # skip confirmation
 | `Not authenticated`          | `TEAMCITY_URL` set without matching token, or no auth configured | Unset `TEAMCITY_URL` to use stored auth from `teamcity auth login`, or set both `TEAMCITY_URL` and `TEAMCITY_TOKEN` |
 | `No server configured`       | Missing auth config       | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars  |
 | `Network access blocked by sandbox` | Sandbox proxy blocking outbound requests | Add the server domain to the sandbox `allowedDomains`, or exclude `teamcity` from sandboxing |
+
+`project settings status` reports the server’s runtime message and missing DSL context parameters. Its “Recorded” timestamp is when the status was recorded, not the last successful sync.

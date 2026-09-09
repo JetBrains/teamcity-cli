@@ -149,13 +149,13 @@ teamcity pipeline schema
 
 <img src="pipeline-schema.gif" alt="Inspecting and saving the pipeline JSON schema" border-effect="rounded"/>
 
-The schema reflects the runners, parameters, and constructs available on the connected server, so it can drift between TeamCity versions. The CLI caches it locally for 24 hours; pass `--refresh` to bypass the cache and re-fetch from the server:
+The complete schema includes the enabled runners and build features, with their parameters, on the connected server, so it can drift between TeamCity versions. The CLI caches it locally for 24 hours; pass `--refresh` to bypass the cache and re-fetch from the server:
 
 ```Shell
 teamcity pipeline schema --refresh
 ```
 
-If the server predates TeamCity 2026.1 (no schema endpoint), the command prints an embedded fallback schema and writes a warning to stderr.
+If the complete schema endpoint is unavailable, the command prints a limited embedded fallback schema and warns on stderr. `--refresh` requires the server schema. Authentication and server errors are reported, not replaced with a fallback. Proxies must allow `/app/pipeline/schema/complete`; allowing only `/app/rest/` is insufficient.
 
 ## Creating a pipeline
 

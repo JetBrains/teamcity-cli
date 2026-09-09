@@ -64,7 +64,7 @@ func TestPipelineSchemaRefresh(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	ts := cmdtest.SetupMockClient(t)
 	hits := 0
-	ts.Handle("POST /app/pipeline/schema/generate", func(w http.ResponseWriter, r *http.Request) {
+	ts.Handle("GET /app/pipeline/schema/complete", func(w http.ResponseWriter, r *http.Request) {
 		hits++
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"type":"object","x-hits":` + strconv.Itoa(hits) + `}`))
@@ -80,14 +80,14 @@ func TestPipelineSchemaRefresh(t *testing.T) {
 func TestPipelineSchemaEmbeddedFallback(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	ts := cmdtest.SetupMockClient(t)
-	ts.Handle("POST /app/pipeline/schema/generate", func(w http.ResponseWriter, r *http.Request) {
+	ts.Handle("GET /app/pipeline/schema/complete", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte("<html></html>"))
 	})
 
 	out := cmdtest.CaptureOutput(t, ts.Factory, "pipeline", "schema")
 	assert.Contains(t, out, "warning:")
-	assert.Contains(t, out, "predate TeamCity 2026.1")
+	assert.Contains(t, out, "complete schema endpoint is unavailable")
 
 	err := cmdtest.CaptureErr(t, ts.Factory, "pipeline", "schema", "--refresh")
 	assert.Contains(t, err.Error(), "schema endpoint not available")
@@ -96,11 +96,11 @@ func TestPipelineSchemaEmbeddedFallback(t *testing.T) {
 func TestPipelineSchemaServerErrorPropagates(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	ts := cmdtest.SetupMockClient(t)
-	ts.Handle("POST /app/pipeline/schema/generate", func(w http.ResponseWriter, r *http.Request) {
+	ts.Handle("GET /app/pipeline/schema/complete", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	})
 
 	err := cmdtest.CaptureErr(t, ts.Factory, "pipeline", "schema")
 	assert.Contains(t, err.Error(), "failed to fetch pipeline schema")
-	assert.NotContains(t, err.Error(), "predate TeamCity 2026.1")
+	assert.NotContains(t, err.Error(), "complete schema endpoint is unavailable")
 }

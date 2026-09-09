@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/httpclient"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/gorilla/websocket"
 	"golang.org/x/term"
@@ -61,8 +62,9 @@ func NewClient(baseURL, username, token string, debugf func(string, ...any)) *Cl
 		debugf:       debugf,
 		extraHeaders: api.EnvHeaders(),
 		httpClient: &http.Client{
-			Jar:     jar,
-			Timeout: 30 * time.Second,
+			Jar:           jar,
+			Timeout:       30 * time.Second,
+			CheckRedirect: httpclient.RedirectPolicy(false),
 		},
 	}
 }

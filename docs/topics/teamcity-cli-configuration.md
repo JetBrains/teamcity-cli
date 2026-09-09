@@ -417,6 +417,8 @@ Setting `TERM=dumb` also disables colored output. Color is automatically disable
 
 ### Extra HTTP headers (corporate proxies)
 
+HTTPS redirects never downgrade to HTTP. Cross-origin API and artifact redirects are followed only for body-free GET/HEAD requests, without the original request headers (including tokens, cookies, and proxy credentials). Agent terminal redirects must stay on the same origin.
+
 If your TeamCity server sits behind an authenticating proxy such as **Cloudflare Access** or **Google IAP**, the proxy needs its own credentials on every request. `TEAMCITY_HEADER_*` lets you supply them via env vars without editing the config file. The CLI applies them to every API call, the auth login probe, the PKCE exchange, and the agent terminal WebSocket — anywhere a request might pass through the proxy.
 
 Header names follow these rules:
