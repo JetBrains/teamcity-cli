@@ -463,7 +463,7 @@ OAuth-style connections (GitHub App, Bitbucket, GitLab, …) need a per-user aut
 teamcity project connection authorize PROJECT_EXT_42 -p Backend
 ```
 
-The command opens a browser to complete the OAuth flow and stores the resulting token against the current user. Connection types without a user OAuth flow (Docker, AWS) return an error.
+The command prints the authorization URL and opens a browser to complete the OAuth flow, storing the resulting token against the current user. With `--no-input`, it prints the URL without opening a browser. Connection types without a user OAuth flow (Docker, AWS) return an error.
 
 ### Deleting a connection
 

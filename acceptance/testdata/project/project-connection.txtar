@@ -29,6 +29,11 @@ stdout 'Created connection'
 extract '\(([A-Za-z0-9_-]+)\) in project' GHAPP_ID
 ! stderr 'Error'
 
+# Headless authorization prints a usable URL without launching a browser.
+exec teamcity project connection authorize $GHAPP_ID --project Sandbox --no-input
+stdout '/oauth/githubapp/repositories.html\?projectId=Sandbox&connectionId='
+! stdout 'Opening browser'
+
 exec teamcity project connection delete $GHAPP_ID --project Sandbox --force --no-input
 stdout 'Deleted connection'
 ! stderr 'Error'
