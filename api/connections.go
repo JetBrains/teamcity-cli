@@ -7,16 +7,40 @@ import (
 	"net/url"
 )
 
-// GetProjectConnections returns OAuth/connection features for a project
+// GetProjectConnections returns connections declared in a project and its ancestors.
 func (c *Client) GetProjectConnections(projectID string) (*ProjectFeatureList, error) {
-	fields := url.QueryEscape("projectFeature(id,type,properties(property(name,value)))")
-	path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures?locator=type:OAuthProvider&fields=%s", url.PathEscape(projectID), fields)
-
-	var result ProjectFeatureList
-	if err := c.get(c.ctx(), path, &result); err != nil {
-		return nil, err
+	result := &ProjectFeatureList{ProjectFeature: []ProjectFeature{}}
+	seenProjects := map[string]bool{}
+	seenFeatures := map[string]bool{}
+	for projectID != "" {
+		if seenProjects[projectID] {
+			return nil, fmt.Errorf("cycle in project hierarchy at %s", projectID)
+		}
+		seenProjects[projectID] = true
+		fields := url.QueryEscape("projectFeature(id,type,properties(property(name,value)))")
+		path := fmt.Sprintf("/app/rest/projects/id:%s/projectFeatures?locator=type:OAuthProvider&fields=%s", url.PathEscape(projectID), fields)
+		var own ProjectFeatureList
+		if err := c.get(c.ctx(), path, &own); err != nil {
+			return nil, err
+		}
+		for _, feature := range own.ProjectFeature {
+			if !seenFeatures[feature.ID] {
+				result.ProjectFeature = append(result.ProjectFeature, feature)
+				seenFeatures[feature.ID] = true
+			}
+		}
+		if projectID == "_Root" {
+			break
+		}
+		var project Project
+		path = fmt.Sprintf("/app/rest/projects/id:%s?fields=id,parentProjectId", url.PathEscape(projectID))
+		if err := c.get(c.ctx(), path, &project); err != nil {
+			return nil, fmt.Errorf("failed to resolve parent project of %s: %w", projectID, err)
+		}
+		projectID = project.ParentProjectID
 	}
-	return &result, nil
+	result.Count = len(result.ProjectFeature)
+	return result, nil
 }
 
 // CreateProjectFeature creates a new project feature (e.g., OAuth connection).
