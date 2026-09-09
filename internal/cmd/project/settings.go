@@ -58,7 +58,7 @@ func newProjectSettingsStatusCmd(f *cmdutil.Factory) *cobra.Command {
 Displays:
 - Whether versioned settings are enabled
 - Current sync state (up-to-date, pending changes, errors)
-- Last successful sync timestamp
+- Timestamp when the server recorded the status
 - VCS root and format information
 - Any warnings or errors from the last sync attempt`,
 		Example: `  teamcity project settings status MyProject
@@ -122,24 +122,20 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 		return nil
 	}
 
-	statusIcon := output.Green(output.Sym().Check)
-	statusLabel := "synchronized"
+	statusIcon := output.Faint("i")
+	statusLabel := "unknown"
 	if statusErr != nil {
 		statusIcon = output.Red(output.Sym().Cross)
 		statusLabel = "unavailable"
 	} else {
-		if syncingStatus := getSyncingStatus(status.Message); syncingStatus != "" {
-			statusIcon = output.Cyan(output.Sym().Recycle)
-			statusLabel = syncingStatus
-		} else {
-			switch status.Type {
-			case "warning":
-				statusIcon = output.Yellow("!")
-				statusLabel = "warning"
-			case "error":
-				statusIcon = output.Red(output.Sym().Cross)
-				statusLabel = "error"
-			}
+		if status.Message != "" {
+			statusLabel = status.Message
+		}
+		switch {
+		case status.Type == "error" || len(status.VersionedSettingsError) > 0:
+			statusIcon = output.Red(output.Sym().Cross)
+		case status.Type == "warn" || status.Type == "warning" || len(status.MissingContextParameters) > 0:
+			statusIcon = output.Yellow("!")
 		}
 	}
 
@@ -171,11 +167,18 @@ func runProjectSettingsStatus(f *cmdutil.Factory, projectID string, opts *projec
 	}
 
 	if status.Timestamp != "" {
-		_, _ = fmt.Fprintf(p.Out, "\n%-12s %s\n", output.Faint("Last sync"), formatRelativeTime(status.Timestamp))
+		_, _ = fmt.Fprintf(p.Out, "\n%-12s %s\n", output.Faint("Recorded"), formatRelativeTime(status.Timestamp))
 	}
 
-	if status.Message != "" && status.Type != "info" {
-		_, _ = fmt.Fprintf(p.Out, "%-12s %s\n", output.Faint("Message"), output.Faint(status.Message))
+	for _, detail := range status.VersionedSettingsError {
+		_, _ = fmt.Fprintf(p.Out, "Error        %s", detail.Message)
+		if detail.File != "" {
+			_, _ = fmt.Fprintf(p.Out, " (%s)", detail.File)
+		}
+		_, _ = fmt.Fprintln(p.Out)
+	}
+	if len(status.MissingContextParameters) > 0 {
+		_, _ = fmt.Fprintf(p.Out, "Missing context parameters: %s\n", strings.Join(status.MissingContextParameters, ", "))
 	}
 
 	_, _ = fmt.Fprintf(p.Out, "\n%-12s %s\n", output.Faint("View"), output.Faint(project.WebURL+"&tab=versionedSettings"))
@@ -285,34 +288,15 @@ func formatBuildMode(mode string) string {
 }
 
 func formatRelativeTime(ts string) string {
-	t, err := time.Parse("Mon Jan 2 15:04:05 MST 2006", ts)
+	t, err := api.ParseTeamCityTime(ts)
+	if err != nil {
+		t, err = time.Parse("Mon Jan 2 15:04:05 MST 2006", ts)
+	}
 	if err != nil {
 		return ts
 	}
 	local := t.Local()
 	return fmt.Sprintf("%s (%s)", output.RelativeTime(local), local.Format("Jan 2 15:04"))
-}
-
-func getSyncingStatus(message string) string {
-	lowerMsg := strings.ToLower(message)
-
-	if strings.Contains(lowerMsg, "running dsl") {
-		return "running DSL"
-	}
-	if strings.Contains(lowerMsg, "resolving maven dependencies") {
-		return "resolving dependencies"
-	}
-	if strings.Contains(lowerMsg, "loading project settings from vcs") {
-		return "loading from VCS"
-	}
-	if strings.Contains(lowerMsg, "generating settings") {
-		return "generating settings"
-	}
-	if strings.Contains(lowerMsg, "waiting for update") {
-		return "waiting for VCS"
-	}
-
-	return ""
 }
 
 type projectSettingsValidateOptions struct {

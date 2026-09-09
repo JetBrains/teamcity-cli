@@ -169,3 +169,5 @@ See [AI agent integration](https://www.jetbrains.com/help/teamcity/teamcity-cli-
 ## Contributing
 
 TeamCity CLI is open source under the Apache-2.0 license. Bug reports and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers how the project is built and tested.
+
+`project settings status` reports the server’s runtime message and missing DSL context parameters. Its “Recorded” timestamp is when the status was recorded, not the last successful sync.
