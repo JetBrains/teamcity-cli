@@ -707,6 +707,18 @@ Set a project parameter value
 <tr>
 <td>
 
+`teamcity project settings enable`
+
+</td>
+<td>
+
+Enable versioned settings by importing from VCS
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity project settings export`
 
 </td>

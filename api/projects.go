@@ -185,3 +185,29 @@ func (c *Client) ExportProjectSettings(projectID, format string, useRelativeIds 
 
 	return io.ReadAll(resp.Body)
 }
+
+// EnableVersionedSettings imports settings from VCS while preserving UI editing.
+func (c *Client) EnableVersionedSettings(projectID, vcsRootID, format, settingsPath string) (*VersionedSettingsConfig, error) {
+	body, err := json.Marshal(map[string]any{
+		"synchronizationMode": "enabled", "vcsRootId": vcsRootID, "format": format,
+		"settingsPath": settingsPath, "allowUIEditing": true, "importDecision": "importFromVCS",
+		"buildSettingsMode": "useFromVCS", "storeSecureValuesOutsideVcs": true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/app/rest/projects/id:%s/versionedSettings/config", url.PathEscape(projectID))
+	resp, err := c.doRequest(c.ctx(), "PUT", path, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.handleErrorResponse(resp)
+	}
+	var result VersionedSettingsConfig
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

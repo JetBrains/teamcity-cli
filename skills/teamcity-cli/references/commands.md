@@ -269,6 +269,7 @@ The `<id>` (job) positional is optional when the repo is linked; `delete` accept
 | `teamcity project param delete <id> <name>`    | Delete parameter             |
 | `teamcity project token put <id>`              | Store secret, get token      |
 | `teamcity project token get <id> <token>`      | Retrieve secret              |
+| `teamcity project settings enable <id>`        | Import initial settings from VCS |
 | `teamcity project settings export <id>`        | Export settings as ZIP       |
 | `teamcity project settings status <id>`        | Show versioned settings sync |
 | `teamcity project settings validate [path]`    | Validate Kotlin DSL config   |
@@ -322,6 +323,13 @@ The `<id>` (job) positional is optional when the repo is linked; `delete` accept
 ### Flags for `teamcity project param set`
 
 - `--secure` - Mark as secure/password parameter
+
+### Flags for `teamcity project settings enable`
+
+- `--vcs-root <id>` - Settings VCS root (required)
+- `--format <kotlin|xml>` - Settings format (default: kotlin)
+- `--settings-path <path>` - Repository settings directory (default: .teamcity)
+- `--json` - Output the configuration as JSON
 
 ### Flags for `teamcity project settings export`
 

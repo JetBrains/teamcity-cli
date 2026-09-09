@@ -631,6 +631,17 @@ Use relative IDs in the exported settings (enabled by default)
 </tr>
 </table>
 
+### Enabling versioned settings
+
+Import initial settings from an existing VCS root while keeping UI editing enabled:
+
+```Shell
+teamcity project settings enable MyProject --vcs-root MyProject_Settings
+teamcity project settings status MyProject
+```
+
+Use `--format xml` for XML settings, `--settings-path` for a custom repository directory, or `--json` for the configuration response. Existing configurations are refused rather than disabled automatically.
+
 ### Viewing versioned settings sync status
 
 Check the synchronization status of versioned settings for a project:
