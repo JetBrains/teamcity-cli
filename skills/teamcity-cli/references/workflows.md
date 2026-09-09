@@ -476,6 +476,8 @@ VCS roots and build features that reference the deleted connection break — cle
 
 ## VCS Roots
 
+`teamcity project vcs test <id>` tests saved credentials through the web UI endpoint; if access is blocked, use the printed UI link.
+
 For questions like "which repository URL and default branch does project `<id>` use", always discover attached VCS roots first, then inspect a concrete root.
 
 **List VCS roots in a project:**

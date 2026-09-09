@@ -2,12 +2,14 @@ package project_test
 
 import (
 	"encoding/json"
-	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/stretchr/testify/require"
+	"fmt"
+	"net/http"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVcsList(T *testing.T) {
@@ -133,13 +135,16 @@ func TestVcsCreateMissingURL(T *testing.T) {
 	cmdtest.RunCmdWithFactoryExpectErr(T, f, "url", "project", "vcs", "create", "--project", "TestProject", "--auth", "anonymous")
 }
 
-func TestVcsTest(T *testing.T) {
-	ts := cmdtest.SetupMockClient(T)
-	f := ts.Factory
-
-	out := cmdtest.CaptureOutput(T, f, "project", "vcs", "test", "TestProject_Repo")
-	assert.Contains(T, out, "Testing connection...")
-	assert.Contains(T, out, "Connection to")
+func TestVcsTestReturnsServerFailure(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /admin/editVcsRoot.html", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `<form id="vcsSettingsForm"><input type="hidden" name="publicKey" value="key"><input type="hidden" name="prop:encrypted:secure:password" value="encrypted"></form>`)
+	})
+	ts.Handle("POST /admin/editVcsRoot.html", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "testConnection", r.FormValue("submitVcsRoot"))
+		fmt.Fprint(w, `<response><errors><error id="failedTestConnection">repository access denied</error></errors></response>`)
+	})
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "test connection failed: repository access denied", "project", "vcs", "test", "TestProject_Repo")
 }
 
 func TestVcsStoredTokenSkipsPreflightHintForJSON(t *testing.T) {

@@ -32,6 +32,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/tiulpin/instill v0.0.0-20260521174322-b563ba2627d7
 	github.com/zalando/go-keyring v0.2.8
+	golang.org/x/net v0.56.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v3 v3.0.1
