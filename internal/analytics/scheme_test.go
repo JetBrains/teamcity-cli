@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	fus "github.com/JetBrains/fus-reporting-api-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestScheme_BuildsValidator ensures every group/event/field in the scheme is
@@ -36,24 +38,38 @@ func TestScheme_HasAllExpectedGroups(t *testing.T) {
 	}
 }
 
-// TestScheme_FlatGroupsRespectFieldCap covers groups where every declared field
-// is sent on every event (session, command, api). Multi-event groups (build,
-// auth, agent, etc.) declare a union of fields across events, so they are
-// excluded — Track() enforces the per-event 10-field cap at runtime.
-func TestScheme_FlatGroupsRespectFieldCap(t *testing.T) {
-	flat := map[string]bool{
-		GroupSession: true,
-		GroupCommand: true,
-		GroupAPI:     true,
-	}
-	for _, g := range Scheme.Groups {
-		if !flat[g.ID] || g.Rules == nil {
-			continue
+func TestDefinitionMatchesEvents(t *testing.T) {
+	t.Parallel()
+	es, err := Definition.BuildEventsScheme(fus.RecorderConfig{RecorderID: RecorderID, RecorderVersion: RecorderVersion}, "test")
+	require.NoError(t, err)
+	samples := map[string]map[string]bool{}
+	for _, event := range SampleEvents() {
+		key := event.Group.ID + "/" + event.Event.ID
+		if samples[key] == nil {
+			samples[key] = map[string]bool{}
 		}
-		if n := len(g.Rules.EventData); n > fus.MaxDataFields {
-			t.Errorf("flat group %q declares %d fields, exceeds FUS cap of %d", g.ID, n, fus.MaxDataFields)
+		for field := range event.Event.Data {
+			samples[key][field] = true
 		}
 	}
+	for _, group := range es.Scheme {
+		assert.Equal(t, groupVersion[group.ID], group.Version)
+		for _, event := range group.Schema {
+			key := group.ID + "/" + event.Event
+			assert.LessOrEqual(t, len(event.Fields), fus.MaxDataFields, key)
+			fields := map[string]bool{}
+			for _, field := range event.Fields {
+				fields[field.Path] = true
+				if field.ShouldBeAnonymized {
+					assert.Equal(t, "session_id", field.Path)
+					assert.Equal(t, []string{"{regexp#hash}"}, field.Value)
+				}
+			}
+			assert.Equal(t, samples[key], fields, key)
+			delete(samples, key)
+		}
+	}
+	assert.Empty(t, samples, "sample events missing from the declaration")
 }
 
 func TestNormalizeCommand(t *testing.T) {
