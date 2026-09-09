@@ -30,7 +30,7 @@ type authStatus struct {
 	TokenExpiry string      `json:"token_expiry,omitempty"`
 	Status      string      `json:"status"`
 	Error       string      `json:"error,omitempty"`
-	IsDefault   bool        `json:"is_default,omitempty"`
+	IsDefault   bool        `json:"is_default,omitzero"`
 
 	versionCheckErr string
 	keyringErr      error

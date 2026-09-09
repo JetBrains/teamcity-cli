@@ -8,7 +8,7 @@ import (
 
 // User represents a TeamCity user
 type User struct {
-	ID       int    `json:"id,omitempty"`
+	ID       int    `json:"id,omitzero"`
 	Username string `json:"username,omitempty"`
 	Name     string `json:"name,omitempty"`
 	Email    string `json:"email,omitempty"`
@@ -40,7 +40,7 @@ type BuildType struct {
 	ProjectID      string          `json:"projectId,omitempty"`
 	Href           string          `json:"href,omitempty"`
 	WebURL         string          `json:"webUrl,omitempty"`
-	Paused         bool            `json:"paused,omitempty"`
+	Paused         bool            `json:"paused,omitzero"`
 	Project        *Project        `json:"project,omitempty"`
 	VcsRootEntries *VcsRootEntries `json:"vcs-root-entries,omitempty"`
 }
@@ -59,9 +59,9 @@ type Build struct {
 	Number             string      `json:"number,omitempty"`
 	Status             string      `json:"status,omitempty"`
 	State              string      `json:"state,omitempty"`
-	Personal           bool        `json:"personal,omitempty"`
+	Personal           bool        `json:"personal,omitzero"`
 	BranchName         string      `json:"branchName,omitempty"`
-	DefaultBranch      bool        `json:"defaultBranch,omitempty"`
+	DefaultBranch      bool        `json:"defaultBranch,omitzero"`
 	Href               string      `json:"href,omitempty"`
 	WebURL             string      `json:"webUrl,omitempty"`
 	StatusText         string      `json:"statusText,omitempty"`
@@ -71,12 +71,12 @@ type Build struct {
 	BuildType          *BuildType  `json:"buildType,omitempty"`
 	Triggered          *Triggered  `json:"triggered,omitempty"`
 	Agent              *Agent      `json:"agent,omitempty"`
-	PercentageComplete int         `json:"percentageComplete,omitempty"`
-	Pinned             bool        `json:"pinned,omitempty"`
+	PercentageComplete int         `json:"percentageComplete,omitzero"`
+	Pinned             bool        `json:"pinned,omitzero"`
 	Tags               *TagList    `json:"tags,omitempty"`
 	LastChanges        *ChangeList `json:"lastChanges,omitempty"`
 	WaitReason         string      `json:"waitReason,omitempty"`
-	UsedByOtherBuilds  bool        `json:"usedByOtherBuilds,omitempty"`
+	UsedByOtherBuilds  bool        `json:"usedByOtherBuilds,omitzero"`
 }
 
 // BuildList represents a list of builds
@@ -96,12 +96,12 @@ type Triggered struct {
 
 // Agent represents a build agent
 type Agent struct {
-	ID         int    `json:"id,omitempty"`
+	ID         int    `json:"id,omitzero"`
 	Name       string `json:"name,omitempty"`
-	TypeID     int    `json:"typeId,omitempty"`
-	Connected  bool   `json:"connected,omitempty"`
-	Enabled    bool   `json:"enabled,omitempty"`
-	Authorized bool   `json:"authorized,omitempty"`
+	TypeID     int    `json:"typeId,omitzero"`
+	Connected  bool   `json:"connected,omitzero"`
+	Enabled    bool   `json:"enabled,omitzero"`
+	Authorized bool   `json:"authorized,omitzero"`
 	Href       string `json:"href,omitempty"`
 	WebURL     string `json:"webUrl,omitempty"`
 	Pool       *Pool  `json:"pool,omitempty"`
@@ -118,10 +118,10 @@ type AgentList struct {
 
 // Pool represents an agent pool
 type Pool struct {
-	ID        int          `json:"id,omitempty"`
+	ID        int          `json:"id,omitzero"`
 	Name      string       `json:"name,omitempty"`
 	Href      string       `json:"href,omitempty"`
-	MaxAgents int          `json:"maxAgents,omitempty"`
+	MaxAgents int          `json:"maxAgents,omitzero"`
 	Projects  *ProjectList `json:"projects,omitempty"`
 	Agents    *AgentList   `json:"agents,omitempty"`
 }
@@ -202,7 +202,7 @@ type TriggerBuildRequest struct {
 	BranchName           string             `json:"branchName,omitempty"`
 	Properties           *PropertyList      `json:"properties,omitempty"`
 	Comment              *BuildComment      `json:"comment,omitempty"`
-	Personal             bool               `json:"personal,omitempty"`
+	Personal             bool               `json:"personal,omitzero"`
 	TriggeringOptions    *TriggeringOptions `json:"triggeringOptions,omitempty"`
 	Agent                *AgentRef          `json:"agent,omitempty"`
 	Tags                 *TagList           `json:"tags,omitempty"`
@@ -247,7 +247,7 @@ type LastChanges struct {
 // PersonalChange represents a personal change (uploaded diff) reference
 type PersonalChange struct {
 	ID       string `json:"id"`
-	Personal bool   `json:"personal,omitempty"`
+	Personal bool   `json:"personal,omitzero"`
 }
 
 // BuildComment represents a comment on a build
@@ -257,17 +257,17 @@ type BuildComment struct {
 
 // TriggeringOptions represents options for triggering a build
 type TriggeringOptions struct {
-	CleanSources              bool `json:"cleanSources,omitempty"`
-	RebuildAllDependencies    bool `json:"rebuildAllDependencies,omitempty"`
-	QueueAtTop                bool `json:"queueAtTop,omitempty"`
-	RebuildFailedOrIncomplete bool `json:"rebuildFailedOrIncompleteDependencies,omitempty"`
+	CleanSources              bool `json:"cleanSources,omitzero"`
+	RebuildAllDependencies    bool `json:"rebuildAllDependencies,omitzero"`
+	QueueAtTop                bool `json:"queueAtTop,omitzero"`
+	RebuildFailedOrIncomplete bool `json:"rebuildFailedOrIncompleteDependencies,omitzero"`
 	// FreezeSettings overrides the versioned-settings source: true loads settings from VCS, false uses current server settings, nil keeps the build configuration default.
 	FreezeSettings *bool `json:"freezeSettings,omitempty"`
 }
 
 // AgentRef is a reference to an agent
 type AgentRef struct {
-	ID   int    `json:"id,omitempty"`
+	ID   int    `json:"id,omitzero"`
 	Name string `json:"name,omitempty"`
 }
 
@@ -315,7 +315,7 @@ type Server struct {
 }
 
 type Change struct {
-	ID       int    `json:"id,omitempty"`
+	ID       int    `json:"id,omitzero"`
 	Version  string `json:"version,omitempty"` // commit SHA
 	Username string `json:"username,omitempty"`
 	Date     string `json:"date,omitempty"`
@@ -342,11 +342,11 @@ type TestOccurrence struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
 	Status     string `json:"status"` // SUCCESS, FAILURE, IGNORED
-	Duration   int    `json:"duration,omitempty"`
+	Duration   int    `json:"duration,omitzero"`
 	Details    string `json:"details,omitempty"`
-	NewFailure bool   `json:"newFailure,omitempty"`
-	Ignored    bool   `json:"ignored,omitempty"`
-	Muted      bool   `json:"muted,omitempty"`
+	NewFailure bool   `json:"newFailure,omitzero"`
+	Ignored    bool   `json:"ignored,omitzero"`
+	Muted      bool   `json:"muted,omitzero"`
 	Href       string `json:"href,omitempty"`
 
 	FirstFailed *TestOccurrence `json:"firstFailed,omitempty"`
@@ -355,10 +355,10 @@ type TestOccurrence struct {
 
 type TestOccurrences struct {
 	Count          int              `json:"count"`
-	Passed         int              `json:"passed,omitempty"`
-	Failed         int              `json:"failed,omitempty"`
-	Ignored        int              `json:"ignored,omitempty"`
-	Muted          int              `json:"muted,omitempty"`
+	Passed         int              `json:"passed,omitzero"`
+	Failed         int              `json:"failed,omitzero"`
+	Ignored        int              `json:"ignored,omitzero"`
+	Muted          int              `json:"muted,omitzero"`
 	NextHref       string           `json:"nextHref,omitempty"`
 	TestOccurrence []TestOccurrence `json:"testOccurrence"`
 }
@@ -384,10 +384,10 @@ func ParseTeamCityTime(s string) (time.Time, error) {
 type VersionedSettingsStatus struct {
 	MissingContextParameters []string                 `json:"missingContextParameters,omitempty"`
 	VersionedSettingsError   []VersionedSettingsError `json:"versionedSettingsError,omitempty"`
-	Type                     string                   `json:"type,omitempty"`        // info, warning, error
-	Message                  string                   `json:"message,omitempty"`     // Human-readable status message
-	Timestamp                string                   `json:"timestamp,omitempty"`   // When the status was recorded
-	DslOutdated              bool                     `json:"dslOutdated,omitempty"` // DSL scripts need regeneration
+	Type                     string                   `json:"type,omitempty"`       // info, warning, error
+	Message                  string                   `json:"message,omitempty"`    // Human-readable status message
+	Timestamp                string                   `json:"timestamp,omitempty"`  // When the status was recorded
+	DslOutdated              bool                     `json:"dslOutdated,omitzero"` // DSL scripts need regeneration
 }
 
 // VersionedSettingsError describes a failure processing versioned settings.
@@ -405,8 +405,8 @@ type VersionedSettingsConfig struct {
 	BuildSettingsMode   string `json:"buildSettingsMode,omitempty"`   // useFromVCS, useCurrentByDefault
 	VcsRootID           string `json:"vcsRootId,omitempty"`
 	SettingsPath        string `json:"settingsPath,omitempty"`
-	AllowUIEditing      bool   `json:"allowUIEditing,omitempty"`
-	ShowSettingsChanges bool   `json:"showSettingsChanges,omitempty"`
+	AllowUIEditing      bool   `json:"allowUIEditing,omitzero"`
+	ShowSettingsChanges bool   `json:"showSettingsChanges,omitzero"`
 }
 
 // SnapshotDependency represents a snapshot dependency between build configurations
@@ -629,7 +629,7 @@ type PipelineRef struct {
 
 // PipelineRunJobs represents jobs within a pipeline run
 type PipelineRunJobs struct {
-	Count int              `json:"count,omitempty"`
+	Count int              `json:"count,omitzero"`
 	Job   []PipelineRunJob `json:"job,omitempty"`
 }
 
@@ -642,7 +642,7 @@ type PipelineRunJob struct {
 
 // BuildRef is a lightweight reference to a build
 type BuildRef struct {
-	ID int `json:"id,omitempty"`
+	ID int `json:"id,omitzero"`
 }
 
 // APIError represents an error from TeamCity's REST API

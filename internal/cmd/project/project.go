@@ -335,7 +335,7 @@ type ProjectTreeNode struct {
 type pipelineRef struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
-	JobCount int    `json:"jobCount,omitempty"`
+	JobCount int    `json:"jobCount,omitzero"`
 }
 
 type jobRef struct {

@@ -20,7 +20,7 @@ func encodeArtifactPath(p string) string {
 // Artifact represents a build artifact
 type Artifact struct {
 	Name     string     `json:"name"`
-	Size     int64      `json:"size,omitempty"`
+	Size     int64      `json:"size,omitzero"`
 	ModTime  string     `json:"modificationTime,omitempty"`
 	Href     string     `json:"href,omitempty"`
 	Children *Artifacts `json:"children,omitempty"`

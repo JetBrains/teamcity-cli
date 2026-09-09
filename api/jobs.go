@@ -119,7 +119,7 @@ type BuildStep struct {
 	ID         string       `json:"id,omitempty"`
 	Name       string       `json:"name"`
 	Type       string       `json:"type"`
-	Disabled   bool         `json:"disabled,omitempty"`
+	Disabled   bool         `json:"disabled,omitzero"`
 	Properties PropertyList `json:"properties"`
 }
 
