@@ -637,7 +637,7 @@ teamcity project settings status MyProject
 teamcity project settings status MyProject --json
 ```
 
-This displays whether versioned settings are enabled, the current sync state, last successful sync timestamp, VCS root and format information, and any errors from the last sync attempt.
+This displays the server’s runtime status message, configuration, processing errors, and missing DSL context parameters. “Recorded” is the status timestamp, not a successful synchronization time. An informational status can mean synchronization is disabled or has never been enabled.
 
 ### Validating Kotlin DSL
 

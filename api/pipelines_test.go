@@ -57,3 +57,37 @@ func TestUpdatePipelineYAML(t *testing.T) {
 	assert.Equal(t, map[string]any{"externalVcsRootId": "MyRepo"}, nested["vcsRoot"])
 	assert.Contains(t, nested, "triggers")
 }
+
+func TestGetPipelineSchemaComplete(t *testing.T) {
+	t.Parallel()
+	const schema = `{"type":"object","properties":{"features":{"items":{"oneOf":[{"properties":{"type":{"const":"swabra"}}}]}}}}`
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/app/pipeline/schema/complete", r.URL.Path)
+		assert.Equal(t, "false", r.URL.Query().Get("descriptions"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, schema)
+	})
+	data, err := client.GetPipelineSchema()
+	require.NoError(t, err)
+	assert.JSONEq(t, schema, string(data))
+}
+
+func TestGetPipelineSchemaErrors(t *testing.T) {
+	t.Parallel()
+	for _, status := range []int{http.StatusNotFound, http.StatusUnauthorized, http.StatusForbidden, http.StatusInternalServerError} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			t.Parallel()
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "unavailable", status)
+			})
+			_, err := client.GetPipelineSchema()
+			require.Error(t, err)
+			if status == http.StatusNotFound {
+				assert.ErrorIs(t, err, ErrPipelineSchemaUnsupported)
+			} else {
+				assert.NotErrorIs(t, err, ErrPipelineSchemaUnsupported)
+			}
+		})
+	}
+}

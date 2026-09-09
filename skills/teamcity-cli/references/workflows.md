@@ -380,6 +380,8 @@ mvn teamcity-configs:generate -f .teamcity/pom.xml       # fallback
 
 Connections give jobs credentials for external services (GitHub, Docker registries, AWS, ...) without storing secrets per-job. Required before creating a VCS root that authenticates via OAuth.
 
+Connections listed or selected with `--project` include parent projects, including `_Root`. Delete an inherited connection from its owning project.
+
 **Inspect existing connections in a project:**
 ```bash
 teamcity project connection list --project <project-id>
@@ -606,6 +608,8 @@ teamcity agent reboot <agent-id> --graceful
 ```
 
 ## Remote Agent Access
+
+`TEAMCITY_RO=1` or per-server `ro: true` blocks both commands below before connecting. Use server-side permissions, rather than this local guard alone, to restrict credential access.
 
 **Open interactive shell on an agent:**
 ```bash
@@ -890,7 +894,7 @@ teamcity pipeline create my-pipeline --project <project-id> --vcs-root <vcs-root
 
 **Validate pipeline YAML before pushing:**
 ```bash
-# Validates against server schema (cached locally for 24h)
+# Validates against the complete server schema with enabled runners/features (cached for 24h)
 teamcity pipeline validate
 
 # Validate a specific file
@@ -952,4 +956,4 @@ teamcity pipeline delete <pipeline-id> --yes   # skip confirmation
 | `No server configured`       | Missing auth config       | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars  |
 | `Network access blocked by sandbox` | Sandbox proxy blocking outbound requests | Add the server domain to the sandbox `allowedDomains`, or exclude `teamcity` from sandboxing |
 
-Connections listed or selected with `--project` include connections inherited from parent projects, including `_Root`. Use the owning project when deleting an inherited connection.
+`project settings status` reports the server’s runtime message and missing DSL context parameters. Its “Recorded” timestamp is when the status was recorded, not the last successful sync.

@@ -33,6 +33,7 @@ Environment override note:
 - `TEAMCITY_URL` + `TEAMCITY_TOKEN` should be set together when overriding auth in scripts
 - `TEAMCITY_URL` alone bypasses stored `teamcity auth login` credentials
 - `TEAMCITY_HEADER_*` adds an HTTP header to every request: `TEAMCITY_HEADER_FOO_BAR=baz` sends `Foo-Bar: baz`. Use this for proxies that gate access (Cloudflare Access, Google IAP). Values are redacted in `--verbose` output.
+- Cross-origin redirects drop request headers and only permit body-free GET/HEAD requests. HTTPS downgrades and cross-origin terminal redirects are rejected.
 
 ## Builds/Runs (`teamcity run`)
 
@@ -150,6 +151,8 @@ the name once as a header, one row per build, and a pass-rate footer.
 - `--json` - Output as JSON
 
 ### Flags for `teamcity run download`
+
+Downloads confine writes to `--output`, replace destination file symlinks rather than following them, and preserve existing files on failed transfers.
 
 - `-a, --artifact <pattern>` - Artifact name pattern to filter (matches full path and basename)
 - `-p, --path <subdir>` - Download artifacts under this subdirectory
@@ -371,6 +374,8 @@ The `<id>` (job) positional is optional when the repo is linked; `delete` accept
 | `teamcity agent term <id>`        | Open interactive shell on agent   |
 | `teamcity agent reboot <id>`      | Reboot a build agent              |
 
+`agent exec` and `agent term` are blocked by `TEAMCITY_RO=1` or per-server `ro: true`.
+
 ### Flags for `teamcity agent list`
 
 - `-p, --pool <name>` - Filter by agent pool
@@ -426,7 +431,7 @@ Pipelines are YAML-first build configurations. Each pipeline is a project that c
 | `teamcity pipeline list`                 | List pipelines                           |
 | `teamcity pipeline view <id>`            | View pipeline details                    |
 | `teamcity pipeline create <name>`        | Create pipeline from YAML                |
-| `teamcity pipeline validate [file]`      | Validate pipeline YAML against schema    |
+| `teamcity pipeline validate [file]`      | Validate pipeline YAML against complete server schema    |
 | `teamcity pipeline pull <id>`            | Download pipeline YAML                   |
 | `teamcity pipeline push <id> [file]`     | Upload pipeline YAML                     |
 | `teamcity pipeline delete <id>`          | Delete a pipeline                        |
@@ -560,4 +565,4 @@ Available on all list commands (`run list`, `agent list`, `job list`, `pool list
 - `--plain` - Tab-separated plain text output for scripting (mutually exclusive with `--json`)
 - `--no-header` - Omit header row (use with `--plain`)
 
-Connections listed or selected with `--project` include connections inherited from parent projects, including `_Root`. Use the owning project when deleting an inherited connection.
+`project settings status` reports the server’s runtime message and missing DSL context parameters. Its “Recorded” timestamp is when the status was recorded, not the last successful sync.
