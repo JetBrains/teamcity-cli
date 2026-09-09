@@ -172,4 +172,4 @@ TeamCity CLI is open source under the Apache-2.0 license. Bug reports and pull r
 
 `project settings status` reports the server’s runtime message and missing DSL context parameters. Its “Recorded” timestamp is when the status was recorded, not the last successful sync.
 
-To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.
+Connections listed or selected with `--project` include parent projects, including `_Root`. Delete an inherited connection from its owning project.

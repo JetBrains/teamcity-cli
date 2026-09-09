@@ -16,7 +16,10 @@ func TestGetProjectConnections(t *testing.T) {
 
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.True(t, strings.HasSuffix(r.URL.Path, "/projectFeatures"))
+		if !strings.HasSuffix(r.URL.Path, "/projectFeatures") {
+			_ = json.NewEncoder(w).Encode(Project{ID: "MyProject"})
+			return
+		}
 		assert.Contains(t, r.URL.RawQuery, "locator=type:OAuthProvider")
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(ProjectFeatureList{
@@ -116,4 +119,55 @@ func TestDeleteProjectFeatureNotFound(t *testing.T) {
 
 	err := client.DeleteProjectFeature("MyProject", "PROJECT_EXT_99")
 	require.Error(t, err)
+}
+
+func TestGetProjectConnectionsInherited(t *testing.T) {
+	t.Parallel()
+	requests := []string{}
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/app/rest/projects/id:Child":
+			_ = json.NewEncoder(w).Encode(Project{ID: "Child", ParentProjectID: "Parent"})
+		case "/app/rest/projects/id:Parent":
+			_ = json.NewEncoder(w).Encode(Project{ID: "Parent", ParentProjectID: "_Root"})
+		default:
+			id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/app/rest/projects/id:"), "/projectFeatures")
+			_ = json.NewEncoder(w).Encode(ProjectFeatureList{ProjectFeature: []ProjectFeature{{ID: id, Type: "OAuthProvider"}}})
+		}
+	})
+	got, err := client.GetProjectConnections("Child")
+	require.NoError(t, err)
+	require.Len(t, got.ProjectFeature, 3)
+	assert.Equal(t, 3, got.Count)
+	assert.Equal(t, "Child", got.ProjectFeature[0].ID)
+	assert.Equal(t, "Parent", got.ProjectFeature[1].ID)
+	assert.Equal(t, "_Root", got.ProjectFeature[2].ID)
+	assert.Len(t, requests, 5)
+}
+
+func TestGetProjectConnectionsHierarchyError(t *testing.T) {
+	for _, status := range []int{http.StatusOK, http.StatusForbidden} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			t.Parallel()
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if strings.HasSuffix(r.URL.Path, "/projectFeatures") {
+					_ = json.NewEncoder(w).Encode(ProjectFeatureList{ProjectFeature: []ProjectFeature{}})
+					return
+				}
+				w.WriteHeader(status)
+				_ = json.NewEncoder(w).Encode(Project{ID: "Child", ParentProjectID: "Child"})
+			})
+			got, err := client.GetProjectConnections("Child")
+			require.Error(t, err)
+			assert.Nil(t, got)
+			if status == http.StatusOK {
+				assert.Contains(t, err.Error(), "cycle")
+			} else {
+				assert.Contains(t, err.Error(), "failed to resolve parent")
+			}
+		})
+	}
 }

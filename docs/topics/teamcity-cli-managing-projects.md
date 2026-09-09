@@ -654,6 +654,8 @@ teamcity project settings validate --verbose
 
 The command auto-detects the `.teamcity` directory in the current directory or its parents. It requires Maven (`mvn`) or uses the Maven wrapper (`mvnw`) if present in the DSL directory.
 
+Connections listed or selected with `--project` include connections inherited from parent projects, including `_Root`. Use the owning project when deleting an inherited connection.
+
 <seealso>
     <category ref="reference">
         <a href="teamcity-cli-commands.md">Command reference</a>
