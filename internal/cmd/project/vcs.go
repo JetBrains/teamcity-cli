@@ -267,6 +267,7 @@ type vcsCreateOptions struct {
 	keyPath      string
 	passphrase   string
 	connectionID string
+	tokenID      string
 	noTest       bool
 }
 
@@ -279,7 +280,8 @@ func newVcsCreateCmd(f *cmdutil.Factory) *cobra.Command {
 		Long: `Create a new Git VCS root in a project.
 
 In interactive mode, guides you through URL, name, and authentication setup.
-Tests the connection before creating unless --no-test is specified.`,
+Tests the connection before creating unless --no-test is specified.
+Stored --token-id credentials must be tested in the TeamCity UI.`,
 		Example: `  # Interactive wizard
   teamcity project vcs create
 
@@ -313,6 +315,8 @@ Tests the connection before creating unless --no-test is specified.`,
 	cmd.Flags().StringVar(&opts.keyPath, "key-path", "", "Path to SSH key file on agent")
 	cmd.Flags().StringVar(&opts.passphrase, "passphrase", "", "SSH key passphrase")
 	cmd.Flags().StringVar(&opts.connectionID, "connection-id", "", "OAuth connection ID")
+	cmd.Flags().StringVar(&opts.tokenID, "token-id", "", "Stored token ID (requires --auth token; excludes --connection-id)")
+	cmd.MarkFlagsMutuallyExclusive("connection-id", "token-id")
 	cmd.Flags().BoolVar(&opts.noTest, "no-test", false, "Skip connection test before creating")
 
 	_ = cmd.RegisterFlagCompletionFunc("auth", completion.VCSAuthMethods())
@@ -367,6 +371,9 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 			}
 		}
 	}
+	if opts.tokenID != "" && authMethod != authToken {
+		return api.Validation("--token-id requires --auth token", "Use --auth token with a stored token ID")
+	}
 	if opts.connectionID != "" && authMethod != authToken {
 		return api.Validation(
 			"--connection-id requires --auth token",
@@ -390,7 +397,10 @@ func runVcsCreate(f *cmdutil.Factory, opts *vcsCreateOptions) error {
 	testReq.URL = repoURL
 	testReq.VcsName = "jetbrains.git"
 
-	if !opts.noTest && client.SupportsFeature("vcs_test_connection") {
+	if opts.tokenID != "" && !opts.noTest {
+		f.Printer.Tip("Test the stored token connection in the TeamCity UI after creating the VCS root")
+	}
+	if opts.tokenID == "" && !opts.noTest && client.SupportsFeature("vcs_test_connection") {
 		if err := runConnectionTest(f, client, testReq, projectID); err != nil {
 			return err
 		}
@@ -513,6 +523,14 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 		testReq.IsPrivate = true
 
 	case authToken:
+		if opts.tokenID != "" {
+			props = append(props,
+				api.Property{Name: "authMethod", Value: "ACCESS_TOKEN"},
+				api.Property{Name: "tokenId", Value: opts.tokenID},
+				api.Property{Name: "username", Value: cmp.Or(opts.username, "oauth2")},
+			)
+			break
+		}
 		if opts.connectionID == "" {
 			if !interactive {
 				return nil, testReq, api.RequiredFlag("connection-id")

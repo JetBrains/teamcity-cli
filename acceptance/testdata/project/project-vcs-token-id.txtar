@@ -1,0 +1,7 @@
+# Stored token IDs have a distinct, discoverable CLI option.
+exec teamcity project vcs create --help
+stdout '\-\-token-id'
+
+# A stored token and connection-based token selection cannot both be requested.
+! exec teamcity project vcs create --project Sandbox --url https://example.invalid/repo --auth token --token-id tc_token_id:CID_test:-1:uuid --connection-id PROJECT_EXT_1 --no-input
+stderr 'connection-id.*token-id|token-id.*connection-id'

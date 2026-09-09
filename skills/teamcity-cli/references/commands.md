@@ -559,3 +559,5 @@ Available on all list commands (`run list`, `agent list`, `job list`, `pool list
 
 - `--plain` - Tab-separated plain text output for scripting (mutually exclusive with `--json`)
 - `--no-header` - Omit header row (use with `--plain`)
+
+To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.

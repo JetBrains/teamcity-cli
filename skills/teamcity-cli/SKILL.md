@@ -21,7 +21,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 - **Composite builds have empty logs** — drill into child builds for the actual failure.
 - **Build chains fail bottom-up** — deepest failed dependency is the root cause. Use `teamcity run tree <id>`.
 - **`--local-changes` excludes Kotlin DSL** — push `.teamcity/` changes before running.
-- **`TEAMCITY_URL` alone bypasses stored auth** — set both `TEAMCITY_URL` and `TEAMCITY_TOKEN`, or leave unset.
+- **Select a server per command with `TEAMCITY_URL`** — `TEAMCITY_URL=https://cli.teamcity.com teamcity run list` uses stored credentials for that server; set `TEAMCITY_TOKEN` to override them.
 - **Logs**: use `--raw` and dump to a temp file. **Builds**: use `--watch` when starting them.
 - **VCS triggers aren't always wired up** — after pushing a fix you may need to start builds manually.
 - **`pipeline push` does not validate** — always `teamcity pipeline validate` first.
@@ -62,3 +62,5 @@ See [Workflows](references/workflows.md) for full details on each.
 - [Command reference](references/commands.md) — all commands and flags
 - [Workflows](references/workflows.md) — failure investigation, build chains, connections, pipelines
 - [Output formats](references/output.md) — JSON, plain text, scripting
+
+To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.

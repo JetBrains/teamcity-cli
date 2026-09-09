@@ -387,7 +387,7 @@ teamcity project connection list --project <project-id>
 
 ### Connecting a GitHub repository (GitHub App)
 
-> **Always use this path for GitHub.** Don't `vcs create --auth password` with a personal access token — PATs tie infrastructure to one human, leak in job logs, and can't be revoked centrally. The four-step flow below produces a non-personal "Refreshable access token" tied to a service-identity App, which is what the TeamCity UI's "Sign in to GitHub App" button creates.
+> **Prefer a GitHub App connection for GitHub.** Authorization is per TeamCity user. TeamCity chooses the stored credential for `--connection-id`; it may copy a permanent token or reference a refreshable token. This flow does not guarantee a service identity.
 
 Creates a fresh GitHub App via GitHub's manifest flow — credentials are captured automatically, no PAT involved. Lets jobs clone, post commit statuses, and comment on PRs.
 
@@ -424,7 +424,7 @@ teamcity project vcs create -p <project-id> \
   --url https://github.com/<owner>/<repo>.git
 ```
 
-TeamCity auto-fills `authMethod=ACCESS_TOKEN`, `username=oauth2`, and the proper `tokenId` from the connection's stored token. No manual property setup needed; the resulting VCS root uses a non-personal "Refreshable access token" — exactly what the UI's "Sign in to GitHub App" produces.
+TeamCity chooses credentials from the current user's connection tokens. For an explicit reference to an already-stored token, use `--auth token --token-id <full-token-id>` instead of `--connection-id`. The CLI writes `ACCESS_TOKEN` and `tokenId` without copying a secret. Token lifetime, repository access, and identity remain properties of that stored token; this command does not mint installation tokens.
 
 **Non-interactive (agent) variant — bring your own GitHub App credentials:**
 
@@ -951,3 +951,5 @@ teamcity pipeline delete <pipeline-id> --yes   # skip confirmation
 | `Not authenticated`          | `TEAMCITY_URL` set without matching token, or no auth configured | Unset `TEAMCITY_URL` to use stored auth from `teamcity auth login`, or set both `TEAMCITY_URL` and `TEAMCITY_TOKEN` |
 | `No server configured`       | Missing auth config       | Run `teamcity auth login -s <url>` or set `TEAMCITY_URL` and `TEAMCITY_TOKEN` env vars  |
 | `Network access blocked by sandbox` | Sandbox proxy blocking outbound requests | Add the server domain to the sandbox `allowedDomains`, or exclude `teamcity` from sandboxing |
+
+To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.
