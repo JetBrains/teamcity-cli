@@ -351,6 +351,24 @@ teamcity run start MyProject_Build --branch main --revision abc123def
 teamcity run start MyProject_Build --branch @this --revision @head
 ```
 
+For jobs with multiple VCS roots, repeat `--revision ROOT=SHA[@BRANCH]` to pin
+individual roots. Unspecified roots use TeamCity's normal revision selection.
+`ROOT=@BRANCH` uses the latest revision TeamCity has already fetched for that root;
+it does not fetch new commits. Use full refs for tags or pull requests.
+
+```Shell
+teamcity run start MyProject_Build --branch feature/game \
+  --revision GameRepo=abc123@feature/game --revision AssetsRepo=@main
+teamcity run start MyProject_Build --revision AssetsRepo=@refs/tags/v1.0
+```
+
+Root IDs are the VCS root IDs shown by `teamcity project vcs list`, not numeric
+VCS root instance IDs. A root can appear only once, and bare and per-root forms
+cannot be mixed. Bare `SHA`/`@head` still applies to every root and resolves locally;
+per-root SHAs are passed verbatim. `--branch` is the build's logical branch;
+use `@BRANCH` to specify a pinned root's own branch independently.
+`--dry-run` displays the requested pins without resolving branch heads.
+
 ### Build parameters
 
 Pass custom parameters, system properties, and environment variables:

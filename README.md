@@ -102,6 +102,9 @@ teamcity run list --user @me --branch @this --limit 1
 # start a build and stay attached to it
 teamcity run start MyProject_Build --branch main --watch
 
+# pin different revisions in a job with multiple VCS roots
+teamcity run start MyProject_Build --revision AppRepo=abc123 --revision AssetsRepo=@main
+
 # logs from the latest build of a job
 teamcity run log --job MyProject_Build
 

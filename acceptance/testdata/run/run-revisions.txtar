@@ -1,0 +1,28 @@
+# Per-root revision validation runs before any server request.
+! exec teamcity run start Unused --revision abc --revision Root=def --json --no-input
+stderr '"code": "validation_error"'
+stderr 'cannot mix'
+
+! exec teamcity run start Unused --revision Root=abc --revision Root=def --no-input
+stderr 'duplicate --revision'
+
+! exec teamcity run start Unused --revision Root=abc@ --no-input
+stderr 'invalid --revision'
+
+# Dry-run preserves legacy JSON and displays independent root pins.
+exec teamcity job list --limit 1 --json --no-input
+extract '"id":\s*"([^"]+)"' JOB_ID
+
+exec teamcity run start $JOB_ID --revision 0123456789012345678901234567890123456789 --dry-run --json --no-input
+stdout '"revision": "0123456789012345678901234567890123456789"'
+! stdout '"revisions"'
+
+exec teamcity run start $JOB_ID --revision A=abc@feature --revision B=@master --dry-run --json --no-input
+stdout '"vcs_root": "A"'
+stdout '"version": "abc"'
+stdout '"branch": "master"'
+! stdout '"revision":'
+
+exec teamcity run start $JOB_ID --revision A=abc@feature --revision B=@master --dry-run --no-input
+stdout 'Revision: A=abc@feature'
+stdout 'Revision: B=@master'

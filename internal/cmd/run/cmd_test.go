@@ -882,3 +882,21 @@ func TestRunList_invalid_limit(t *testing.T) {
 	err := cmdtest.CaptureErr(t, ts.Factory, "run", "list", "--limit", "-1")
 	assert.Equal(t, "--limit must not be negative, got -1", err.Error())
 }
+
+func TestRunStartPerRootRevisionsPayload(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/buildTypes/id:"+testJob+"/vcs-root-entries", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.VcsRootEntries{Count: 2, VcsRootEntry: []api.VcsRootEntry{{VcsRoot: &api.VcsRoot{ID: "A"}}, {VcsRoot: &api.VcsRoot{ID: "B"}}}})
+	})
+	var captured api.TriggerBuildRequest
+	ts.Handle("POST /app/rest/buildQueue", func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&captured))
+		cmdtest.JSON(w, api.Build{ID: 999, BuildTypeID: testJob})
+	})
+	cmdtest.RunCmdWithFactory(t, ts.Factory, "run", "start", testJob, "--branch", "logical", "--revision", "A=abc@feature", "--revision", "B=def")
+	require.NotNil(t, captured.Revisions)
+	require.Len(t, captured.Revisions.Revision, 2)
+	assert.Equal(t, "logical", captured.BranchName)
+	assert.Equal(t, api.Revision{Version: "abc", VcsBranchName: "refs/heads/feature", VcsRootInstance: &api.VcsRootInstanceRef{VcsRootID: "A"}}, captured.Revisions.Revision[0])
+	assert.Equal(t, api.Revision{Version: "def", VcsRootInstance: &api.VcsRootInstanceRef{VcsRootID: "B"}}, captured.Revisions.Revision[1])
+}
