@@ -32,8 +32,6 @@
 | `teamcity auth status`         | Show auth status and server info  |
 
 Login options:
-
-- Browser login offers additional permissions unchecked by default, including `EDIT_VERSIONED_SETTINGS` and `CHANGE_SERVER_SETTINGS`. Select only those needed; existing tokens require a new login to gain permissions.
 - `-s, --server <url>` - TeamCity server URL
 - `-t, --token <token>` - Access token
 - `--insecure-storage` - Store token in plain text config file instead of system keyring

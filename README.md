@@ -93,8 +93,6 @@ Log in once and the CLI remembers the server:
 teamcity auth login
 ```
 
-Browser login keeps common permissions selected. Additional permissions, including versioned settings and server administration, are available but unchecked by default; select them explicitly when needed.
-
 Then:
 
 ```bash

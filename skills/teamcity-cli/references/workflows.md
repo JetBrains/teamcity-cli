@@ -964,8 +964,6 @@ teamcity pipeline delete <pipeline-id> --yes   # skip confirmation
 
 1. **Multiple servers** - Use `TEAMCITY_URL` env var to switch between servers, or `teamcity auth login --server <url>` to add servers
 
-For a missing permission, run `teamcity auth login` again and select it in the picker. Additional permissions are unchecked by default: choose `EDIT_VERSIONED_SETTINGS` for settings enablement or `CHANGE_SERVER_SETTINGS` for server configuration through `teamcity api`. The user's role and server PKCE policy still limit the grant.
-
 ## Troubleshooting
 
 | Symptom                      | Likely Cause              | Action                                                                                  |
