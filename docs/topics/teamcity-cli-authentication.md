@@ -46,6 +46,8 @@ teamcity auth login --server https://teamcity.example.com --token <token>
 
 TeamCity 2026.1 and newer servers support the streamlined authorization flow that does not require issuing access tokens manually: [OAuth 2.0 PKCE standard (RFC 7636)](https://datatracker.ietf.org/doc/html/rfc7636). When you run the `teamcity auth login` command, the following chain of events occurs:
 
+The permission picker preselects the existing common permissions. Additional permissions, including **Enable / disable versioned settings** (`EDIT_VERSIONED_SETTINGS`) and **Change server settings** (`CHANGE_SERVER_SETTINGS`), are unchecked by default. Select them explicitly when needed; your server role and the server's PKCE policy limit the effective grant. Existing tokens do not change: log in again to request additional permissions.
+
 1. The CLI starts a temporary local server on your machine.
 2. Your browser opens a TeamCity authorization page.
 3. After you approve issuing a new access token, the browser redirects back to the CLI with an authorization code.

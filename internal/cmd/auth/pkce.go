@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"slices"
 	"time"
@@ -52,31 +53,40 @@ func describeScope(scope string) string {
 	return scope
 }
 
-// selectPkceScopes lets the user review and optionally trim the scopes the CLI will request; returns nil if canceled.
+// selectPkceScopes lets the user review defaults and opt into additional permissions; returns nil if canceled.
 func selectPkceScopes() []string {
-	all := api.DefaultScopes()
-	selected := slices.Clone(all)
+	selected := api.DefaultScopes()
+	if err := cmdutil.Prompt(newPkceScopePicker(&selected)); err != nil {
+		return nil
+	}
+	return selected
+}
 
+func newPkceScopePicker(selected *[]string) *huh.MultiSelect[string] {
+	defaults := api.DefaultScopes()
+	all := slices.Clone(defaults)
+	for _, scope := range slices.Sorted(maps.Keys(api.KnownPermissions)) {
+		if !slices.Contains(defaults, scope) {
+			all = append(all, scope)
+		}
+	}
 	options := make([]huh.Option[string], len(all))
 	for i, s := range all {
-		options[i] = huh.NewOption(describeScope(s), s).Selected(true)
+		options[i] = huh.NewOption(describeScope(s), s).Selected(slices.Contains(defaults, s))
 	}
 
-	if err := cmdutil.Prompt(huh.NewMultiSelect[string]().
+	return huh.NewMultiSelect[string]().
 		Title("Select permissions to request").
-		Description(fmt.Sprintf("%d total "+output.Sym().Sep+" your server role limits the final permission set", len(all))).
+		Description(fmt.Sprintf("%d selected by default, %d optional "+output.Sym().Sep+" your server role limits the final permission set", len(defaults), len(all)-len(defaults))).
 		Options(options...).
-		Value(&selected).
+		Value(selected).
 		Height(7).
 		Validate(func(picked []string) error {
 			if len(picked) == 0 {
 				return errors.New("select at least one permission")
 			}
 			return nil
-		})); err != nil {
-		return nil
-	}
-	return selected
+		})
 }
 
 // runPkceLogin orchestrates the browser-based PKCE auth flow with the given scopes and returns the minted access token.
@@ -100,7 +110,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client,
 	authURL := api.BuildAuthorizeURL(client.BaseURL, redirectURI, pkceCodeChallenge(verifier), state, scopes)
 
 	opening := fmt.Sprintf("Opening browser to authenticate with %d permissions...", len(scopes))
-	if total := len(api.DefaultScopes()); len(scopes) < total {
+	if total := len(api.KnownPermissions); len(scopes) < total {
 		opening = fmt.Sprintf("Opening browser to authenticate with %d of %d permissions...", len(scopes), total)
 	}
 	p.Info("%s", opening)

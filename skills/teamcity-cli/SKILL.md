@@ -18,6 +18,7 @@ teamcity run log <id> --failed --raw    # Full failure diagnostics
 
 ## Gotchas
 
+- **Missing permissions**: run `auth login` again and explicitly select the required optional permission. Additional permissions, including `EDIT_VERSIONED_SETTINGS` and `CHANGE_SERVER_SETTINGS`, are unchecked by default; server roles and policy still apply.
 - **Composite builds have empty logs** — drill into child builds for the actual failure.
 - **Build chains fail bottom-up** — deepest failed dependency is the root cause. Use `teamcity run tree <id>`.
 - **`--local-changes` excludes Kotlin DSL** — push `.teamcity/` changes before running.

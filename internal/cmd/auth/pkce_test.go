@@ -2,9 +2,14 @@ package auth
 
 import (
 	"encoding/base64"
+	"net/url"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/api"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,6 +26,33 @@ func TestPkceCodeChallenge_RFC7636Vector(t *testing.T) {
 }
 
 var verifierAlphabet = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+func TestPkceScopePicker(t *testing.T) {
+	t.Parallel()
+	for _, extra := range []string{"", "EDIT_VERSIONED_SETTINGS", "CHANGE_SERVER_SETTINGS"} {
+		t.Run("optional="+extra, func(t *testing.T) {
+			selected := api.DefaultScopes()
+			picker := newPkceScopePicker(&selected)
+			picker.WithKeyMap(huh.NewDefaultKeyMap())
+			if extra != "" {
+				_, _ = picker.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+				_, _ = picker.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(extra)})
+				_, _ = picker.Update(tea.KeyMsg{Type: tea.KeyEnter})
+				assert.Contains(t, picker.View(), extra)
+				_, _ = picker.Update(tea.KeyMsg{Type: tea.KeySpace})
+			}
+			_, _ = picker.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			want := api.DefaultScopes()
+			if extra != "" {
+				want = append(want, extra)
+			}
+			assert.ElementsMatch(t, want, selected)
+			u, err := url.Parse(api.BuildAuthorizeURL("https://tc.example", "http://localhost", "challenge", "state", selected))
+			require.NoError(t, err)
+			assert.Equal(t, strings.Join(selected, " "), u.Query().Get("scope"))
+		})
+	}
+}
 
 // TestGeneratePkceVerifier_RFC7636Constraints pins length (43 chars), alphabet ([A-Za-z0-9_-]), and uniqueness per RFC 7636 §4.1.
 func TestGeneratePkceVerifier_RFC7636Constraints(t *testing.T) {
