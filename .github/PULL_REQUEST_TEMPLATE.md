@@ -34,5 +34,5 @@ teamcity <command>
 - [ ] If adding a new command/flag: added `.txtar` test in `acceptance/testdata/`
 - [ ] If adding a data-producing command: includes `--json` support
 - [ ] If modifying `--json` output: no field removals/renames (additive only)
-- [ ] If changing docs-visible behavior: updated `docs/`, `skills/`, and `README.md`
+- [ ] If changing docs-visible behavior: updated `docs/`, `README.md`, and the skills in [teamcity-skills](https://github.com/JetBrains/teamcity-skills) (then bumped the dependency)
 - [ ] External contributors: links a `status:finalized` issue (or trivial/docs/deps change)

@@ -9,7 +9,6 @@
 
 # Documentation
 /docs/ @tiulpin
-/skills/ @tiulpin
 
 # Release & CI
 /.goreleaser.yaml @tiulpin
