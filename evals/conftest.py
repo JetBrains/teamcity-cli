@@ -24,11 +24,27 @@ SCHEMA_PATH = EVALS_DIR / "cli_schema.json"
 SKILLS_MODULE = "github.com/JetBrains/teamcity-skills"
 
 
+def _module_dir(module: str) -> str:
+    """Path to an extracted dependency in the local module cache, or "".
+
+    `go list -m -f {{.Dir}}` exits 0 but prints nothing when the module is
+    known to go.mod yet not extracted, which is the normal state of a fresh
+    checkout.
+    """
+    out = subprocess.run(
+        ["go", "list", "-m", "-f", "{{.Dir}}", module],
+        cwd=REPO_ROOT, capture_output=True, text=True, timeout=120,
+    )
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
 def _skill_dir() -> Path:
     """Locate the teamcity-cli skill the binary under test actually ships.
 
-    The skill is no longer vendored here — it comes from the SKILLS_MODULE
-    dependency (TW-101970). Resolving it through `go list` rather than a fixed
+    The skill is not in this repository. It lives in JetBrains/teamcity-skills
+    and arrives as the SKILLS_MODULE dependency (TW-101970), so the path below
+    points into the Go module cache — `<module cache>/skills/teamcity-cli` —
+    not into this checkout. Resolving it through `go list` rather than a fixed
     path means the eval measures exactly the revision go.mod pins, so a
     dependency bump is reflected without touching the harness.
 
@@ -38,16 +54,23 @@ def _skill_dir() -> Path:
     vendored = SKILLS_DIR / "teamcity-cli"
     if vendored.exists():
         return vendored
-    out = subprocess.run(
-        ["go", "list", "-m", "-f", "{{.Dir}}", SKILLS_MODULE],
-        cwd=REPO_ROOT, capture_output=True, text=True, timeout=120,
-    )
-    module_dir = out.stdout.strip()
-    if out.returncode != 0 or not module_dir:
+
+    module_dir = _module_dir(SKILLS_MODULE)
+    if not module_dir:
+        # Fresh checkout: the module is pinned but not yet extracted. Fetch it
+        # rather than failing, so `just eval` works without a manual step.
+        subprocess.run(
+            ["go", "mod", "download", SKILLS_MODULE],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=300,
+        )
+        module_dir = _module_dir(SKILLS_MODULE)
+
+    if not module_dir:
         raise RuntimeError(
             f"cannot locate the {SKILLS_MODULE} module — the skill under test is "
-            f"unavailable, so CURRENT would silently equal CONTROL.\n"
-            f"Run `go mod download` first.\n{out.stdout}{out.stderr}"
+            f"unavailable, so CURRENT would silently equal CONTROL. "
+            f"`go mod download {SKILLS_MODULE}` failed; check network access and "
+            f"that go.mod pins a published version."
         )
     return Path(module_dir) / "skills" / "teamcity-cli"
 
