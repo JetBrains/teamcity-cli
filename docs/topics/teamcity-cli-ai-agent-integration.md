@@ -153,12 +153,14 @@ If the sandbox blocks outbound requests to your TeamCity server, add the server 
 
 ## Alternative installation for Claude Code
 
-If you use Claude Code, you can also install the TeamCity skill directly through the plugin system:
+If you use Claude Code, you can install the `teamcity` plugin, which bundles the TeamCity skills from the [JetBrains/teamcity-skills](https://github.com/JetBrains/teamcity-skills) repository:
 
 ```Shell
-/plugin marketplace add JetBrains/teamcity-cli
-/plugin install teamcity-cli@teamcity-cli
+/plugin marketplace add JetBrains/teamcity-skills
+/plugin install teamcity@teamcity
 ```
+
+The plugin provides the skills only. Install the `teamcity` CLI separately.
 
 <seealso>
     <category ref="reference">

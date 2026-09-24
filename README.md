@@ -156,11 +156,16 @@ teamcity skill update            # update to the version bundled with teamcity
 teamcity skill remove            # uninstall
 ```
 
-or specifically for **Claude Code:**
+or specifically for **Claude Code**, install the `teamcity` plugin, which
+bundles these skills from
+[JetBrains/teamcity-skills](https://github.com/JetBrains/teamcity-skills):
+
 ```bash
-/plugin marketplace add JetBrains/teamcity-cli
-/plugin install teamcity-cli@teamcity-cli
+/plugin marketplace add JetBrains/teamcity-skills
+/plugin install teamcity@teamcity
 ```
+
+The plugin ships the skills only — install the `teamcity` CLI itself as above.
 
 See [AI agent integration](https://www.jetbrains.com/help/teamcity/teamcity-cli-ai-agent-integration.html) for details.
 
