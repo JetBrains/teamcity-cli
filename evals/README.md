@@ -6,7 +6,12 @@ live server — the skill is the only variable.
 | Treatment | What Claude Code gets                   |
 |-----------|------------------------------------------|
 | `CONTROL` | the `teamcity` CLI, no skill — baseline  |
-| `CURRENT` | the CLI **+** `skills/teamcity-cli/`     |
+| `CURRENT` | the CLI **+** the `teamcity-cli` skill   |
+
+The skill is not in this repository: it comes from the
+`github.com/JetBrains/teamcity-skills` module that `go.mod` pins, and the
+harness resolves it from the module cache. A dependency bump therefore changes
+what `CURRENT` measures.
 
 The headline metric is the **paired skill lift**: per-task
 `CURRENT − CONTROL` deterministic pass rate, averaged across tasks, with a
@@ -147,8 +152,8 @@ omitted rather than counted as zero.
 lives server-side (`teamcity pipeline pull` to inspect, edit → `teamcity
 pipeline validate` → `teamcity pipeline push` to change). Per run: build
 the CLI from the commit under test →
-change-gate (skips with an explicit `SKIPPED` build status unless
-`skills/teamcity-cli/`, `evals/`, or the schema generator changed) → pinned
+change-gate (skips with an explicit `SKIPPED` build status unless `evals/`,
+the schema generator, or `go.mod`/`go.sum` — which pin the skill — changed) → pinned
 `@anthropic-ai/claude-code` install → schema generation → `pytest tests/
 --runs=2 -n 8` → gate. Pytest and the gate exit codes both propagate — nothing
 is `|| true`'d away.
