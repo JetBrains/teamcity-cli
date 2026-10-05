@@ -1,6 +1,6 @@
 module github.com/JetBrains/teamcity-cli
 
-go 1.26
+go 1.26.0
 
 require (
 	github.com/JetBrains/fus-reporting-api-go v0.2.0
@@ -14,12 +14,12 @@ require (
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/ansi v0.11.8
-	github.com/dustin/go-humanize v1.0.1
+	github.com/dustin/go-humanize v1.1.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
-	github.com/magiconair/properties v1.18.11
-	github.com/mattn/go-runewidth v0.0.28
-	github.com/moby/moby/api v1.55.0
+	github.com/magiconair/properties v1.18.12
+	github.com/mattn/go-runewidth v0.0.30
+	github.com/moby/moby/api v1.56.0
 	github.com/muesli/termenv v0.16.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -33,9 +33,9 @@ require (
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/tiulpin/instill v0.0.0-20260521174322-b563ba2627d7
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/net v0.56.0
-	golang.org/x/sys v0.47.0
-	golang.org/x/term v0.45.0
+	golang.org/x/net v0.59.0
+	golang.org/x/sys v0.48.0
+	golang.org/x/term v0.46.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -123,8 +123,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
-	golang.org/x/tools v0.47.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 )
