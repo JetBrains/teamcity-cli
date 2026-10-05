@@ -351,7 +351,7 @@ Currently deprecated flags: none.
 
 Issues come first — agree on scope and approach in YouTrack before implementation.
 
-Report TeamCity CLI bugs, feature requests, migration issues, and agent-evaluation failures through the links in the [GitHub issue chooser](https://github.com/JetBrains/teamcity-cli/issues/new/choose). They open prefilled issues in the TeamCity project with the Onboarding team. Questions and discussions remain on GitHub Discussions.
+Report TeamCity CLI bugs, feature requests, migration issues, and agent-evaluation failures through the links in the [GitHub issue chooser](https://github.com/JetBrains/teamcity-cli/issues/new/choose). They open prefilled issues in the TeamCity project with the Onboarding team.
 
 **External contributors:** link a YouTrack issue where a maintainer has confirmed the problem and agreed on the approach before opening a PR. Issue discussion is where that agreement happens; the old GitHub `status:finalized` label does not apply in YouTrack.
 
