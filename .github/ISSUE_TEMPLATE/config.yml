@@ -13,6 +13,3 @@ contact_links:
   - name: Report an AI eval issue in YouTrack
     url: "https://youtrack.jetbrains.com/newIssue?project=TW&summary=TeamCity+CLI+eval%3A+%3Cshort+summary%3E&description=%23%23+Prompt%0AWhat+did+you+ask+the+agent+to+do%3F+Write+the+original+task+prompt.%0A%0A%23%23+What+the+agent+did%0APaste+the+actual+commands+and+behavior.+Include+the+relevant+conversation+or+reasoning+without+interpretation.%0A%0A%23%23+Correct+behavior%0AList+concrete+steps+or+assertions+that+should+become+benchmark+checks.%0A%0A%23%23+Failure+types%0ASelect+all+that+apply%3A%0A-+%5B+%5D+Hallucinated+flags+or+commands+that+don't+exist%0A-+%5B+%5D+Used+the+wrong+command+for+the+task%0A-+%5B+%5D+Missed+a+critical+workflow+step%0A-+%5B+%5D+Gave+an+incorrect+diagnosis+or+explanation%0A-+%5B+%5D+Failed+to+recover+from+an+error%0A-+%5B+%5D+Did+not+use+the+CLI%0A%0A%23%23+TeamCity+server+URL%0AWhere+did+you+observe+this%3F&c=Type%3A+Task&c=Team%3A+Onboarding"
     about: Open a prefilled TeamCity CLI eval report in YouTrack
-  - name: Question or Discussion
-    url: https://github.com/JetBrains/teamcity-cli/discussions
-    about: Ask questions, get help, or discuss ideas
