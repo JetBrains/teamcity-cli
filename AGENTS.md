@@ -45,22 +45,15 @@ just record-gifs <name>  # record GIF from docs/tapes/<name>.tape → docs/image
 
 ## Filing Issues
 
-- **Always check `.github/ISSUE_TEMPLATE/` before creating an issue.** This repo has
-  `blank_issues_enabled: false` — every issue must use a template. Match the template
-  to the issue type (bug, feature, eval task).
-- **Follow the template structure exactly.** Fill in each section as defined in the YAML
-  fields. Do not add extra sections, root-cause analysis, or fix suggestions unless the
-  template asks for them.
-- **Verify labels exist before using them.** Templates declare labels (e.g. `eval`) that
-  may not yet exist in the repo. Run `gh label list` first; create missing labels only
-  if the template requires them.
+- TeamCity CLI product reports belong in YouTrack project `TW`, assigned to Team `Onboarding`, with visibility set to All Users. Leave them unassigned unless explicitly requested.
+- Use the matching prefilled YouTrack link in `.github/ISSUE_TEMPLATE/config.yml` for bugs, feature requests, migration issues, and eval reports. code contributions still use GitHub pull requests.
+- When creating issues with the YouTrack CLI, follow the matching description structure and verify the Type, Team, visibility, and assignee fields. Do not create replacement GitHub issues or apply GitHub labels to YouTrack tickets.
 
-## Eval Issues (`eval_task.yml`)
+## Eval Issues
 
-Eval issues document real agent failures to turn into automated benchmarks. Keep them
-focused on observable behavior:
+Eval issues document real agent failures to turn into automated benchmarks. Keep them focused on observable behavior:
 
 - **Prompt**: what the agent was asked to do
 - **What the agent did**: paste the actual commands and reasoning — no interpretation
 - **Correct behavior**: numbered list of concrete steps / assertions
-- **Failure type checkboxes**: select from the predefined list only
+- **Failure types**: choose only from the predefined list in the eval issue link
