@@ -2,7 +2,7 @@
 
 ## Summary
 
-<!-- One paragraph. What does this PR do, and why? Link related issues with "Fixes #123". -->
+<!-- One paragraph. What does this PR do, and why? Link related YouTrack issues by ID (for example, `TW-12345`). -->
 
 
 
@@ -35,4 +35,4 @@ teamcity <command>
 - [ ] If adding a data-producing command: includes `--json` support
 - [ ] If modifying `--json` output: no field removals/renames (additive only)
 - [ ] If changing docs-visible behavior: updated `docs/`, `skills/`, and `README.md`
-- [ ] External contributors: links a `status:finalized` issue (or trivial/docs/deps change)
+- [ ] External contributors: links a YouTrack issue with maintainer-confirmed scope (or trivial/docs/deps change)

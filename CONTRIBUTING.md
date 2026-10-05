@@ -349,21 +349,20 @@ Currently deprecated flags: none.
 
 ## Before you open a pull request
 
-Issues come first — we agree on scope and approach there, before any code.
+Issues come first — agree on scope and approach in YouTrack before implementation.
 
-AI makes it trivial to generate a plausible PR against any issue in seconds, and reviewing that slop costs us more than generating it costs you. So we gate on the issue, not the PR.
+Report TeamCity CLI bugs, feature requests, migration issues, and agent-evaluation failures through the links in the [GitHub issue chooser](https://github.com/JetBrains/teamcity-cli/issues/new/choose). They open prefilled issues in the TeamCity project with the Onboarding team.
 
-**External contributors:** your PR must reference an issue labeled `status:finalized` — a maintainer has agreed the problem is real and the approach is wanted. No finalized issue, no PR; we'll close it and point you here.
+**External contributors:** link a YouTrack issue where a maintainer has confirmed the problem and agreed on the approach before opening a PR. Issue discussion is where that agreement happens; the old GitHub `status:finalized` label does not apply in YouTrack.
 
-- **Bugs** get finalized fast — comment with a clear repro and ask for the label.
-- **Features** need scope agreement first. Discussion isn't approval — wait for the label.
-- **Trivial changes** (typos, doc fixes, dependency bumps) — skip the issue, just open the PR.
-
-**JetBrains members** can open PRs without a finalized issue, but link related issues where they exist.
+- **Bugs** need a clear reproduction and maintainer confirmation before implementation.
+- **Features** need scope agreement before implementation.
+- **Trivial changes** (typos, doc fixes, dependency bumps) can skip the issue.
+- **JetBrains members** can open PRs without prior agreement, but should link related YouTrack issues where they exist.
 
 ## Submit a pull request
 
-Push your branch and open a PR against `main`. Link the issue with `Fixes #123`. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) will guide you through describing the change — fill in every section it defines.
+Push your branch and open a PR against `main`. Link related YouTrack issues by ID (for example, `TW-12345`) in the PR description. GitHub will not automatically close a YouTrack issue when the PR merges. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) guides the description; fill in every section it defines.
 
 ## AI-assisted contributions
 
