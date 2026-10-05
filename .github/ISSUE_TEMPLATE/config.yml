@@ -3,6 +3,3 @@ contact_links:
   - name: Report a bug in YouTrack
     url: "https://youtrack.jetbrains.com/newIssue?project=TW&summary=TeamCity+CLI%3A+%3Cshort+bug+summary%3E&description=%23%23+CLI+Version%0ARun+%60teamcity+--version%60+to+get+this.%0A%0A%23%23+TeamCity+Server+Version%0AOptional%3B+helpful+for+API-related+issues.%0A%0A%23%23+Operating+System%0AmacOS%2C+Linux%2C+or+Windows.%0A%0A%23%23+What+happened%3F%0ADescribe+the+bug+clearly+and+concisely.+Include+the+command+you+ran.%0A%0A%23%23+Expected+behavior%0AWhat+did+you+expect+to+happen%3F%0A%0A%23%23+Steps+to+reproduce%0A1.+Run+%60teamcity+...%60%0A2.+Describe+what+happened.%0A%0A%23%23+Relevant+log+output%0APaste+relevant+logs+or+error+messages.+Redact+secrets+before+submitting.&c=Type%3A+Bug&c=Team%3A+Onboarding"
     about: Open a prefilled TeamCity CLI bug report in YouTrack
-  - name: Question or Discussion
-    url: https://github.com/JetBrains/teamcity-cli/discussions
-    about: Ask questions, get help, or discuss ideas
