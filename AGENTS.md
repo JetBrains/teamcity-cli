@@ -46,7 +46,7 @@ just record-gifs <name>  # record GIF from docs/tapes/<name>.tape → docs/image
 ## Filing Issues
 
 - TeamCity CLI product reports belong in YouTrack project `TW`, assigned to Team `Onboarding`, with visibility set to All Users. Leave them unassigned unless explicitly requested.
-- Use the matching prefilled YouTrack link in `.github/ISSUE_TEMPLATE/config.yml` for bugs, feature requests, migration issues, and eval reports. GitHub Discussions remain available for questions; code contributions still use GitHub pull requests.
+- Use the matching prefilled YouTrack link in `.github/ISSUE_TEMPLATE/config.yml` for bugs, feature requests, migration issues, and eval reports. code contributions still use GitHub pull requests.
 - When creating issues with the YouTrack CLI, follow the matching description structure and verify the Type, Team, visibility, and assignee fields. Do not create replacement GitHub issues or apply GitHub labels to YouTrack tickets.
 
 ## Eval Issues
