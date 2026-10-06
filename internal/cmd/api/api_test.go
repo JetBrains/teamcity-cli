@@ -13,6 +13,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -214,6 +215,40 @@ func TestAPICommandXMLErrorResponse(T *testing.T) {
 	var nf *api.NotFoundError
 	assert.ErrorAs(T, err, &nf, "404 should classify as NotFoundError")
 	assert.Contains(T, err.Error(), "snapshot-dependencies", "wire message should be preserved")
+}
+
+// TestAPICommandPermissionErrorCarriesAuthSource reproduces TW-104682: a 403 from
+// `teamcity api` must carry the client's AuthSource so the tip matches the login method.
+func TestAPICommandPermissionErrorCarriesAuthSource(T *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(T, "PUT", r.Method, "Method")
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><errors><error><message>You do not have "Enable / disable versioned settings" permission in project with internal id: project1</message><additionalMessage>jetbrains.buildServer.serverSide.auth.AccessDeniedException: You do not have "Enable / disable versioned settings" permission in project with internal id: project1.</additionalMessage><statusText>Responding with error, status code: 403 (Forbidden).</statusText></error></errors>`))
+	}))
+	defer server.Close()
+
+	f := cmdutil.NewFactory()
+	f.ClientFunc = func() (api.ClientInterface, error) {
+		return api.NewClient(server.URL, "test-token", api.WithAuthSource(api.AuthSourcePKCE)), nil
+	}
+
+	var out bytes.Buffer
+	rootCmd := createTestRootCmdWithFactory(f)
+	rootCmd.SetArgs([]string{"api", "/app/rest/projects/id:p1/versionedSettings/config/parameters/allowUIEditing",
+		"-X", "PUT", "-H", "Content-Type: text/plain", "-f", "value=false"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+
+	err := rootCmd.Execute()
+	require.Error(T, err, "expected error for 403 response")
+	var pe *api.PermissionError
+	require.ErrorAs(T, err, &pe, "403 should classify as PermissionError")
+	assert.Equal(T, "Enable / disable versioned settings", pe.Permission)
+	assert.Equal(T, "project1", pe.Project)
+	assert.Equal(T, api.AuthSourcePKCE, pe.AuthSource, "AuthSource must survive the raw-request error path")
+	_, _, tip := output.ClassifyError(err)
+	assert.Contains(T, tip, "permissions picker", "PKCE users must be pointed at the scope picker, not the profile token page")
 }
 
 func TestAPICommand406RetriesWithWildcardAccept(T *testing.T) {
@@ -784,11 +819,14 @@ func TestFetchAllPagesPropagatesErrorStatus(T *testing.T) {
 	}))
 	defer server.Close()
 
-	client := api.NewClient(server.URL, "test-token")
+	client := api.NewClient(server.URL, "test-token", api.WithAuthSource(api.AuthSourceEnv))
 	pages, status, err := fetchAllPages(T.Context(), client, "/app/rest/builds", nil)
 	require.Error(T, err, "fetchAllPages() must surface non-2xx as error")
 	assert.Equal(T, http.StatusForbidden, status, "fetchAllPages() must return the failed status (not 200) so analytics records the real code")
 	assert.Empty(T, pages, "no pages should be returned on first-page failure")
+	var pe *api.PermissionError
+	require.ErrorAs(T, err, &pe)
+	assert.Equal(T, api.AuthSourceEnv, pe.AuthSource, "paginated errors must carry AuthSource too (TW-104682)")
 }
 
 func TestPrettyPrintJSON(T *testing.T) {
