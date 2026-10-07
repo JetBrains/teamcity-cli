@@ -484,7 +484,13 @@ func (c *Client) getWithRetry(ctx context.Context, path string, result any, retr
 
 // handleErrorResponse converts a non-2xx response into a typed error and stamps the AuthSource on PermissionError.
 func (c *Client) handleErrorResponse(resp *http.Response) error {
-	err := ErrorFromResponse(resp)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
+	return c.TypedError(resp.StatusCode, body)
+}
+
+// TypedError classifies a non-2xx status + body like ErrorFromBody and stamps the client's AuthSource on PermissionError, so 403 tips match how the user authenticated.
+func (c *Client) TypedError(status int, body []byte) error {
+	err := ErrorFromBody(status, body)
 	if perm, ok := errors.AsType[*PermissionError](err); ok {
 		perm.AuthSource = c.AuthSource
 	}

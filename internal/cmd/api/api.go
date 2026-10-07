@@ -189,7 +189,17 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 		return err
 	}
 
-	return outputAPIResponse(f.Printer, resp.Body, resp.StatusCode, resp.Headers, opts)
+	return outputAPIResponse(f.Printer, client, resp.Body, resp.StatusCode, resp.Headers, opts)
+}
+
+// typedError classifies a non-2xx status + body, stamping the client's AuthSource so 403 tips match how the user authenticated (TW-104682).
+func typedError(client api.ClientInterface, status int, body []byte) error {
+	if c, ok := client.(interface {
+		TypedError(status int, body []byte) error
+	}); ok {
+		return c.TypedError(status, body)
+	}
+	return api.ErrorFromBody(status, body)
 }
 
 func statusCodeOf(r *api.RawResponse) int {
@@ -230,14 +240,14 @@ func runAPIPaginated(ctx context.Context, p *output.Printer, client api.ClientIn
 		if err != nil {
 			return lastStatus, fmt.Errorf("failed to merge pages: %w", err)
 		}
-		return lastStatus, outputAPIResponse(p, merged, http.StatusOK, nil, opts)
+		return lastStatus, outputAPIResponse(p, client, merged, http.StatusOK, nil, opts)
 	}
 
 	for i, page := range pages {
 		if i > 0 {
 			_, _ = fmt.Fprintln(p.Out)
 		}
-		if err := outputAPIResponse(p, page, http.StatusOK, nil, opts); err != nil {
+		if err := outputAPIResponse(p, client, page, http.StatusOK, nil, opts); err != nil {
 			return lastStatus, err
 		}
 	}
@@ -245,7 +255,7 @@ func runAPIPaginated(ctx context.Context, p *output.Printer, client api.ClientIn
 	return lastStatus, nil
 }
 
-func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeaders map[string][]string, opts *apiOptions) error {
+func outputAPIResponse(p *output.Printer, client api.ClientInterface, body []byte, statusCode int, respHeaders map[string][]string, opts *apiOptions) error {
 	if opts.silent && statusCode >= 200 && statusCode < 300 {
 		return nil
 	}
@@ -268,7 +278,7 @@ func outputAPIResponse(p *output.Printer, body []byte, statusCode int, respHeade
 		if opts.raw && len(body) > 0 {
 			_, _ = fmt.Fprint(p.Out, string(body))
 		}
-		return api.ErrorFromBody(statusCode, body)
+		return typedError(client, statusCode, body)
 	}
 
 	if len(body) > 0 {
@@ -305,7 +315,7 @@ func fetchAllPages(ctx context.Context, client api.ClientInterface, endpoint str
 		lastStatus = resp.StatusCode
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return nil, lastStatus, api.ErrorFromBody(resp.StatusCode, resp.Body)
+			return nil, lastStatus, typedError(client, resp.StatusCode, resp.Body)
 		}
 
 		pages = append(pages, resp.Body)
