@@ -2,6 +2,7 @@ package run
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -12,8 +13,8 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
-// agentListInlineLimit is the max agents listed before we collapse to a pool summary.
-const agentListInlineLimit = 20
+// compatibilityInlineLimit is the max entries listed before a pool is summarized.
+const compatibilityInlineLimit = 20
 
 // reasonProbeAgents caps how many incompatible agents we probe for reasons to avoid long waits.
 const reasonProbeAgents = 5
@@ -32,7 +33,145 @@ func waitReasonIsCompatibility(waitReason string) bool {
 	})
 }
 
-// renderBuildCompatibility prints compatible/incompatible agents for a queued build; errors are best-effort.
+func queuedBuildCompatibility(client api.ClientInterface, build *api.Build) (*api.CompatibilityList, bool) {
+	if build.State != "queued" {
+		return nil, false
+	}
+
+	compatibility, err := client.GetQueuedBuildCompatibilities(build.ID)
+	if err == nil {
+		return compatibility, false
+	}
+
+	var notFound *api.NotFoundError
+	return nil, errors.As(err, &notFound)
+}
+
+// renderQueuedBuildCompatibility prints compatibility returned directly by the queued-build API.
+func renderQueuedBuildCompatibility(w io.Writer, compatibility *api.CompatibilityList) {
+	if compatibility == nil {
+		return
+	}
+
+	compatible := make([]api.Compatibility, 0, len(compatibility.Compatibility))
+	incompatible := make([]api.Compatibility, 0, len(compatibility.Compatibility))
+	for _, entry := range compatibility.Compatibility {
+		if entry.Compatible {
+			compatible = append(compatible, entry)
+		} else {
+			incompatible = append(incompatible, entry)
+		}
+	}
+
+	_, _ = fmt.Fprintln(w, "\nCompatibility:")
+	renderCompatibilityGroup(w, "Compatible resources", compatible, output.Green)
+	renderCompatibilityGroup(w, "Incompatible resources", incompatible, output.Yellow)
+}
+
+func renderCompatibilityGroup(w io.Writer, title string, entries []api.Compatibility, colorize func(a ...any) string) {
+	_, _ = fmt.Fprintf(w, "%s (%d)\n", colorize(title), len(entries))
+	for _, group := range groupCompatibilityByPool(entries) {
+		if len(group.entries) > compatibilityInlineLimit {
+			_, _ = fmt.Fprintf(w, "  %s %d resources\n", output.Faint("["+group.name+"]"), len(group.entries))
+			renderUniqueCompatibilityReasons(w, group.entries)
+			_, _ = fmt.Fprintf(w, "    %s %d resources not shown\n", output.Faint(output.Sym().Ellipsis), len(group.entries))
+			continue
+		}
+		_, _ = fmt.Fprintf(w, "  %s\n", output.Faint("["+group.name+"]"))
+		for _, entry := range group.entries {
+			_, _ = fmt.Fprintf(w, "    %s\n", compatibilityResourceName(entry))
+			if entry.Compatible {
+				continue
+			}
+			for _, reason := range entry.ReasonsList() {
+				_, _ = fmt.Fprintf(w, "      %s %s\n", output.Red(output.Sym().Bullet), reason)
+			}
+		}
+	}
+}
+
+func renderUniqueCompatibilityReasons(w io.Writer, entries []api.Compatibility) {
+	seen := map[string]struct{}{}
+	reasons := []string{}
+	for _, entry := range entries {
+		for _, reason := range entry.ReasonsList() {
+			if reason == "Unmet requirements:" {
+				continue
+			}
+			if _, exists := seen[reason]; exists {
+				continue
+			}
+			seen[reason] = struct{}{}
+			reasons = append(reasons, reason)
+		}
+	}
+	if len(reasons) == 0 {
+		return
+	}
+
+	_, _ = fmt.Fprintln(w, "    Incompatibility reasons:")
+	for _, reason := range reasons {
+		_, _ = fmt.Fprintf(w, "      %s %s\n", output.Red(output.Sym().Bullet), reason)
+	}
+}
+
+type compatibilityPool struct {
+	name    string
+	entries []api.Compatibility
+}
+
+func groupCompatibilityByPool(entries []api.Compatibility) []compatibilityPool {
+	groups := map[string][]api.Compatibility{}
+	for _, entry := range entries {
+		pool := compatibilityPoolName(entry)
+		groups[pool] = append(groups[pool], entry)
+	}
+
+	result := make([]compatibilityPool, 0, len(groups))
+	for name, grouped := range groups {
+		slices.SortFunc(grouped, func(a, b api.Compatibility) int {
+			return cmp.Compare(compatibilityResourceName(a), compatibilityResourceName(b))
+		})
+		result = append(result, compatibilityPool{name: name, entries: grouped})
+	}
+	slices.SortFunc(result, func(a, b compatibilityPool) int { return cmp.Compare(a.name, b.name) })
+	return result
+}
+
+func compatibilityPoolName(entry api.Compatibility) string {
+	if entry.Agent != nil {
+		if entry.Agent.Pool != nil && entry.Agent.Pool.Name != "" {
+			return entry.Agent.Pool.Name
+		}
+		return "(no pool)"
+	}
+	if entry.AgentType != nil {
+		if entry.AgentType.IsCloud {
+			return "Cloud images"
+		}
+		return "Agent types"
+	}
+	return "Unknown resources"
+}
+
+func compatibilityResourceName(entry api.Compatibility) string {
+	if entry.Agent != nil {
+		return entry.Agent.Name + agentStatusSuffix(*entry.Agent)
+	}
+	if entry.AgentType != nil {
+		details := []string{"agent type"}
+		if entry.AgentType.IsCloud {
+			details[0] = "cloud image"
+		}
+		if entry.CanStartNewInstance {
+			details = append(details, "can start new instance")
+		}
+		return entry.AgentType.Name + " (" + strings.Join(details, ", ") + ")"
+	}
+	return "Unknown resource"
+}
+
+// renderBuildCompatibility prints compatible/incompatible agents for servers without the queued-build API.
 func renderBuildCompatibility(w io.Writer, client api.ClientInterface, build *api.Build) {
 	if build.State != "queued" {
 		return
@@ -71,7 +210,7 @@ func renderAgentGroup(w io.Writer, title string, total int, agents []api.Agent, 
 	}
 	_, _ = fmt.Fprintln(w)
 
-	if len(agents) <= agentListInlineLimit {
+	if len(agents) <= compatibilityInlineLimit {
 		pools := groupAgentsByPool(agents)
 		for _, pool := range pools {
 			_, _ = fmt.Fprintf(w, "  %s\n", output.Faint("["+pool.name+"]"))

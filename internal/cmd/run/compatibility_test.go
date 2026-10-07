@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,4 +58,31 @@ func TestRenderIncompatibilityReasonsParallel(T *testing.T) {
 		require.GreaterOrEqual(T, positions[i], 0, "agent %s missing from output", a.Name)
 	}
 	assert.True(T, slices.IsSorted(positions), "agents printed out of input order: %v", positions)
+}
+
+func TestRenderCompatibilityGroupCollapsesLargePool(T *testing.T) {
+	previousNoColor := output.NoColor
+	output.NoColor = true
+	T.Cleanup(func() { output.NoColor = previousNoColor })
+
+	entries := make([]api.Compatibility, compatibilityInlineLimit+1)
+	for i := range entries {
+		entries[i] = api.Compatibility{
+			Agent: &api.Agent{Name: fmt.Sprintf("agent-%d", i), Pool: &api.Pool{Name: "Linux Pool"}},
+			UnmetRequirements: &api.UnmetRequirements{
+				Description: "Unmet requirements:\n\tParameter 'os.name' contains 'Linux'",
+			},
+		}
+	}
+
+	var buf bytes.Buffer
+	renderCompatibilityGroup(&buf, "Incompatible resources", entries, output.Yellow)
+	out := buf.String()
+
+	assert.Contains(T, out, "Incompatible resources (21)")
+	assert.Contains(T, out, "[Linux Pool] 21 resources")
+	assert.Contains(T, out, "Incompatibility reasons:")
+	assert.Equal(T, 1, strings.Count(out, "Parameter 'os.name' contains 'Linux'"))
+	assert.Contains(T, out, "21 resources not shown")
+	assert.NotContains(T, out, "agent-0")
 }

@@ -54,29 +54,30 @@ type BuildTypeList struct {
 
 // Build represents a TeamCity build
 type Build struct {
-	ID                 int         `json:"id"`
-	BuildTypeID        string      `json:"buildTypeId,omitempty"`
-	Number             string      `json:"number,omitempty"`
-	Status             string      `json:"status,omitempty"`
-	State              string      `json:"state,omitempty"`
-	Personal           bool        `json:"personal,omitzero"`
-	BranchName         string      `json:"branchName,omitempty"`
-	DefaultBranch      bool        `json:"defaultBranch,omitzero"`
-	Href               string      `json:"href,omitempty"`
-	WebURL             string      `json:"webUrl,omitempty"`
-	StatusText         string      `json:"statusText,omitempty"`
-	QueuedDate         string      `json:"queuedDate,omitempty"`
-	StartDate          string      `json:"startDate,omitempty"`
-	FinishDate         string      `json:"finishDate,omitempty"`
-	BuildType          *BuildType  `json:"buildType,omitempty"`
-	Triggered          *Triggered  `json:"triggered,omitempty"`
-	Agent              *Agent      `json:"agent,omitempty"`
-	PercentageComplete int         `json:"percentageComplete,omitzero"`
-	Pinned             bool        `json:"pinned,omitzero"`
-	Tags               *TagList    `json:"tags,omitempty"`
-	LastChanges        *ChangeList `json:"lastChanges,omitempty"`
-	WaitReason         string      `json:"waitReason,omitempty"`
-	UsedByOtherBuilds  bool        `json:"usedByOtherBuilds,omitzero"`
+	ID                 int                `json:"id"`
+	BuildTypeID        string             `json:"buildTypeId,omitempty"`
+	Number             string             `json:"number,omitempty"`
+	Status             string             `json:"status,omitempty"`
+	State              string             `json:"state,omitempty"`
+	Personal           bool               `json:"personal,omitzero"`
+	BranchName         string             `json:"branchName,omitempty"`
+	DefaultBranch      bool               `json:"defaultBranch,omitzero"`
+	Href               string             `json:"href,omitempty"`
+	WebURL             string             `json:"webUrl,omitempty"`
+	StatusText         string             `json:"statusText,omitempty"`
+	QueuedDate         string             `json:"queuedDate,omitempty"`
+	StartDate          string             `json:"startDate,omitempty"`
+	FinishDate         string             `json:"finishDate,omitempty"`
+	BuildType          *BuildType         `json:"buildType,omitempty"`
+	Triggered          *Triggered         `json:"triggered,omitempty"`
+	Agent              *Agent             `json:"agent,omitempty"`
+	PercentageComplete int                `json:"percentageComplete,omitzero"`
+	Pinned             bool               `json:"pinned,omitzero"`
+	Tags               *TagList           `json:"tags,omitempty"`
+	LastChanges        *ChangeList        `json:"lastChanges,omitempty"`
+	WaitReason         string             `json:"waitReason,omitempty"`
+	Compatibility      *CompatibilityList `json:"compatibility,omitempty"`
+	UsedByOtherBuilds  bool               `json:"usedByOtherBuilds,omitzero"`
 }
 
 // BuildList represents a list of builds
@@ -108,6 +109,13 @@ type Agent struct {
 	Build      *Build `json:"build,omitempty"`
 }
 
+// AgentType represents an agent type, including cloud images that can start new agents.
+type AgentType struct {
+	ID      int    `json:"id,omitzero"`
+	Name    string `json:"name,omitempty"`
+	IsCloud bool   `json:"isCloud,omitzero"`
+}
+
 // AgentList represents a list of agents
 type AgentList struct {
 	Count    int     `json:"count"`
@@ -133,13 +141,19 @@ type PoolList struct {
 	Pools    []Pool `json:"agentPool"`
 }
 
-// Compatibility represents build type compatibility info
+// Compatibility represents agent or agent-type compatibility with a run.
 type Compatibility struct {
-	Compatible        bool                 `json:"compatible"`
-	BuildType         *BuildType           `json:"buildType,omitempty"`
-	Agent             *Agent               `json:"agent,omitempty"`
-	Reasons           *IncompatibleReasons `json:"incompatibleReasons,omitempty"`
-	UnmetRequirements *UnmetRequirements   `json:"unmetRequirements,omitempty"`
+	Compatible                 bool                 `json:"compatible"`
+	BuildType                  *BuildType           `json:"buildType,omitempty"`
+	Agent                      *Agent               `json:"agent,omitempty"`
+	AgentType                  *AgentType           `json:"agentType,omitempty"`
+	CanStartNewInstance        bool                 `json:"canStartNewInstance"`
+	StartingInstanceCount      int                  `json:"startingInstanceCount"`
+	IncompatibilityReason      string               `json:"incompatibilityReason,omitempty"`
+	IncompatibilityDescription string               `json:"incompatibilityDescription,omitempty"`
+	IncompatibleRunner         string               `json:"incompatibleRunner,omitempty"`
+	Reasons                    *IncompatibleReasons `json:"incompatibleReasons,omitempty"`
+	UnmetRequirements          *UnmetRequirements   `json:"unmetRequirements,omitempty"`
 }
 
 // CompatibilityList represents a list of compatibility entries
@@ -155,7 +169,16 @@ type IncompatibleReasons struct {
 
 // UnmetRequirements holds the human-readable incompatibility description (may be multi-line).
 type UnmetRequirements struct {
-	Description string `json:"description,omitempty"`
+	Count        int                `json:"count"`
+	Description  string             `json:"description,omitempty"`
+	Requirements []UnmetRequirement `json:"requirement,omitempty"`
+}
+
+// UnmetRequirement describes a requirement that prevents a run from starting.
+type UnmetRequirement struct {
+	PropertyName  string `json:"propertyName,omitempty"`
+	Type          string `json:"type,omitempty"`
+	PropertyValue string `json:"propertyValue,omitempty"`
 }
 
 // ReasonsList merges the legacy incompatibleReasons.reason array with unmetRequirements.description.
@@ -164,8 +187,18 @@ func (c *Compatibility) ReasonsList() []string {
 	if c.Reasons != nil {
 		out = append(out, c.Reasons.Reasons...)
 	}
-	if c.UnmetRequirements != nil && c.UnmetRequirements.Description != "" {
-		for line := range strings.SplitSeq(c.UnmetRequirements.Description, "\n") {
+	description := c.IncompatibilityDescription
+	if description == "" {
+		description = c.IncompatibilityReason
+	}
+	if description == "" && c.IncompatibleRunner != "" {
+		description = "Incompatible runner: " + c.IncompatibleRunner
+	}
+	if description == "" && c.UnmetRequirements != nil {
+		description = c.UnmetRequirements.Description
+	}
+	if description != "" {
+		for line := range strings.SplitSeq(description, "\n") {
 			if trimmed := strings.TrimSpace(line); trimmed != "" {
 				out = append(out, trimmed)
 			}

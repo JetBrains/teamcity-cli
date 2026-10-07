@@ -755,6 +755,8 @@ teamcity run view 12345 --web
 teamcity run view 12345 --json
 ```
 
+For queued runs, `run view` lists compatible and incompatible agents plus cloud images that can start an agent. Incompatible entries include unmet requirements, such as a missing parameter. Large pool groups are summarized with unique reasons; the JSON result adds every entry in `compatibility`. On servers without this API, the command keeps its existing agent summary.
+
 ## Snapshot dependency tree
 
 Visualize the snapshot dependency chain for a run with `teamcity run tree`:
