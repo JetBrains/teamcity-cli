@@ -87,3 +87,27 @@ func TestGetQueuedBuildApprovalInfo(t *testing.T) {
 	assert.Equal(t, "waitingForApproval", info.Status)
 	assert.True(t, info.CanBeApprovedByCurrentUser)
 }
+
+func TestGetQueuedBuildCompatibilities(t *testing.T) {
+	t.Parallel()
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/app/rest/buildQueue/id:100/compatibilities", r.URL.Path)
+		assert.Equal(t, "true", r.URL.Query().Get("allPools"))
+		assert.Contains(t, r.URL.Query().Get("fields"), "agentType(id,name,isCloud)")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(CompatibilityList{
+			Count: 1,
+			Compatibility: []Compatibility{{
+				AgentType:                  &AgentType{ID: 12, Name: "Ubuntu", IsCloud: true},
+				CanStartNewInstance:        true,
+				IncompatibilityDescription: "Missing parameter: os.name",
+			}},
+		})
+	})
+
+	result, err := client.GetQueuedBuildCompatibilities(100)
+	require.NoError(t, err)
+	require.Len(t, result.Compatibility, 1)
+	assert.Equal(t, "Ubuntu", result.Compatibility[0].AgentType.Name)
+	assert.Equal(t, []string{"Missing parameter: os.name"}, result.Compatibility[0].ReasonsList())
+}

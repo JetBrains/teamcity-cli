@@ -121,6 +121,8 @@ Set `TEAMCITY_RO=1` to block writes and remote shells (`agent exec` and `agent t
 
 Every command takes `--json` or `--plain` for [scripting](https://www.jetbrains.com/help/teamcity/teamcity-cli-scripting.html), and `--web` opens the matching page in the TeamCity UI. When no command covers what you need, `teamcity api` calls the REST API directly with your stored credentials. You can also log in to several servers and switch between them — see [configuration](https://www.jetbrains.com/help/teamcity/teamcity-cli-configuration.html).
 
+For a queued run, `teamcity run view <id>` reports agent and cloud-image compatibility, including unmet requirements, when the server supports it. Large pools are summarized; use `--json` and read `.compatibility` for every entry.
+
 ## Commands
 
 Artifact downloads are confined to `--output`; failed or incomplete transfers preserve existing files.

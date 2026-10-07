@@ -82,6 +82,7 @@ type ClientInterface interface {
 	MoveQueuedBuildToTop(buildID string) error
 	ApproveQueuedBuild(buildID string) error
 	GetQueuedBuildApprovalInfo(buildID string) (*ApprovalInfo, error)
+	GetQueuedBuildCompatibilities(buildID int) (*CompatibilityList, error)
 
 	GetProjectParameters(projectID string) (*ParameterList, error)
 	GetProjectParameter(projectID, name string) (*Parameter, error)

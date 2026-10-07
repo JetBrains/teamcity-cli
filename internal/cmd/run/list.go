@@ -400,6 +400,10 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	if done, err := opts.EmitWebURL(p, build.WebURL); done {
 		return err
 	}
+	compatibility, compatibilityUnsupported := queuedBuildCompatibility(client, build)
+	if compatibility != nil {
+		build.Compatibility = compatibility
+	}
 
 	if opts.JSON {
 		reused, _ := client.GetBuildUsedByOtherBuilds(strconv.Itoa(build.ID))
@@ -456,7 +460,12 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 
 	if build.State == "queued" && build.WaitReason != "" {
 		_, _ = fmt.Fprintf(p.Out, "\nWait reason: %s\n", output.Yellow(build.WaitReason))
-		if waitReasonIsCompatibility(build.WaitReason) {
+	}
+	if build.State == "queued" {
+		switch {
+		case compatibility != nil:
+			renderQueuedBuildCompatibility(p.Out, compatibility)
+		case compatibilityUnsupported && waitReasonIsCompatibility(build.WaitReason):
 			renderBuildCompatibility(p.Out, client, build)
 		}
 	}
