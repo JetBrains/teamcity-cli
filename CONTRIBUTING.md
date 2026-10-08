@@ -81,7 +81,6 @@ internal/
   terminal/          # Agent WebSocket terminal
 acceptance/          # .txtar e2e tests (testscript framework)
 docs/                # Writerside topics + images + tapes
-skills/migrate-to-teamcity/ # AI agent skill maintained here
 ```
 
 **Data flow:** `tc/main.go` → `cmd.Execute()` → cobra tree → `*cmdutil.Factory` → `f.Client()` → API → `output.Printer`.
@@ -259,10 +258,11 @@ Run, in order:
 
 Update all three:
 1. `docs/topics/` — Writerside topics + GIF if needed
-2. The `teamcity-cli` skill — **it lives in
+2. The skills — **they live in
    [JetBrains/teamcity-skills](https://github.com/JetBrains/teamcity-skills)**,
-   not here. Open a PR there against `skills/teamcity-cli/`, then bump the
-   dependency with `go get github.com/JetBrains/teamcity-skills@<version>`
+   not here. Open a PR there against `skills/teamcity-cli/` (or
+   `skills/migrate-to-teamcity/`), then bump the dependency with
+   `go get github.com/JetBrains/teamcity-skills@<version>`
 3. `README.md` — commands table
 
 Grep the flag/command name across all three before closing the PR.
