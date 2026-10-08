@@ -21,6 +21,10 @@ type mockCompatClient struct {
 	calls atomic.Int32
 }
 
+type legacyCompatibilityClient struct {
+	api.ClientInterface
+}
+
 func (m *mockCompatClient) GetAgentBuildTypeCompatibility(agentID int, _ string, _ int) (*api.Compatibility, error) {
 	m.calls.Add(1)
 	time.Sleep(m.delay)
@@ -58,6 +62,13 @@ func TestRenderIncompatibilityReasonsParallel(T *testing.T) {
 		require.GreaterOrEqual(T, positions[i], 0, "agent %s missing from output", a.Name)
 	}
 	assert.True(T, slices.IsSorted(positions), "agents printed out of input order: %v", positions)
+}
+
+func TestQueuedBuildCompatibilityFallsBackForLegacyClient(t *testing.T) {
+	compatibility, fallback := queuedBuildCompatibility(&legacyCompatibilityClient{}, &api.Build{State: "queued"})
+
+	assert.Nil(t, compatibility)
+	assert.True(t, fallback)
 }
 
 func TestRenderCompatibilityGroupCollapsesLargePool(T *testing.T) {
