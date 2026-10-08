@@ -21,7 +21,7 @@ type mockCompatClient struct {
 	calls atomic.Int32
 }
 
-type legacyCompatibilityClient struct {
+type clientWithoutQueuedCompatibility struct {
 	api.ClientInterface
 }
 
@@ -64,8 +64,8 @@ func TestRenderIncompatibilityReasonsParallel(T *testing.T) {
 	assert.True(T, slices.IsSorted(positions), "agents printed out of input order: %v", positions)
 }
 
-func TestQueuedBuildCompatibilityFallsBackForLegacyClient(t *testing.T) {
-	compatibility, fallback := queuedBuildCompatibility(&legacyCompatibilityClient{}, &api.Build{State: "queued"})
+func TestQueuedBuildCompatibilityFallsBackWithoutCapability(t *testing.T) {
+	compatibility, fallback := queuedBuildCompatibility(&clientWithoutQueuedCompatibility{}, &api.Build{State: "queued"})
 
 	assert.Nil(t, compatibility)
 	assert.True(t, fallback)
