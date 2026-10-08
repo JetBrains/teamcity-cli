@@ -385,6 +385,11 @@ func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
+type runViewJSON struct {
+	*api.Build
+	Compatibility *api.CompatibilityList `json:"compatibility,omitempty"`
+}
+
 func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) error {
 	p := f.Printer
 	client, err := f.Client()
@@ -401,14 +406,11 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 		return err
 	}
 	compatibility, compatibilityUnsupported := queuedBuildCompatibility(client, build)
-	if compatibility != nil {
-		build.Compatibility = compatibility
-	}
 
 	if opts.JSON {
 		reused, _ := client.GetBuildUsedByOtherBuilds(strconv.Itoa(build.ID))
 		build.UsedByOtherBuilds = reused
-		return p.PrintJSON(build)
+		return p.PrintJSON(runViewJSON{Build: build, Compatibility: compatibility})
 	}
 
 	reused, _ := client.GetBuildUsedByOtherBuilds(strconv.Itoa(build.ID))

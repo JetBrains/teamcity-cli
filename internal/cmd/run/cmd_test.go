@@ -854,7 +854,9 @@ func TestRunView_compatibilityDetails(t *testing.T) {
 	jsonOutput := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "71", "--json")
 	var gotJSON map[string]any
 	require.NoError(t, json.Unmarshal([]byte(jsonOutput), &gotJSON))
+	assert.Equal(t, float64(71), gotJSON["id"])
 	assert.Contains(t, gotJSON, "compatibility")
+	assert.NotContains(t, gotJSON, "Build")
 }
 
 func TestRunView_compatibilityFallback(t *testing.T) {
