@@ -25,6 +25,10 @@ var compatibilityWaitKeywords = []string{
 	"outdated, waiting for upgrade",
 }
 
+type queuedBuildCompatibilityClient interface {
+	GetQueuedBuildCompatibilities(buildID int) (*api.CompatibilityList, error)
+}
+
 // waitReasonIsCompatibility returns true when the wait reason suggests an agent compatibility problem.
 func waitReasonIsCompatibility(waitReason string) bool {
 	lower := strings.ToLower(waitReason)
@@ -38,7 +42,12 @@ func queuedBuildCompatibility(client api.ClientInterface, build *api.Build) (*ap
 		return nil, false
 	}
 
-	compatibility, err := client.GetQueuedBuildCompatibilities(build.ID)
+	compatibilityClient, ok := client.(queuedBuildCompatibilityClient)
+	if !ok {
+		return nil, true
+	}
+
+	compatibility, err := compatibilityClient.GetQueuedBuildCompatibilities(build.ID)
 	if err == nil {
 		return compatibility, false
 	}
