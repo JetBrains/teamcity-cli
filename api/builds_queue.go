@@ -93,12 +93,19 @@ func (c *Client) GetQueuedBuildApprovalInfo(buildID string) (*ApprovalInfo, erro
 
 // GetQueuedBuildCompatibilities returns agent and cloud-image compatibility for a queued build.
 func (c *Client) GetQueuedBuildCompatibilities(buildID int) (*CompatibilityList, error) {
-	fields := "count,compatibility(compatible,agent(id,name,connected,enabled,authorized,pool(id,name)),agentType(id,name,isCloud),canStartNewInstance,startingInstanceCount,incompatibilityReason,incompatibilityDescription,incompatibleRunner,unmetRequirements(count,description,requirement(propertyName,type,propertyValue)))"
-	path := fmt.Sprintf("/app/rest/buildQueue/id:%d/compatibilities?allPools=true&fields=%s", buildID, url.QueryEscape(fields))
+	locator := NewLocator().AddInt("count", pageCount(0))
+	fields := "count,nextHref,compatibility(compatible,agent(id,name,connected,enabled,authorized,pool(id,name)),agentType(id,name,isCloud),canStartNewInstance,startingInstanceCount,incompatibilityReason,incompatibilityDescription,incompatibleRunner,unmetRequirements(count,description,requirement(propertyName,type,propertyValue)))"
+	path := fmt.Sprintf("/app/rest/buildQueue/id:%d/compatibilities?locator=%s&allPools=true&fields=%s", buildID, locator.Encode(), url.QueryEscape(fields))
 
-	var result CompatibilityList
-	if err := c.get(c.ctx(), path, &result); err != nil {
+	compatibility, _, err := collectPages(c, path, 0, func(p string) ([]Compatibility, string, error) {
+		var page CompatibilityList
+		if err := c.get(c.ctx(), p, &page); err != nil {
+			return nil, "", err
+		}
+		return page.Compatibility, page.NextHref, nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return &CompatibilityList{Count: len(compatibility), Compatibility: compatibility}, nil
 }
