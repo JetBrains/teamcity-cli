@@ -87,3 +87,47 @@ func TestGetQueuedBuildApprovalInfo(t *testing.T) {
 	assert.Equal(t, "waitingForApproval", info.Status)
 	assert.True(t, info.CanBeApprovedByCurrentUser)
 }
+
+func TestGetQueuedBuildCompatibilities(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/app/rest/buildQueue/id:100/compatibilities", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+
+		switch r.URL.Query().Get("page") {
+		case "":
+			assert.Equal(t, "true", r.URL.Query().Get("allPools"))
+			assert.Equal(t, "count:1000", r.URL.Query().Get("locator"))
+			assert.Contains(t, r.URL.Query().Get("fields"), "nextHref")
+			assert.Contains(t, r.URL.Query().Get("fields"), "agentType(id,name,isCloud)")
+			calls++
+			json.NewEncoder(w).Encode(CompatibilityList{
+				Count:    2,
+				NextHref: "/app/rest/buildQueue/id:100/compatibilities?page=2",
+				Compatibility: []Compatibility{{
+					AgentType:                  &AgentType{ID: 12, Name: "Ubuntu", IsCloud: true},
+					CanStartNewInstance:        true,
+					IncompatibilityDescription: "Missing parameter: os.name",
+				}},
+			})
+		case "2":
+			calls++
+			json.NewEncoder(w).Encode(CompatibilityList{
+				Count:         2,
+				Compatibility: []Compatibility{{Agent: &Agent{ID: 13, Name: "agent-13"}}},
+			})
+		default:
+			t.Fatalf("unexpected page %q", r.URL.Query().Get("page"))
+		}
+	})
+
+	result, err := client.GetQueuedBuildCompatibilities(100)
+	require.NoError(t, err)
+	assert.Equal(t, 2, calls)
+	require.Len(t, result.Compatibility, 2)
+	assert.Equal(t, 2, result.Count)
+	assert.Equal(t, "Ubuntu", result.Compatibility[0].AgentType.Name)
+	assert.Equal(t, []string{"Missing parameter: os.name"}, result.Compatibility[0].ReasonsList())
+	assert.Equal(t, "agent-13", result.Compatibility[1].Agent.Name)
+}

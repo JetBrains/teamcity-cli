@@ -108,6 +108,13 @@ type Agent struct {
 	Build      *Build `json:"build,omitempty"`
 }
 
+// AgentType represents an agent type, including cloud images that can start new agents.
+type AgentType struct {
+	ID      int    `json:"id,omitzero"`
+	Name    string `json:"name,omitempty"`
+	IsCloud bool   `json:"isCloud,omitzero"`
+}
+
 // AgentList represents a list of agents
 type AgentList struct {
 	Count    int     `json:"count"`
@@ -133,18 +140,25 @@ type PoolList struct {
 	Pools    []Pool `json:"agentPool"`
 }
 
-// Compatibility represents build type compatibility info
+// Compatibility represents agent or agent-type compatibility with a run.
 type Compatibility struct {
-	Compatible        bool                 `json:"compatible"`
-	BuildType         *BuildType           `json:"buildType,omitempty"`
-	Agent             *Agent               `json:"agent,omitempty"`
-	Reasons           *IncompatibleReasons `json:"incompatibleReasons,omitempty"`
-	UnmetRequirements *UnmetRequirements   `json:"unmetRequirements,omitempty"`
+	Compatible                 bool                 `json:"compatible"`
+	BuildType                  *BuildType           `json:"buildType,omitempty"`
+	Agent                      *Agent               `json:"agent,omitempty"`
+	AgentType                  *AgentType           `json:"agentType,omitempty"`
+	CanStartNewInstance        bool                 `json:"canStartNewInstance"`
+	StartingInstanceCount      int                  `json:"startingInstanceCount"`
+	IncompatibilityReason      string               `json:"incompatibilityReason,omitempty"`
+	IncompatibilityDescription string               `json:"incompatibilityDescription,omitempty"`
+	IncompatibleRunner         string               `json:"incompatibleRunner,omitempty"`
+	Reasons                    *IncompatibleReasons `json:"incompatibleReasons,omitempty"`
+	UnmetRequirements          *UnmetRequirements   `json:"unmetRequirements,omitempty"`
 }
 
 // CompatibilityList represents a list of compatibility entries
 type CompatibilityList struct {
 	Count         int             `json:"count"`
+	NextHref      string          `json:"nextHref,omitempty"`
 	Compatibility []Compatibility `json:"compatibility"`
 }
 
@@ -155,7 +169,16 @@ type IncompatibleReasons struct {
 
 // UnmetRequirements holds the human-readable incompatibility description (may be multi-line).
 type UnmetRequirements struct {
-	Description string `json:"description,omitempty"`
+	Count        int                `json:"count"`
+	Description  string             `json:"description,omitempty"`
+	Requirements []UnmetRequirement `json:"requirement,omitempty"`
+}
+
+// UnmetRequirement describes a requirement that prevents a run from starting.
+type UnmetRequirement struct {
+	PropertyName  string `json:"propertyName,omitempty"`
+	Type          string `json:"type,omitempty"`
+	PropertyValue string `json:"propertyValue,omitempty"`
 }
 
 // ReasonsList merges the legacy incompatibleReasons.reason array with unmetRequirements.description.
@@ -164,8 +187,18 @@ func (c *Compatibility) ReasonsList() []string {
 	if c.Reasons != nil {
 		out = append(out, c.Reasons.Reasons...)
 	}
-	if c.UnmetRequirements != nil && c.UnmetRequirements.Description != "" {
-		for line := range strings.SplitSeq(c.UnmetRequirements.Description, "\n") {
+	description := c.IncompatibilityDescription
+	if description == "" {
+		description = c.IncompatibilityReason
+	}
+	if description == "" && c.IncompatibleRunner != "" {
+		description = "Incompatible runner: " + c.IncompatibleRunner
+	}
+	if description == "" && c.UnmetRequirements != nil {
+		description = c.UnmetRequirements.Description
+	}
+	if description != "" {
+		for line := range strings.SplitSeq(description, "\n") {
 			if trimmed := strings.TrimSpace(line); trimmed != "" {
 				out = append(out, trimmed)
 			}

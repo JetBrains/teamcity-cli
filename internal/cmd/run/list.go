@@ -385,6 +385,11 @@ func newRunViewCmd(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
+type runViewJSON struct {
+	*api.Build
+	Compatibility *api.CompatibilityList `json:"compatibility,omitempty"`
+}
+
 func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) error {
 	p := f.Printer
 	client, err := f.Client()
@@ -400,11 +405,12 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	if done, err := opts.EmitWebURL(p, build.WebURL); done {
 		return err
 	}
+	compatibility, compatibilityFallback := queuedBuildCompatibility(client, build)
 
 	if opts.JSON {
 		reused, _ := client.GetBuildUsedByOtherBuilds(strconv.Itoa(build.ID))
 		build.UsedByOtherBuilds = reused
-		return p.PrintJSON(build)
+		return p.PrintJSON(runViewJSON{Build: build, Compatibility: compatibility})
 	}
 
 	reused, _ := client.GetBuildUsedByOtherBuilds(strconv.Itoa(build.ID))
@@ -456,7 +462,12 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 
 	if build.State == "queued" && build.WaitReason != "" {
 		_, _ = fmt.Fprintf(p.Out, "\nWait reason: %s\n", output.Yellow(build.WaitReason))
-		if waitReasonIsCompatibility(build.WaitReason) {
+	}
+	if build.State == "queued" {
+		switch {
+		case compatibility != nil:
+			renderQueuedBuildCompatibility(p.Out, compatibility)
+		case compatibilityFallback && waitReasonIsCompatibility(build.WaitReason):
 			renderBuildCompatibility(p.Out, client, build)
 		}
 	}

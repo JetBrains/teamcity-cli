@@ -774,6 +774,9 @@ func TestRunView_waitReason(t *testing.T) {
 			WaitReason:  "No compatible agents available",
 		})
 	})
+	ts.Handle("GET /app/rest/buildQueue/id:60/compatibilities", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.Error(w, http.StatusNotFound, "resource not found")
+	})
 	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "60")
 	assert.Contains(t, got, "Wait reason: No compatible agents available")
 	assert.Contains(t, got, "Compatible agents")
@@ -812,34 +815,25 @@ func TestRunView_compatibilityDetails(t *testing.T) {
 			WaitReason:  "There are no idle compatible agents which can run this build",
 		})
 	})
-	// agents endpoint is shared for compatible/incompatible locators via the default handler;
-	// override it so compatible returns empty and incompatible returns one agent grouped by pool.
-	ts.Handle("GET /app/rest/agents", func(w http.ResponseWriter, r *http.Request) {
-		locator := r.URL.Query().Get("locator")
-		if strings.Contains(locator, "incompatible:") {
-			cmdtest.JSON(w, api.AgentList{
-				Count: 1,
-				Agents: []api.Agent{
-					{ID: 42, Name: "linux-agent-bad", Connected: true, Enabled: true, Authorized: true,
-						Pool: &api.Pool{ID: 3, Name: "Linux Pool"}},
-				},
-			})
-			return
-		}
-		if strings.Contains(locator, "compatible:") {
-			cmdtest.JSON(w, api.AgentList{Count: 0})
-			return
-		}
-		cmdtest.JSON(w, api.AgentList{Count: 0})
-	})
-	ts.Handle("GET /app/rest/agents/id:42/incompatibleBuildTypes", func(w http.ResponseWriter, r *http.Request) {
+	ts.Handle("GET /app/rest/buildQueue/id:71/compatibilities", func(w http.ResponseWriter, r *http.Request) {
 		cmdtest.JSON(w, api.CompatibilityList{
-			Count: 1,
+			Count: 3,
 			Compatibility: []api.Compatibility{
 				{
-					Compatible:        false,
-					BuildType:         &api.BuildType{ID: "Target_BT"},
-					UnmetRequirements: &api.UnmetRequirements{Description: "Incompatible runner: Docker"},
+					Compatible: true,
+					Agent: &api.Agent{ID: 41, Name: "linux-agent-good", Connected: true, Enabled: true, Authorized: true,
+						Pool: &api.Pool{ID: 3, Name: "Linux Pool"}},
+				},
+				{
+					Agent: &api.Agent{ID: 42, Name: "linux-agent-bad", Connected: true, Enabled: true, Authorized: true,
+						Pool: &api.Pool{ID: 3, Name: "Linux Pool"}},
+					IncompatibilityDescription: "Missing parameter: docker",
+				},
+				{
+					AgentType:                  &api.AgentType{ID: 12, Name: "Ubuntu 22.04", IsCloud: true},
+					CanStartNewInstance:        true,
+					StartingInstanceCount:      0,
+					IncompatibilityDescription: "Incompatible runner: Docker",
 				},
 			},
 		})
@@ -847,11 +841,58 @@ func TestRunView_compatibilityDetails(t *testing.T) {
 
 	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "71")
 	assert.Contains(t, got, "Wait reason: There are no idle compatible agents which can run this build")
+	assert.Contains(t, got, "Compatibility:")
+	assert.Contains(t, got, "Compatible resources (1)")
+	assert.Contains(t, got, "Incompatible resources (2)")
+	assert.Contains(t, got, "[Linux Pool]")
+	assert.Contains(t, got, "linux-agent-good")
+	assert.Contains(t, got, "linux-agent-bad")
+	assert.Contains(t, got, "Ubuntu 22.04 (cloud image, can start new instance)")
+	assert.Contains(t, got, "Missing parameter: docker")
+	assert.Contains(t, got, "Incompatible runner: Docker")
+
+	jsonOutput := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "71", "--json")
+	var gotJSON map[string]any
+	require.NoError(t, json.Unmarshal([]byte(jsonOutput), &gotJSON))
+	assert.Equal(t, float64(71), gotJSON["id"])
+	assert.Contains(t, gotJSON, "compatibility")
+	assert.NotContains(t, gotJSON, "Build")
+}
+
+func TestRunView_compatibilityFallbackOnEndpointError(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("GET /app/rest/builds/id:72", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.Build{
+			ID:          72,
+			State:       "queued",
+			BuildTypeID: "Target_BT",
+			BuildType:   &api.BuildType{ID: "Target_BT", Name: "Target"},
+			WebURL:      "https://ci.example.com/viewLog.html?buildId=72",
+			WaitReason:  "No compatible agents available",
+		})
+	})
+	ts.Handle("GET /app/rest/buildQueue/id:72/compatibilities", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.Error(w, http.StatusInternalServerError, "server error")
+	})
+	ts.Handle("GET /app/rest/agents", func(w http.ResponseWriter, r *http.Request) {
+		locator := r.URL.Query().Get("locator")
+		if strings.Contains(locator, "incompatible:") {
+			cmdtest.JSON(w, api.AgentList{Count: 1, Agents: []api.Agent{{ID: 42, Name: "linux-agent-bad", Pool: &api.Pool{Name: "Linux Pool"}}}})
+			return
+		}
+		cmdtest.JSON(w, api.AgentList{Count: 0})
+	})
+	ts.Handle("GET /app/rest/agents/id:42/incompatibleBuildTypes", func(w http.ResponseWriter, r *http.Request) {
+		cmdtest.JSON(w, api.CompatibilityList{Count: 1, Compatibility: []api.Compatibility{{
+			BuildType:         &api.BuildType{ID: "Target_BT"},
+			UnmetRequirements: &api.UnmetRequirements{Description: "Missing parameter: docker"},
+		}}})
+	})
+
+	got := cmdtest.CaptureOutput(t, ts.Factory, "run", "view", "72")
 	assert.Contains(t, got, "Compatible agents (0)")
 	assert.Contains(t, got, "Incompatible agents (1)")
-	assert.Contains(t, got, "[Linux Pool]")
-	assert.Contains(t, got, "linux-agent-bad")
-	assert.Contains(t, got, "Incompatible runner: Docker")
+	assert.Contains(t, got, "Missing parameter: docker")
 }
 
 func TestRunStart_reused(t *testing.T) {
