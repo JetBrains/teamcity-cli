@@ -129,11 +129,16 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 		scheme = "ws"
 	}
 
-	wsURL := fmt.Sprintf("%s://%s/app/agentTerminal/terminal/%s?cols=%d&rows=%d",
-		scheme, u.Host, session.Token, cols, rows)
+	terminalPath := u.Path + "/app/agentTerminal/terminal/"
+	wsURL := (&url.URL{
+		Scheme:   scheme,
+		Host:     u.Host,
+		Path:     terminalPath + session.Token,
+		RawQuery: fmt.Sprintf("cols=%d&rows=%d", cols, rows),
+	}).String()
 
 	header := http.Header{}
-	header.Set("Origin", c.baseURL)
+	header.Set("Origin", u.Scheme+"://"+u.Host)
 	for k, v := range c.extraHeaders {
 		header.Set(k, v)
 	}
@@ -149,7 +154,7 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 		header.Set("Cookie", strings.Join(cookies, "; "))
 	}
 
-	c.debugf("WebSocket URL: %s://%s/app/agentTerminal/terminal/<redacted>?cols=%d&rows=%d", scheme, u.Host, cols, rows)
+	c.debugf("WebSocket URL: %s://%s%s<redacted>?cols=%d&rows=%d", scheme, u.Host, terminalPath, cols, rows)
 
 	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err != nil {
