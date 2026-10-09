@@ -2,7 +2,6 @@ package run
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -51,9 +50,7 @@ func queuedBuildCompatibility(client api.ClientInterface, build *api.Build) (*ap
 	if err == nil {
 		return compatibility, false
 	}
-
-	var notFound *api.NotFoundError
-	return nil, errors.As(err, &notFound)
+	return nil, true
 }
 
 // renderQueuedBuildCompatibility prints compatibility returned directly by the queued-build API.

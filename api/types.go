@@ -158,6 +158,7 @@ type Compatibility struct {
 // CompatibilityList represents a list of compatibility entries
 type CompatibilityList struct {
 	Count         int             `json:"count"`
+	NextHref      string          `json:"nextHref,omitempty"`
 	Compatibility []Compatibility `json:"compatibility"`
 }
 

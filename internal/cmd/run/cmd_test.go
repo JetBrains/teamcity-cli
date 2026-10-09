@@ -859,7 +859,7 @@ func TestRunView_compatibilityDetails(t *testing.T) {
 	assert.NotContains(t, gotJSON, "Build")
 }
 
-func TestRunView_compatibilityFallback(t *testing.T) {
+func TestRunView_compatibilityFallbackOnEndpointError(t *testing.T) {
 	ts := cmdtest.SetupMockClient(t)
 	ts.Handle("GET /app/rest/builds/id:72", func(w http.ResponseWriter, r *http.Request) {
 		cmdtest.JSON(w, api.Build{
@@ -872,7 +872,7 @@ func TestRunView_compatibilityFallback(t *testing.T) {
 		})
 	})
 	ts.Handle("GET /app/rest/buildQueue/id:72/compatibilities", func(w http.ResponseWriter, r *http.Request) {
-		cmdtest.Error(w, http.StatusNotFound, "resource not found")
+		cmdtest.Error(w, http.StatusInternalServerError, "server error")
 	})
 	ts.Handle("GET /app/rest/agents", func(w http.ResponseWriter, r *http.Request) {
 		locator := r.URL.Query().Get("locator")

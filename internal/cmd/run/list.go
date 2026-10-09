@@ -414,7 +414,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	if done, err := opts.EmitWebURL(p, build.WebURL); done {
 		return err
 	}
-	compatibility, compatibilityUnsupported := queuedBuildCompatibility(client, build)
+	compatibility, compatibilityFallback := queuedBuildCompatibility(client, build)
 
 	if opts.JSON {
 		reused, _ := client.GetBuildUsedByOtherBuilds(strconv.Itoa(build.ID))
@@ -476,7 +476,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 		switch {
 		case compatibility != nil:
 			renderQueuedBuildCompatibility(p.Out, compatibility)
-		case compatibilityUnsupported && waitReasonIsCompatibility(build.WaitReason):
+		case compatibilityFallback && waitReasonIsCompatibility(build.WaitReason):
 			renderBuildCompatibility(p.Out, client, build)
 		}
 	}
