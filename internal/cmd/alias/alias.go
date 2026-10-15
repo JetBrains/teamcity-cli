@@ -57,7 +57,7 @@ Use --shell for aliases that need pipes, redirection, or other shell features.`,
 
   # Shell aliases for pipes and external tools
   teamcity alias set watchnotify '!teamcity run watch $1 && notify-send "Build $1 done"'
-  teamcity alias set faillog '!teamcity run list --status=failure --json | jq ".[].id"'`,
+  teamcity alias set faillog '!teamcity run list --status=failure --json | jq ".build[].id"'`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, expansion := args[0], args[1]
