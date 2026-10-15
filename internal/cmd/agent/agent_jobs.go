@@ -71,7 +71,7 @@ func showCompatibleJobs(p *output.Printer, client api.ClientInterface, agentID i
 		return p.PrintJSON(jobs)
 	}
 
-	if jobs.Count == 0 {
+	if jobs.Count == 0 && !opts.Plain {
 		_, _ = fmt.Fprintln(p.Out, "No compatible jobs found")
 		return nil
 	}
@@ -110,7 +110,7 @@ func showIncompatibleJobs(p *output.Printer, client api.ClientInterface, agentID
 		return p.PrintJSON(compat)
 	}
 
-	if compat.Count == 0 {
+	if compat.Count == 0 && !opts.Plain {
 		_, _ = fmt.Fprintln(p.Out, "No incompatible jobs found")
 		return nil
 	}

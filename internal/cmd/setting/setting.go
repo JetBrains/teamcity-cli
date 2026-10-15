@@ -94,7 +94,7 @@ func runSettingList(f *cmdutil.Factory, id string, opts *cmdutil.ListOptions) er
 	}
 
 	p := f.Printer
-	if settings.Count == 0 {
+	if settings.Count == 0 && !opts.Plain {
 		p.Empty("No settings found", output.TipNoSettingsFor(id))
 		return nil
 	}

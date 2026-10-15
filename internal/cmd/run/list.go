@@ -151,7 +151,7 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 		return nil
 	}
 
-	if runs.Count == 0 {
+	if runs.Count == 0 && !opts.plain {
 		f.Printer.Empty(request.emptyMsg, request.emptyTip)
 		return nil
 	}

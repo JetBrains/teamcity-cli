@@ -87,7 +87,7 @@ func runJobStepList(f *cmdutil.Factory, jobID string, opts *cmdutil.ListOptions)
 	}
 
 	p := f.Printer
-	if steps.Count == 0 {
+	if steps.Count == 0 && !opts.Plain {
 		p.Empty("No build steps found", "Add one with 'teamcity job step add "+jobID+" --type <runner-id>'")
 		return nil
 	}

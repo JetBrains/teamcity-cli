@@ -92,7 +92,7 @@ func RunList(
 		return nil
 	}
 
-	if len(result.Table.Rows) == 0 {
+	if len(result.Table.Rows) == 0 && !flags.Plain {
 		tip := result.EmptyTip
 		if result.Truncated && flags.Limit > 0 {
 			tip = fmt.Sprintf("Searched only the first %d results - use --limit 0 to fetch all", flags.Limit)
