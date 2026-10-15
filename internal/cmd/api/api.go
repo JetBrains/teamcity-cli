@@ -121,7 +121,7 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 	}
 
 	var body io.Reader
-	if opts.input != "" {
+	if opts.method != "GET" && opts.input != "" {
 		if opts.input == "-" {
 			data, err := io.ReadAll(f.IOStreams.In)
 			if err != nil {
@@ -135,7 +135,7 @@ func runAPI(f *cmdutil.Factory, endpoint string, opts *apiOptions) error {
 			}
 			body = bytes.NewReader(data)
 		}
-	} else if len(opts.fields) > 0 {
+	} else if opts.method != "GET" && len(opts.fields) > 0 {
 		jsonBody := make(map[string]any)
 		for _, f := range opts.fields {
 			key, value, ok := strings.Cut(f, "=")
