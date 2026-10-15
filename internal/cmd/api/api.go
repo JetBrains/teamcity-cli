@@ -84,6 +84,7 @@ See: https://www.jetbrains.com/help/teamcity/rest/teamcity-rest-api-documentatio
 	cmd.Flags().BoolVar(&opts.slurp, "slurp", false, "Combine paginated results into a JSON array (requires --paginate)")
 
 	cmd.MarkFlagsMutuallyExclusive("input", "field")
+	cmd.MarkFlagsMutuallyExclusive("include", "paginate")
 
 	_ = cmd.RegisterFlagCompletionFunc("method", completion.HTTPMethods())
 	_ = cmd.MarkFlagFilename("input")

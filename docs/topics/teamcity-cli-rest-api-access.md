@@ -107,6 +107,8 @@ Combine paginated results into a single JSON array with `--slurp`:
 teamcity api '/app/rest/builds' --paginate --slurp
 ```
 
+> The `--include` flag cannot be combined with `--paginate`.
+
 > The `--slurp` flag requires `--paginate`. It collects items from all pages and outputs them as a single JSON array.
 >
 {style="note"}
