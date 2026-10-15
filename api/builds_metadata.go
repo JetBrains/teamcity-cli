@@ -230,7 +230,7 @@ func (c *Client) GetBuildTests(ctx context.Context, buildID string, opts BuildTe
 	q := TestOccurrenceQuery{
 		Build:  id,
 		Limit:  opts.Limit,
-		Fields: []string{"id", "name", "status", "duration", "details", "newFailure", "muted", "firstFailed(build(id,number))"},
+		Fields: []string{"id", "name", "status", "duration", "details", "newFailure", "ignored", "muted", "firstFailed(build(id,number))"},
 	}
 	switch {
 	case opts.FailedOnly:

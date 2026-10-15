@@ -208,7 +208,7 @@ func TestGetBuildTests(t *testing.T) {
 			assert.Equal(t, tc.wantLocators, locators)
 			assert.Equal(t, []string{
 				"count,passed,failed,ignored,muted",
-				"count,nextHref,testOccurrence(id,name,status,duration,details,newFailure,muted,firstFailed(build(id,number)))",
+				"count,nextHref,testOccurrence(id,name,status,duration,details,newFailure,ignored,muted,firstFailed(build(id,number)))",
 			}, fields)
 		})
 	}

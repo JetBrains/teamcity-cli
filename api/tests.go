@@ -33,7 +33,7 @@ var validTestStatuses = map[string]bool{"": true, "passed": true, "failed": true
 func ValidTestStatus(s string) bool { return validTestStatuses[s] }
 
 // defaultTestOccurrenceFields is the lean projection used when Query.Fields is empty.
-const defaultTestOccurrenceFields = "id,name,status,duration,muted,newFailure,build(id,number,branchName,startDate)"
+const defaultTestOccurrenceFields = "id,name,status,duration,ignored,muted,newFailure,build(id,number,branchName,startDate)"
 
 // buildLocator maps the query's fields onto testOccurrences locator dimensions; count is applied by ListTestOccurrences.
 func (q TestOccurrenceQuery) buildLocator() (*Locator, error) {
