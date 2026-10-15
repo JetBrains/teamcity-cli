@@ -73,7 +73,7 @@ func newRunListCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.favorites, "favorites", false, "Show favorites for the current user")
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Filter by project ID")
 	cmd.Flags().IntVarP(&opts.limit, "limit", "n", 30, "Maximum number of items (0 for all)")
-	cmd.Flags().StringVar(&opts.since, "since", "", "Finished after this time (e.g., 24h, 7d, 2026-01-21)")
+	cmd.Flags().StringVar(&opts.since, "since", "", "Started after this time, excluding queued runs (e.g., 24h, 7d, 2026-01-21)")
 	cmd.Flags().StringVar(&opts.until, "until", "", "Finished before this time (e.g., 12h, 7d, 2026-01-22)")
 	cmdutil.AddJSONFieldsFlag(cmd, &opts.jsonFields)
 	cmd.Flags().BoolVar(&opts.plain, "plain", false, "Output in plain text format for scripting")
