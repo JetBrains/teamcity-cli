@@ -111,8 +111,24 @@ func (opts *jobListOptions) fetch(client api.ClientInterface, fields []string) (
 		})
 	}
 
+	type jobJSON struct {
+		api.BuildType
+		Paused *bool `json:"paused,omitempty"`
+	}
+	items := make([]jobJSON, 0, len(jobs.BuildTypes))
+	for _, job := range jobs.BuildTypes {
+		item := jobJSON{BuildType: job}
+		if slices.Contains(fields, "paused") {
+			item.Paused = &job.Paused
+		}
+		items = append(items, item)
+	}
+
 	return &cmdutil.ListResult{
-		JSON:      jobs,
+		JSON: struct {
+			*api.BuildTypeList
+			BuildTypes []jobJSON `json:"buildType"`
+		}{jobs, items},
 		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{0, 1, 2}},
 		EmptyMsg:  "No jobs found",
 		EmptyTip:  output.TipNoJobs,

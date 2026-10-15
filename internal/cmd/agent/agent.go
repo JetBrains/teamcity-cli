@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -138,8 +139,32 @@ func (opts *agentListOptions) fetch(client api.ClientInterface, fields []string)
 		})
 	}
 
+	type agentJSON struct {
+		api.Agent
+		Connected  *bool `json:"connected,omitempty"`
+		Enabled    *bool `json:"enabled,omitempty"`
+		Authorized *bool `json:"authorized,omitempty"`
+	}
+	items := make([]agentJSON, 0, len(agents.Agents))
+	for _, agent := range agents.Agents {
+		item := agentJSON{Agent: agent}
+		if slices.Contains(fields, "connected") {
+			item.Connected = &agent.Connected
+		}
+		if slices.Contains(fields, "enabled") {
+			item.Enabled = &agent.Enabled
+		}
+		if slices.Contains(fields, "authorized") {
+			item.Authorized = &agent.Authorized
+		}
+		items = append(items, item)
+	}
+
 	return &cmdutil.ListResult{
-		JSON:      agents,
+		JSON: struct {
+			*api.AgentList
+			Agents []agentJSON `json:"agent"`
+		}{agents, items},
 		Table:     cmdutil.ListTable{Headers: headers, Rows: rows, FlexCols: []int{1, 2}},
 		EmptyMsg:  "No agents found",
 		EmptyTip:  output.TipNoAgents,
