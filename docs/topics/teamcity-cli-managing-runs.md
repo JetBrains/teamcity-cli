@@ -261,7 +261,7 @@ Show builds started after this time, excluding queued runs (for example, `24h`, 
 </td>
 <td>
 
-Show builds finished before this time
+Show builds started before this time
 
 </td>
 </tr>
