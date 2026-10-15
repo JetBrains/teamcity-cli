@@ -85,6 +85,8 @@ type BuildList struct {
 	Href     string  `json:"href"`
 	NextHref string  `json:"nextHref,omitempty"`
 	Builds   []Build `json:"build"`
+	// LookupLimitReached reports an incomplete search stopped at an empty page with more history available.
+	LookupLimitReached bool `json:"lookupLimitReached,omitempty"`
 }
 
 // Triggered represents who/what triggered a build

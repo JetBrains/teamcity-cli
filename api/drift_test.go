@@ -142,6 +142,10 @@ func TestAPIDrift(t *testing.T) {
 			props := getAllSwaggerProperties(swagger, swaggerDef)
 
 			for _, field := range gs.Fields {
+				// Search completeness is client-side metadata, not a TeamCity response field.
+				if gs.Name == "BuildList" && field.Name == "LookupLimitReached" {
+					continue
+				}
 				if !swaggerPropertyExists(props, field.JSONName) {
 					t.Errorf("field '%s' (json: %s) not in swagger definition", field.Name, field.JSONName)
 				}
