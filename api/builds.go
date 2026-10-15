@@ -102,14 +102,12 @@ func (c *Client) GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList,
 	fields := fmt.Sprintf("count,nextHref,build(%s)", ToAPIFields(buildFields))
 	path := fmt.Sprintf("/app/rest/builds?locator=%s&fields=%s", locator.Encode(), url.QueryEscape(fields))
 
-	lookupLimitReached := false
 	builds, truncated, err := collectPages(c, path, opts.Limit, func(p string) ([]Build, string, error) {
 		var page BuildList
 		if err := c.get(ctx, p, &page); err != nil {
 			return nil, "", err
 		}
 		if len(page.Builds) == 0 && !opts.DeepLookup {
-			lookupLimitReached = page.NextHref != ""
 			// Empty page: TeamCity's nextHref only escalates lookupLimit to scan deeper history, so drop it and stop rather than chase the unbounded scan behind run-list hangs. Point lookups (DeepLookup) keep chasing to find old builds.
 			return nil, "", nil
 		}
@@ -123,7 +121,7 @@ func (c *Client) GetBuilds(ctx context.Context, opts BuildsOptions) (*BuildList,
 		cleanupBuildTriggered(&builds[i])
 	}
 
-	return &BuildList{Count: len(builds), Builds: builds, LookupLimitReached: lookupLimitReached}, truncated, nil
+	return &BuildList{Count: len(builds), Builds: builds}, truncated, nil
 }
 
 // cleanupBuildTriggered removes empty User objects from build trigger info

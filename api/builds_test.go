@@ -126,12 +126,10 @@ func TestGetBuildsStopsOnEmptyPageUnlessDeepLookup(T *testing.T) {
 
 	T.Run("list query stops at the first empty page", func(t *testing.T) {
 		c, calls := newServer()
-		builds, truncated, err := c.GetBuilds(t.Context(), BuildsOptions{Number: "123", Limit: 1})
+		builds, _, err := c.GetBuilds(t.Context(), BuildsOptions{Number: "123", Limit: 1})
 		require.NoError(t, err)
 		assert.Equal(t, 1, *calls, "must not chase the lookupLimit escalation")
 		assert.Equal(t, 0, builds.Count)
-		assert.True(t, builds.LookupLimitReached)
-		assert.False(t, truncated, "search truncation is independent of the result limit")
 	})
 
 	T.Run("deep lookup follows nextHref to find an old build", func(t *testing.T) {
@@ -141,17 +139,6 @@ func TestGetBuildsStopsOnEmptyPageUnlessDeepLookup(T *testing.T) {
 		assert.Equal(t, 2, *calls, "must follow nextHref past the empty page")
 		require.Equal(t, 1, builds.Count)
 		assert.Equal(t, 42, builds.Builds[0].ID)
-		assert.False(t, builds.LookupLimitReached)
-	})
-
-	T.Run("exhausted history is a complete search", func(t *testing.T) {
-		c := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-			_ = json.NewEncoder(w).Encode(BuildList{Builds: []Build{}})
-		})
-		builds, truncated, err := c.GetBuilds(t.Context(), BuildsOptions{Limit: 0})
-		require.NoError(t, err)
-		assert.False(t, builds.LookupLimitReached)
-		assert.False(t, truncated)
 	})
 }
 

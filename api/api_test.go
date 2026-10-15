@@ -278,24 +278,6 @@ func TestGetBuilds(T *testing.T) {
 	})
 }
 
-func TestGetBuildsLookupLimitReached(t *testing.T) {
-	latest, _, err := client.GetBuilds(t.Context(), api.BuildsOptions{Limit: 2})
-	require.NoError(t, err)
-	if len(latest.Builds) < 2 {
-		t.Skip("requires at least two builds to exhaust a search window")
-	}
-	status := "SUCCESS"
-	if latest.Builds[0].Status == status {
-		status = "FAILURE"
-	}
-	t.Setenv("TEAMCITY_LOOKUP_LIMIT", "1")
-	builds, truncated, err := client.GetBuilds(t.Context(), api.BuildsOptions{Status: status, Limit: 0})
-	require.NoError(t, err)
-	assert.Empty(t, builds.Builds)
-	assert.True(t, builds.LookupLimitReached)
-	assert.False(t, truncated, "the result limit is unbounded")
-}
-
 func TestResolveBuildID_Integration(T *testing.T) {
 	// Note: passthrough and error cases are covered in unit tests (client_test.go)
 	// This integration test only covers actual server-resolved cases

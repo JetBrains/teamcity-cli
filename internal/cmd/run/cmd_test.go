@@ -3,7 +3,6 @@ package run_test
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -77,77 +76,6 @@ func handleTruncatedBuilds(ts *cmdtest.TestServer) {
 }
 
 const runTruncationHint = "use --limit 0 to fetch all"
-
-func TestRunListLookupLimitWarning(t *testing.T) {
-	for _, mode := range []string{"table", "plain", "json"} {
-		for _, partial := range []bool{false, true} {
-			t.Run(mode+"/partial="+fmt.Sprint(partial), func(t *testing.T) {
-				ts := cmdtest.NewTestServer(t)
-				calls := 0
-				ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
-					calls++
-					if partial && calls == 1 {
-						cmdtest.JSON(w, api.BuildList{Count: 1, Builds: []api.Build{{ID: 42, BuildTypeID: "B"}}, NextHref: "/app/rest/builds?cursor=2"})
-						return
-					}
-					cmdtest.JSON(w, api.BuildList{Builds: []api.Build{}, NextHref: "/app/rest/builds?cursor=deeper"})
-				})
-				args := []string{"run", "list", "--user", "alice", "--limit", "0"}
-				if mode != "table" {
-					args = append(args, "--"+mode)
-				}
-				stdout, stderr := runListSplit(t, ts, args...)
-				assert.Contains(t, stderr, "Search stopped at the lookup limit")
-				assert.Contains(t, stderr, "--project or --job")
-				assert.Contains(t, stderr, "TEAMCITY_LOOKUP_LIMIT=100000")
-				assert.NotContains(t, stdout, "Try --since")
-				assert.NotContains(t, stdout, "TEAMCITY_LOOKUP_LIMIT")
-				if mode == "json" {
-					var list map[string]any
-					require.NoError(t, json.Unmarshal([]byte(stdout), &list))
-					assert.Equal(t, true, list["lookupLimitReached"])
-				} else if !partial {
-					assert.Contains(t, stdout, "No matching runs found within the search limit")
-				}
-				wantCalls := 1
-				if partial {
-					wantCalls++
-				}
-				assert.Equal(t, wantCalls, calls, "must not follow the deeper search link")
-			})
-		}
-	}
-}
-
-func TestRunListLookupLimitQuietAndComplete(t *testing.T) {
-	for _, quiet := range []bool{false, true} {
-		for _, limited := range []bool{false, true} {
-			t.Run(fmt.Sprintf("quiet=%t/limited=%t", quiet, limited), func(t *testing.T) {
-				ts := cmdtest.NewTestServer(t)
-				ts.Handle("GET /app/rest/builds", func(w http.ResponseWriter, r *http.Request) {
-					nextHref := ""
-					if limited {
-						nextHref = "/app/rest/builds?cursor=deeper"
-					}
-					cmdtest.JSON(w, api.BuildList{Builds: []api.Build{}, NextHref: nextHref})
-				})
-				args := []string{"run", "list", "--json"}
-				if quiet {
-					args = append(args, "--quiet")
-				}
-				stdout, stderr := runListSplit(t, ts, args...)
-				var list api.BuildList
-				require.NoError(t, json.Unmarshal([]byte(stdout), &list))
-				assert.Equal(t, limited, list.LookupLimitReached)
-				if quiet || !limited {
-					assert.Empty(t, stderr)
-				} else {
-					assert.Contains(t, stderr, "Search stopped at the lookup limit")
-				}
-			})
-		}
-	}
-}
 
 func TestRunListTruncationHint(T *testing.T) {
 	T.Run("finite limit emits hint on stderr only", func(t *testing.T) {

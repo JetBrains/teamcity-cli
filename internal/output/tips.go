@@ -9,8 +9,7 @@ func FormatTip(tip string) string {
 
 // Empty-state tip constants — one canonical copy per list surface.
 const (
-	TipNoRuns         = "Check your filters, or use --project or --job to scope the search"
-	TipRunLookupLimit = "Scope with --project or --job, or increase TEAMCITY_LOOKUP_LIMIT (e.g. TEAMCITY_LOOKUP_LIMIT=100000 teamcity run list --user @me); --limit 0 only removes the result limit"
+	TipNoRuns         = "Check your filters or scope with --project/--job; to search deeper, set TEAMCITY_LOOKUP_LIMIT=100000"
 	TipNoFavoriteRuns = "Pin a run with 'teamcity run pin <id>'"
 	TipNoAgents       = "Check connectivity or run 'teamcity auth status'"
 	TipNoProjects     = "Check your permissions or run 'teamcity auth status'"

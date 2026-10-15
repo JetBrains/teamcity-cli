@@ -51,10 +51,7 @@ Without a job filter, searches start with a window of 5,000 recent builds.
 If the search stops early, matching runs may be missing. Scope with --project
 or --job, or increase the search cap with TEAMCITY_LOOKUP_LIMIT (a positive
 integer, e.g. 100000). Zero and invalid values use the default of 5,000.
---limit 0 does not remove the search cap. There is no default time cutoff.
-
-Incomplete searches warn on stderr and include lookupLimitReached: true in JSON.
---quiet suppresses the warning but preserves the JSON field.`,
+--limit 0 does not remove the search cap. There is no default time cutoff.`,
 		Example: `  teamcity run list
   teamcity run list --favorites
   teamcity run list --user @me --limit 1
@@ -153,14 +150,6 @@ func runRunList(f *cmdutil.Factory, cmd *cobra.Command, opts *runListOptions) er
 	runs, truncated, err := client.GetBuilds(f.Context(), request.builds)
 	if err != nil {
 		return err
-	}
-	if runs.LookupLimitReached {
-		request.emptyMsg = "No matching runs found within the search limit"
-		request.emptyTip = ""
-		if !f.Printer.Quiet {
-			f.Printer.Warn("Search stopped at the lookup limit; matching runs may be missing")
-			_, _ = fmt.Fprintln(f.Printer.ErrOut, output.FormatTip(output.TipRunLookupLimit))
-		}
 	}
 
 	if jsonResult.Enabled {
