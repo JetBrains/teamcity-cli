@@ -34,7 +34,7 @@ For aliases that need pipes, redirection, or other shell features, prefix the ex
 
 ```Shell
 teamcity alias set watchnotify '!teamcity run watch $1 && notify-send "Build $1 done"'
-teamcity alias set faillog '!teamcity run list --status=failure --json | jq ".[].id"'
+teamcity alias set faillog '!teamcity run list --status=failure --json | jq ".build[].id"'
 ```
 
 Shell aliases are evaluated through `sh` instead of being expanded directly.
@@ -112,7 +112,7 @@ teamcity alias set whoami   "api '/app/rest/users/current'"
 
 ```Shell
 teamcity alias set watchnotify '!teamcity run watch $1 && notify-send "Build $1 done"'
-teamcity alias set faillog     '!teamcity run list --status=failure --json | jq ".[].id"'
+teamcity alias set faillog     '!teamcity run list --status=failure --json | jq ".build[].id"'
 ```
 
 ## Storage
