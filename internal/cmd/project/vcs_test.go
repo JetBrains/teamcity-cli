@@ -173,3 +173,70 @@ func TestVcsCreateJSON(t *testing.T) {
 		})
 	}
 }
+
+// createdRootProps records the properties and connection of the root vcs create posts.
+func createdRootProps(t *testing.T, ts *cmdtest.TestServer) (map[string]string, *string) {
+	t.Helper()
+	props := map[string]string{}
+	var connectionID string
+	ts.Handle("POST /app/rest/vcs-roots", func(w http.ResponseWriter, r *http.Request) {
+		var root api.VcsRoot
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&root))
+		for _, p := range root.Properties.Property {
+			props[p.Name] = p.Value
+		}
+		connectionID = root.ConnectionID
+		root.ID = "TestProject_NewRoot"
+		cmdtest.JSON(w, root)
+	})
+	ts.Handle("POST /app/pipeline/repository/testConnection", func(w http.ResponseWriter, r *http.Request) {
+		t.Error("a GitHub App root is created from a stored token and is not tested by connection")
+	})
+	return props, &connectionID
+}
+
+func TestVcsCreateGitHubAppIssuesInstallationToken(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	props, connectionID := createdRootProps(t, ts)
+	ts.Handle("POST /app/oauth/githubapp/installationToken", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "TestProject", r.FormValue("projectId"))
+		assert.Equal(t, "PROJECT_EXT_1", r.FormValue("connectionId"))
+		assert.Equal(t, "repo", r.FormValue("repositoryName"))
+		cmdtest.JSON(w, map[string]string{"tokenId": "tc_token_id:CID_x:-1:installation"})
+	})
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "project", "vcs", "create", "--project", "TestProject",
+		"--url", "https://github.com/org/repo.git", "--connection-id", "PROJECT_EXT_1", "--no-input")
+
+	assert.Contains(t, out, "Created VCS root")
+	assert.Equal(t, "ACCESS_TOKEN", props["authMethod"])
+	assert.Equal(t, "tc_token_id:CID_x:-1:installation", props["tokenId"])
+	assert.Equal(t, "oauth2", props["username"])
+	assert.NotContains(t, props, "secure:password")
+	assert.Empty(t, *connectionID, "a connectionId makes the server replace the auth with the user's token")
+}
+
+func TestVcsCreateGitHubAppReportsLoginPage(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("POST /app/oauth/githubapp/installationToken", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, "<html>Sign in</html>")
+	})
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "may require browser sign-in",
+		"project", "vcs", "create", "--project", "TestProject",
+		"--url", "https://github.com/org/repo.git", "--connection-id", "PROJECT_EXT_1", "--no-input")
+}
+
+func TestVcsCreateGitHubAppNeedsAuthorization(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	ts.Handle("POST /app/oauth/githubapp/installationToken", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, `{"status":404,"message":"No personal access token was provided via header X-TC-GitHub-PAT and no suitable value could be found in token storage either"}`)
+	})
+
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "you have not authorized connection PROJECT_EXT_1",
+		"project", "vcs", "create", "--project", "TestProject",
+		"--url", "https://github.com/org/repo.git", "--connection-id", "PROJECT_EXT_1", "--no-input")
+}
