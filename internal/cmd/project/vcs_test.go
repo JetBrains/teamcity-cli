@@ -202,6 +202,7 @@ func TestVcsCreateGitHubAppIssuesInstallationToken(t *testing.T) {
 		assert.Equal(t, "TestProject", r.FormValue("projectId"))
 		assert.Equal(t, "PROJECT_EXT_1", r.FormValue("connectionId"))
 		assert.Equal(t, "repo", r.FormValue("repositoryName"))
+		assert.Equal(t, "repo", r.FormValue("tokenName"), "TeamCity accepts only [A-Za-z0-9_-] in token names")
 		cmdtest.JSON(w, map[string]string{"tokenId": "tc_token_id:CID_x:-1:installation"})
 	})
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -575,7 +576,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 		}
 		// The server would back a GitHub App root with the user's own token; an installation token acts as the app.
 		if ptype == "GitHubApp" {
-			tokenID, err := client.IssueGitHubAppInstallationToken(projectID, opts.connectionID, opts.repoURL, cmp.Or(git.RepoPath(opts.repoURL), opts.repoURL))
+			tokenID, err := client.IssueGitHubAppInstallationToken(projectID, opts.connectionID, opts.repoURL, path.Base(strings.TrimSuffix(opts.repoURL, ".git")))
 			if errors.Is(err, api.ErrNoGitHubAppUserToken) {
 				return nil, testReq, api.Validation(
 					"you have not authorized connection "+opts.connectionID,
