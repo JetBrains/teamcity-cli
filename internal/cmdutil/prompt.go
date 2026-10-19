@@ -42,9 +42,14 @@ func RunForm(groups ...*huh.Group) error {
 
 // PromptString asks for free-form text and echoes the answer back so it survives in scrollback.
 func PromptString(p *output.Printer, title, description string, value *string) error {
+	return PromptValidatedString(p, title, description, RequireNonEmpty, value)
+}
+
+// PromptValidatedString is PromptString with a custom validator; huh re-asks inline until validate passes.
+func PromptValidatedString(p *output.Printer, title, description string, validate func(string) error, value *string) error {
 	input := huh.NewInput().
 		Title(title).
-		Validate(RequireNonEmpty).
+		Validate(validate).
 		Value(value)
 	if description != "" {
 		input.Description(description)
