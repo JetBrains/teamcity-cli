@@ -67,7 +67,14 @@ func ResolveRevision(rev string) (string, error) {
 
 // RemoteURLs returns each configured remote's fetch URL, with origin first when present and duplicates removed; empty outside a working tree.
 func RemoteURLs() []string {
-	out, err := exec.Command("git", "remote", "-v").Output()
+	return RemoteURLsIn("")
+}
+
+// RemoteURLsIn is RemoteURLs for the working tree at dir; "" means the current directory.
+func RemoteURLsIn(dir string) []string {
+	cmd := exec.Command("git", "remote", "-v")
+	cmd.Dir = dir
+	out, err := cmd.Output()
 	if err != nil {
 		return nil
 	}
