@@ -93,6 +93,8 @@ Log in once and the CLI remembers the server:
 teamcity auth login
 ```
 
+Browser login preselects `EDIT_VERSIONED_SETTINGS` along with the common permissions. Log in again to add it to an existing token.
+
 Then:
 
 ```bash
