@@ -1,10 +1,21 @@
 package onboard_test
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/internal/cmd/onboard"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestOnboardIsExperimental(t *testing.T) {
+	cmd := onboard.NewCmd(cmdutil.NewFactory())
+
+	assert.Equal(t, "true", cmd.Annotations["experimental"])
+	assert.True(t, strings.HasPrefix(cmd.Short, "[experimental] "))
+}
 
 func TestOnboardRequiresInteractiveTerminal(t *testing.T) {
 	ts := cmdtest.NewTestServer(t)
