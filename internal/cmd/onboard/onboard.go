@@ -35,6 +35,8 @@ access it, and hand over to an AI agent to finish the setup.`,
 	cmd.Flags().StringVar(&opts.token, "token", "", "Short-lived onboarding token")
 	_ = cmd.MarkFlagRequired("token")
 
+	cmdutil.MarkExperimental(f, cmd)
+
 	return cmd
 }
 
