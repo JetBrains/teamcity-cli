@@ -2,8 +2,9 @@
 package onboard
 
 import (
+	"fmt"
+
 	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/JetBrains/teamcity-cli/internal/cmd/auth"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/version"
@@ -45,9 +46,21 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		)
 	}
 
-	accessToken, err := auth.ExchangeToken(f, opts.serverURL, opts.token)
+	// TODO: restore once endpoint ships
+	// accessToken, err := auth.ExchangeToken(f, opts.serverURL, opts.token)
+	// if err != nil {
+	// 	return err
+	// }
+	// Simulates the exchange: --token is accepted but ignored; uses the existing login for serverURL.
+	accessToken, _, err := config.GetTokenForServer(opts.serverURL)
 	if err != nil {
-		return err
+		return fmt.Errorf("read token for %s: %w", opts.serverURL, err)
+	}
+	if accessToken == "" {
+		return api.Validation(
+			fmt.Sprintf("not logged in to %s", opts.serverURL),
+			fmt.Sprintf("Run teamcity auth login -s %s first", opts.serverURL),
+		)
 	}
 	client := api.NewClient(opts.serverURL, accessToken, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 
@@ -56,10 +69,24 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		return err
 	}
 
-	authorized, err := isRepositoryAuthorized(client, repo)
+	instanceID, err := findInstanceProject(client)
+	if err != nil {
+		return err
+	}
+	projectID, err := ensureRepoProject(f, client, instanceID, repo)
 	if err != nil {
 		return err
 	}
 
-	return handOverToAgent(f, client, repo, authorized)
+	authorized, err := isRepositoryAuthorized(client, repo)
+	if err != nil {
+		return err
+	}
+	if !authorized {
+		if authorized, err = authorizeRepository(f, client, repo, instanceID, projectID); err != nil {
+			return err
+		}
+	}
+
+	return handOverToAgent(f, client, repo, projectID, authorized)
 }
