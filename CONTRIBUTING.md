@@ -219,6 +219,7 @@ Every CLI command and subcommand has acceptance test coverage. The following is 
 - `--web` flags (open a browser, no headless assertion possible)
 - `run watch --logs` (starts a full-screen TUI, needs a terminal)
 - `agent term` (WebSocket terminal session, needs an interactive TTY)
+- `onboard` beyond `--help` and the non-interactive guard (prompt-driven flow, needs an interactive TTY)
 - `agent enable/disable`, `authorize/deauthorize`, `move`, `reboot` (need admin privileges and a live agent)
 - `run start --personal`, `--local-changes`, `--no-push` (need a VCS-connected checkout)
 - `project settings validate` (needs Maven installed locally)
