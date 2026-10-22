@@ -57,6 +57,14 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 	return exchanged.Value, nil
 }
 
+// ErrExchangeRejected marks a 401/404 from the exchange endpoint; servers without the endpoint answer 401 too, so callers may fall back to a saved login.
+var ErrExchangeRejected = errors.New("onboarding token exchange rejected")
+
+// rejectedError tags a validation error with ErrExchangeRejected; it still unwraps to *api.ValidationError for rendering.
+type rejectedError struct{ *api.ValidationError }
+
+func (e rejectedError) Unwrap() []error { return []error{ErrExchangeRejected, e.ValidationError} }
+
 // exchangeError maps exchange endpoint failures to actionable errors.
 func exchangeError(err error, serverURL string) error {
 	if he, ok := errors.AsType[*api.HTTPError](err); ok && he.Status == http.StatusBadRequest {
@@ -71,11 +79,11 @@ func exchangeError(err error, serverURL string) error {
 	}
 	switch ue.Category() {
 	case api.CatAuth:
-		return api.Validation("onboarding token is expired or invalid", regenerateTip)
+		return rejectedError{api.Validation("onboarding token is expired or invalid", regenerateTip)}
 	case api.CatPermission:
 		return api.Validation("not a valid onboarding token", regenerateTip)
 	case api.CatNotFound:
-		return api.Validation("this TeamCity server doesn't support onboarding tokens", "Log in with teamcity auth login instead")
+		return rejectedError{api.Validation("this TeamCity server doesn't support onboarding tokens", "Log in with teamcity auth login instead")}
 	}
 	return err
 }
