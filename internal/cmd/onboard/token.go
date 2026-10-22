@@ -3,7 +3,6 @@ package onboard
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmd/auth"
@@ -12,13 +11,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/version"
 )
 
-// fallbackMsgs mirror auth.ExchangeToken's errors for 404 and 401; servers without the exchange endpoint answer 401
-// because they reject the unknown onboarding token before routing, so both mean "maybe unsupported".
-var fallbackMsgs = []string{
-	"this TeamCity server doesn't support onboarding tokens",
-	"onboarding token is expired or invalid",
-}
-
 // accessToken exchanges the onboarding token, or uses the saved login when none is given or the exchange is unsupported or rejected.
 func accessToken(f *cmdutil.Factory, serverURL, onboardingToken string) (string, error) {
 	if onboardingToken == "" {
@@ -26,11 +18,10 @@ func accessToken(f *cmdutil.Factory, serverURL, onboardingToken string) (string,
 	}
 
 	token, exchangeErr := auth.ExchangeToken(f, serverURL, onboardingToken)
-	ve, ok := errors.AsType[*api.ValidationError](exchangeErr)
-	if !ok || !slices.Contains(fallbackMsgs, ve.Error()) {
+	if !errors.Is(exchangeErr, auth.ErrExchangeRejected) {
 		return token, exchangeErr
 	}
-	saved, err := savedLogin(f, serverURL, fmt.Sprintf("couldn't exchange the onboarding token (%s) and ", ve.Error()))
+	saved, err := savedLogin(f, serverURL, fmt.Sprintf("couldn't exchange the onboarding token (%s) and ", exchangeErr))
 	if err != nil {
 		return "", err
 	}
