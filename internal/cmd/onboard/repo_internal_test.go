@@ -153,6 +153,12 @@ func TestDemoReposAreValid(t *testing.T) {
 	require.NotEmpty(t, demoRepos)
 	for _, d := range demoRepos {
 		assert.NotEmpty(t, d.name)
+		assert.NotEmpty(t, d.stack, "demo %q needs a tech stack", d.name)
 		assert.NotEmpty(t, git.CanonicalURL(d.url), "demo URL %q must be a parseable remote", d.url)
 	}
+}
+
+func TestDemoRepoLabel(t *testing.T) {
+	assert.Equal(t, "Spring PetClinic (Java, Spring Boot, Maven)", demoRepo{name: "Spring PetClinic", stack: "Java, Spring Boot, Maven"}.label())
+	assert.Equal(t, "Spring PetClinic", demoRepo{name: "Spring PetClinic"}.label())
 }

@@ -32,14 +32,23 @@ type repository struct {
 
 // demoRepo is a public sample repository offered when the user has none at hand.
 type demoRepo struct {
-	name string
-	url  string
+	name  string
+	stack string // shown next to the name in the picker
+	url   string
 }
 
 // demoRepos lists the sample repositories offered by the picker.
 var demoRepos = []demoRepo{
 	// TODO: update final demo list
-	{name: "Spring PetClinic", url: "https://github.com/spring-projects/spring-petclinic"},
+	{name: "Spring PetClinic", stack: "Java, Spring Boot, Maven", url: "https://github.com/spring-projects/spring-petclinic"},
+}
+
+// label renders a demo as "Name (stack)" for the picker.
+func (d demoRepo) label() string {
+	if d.stack == "" {
+		return d.name
+	}
+	return d.name + " (" + d.stack + ")"
 }
 
 // chooseRepository asks whether to use the current directory, another path, or a demo repository.
@@ -150,7 +159,7 @@ func normalizePath(input string) (string, error) {
 func promptDemo(f *cmdutil.Factory) (repository, error) {
 	options := make([]huh.Option[string], 0, len(demoRepos))
 	for _, d := range demoRepos {
-		options = append(options, huh.NewOption(d.name, d.url))
+		options = append(options, huh.NewOption(d.label(), d.url))
 	}
 	var url string
 	if err := cmdutil.Select(f.Printer, "Select a demo repository", options, &url); err != nil {
