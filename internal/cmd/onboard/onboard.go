@@ -2,8 +2,6 @@
 package onboard
 
 import (
-	"fmt"
-
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
@@ -48,23 +46,11 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		)
 	}
 
-	// TODO: restore once endpoint ships
-	// accessToken, err := auth.ExchangeToken(f, opts.serverURL, opts.token)
-	// if err != nil {
-	// 	return err
-	// }
-	// Simulates the exchange: --token is accepted but ignored; uses the existing login for serverURL.
-	accessToken, _, err := config.GetTokenForServer(opts.serverURL)
+	token, err := accessToken(f, opts.serverURL, opts.token)
 	if err != nil {
-		return fmt.Errorf("read token for %s: %w", opts.serverURL, err)
+		return err
 	}
-	if accessToken == "" {
-		return api.Validation(
-			fmt.Sprintf("not logged in to %s", opts.serverURL),
-			fmt.Sprintf("Run teamcity auth login -s %s first", opts.serverURL),
-		)
-	}
-	client := api.NewClient(opts.serverURL, accessToken, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := api.NewClient(opts.serverURL, token,api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 
 	repo, err := chooseRepository(f)
 	if err != nil {
