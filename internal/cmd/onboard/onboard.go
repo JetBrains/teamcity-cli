@@ -28,7 +28,7 @@ agent to finish the setup.`,
 
   # Already logged in with teamcity auth login
   teamcity onboard https://teamcity.example.com`,
-		Args:    cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.serverURL = config.NormalizeURL(args[0])
 			return runOnboard(f, opts)
@@ -54,7 +54,7 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(opts.serverURL, token,api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := api.NewClient(opts.serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 
 	repo, err := chooseRepository(f)
 	if err != nil {

@@ -73,7 +73,7 @@ func resolveRepository(source repoSource, dir string) (repository, error) {
 	root, ok := git.RepoRoot(dir)
 	if !ok {
 		return repository{}, api.Validation(
-			fmt.Sprintf("%s is not inside a git repository", dir),
+			dir+" is not inside a git repository",
 			"Pick a directory that contains a .git folder",
 		)
 	}

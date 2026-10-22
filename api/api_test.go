@@ -394,6 +394,38 @@ func TestProjectParameters(T *testing.T) {
 	client.DeleteProjectParameter(testProject, paramName)
 }
 
+func TestGetVcsRootsURLFilterIntegration(T *testing.T) {
+	skipIfGuest(T)
+	T.Parallel()
+
+	root, err := client.CreateVcsRoot(api.VcsRoot{
+		Name:    "tc-cli-url-filter",
+		VcsName: "jetbrains.git",
+		Project: &api.Project{ID: testProject},
+		Properties: &api.PropertyList{Property: []api.Property{
+			{Name: "url", Value: "https://github.com/tc-cli-test/url-filter.git"},
+			{Name: "branch", Value: "refs/heads/main"},
+			{Name: "authMethod", Value: "ANONYMOUS"},
+		}},
+	})
+	require.NoError(T, err)
+	T.Cleanup(func() { _ = client.DeleteVcsRoot(root.ID) })
+
+	ids := func(t *testing.T, urlFilter string) []string {
+		t.Helper()
+		roots, _, err := client.GetVcsRoots(api.VcsRootsOptions{Project: testProject, URL: urlFilter})
+		require.NoError(t, err)
+		var out []string
+		for _, r := range roots.VcsRoot {
+			out = append(out, r.ID)
+		}
+		return out
+	}
+
+	assert.Contains(T, ids(T, "tc-cli-test/url-filter"), root.ID, "substring of the url property matches")
+	assert.NotContains(T, ids(T, "tc-cli-test/no-such-repo"), root.ID, "non-matching filter excludes the root")
+}
+
 func TestBuildTypeParameters(T *testing.T) {
 	skipIfGuest(T)
 	// Not parallel: creates/deletes shared config parameters

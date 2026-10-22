@@ -6,4 +6,4 @@ stdout '--token'
 ! stderr 'Error'
 
 ! exec teamcity onboard https://x.example --no-input
-stderr 'token'
+stderr 'interactive terminal'

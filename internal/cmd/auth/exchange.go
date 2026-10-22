@@ -61,7 +61,7 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 func exchangeError(err error, serverURL string) error {
 	if he, ok := errors.AsType[*api.HTTPError](err); ok && he.Status == http.StatusBadRequest {
 		return api.Validation(
-			fmt.Sprintf("onboarding token exchange failed: %s", he.Error()),
+			"onboarding token exchange failed: "+he.Error(),
 			fmt.Sprintf("%s; if the token limit is reached, first delete unused tokens at %s/profile.html?item=accessTokens", regenerateTip, serverURL),
 		)
 	}
