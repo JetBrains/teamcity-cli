@@ -19,10 +19,15 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "onboard <server-url>",
 		Short: "Onboard a repository to TeamCity",
-		Long: `Exchange a short-lived onboarding token for a TeamCity access token, pick a
-repository (current directory, another path, or a demo), check that TeamCity can
-access it, and hand over to an AI agent to finish the setup.`,
-		Example: `  teamcity onboard https://teamcity.example.com --token <onboarding-token>`,
+		Long: `Exchange a short-lived onboarding token for a TeamCity access token (or use
+your existing login when --token is omitted), pick a repository (current directory,
+another path, or a demo), check that TeamCity can access it, and hand over to an AI
+agent to finish the setup.`,
+		Example: `  # With an onboarding token generated in TeamCity
+  teamcity onboard https://teamcity.example.com --token <onboarding-token>
+
+  # Already logged in with teamcity auth login
+  teamcity onboard https://teamcity.example.com`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.serverURL = config.NormalizeURL(args[0])
@@ -30,8 +35,7 @@ access it, and hand over to an AI agent to finish the setup.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&opts.token, "token", "", "Short-lived onboarding token")
-	_ = cmd.MarkFlagRequired("token")
+	cmd.Flags().StringVar(&opts.token, "token", "", "Short-lived onboarding token (default: use existing login)")
 
 	cmdutil.MarkExperimental(f, cmd)
 

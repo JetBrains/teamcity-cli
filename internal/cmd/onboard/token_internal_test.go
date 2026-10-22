@@ -77,6 +77,43 @@ func TestAccessTokenNoUsableLogin(t *testing.T) {
 	}
 }
 
+func TestAccessTokenWithoutOnboardingToken(t *testing.T) {
+	newServer := func(t *testing.T) string {
+		t.Helper()
+		config.ResetForTest()
+		return newTestClient(t, map[string]http.HandlerFunc{
+			exchangeRoute: func(w http.ResponseWriter, r *http.Request) {
+				t.Error("no exchange expected without --token")
+			},
+			"GET /app/rest/users/current": func(w http.ResponseWriter, r *http.Request) {
+				writeJSON(w, api.User{ID: 1, Username: "admin"})
+			},
+		}).ServerURL()
+	}
+
+	t.Run("uses saved login", func(t *testing.T) {
+		serverURL := newServer(t)
+		saveLogin(serverURL, "saved-token")
+		f, out := testFactory()
+
+		got, err := accessToken(f, serverURL, "")
+		require.NoError(t, err)
+		assert.Equal(t, "saved-token", got)
+		assert.NotContains(t, out.String(), "Couldn't exchange", "no exchange was attempted, so no warning")
+	})
+
+	t.Run("not logged in", func(t *testing.T) {
+		serverURL := newServer(t)
+		f, _ := testFactory()
+
+		_, err := accessToken(f, serverURL, "")
+		ve, ok := errors.AsType[*api.ValidationError](err)
+		require.True(t, ok, "want *api.ValidationError, got %T: %v", err, err)
+		assert.Equal(t, "you're not logged in to "+serverURL, ve.Error())
+		assert.Equal(t, "Run teamcity auth login -s "+serverURL+", then teamcity onboard "+serverURL, ve.Suggestion())
+	})
+}
+
 func TestAccessTokenOtherFailuresDoNotFallBack(t *testing.T) {
 	serverURL := exchangeServer(t, http.StatusForbidden)
 	saveLogin(serverURL, "saved-token")

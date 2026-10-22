@@ -23,10 +23,11 @@ func TestOnboardRequiresInteractiveTerminal(t *testing.T) {
 	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "requires an interactive terminal", "onboard", ts.URL, "--token", "onboarding-token", "--no-input")
 }
 
-func TestOnboardRequiresToken(t *testing.T) {
+func TestOnboardTokenIsOptional(t *testing.T) {
 	ts := cmdtest.NewTestServer(t)
 
-	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, `required flag(s) "token" not set`, "onboard", ts.URL)
+	// Gets past flag validation to the interactive check instead of failing on a missing --token.
+	cmdtest.RunCmdWithFactoryExpectErr(t, ts.Factory, "requires an interactive terminal", "onboard", ts.URL, "--no-input")
 }
 
 func TestOnboardRequiresServerURL(t *testing.T) {
