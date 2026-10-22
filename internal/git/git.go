@@ -142,6 +142,18 @@ func Push(branch string) error {
 	return nil
 }
 
+// Clone runs a shallow `git clone --depth 1` of url into dir.
+func Clone(url, dir string) error {
+	out, err := exec.Command("git", "clone", "--depth", "1", "--", url, dir).CombinedOutput()
+	if err != nil {
+		if msg := strings.TrimSpace(string(out)); msg != "" {
+			return errors.New(msg)
+		}
+		return err
+	}
+	return nil
+}
+
 // UntrackedFiles returns files reported by `git ls-files --others --exclude-standard`.
 func UntrackedFiles() ([]string, error) {
 	out, err := exec.Command("git", "ls-files", "--others", "--exclude-standard").Output()

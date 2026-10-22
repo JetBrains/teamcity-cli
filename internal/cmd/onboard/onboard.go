@@ -80,5 +80,11 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		}
 	}
 
+	if repo.source == sourceDemo {
+		if repo, err = cloneDemo(f, repo); err != nil {
+			return err
+		}
+	}
+
 	return handOverToAgent(f, client, repo, projectID, authorized)
 }

@@ -164,6 +164,19 @@ func TestBranchExistsOnRemote(t *testing.T) {
 	assert.False(t, BranchExistsOnRemote("master"))
 }
 
+func TestClone(t *testing.T) {
+	src := setupRepo(t)
+	writeFile(t, src, "test.txt", "content")
+	runGit(t, src, "add", ".")
+	runGit(t, src, "commit", "-m", "initial")
+
+	dst := filepath.Join(t.TempDir(), "clone")
+	require.NoError(t, Clone(src, dst))
+	assert.FileExists(t, filepath.Join(dst, "test.txt"))
+
+	assert.Error(t, Clone(src, dst), "cloning into a non-empty directory fails")
+}
+
 func TestResolveRevision(t *testing.T) {
 	dir := setupRepo(t)
 	t.Chdir(dir)
