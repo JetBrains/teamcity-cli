@@ -70,7 +70,7 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		return err
 	}
 
-	authorized, err := isRepositoryAuthorized(client, repo)
+	authorized, err := isRepositoryAuthorized(client, repo, projectID, instanceID, rootProjectID)
 	if err != nil {
 		return err
 	}
