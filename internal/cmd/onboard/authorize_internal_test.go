@@ -31,11 +31,13 @@ func connectionRoutes(features ...api.ProjectFeature) map[string]http.HandlerFun
 	}
 }
 
-func oauthConnection(id, providerType string) api.ProjectFeature {
-	return api.ProjectFeature{ID: id, Type: "OAuthProvider", Properties: &api.PropertyList{Property: []api.Property{
+// oauthConnection is a connection feature; extra properties (e.g. a self-hosted server URL) are appended.
+func oauthConnection(id, providerType string, extra ...api.Property) api.ProjectFeature {
+	props := append([]api.Property{
 		{Name: "displayName", Value: id},
 		{Name: "providerType", Value: providerType},
-	}}}
+	}, extra...)
+	return api.ProjectFeature{ID: id, Type: "OAuthProvider", Properties: &api.PropertyList{Property: props}}
 }
 
 func TestHTTPSURL(t *testing.T) {
@@ -64,38 +66,6 @@ func TestDefaultBranch(t *testing.T) {
 	})
 }
 
-func TestFindGitHubConnection(t *testing.T) {
-	t.Run("picks GitHub OAuth over other providers", func(t *testing.T) {
-		client := newTestClient(t, connectionRoutes(
-			oauthConnection("PROJECT_EXT_1", "GitHubApp"),
-			oauthConnection("PROJECT_EXT_2", "GitHub"),
-		))
-
-		got, err := findGitHubConnection(client, "Instance")
-		require.NoError(t, err)
-		assert.Equal(t, "PROJECT_EXT_2", got)
-	})
-
-	t.Run("none", func(t *testing.T) {
-		client := newTestClient(t, connectionRoutes(oauthConnection("PROJECT_EXT_1", "GitLabCom")))
-
-		got, err := findGitHubConnection(client, "Instance")
-		require.NoError(t, err)
-		assert.Empty(t, got)
-	})
-
-	t.Run("API error", func(t *testing.T) {
-		client := newTestClient(t, map[string]http.HandlerFunc{
-			"GET /app/rest/projects/id:Instance/projectFeatures": func(w http.ResponseWriter, r *http.Request) {
-				http.Error(w, "forbidden", http.StatusForbidden)
-			},
-		})
-
-		_, err := findGitHubConnection(client, "Instance")
-		assert.ErrorContains(t, err, "list connections in Instance")
-	})
-}
-
 func TestCreateVcsRoot(t *testing.T) {
 	var got api.VcsRoot
 	client := newTestClient(t, map[string]http.HandlerFunc{
@@ -121,7 +91,7 @@ func TestCreateVcsRoot(t *testing.T) {
 }
 
 func TestEnsureConnectionAccess(t *testing.T) {
-	conn := &connection{id: "PROJECT_EXT_2", projectID: "Instance"}
+	conn := connection{id: "PROJECT_EXT_2", providerType: "GitHub", projectID: "Instance"}
 	const repoURL = "https://github.com/acme/app.git"
 
 	t.Run("access OK", func(t *testing.T) {
@@ -202,14 +172,14 @@ func TestAuthorizeRepository(t *testing.T) {
 		assert.Equal(t, "refs/heads/main", property(got.Properties.Property, "branch"))
 	})
 
-	t.Run("missing GitHub connection fails before any prompt", func(t *testing.T) {
-		client := newTestClient(t, connectionRoutes())
+	t.Run("no VCS connection fails before any prompt", func(t *testing.T) {
+		client := newTestClient(t, connectionRoutes(oauthConnection("PROJECT_EXT_9", "Docker")))
 		f, _ := testFactory()
 
 		ok, err := authorizeRepository(f, client, repository{source: sourcePath, remoteURL: "git@github.com:acme/app.git"}, "Instance", "Instance_App")
 		assert.False(t, ok)
 		ve, isValidation := errors.AsType[*api.ValidationError](err)
 		require.True(t, isValidation, "want *api.ValidationError, got %T: %v", err, err)
-		assert.Contains(t, ve.Error(), "no GitHub connection")
+		assert.Contains(t, ve.Error(), "no VCS connection")
 	})
 }

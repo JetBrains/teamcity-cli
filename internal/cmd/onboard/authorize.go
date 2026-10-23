@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -15,10 +14,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
-// githubOAuthProvider is the providerType of a GitHub OAuth connection.
-const githubOAuthProvider = "GitHub"
-
-// authorizeRepository creates a VCS root for repo in projectID: anonymous for demos, via the instance project's GitHub connection otherwise; false means the user declined.
+// authorizeRepository creates a VCS root for repo in projectID: anonymous for demos, via an instance-project connection matching the repo otherwise; false means the user declined.
 func authorizeRepository(f *cmdutil.Factory, client api.ClientInterface, repo repository, instanceID, projectID string) (bool, error) {
 	if repo.remoteURL == "" {
 		return false, nil // see resolveRepository's no-remotes TODO
@@ -29,21 +25,24 @@ func authorizeRepository(f *cmdutil.Factory, client api.ClientInterface, repo re
 		return true, createVcsRoot(f, client, projectID, repo.remoteURL, defaultBranch(f.Context(), repo.remoteURL), "", api.Property{Name: "authMethod", Value: "ANONYMOUS"})
 	}
 
-	connID, err := findGitHubConnection(client, instanceID)
+	conns, err := listConnections(client, instanceID)
 	if err != nil {
 		return false, err
 	}
-	if connID == "" {
+	if len(conns) == 0 {
 		return false, api.Validation(
-			"no GitHub connection found on the server",
-			"Add a GitHub OAuth connection in TeamCity, then rerun teamcity onboard",
+			"no VCS connection found on the server",
+			"Add a connection for your Git host (e.g. GitHub) in TeamCity, then rerun teamcity onboard",
 		)
 	}
-	conn := &connection{id: connID, projectID: instanceID}
+	conn, err := chooseConnection(f, conns, repo.remoteURL)
+	if err != nil {
+		return false, err
+	}
 
 	// TODO: copy pending design review
 	proceed := true
-	title := fmt.Sprintf("%s isn't connected to TeamCity yet. Create a VCS root using GitHub connection %s?", repo.remoteURL, conn.id)
+	title := fmt.Sprintf("%s isn't connected to TeamCity yet. Create a VCS root using connection %s?", repo.remoteURL, conn.label())
 	if err := cmdutil.Confirm(title, &proceed); err != nil {
 		return false, err
 	}
@@ -69,7 +68,7 @@ func httpsURL(remoteURL string) string {
 }
 
 // ensureConnectionAccess tests access through conn, opening the browser authorization until it passes; false means the user gave up.
-func ensureConnectionAccess(f *cmdutil.Factory, client api.ClientInterface, repoURL string, conn *connection) (bool, error) {
+func ensureConnectionAccess(f *cmdutil.Factory, client api.ClientInterface, repoURL string, conn connection) (bool, error) {
 	if !client.SupportsFeature("vcs_test_connection") {
 		return true, nil // older servers: let CreateVcsRoot surface auth problems
 	}
@@ -92,12 +91,12 @@ func ensureConnectionAccess(f *cmdutil.Factory, client api.ClientInterface, repo
 			msg = result.Errors[0].Message
 		}
 		// Same signal `project vcs create` uses for a connection the current user hasn't authorized yet.
-		if !strings.Contains(msg, "Malformed request") {
+		authURL := authorizeURL(client.ServerURL(), conn)
+		if !strings.Contains(msg, "Malformed request") || authURL == "" {
 			return false, fmt.Errorf("%s", msg)
 		}
 
-		cmdutil.OpenURLOrWarn(f.Printer, fmt.Sprintf("%s/oauth/github/repositories.html?projectId=%s&connectionId=%s&updateToken=true&showMode=popup",
-			client.ServerURL(), url.QueryEscape(conn.projectID), url.QueryEscape(conn.id)))
+		cmdutil.OpenURLOrWarn(f.Printer, authURL)
 		// TODO: copy pending design review
 		done := true
 		if err := cmdutil.Confirm("Finished authorizing in the browser?", &done); err != nil {
@@ -107,31 +106,6 @@ func ensureConnectionAccess(f *cmdutil.Factory, client api.ClientInterface, repo
 			return false, nil
 		}
 	}
-}
-
-// connection is a GitHub OAuth connection and the instance project that owns it; VCS roots using it must live there or below.
-type connection struct {
-	id        string
-	projectID string
-}
-
-// findGitHubConnection returns the ID of a GitHub OAuth connection visible from projectID, or "".
-func findGitHubConnection(client api.ClientInterface, projectID string) (string, error) {
-	feats, err := client.GetProjectConnections(projectID)
-	if err != nil {
-		return "", fmt.Errorf("list connections in %s: %w", projectID, err)
-	}
-	for _, feat := range feats.ProjectFeature {
-		if feat.Properties == nil {
-			continue
-		}
-		for _, p := range feat.Properties.Property {
-			if p.Name == "providerType" && p.Value == githubOAuthProvider {
-				return feat.ID, nil
-			}
-		}
-	}
-	return "", nil
 }
 
 // createVcsRoot creates a Git VCS root for repoURL in projectID; connID lets the server resolve OAuth credentials.
