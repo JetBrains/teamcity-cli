@@ -67,7 +67,14 @@ func ResolveRevision(rev string) (string, error) {
 
 // RemoteURLs returns each configured remote's fetch URL, with origin first when present and duplicates removed; empty outside a working tree.
 func RemoteURLs() []string {
-	out, err := exec.Command("git", "remote", "-v").Output()
+	return RemoteURLsIn("")
+}
+
+// RemoteURLsIn is RemoteURLs for the working tree at dir; "" means the current directory.
+func RemoteURLsIn(dir string) []string {
+	cmd := exec.Command("git", "remote", "-v")
+	cmd.Dir = dir
+	out, err := cmd.Output()
 	if err != nil {
 		return nil
 	}
@@ -126,6 +133,18 @@ func LocalChangesGitDiffBase() (string, error) {
 func Push(branch string) error {
 	remote := RemoteForBranch(branch)
 	out, err := exec.Command("git", "push", "-u", remote, branch).CombinedOutput()
+	if err != nil {
+		if msg := strings.TrimSpace(string(out)); msg != "" {
+			return errors.New(msg)
+		}
+		return err
+	}
+	return nil
+}
+
+// Clone runs a shallow `git clone --depth 1` of url into dir.
+func Clone(url, dir string) error {
+	out, err := exec.Command("git", "clone", "--depth", "1", "--", url, dir).CombinedOutput()
 	if err != nil {
 		if msg := strings.TrimSpace(string(out)); msg != "" {
 			return errors.New(msg)

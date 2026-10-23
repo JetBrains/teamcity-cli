@@ -88,6 +88,43 @@ func TestCreateAPIToken(t *testing.T) {
 	assert.Equal(t, "secret-value", token.Value)
 }
 
+func TestExchangeTemporaryToken(t *testing.T) {
+	t.Parallel()
+
+	client := NewClient("https://teamcity.example.com", "temp-token")
+	client.HTTPClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/app/rest/users/current/temporaryTokens/exchange", r.URL.Path)
+		assert.Equal(t, "Bearer temp-token", r.Header.Get("Authorization"))
+		assert.Nil(t, r.Body)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(strings.NewReader(`{"name":"teamcity-cli","value":"perm-token"}`)),
+		}, nil
+	})
+
+	token, err := client.ExchangeTemporaryToken()
+	require.NoError(t, err)
+	assert.Equal(t, "teamcity-cli", token.Name)
+	assert.Equal(t, "perm-token", token.Value)
+}
+
+func TestExchangeTemporaryTokenNoRetry(t *testing.T) {
+	t.Parallel()
+
+	calls := 0
+	client := NewClient("https://teamcity.example.com", "temp-token")
+	client.HTTPClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		calls++
+		return &http.Response{StatusCode: http.StatusServiceUnavailable, Body: io.NopCloser(strings.NewReader(""))}, nil
+	})
+
+	_, err := client.ExchangeTemporaryToken()
+	require.Error(t, err)
+	assert.Equal(t, 1, calls)
+}
+
 func TestDeleteAPIToken(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
