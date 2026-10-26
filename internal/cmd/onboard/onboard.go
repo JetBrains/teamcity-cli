@@ -70,14 +70,9 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		return err
 	}
 
-	authorized, err := isRepositoryAuthorized(client, repo, projectID, instanceID, rootProjectID)
+	authorized, err := connectRepository(f, client, repo, instanceID, projectID)
 	if err != nil {
 		return err
-	}
-	if !authorized {
-		if authorized, err = authorizeRepository(f, client, repo, instanceID, projectID); err != nil {
-			return err
-		}
 	}
 
 	if repo.source == sourceSample {

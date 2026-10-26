@@ -83,7 +83,6 @@ func resolveRepository(source repoSource, dir string) (repository, error) {
 	if remotes := git.RemoteURLsIn(root); len(remotes) > 0 {
 		repo.remoteURL = remotes[0]
 	}
-	// TODO: decide behavior without remotes
 	return repo, nil
 }
 

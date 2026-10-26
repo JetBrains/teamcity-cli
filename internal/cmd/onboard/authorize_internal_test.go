@@ -140,16 +140,18 @@ func TestEnsureConnectionAccess(t *testing.T) {
 	})
 }
 
-func TestAuthorizeRepository(t *testing.T) {
-	t.Run("no remote does nothing", func(t *testing.T) {
+func TestConnectRepository(t *testing.T) {
+	t.Run("no remote skips authorization without server calls", func(t *testing.T) {
 		client := newTestClient(t, nil) // any request fails the test
 		f, _ := testFactory()
 
-		ok, err := authorizeRepository(f, client, repository{source: sourcePath, dir: t.TempDir()}, "Instance", "Instance_App")
+		ok, err := connectRepository(f, client, repository{source: sourcePath, dir: t.TempDir()}, "Instance", "Instance_App")
 		require.NoError(t, err)
 		assert.False(t, ok)
 	})
+}
 
+func TestAuthorizeRepository(t *testing.T) {
 	t.Run("sample creates anonymous root in repo project without a connection lookup", func(t *testing.T) {
 		remote := initRepoWithCommit(t, "main")
 		var got api.VcsRoot
