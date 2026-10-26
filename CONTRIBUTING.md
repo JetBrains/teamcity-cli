@@ -401,7 +401,7 @@ git push origin v1.1.1
 The release pipeline is kept in [`.teamcity/release.yml`](.teamcity/release.yml).
 It selects Go 1.27.3 or a newer toolchain required by the module, verifies the
 codesign client download, and checks that each binary uses the selected Go
-toolchain before publishing. AUR and npm publishing are currently skipped.
+toolchain before publishing. npm publishing is currently skipped.
 
 Validate and apply pipeline changes with:
 

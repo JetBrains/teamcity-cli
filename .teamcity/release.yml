@@ -26,7 +26,7 @@ jobs:
         docker-run-parameters: --user 0
         script-content: |-
           set -eu
-          apk add --no-cache curl coreutils just mono
+          apk add --no-cache curl coreutils just mono openssh-client
           git config --global --add safe.directory "$(pwd)"
           git fetch --tags origin
           RELEASE_TAG=$(git describe --tags --exact-match)
@@ -41,10 +41,12 @@ jobs:
           chmod +x "$HOME/.local/bin/codesign-client"
           export PATH="$HOME/.local/bin:$PATH"
           just install-choco
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan aur.archlinux.org >> "$HOME/.ssh/known_hosts" 2>/dev/null
           export HOMEBREW_TAP_GITHUB_TOKEN="$GITHUB_TOKEN"
           export SCOOP_GITHUB_TOKEN="$GITHUB_TOKEN"
           go version
-          goreleaser release --clean --skip=aur,npm
+          goreleaser release --clean --skip=npm
           printf '%s' "$RELEASE_TAG" > dist/latest
       - type: script
         name: Upload install scripts
@@ -63,4 +65,5 @@ secrets:
   env.ANTHROPIC_API_KEY: credentialsJSON:3316520a-2a6b-48e4-8296-d665692a4030
   env.TEAMCITY_TOKEN: credentialsJSON:1410f1df-7623-4958-85d0-2bb102c0bd63
   env.GORELEASER_KEY: credentialsJSON:0277c80e-aafd-4fd2-af03-1fc840713709
+  env.AUR_SSH_KEY: credentialsJSON:181a83e3-258a-421b-a590-228634d41261
   env.WINGET_GITHUB_TOKEN: credentialsJSON:2767232c-8193-4c6e-8742-9ced9616eada
