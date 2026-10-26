@@ -29,11 +29,6 @@ The install script also works on macOS. New installs use `~/.local/bin` without 
 winget install JetBrains.TeamCityCLI
 ```
 
-**npm:**
-```bash
-npm install -g @jetbrains/teamcity-cli
-```
-
 <details>
 <summary>More installation methods (deb, rpm, Chocolatey, Scoop, build from source)</summary>
 

@@ -117,15 +117,6 @@ scoop install teamcity
 ```
 
 </tab>
-<tab title="npm">
-
-**npm (cross-platform):**
-
-```Shell
-npm install -g @jetbrains/teamcity-cli
-```
-
-</tab>
 </tabs>
 
 <chapter title="Build from source (advanced)" collapsible="true" default-state="collapsed">
@@ -162,7 +153,7 @@ teamcity --version
 
 Run `teamcity update` to check for a newer release and confirm installation. Use `teamcity update --yes` to install without prompting, including in non-interactive scripts. Use `teamcity update --check` or `teamcity update --json` to report status without installing.
 
-Homebrew, Scoop, Winget, Chocolatey, and npm installations update through their package manager. Unmanaged macOS/Linux binaries update at the current executable's location, including custom directories and symlink targets. The updater checks the release archive's SHA-256 against the published checksum, verifies the new binary's version, then replaces the old file. Failed downloads and verification leave the installed binary unchanged; the updater never runs sudo or a downloaded shell script.
+Homebrew, Scoop, Winget, and Chocolatey installations update through their package manager. Unmanaged macOS/Linux binaries update at the current executable's location, including custom directories and symlink targets. The updater checks the release archive's SHA-256 against the published checksum, verifies the new binary's version, then replaces the old file. Failed downloads and verification leave the installed binary unchanged; the updater never runs sudo or a downloaded shell script.
 
 Go installs, Linux distro packages, and unmanaged Windows binaries currently show manual update instructions. A package-manager release may lag the GitHub release; run `teamcity --version` after updating to check what was installed.
 
