@@ -46,6 +46,8 @@ func TestHTTPSURL(t *testing.T) {
 		{"ssh://git@github.com/acme/app.git", "https://github.com/acme/app.git"},
 		{"https://github.com/acme/app", "https://github.com/acme/app.git"},
 		{"https://github.com/acme/app.git", "https://github.com/acme/app.git"},
+		{"git@ssh.dev.azure.com:v3/acme/proj/app", "https://dev.azure.com/acme/proj/_git/app"},
+		{"ssh://git@ssh.dev.azure.com:22/v3/acme/proj/app", "https://dev.azure.com/acme/proj/_git/app"},
 		{"not-a-url", "not-a-url"},
 	}
 	for _, tc := range tests {

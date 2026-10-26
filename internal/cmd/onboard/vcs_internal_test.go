@@ -66,6 +66,19 @@ func TestIsRepositoryAuthorized(t *testing.T) {
 	}
 }
 
+func TestIsRepositoryAuthorizedAzureSSH(t *testing.T) {
+	client := newTestClient(t, map[string]http.HandlerFunc{
+		"GET /app/rest/vcs-roots": func(w http.ResponseWriter, r *http.Request) {
+			assert.Contains(t, r.URL.Query().Get("locator"), "value:acme/proj/_git/app,")
+			writeJSON(w, api.VcsRootList{Count: 1, VcsRoot: []api.VcsRoot{vcsRootWithURL("r1", "https://dev.azure.com/acme/proj/_git/app")}})
+		},
+	})
+
+	got, err := isRepositoryAuthorized(client, repository{remoteURL: "git@ssh.dev.azure.com:v3/acme/proj/app"}, onboardedProjects...)
+	require.NoError(t, err)
+	assert.True(t, got)
+}
+
 func TestIsRepositoryAuthorizedNoRemote(t *testing.T) {
 	client := newTestClient(t, nil) // any request fails the test
 

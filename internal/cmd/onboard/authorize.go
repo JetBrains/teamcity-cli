@@ -70,10 +70,17 @@ func authorizeRepository(f *cmdutil.Factory, client api.ClientInterface, repo re
 
 // httpsURL rewrites SSH remotes to HTTPS, since OAuth connection tokens only authenticate over HTTPS.
 func httpsURL(remoteURL string) string {
-	if canon := git.CanonicalURL(remoteURL); canon != "" {
-		return "https://" + canon + ".git"
+	canon := git.CanonicalURL(remoteURL)
+	if canon == "" {
+		return remoteURL
 	}
-	return remoteURL
+	// Azure DevOps SSH paths (v3/org/project/repo) differ from HTTPS ones (org/project/_git/repo).
+	if path, ok := strings.CutPrefix(canon, "ssh.dev.azure.com/v3/"); ok {
+		if parts := strings.Split(path, "/"); len(parts) == 3 {
+			return "https://dev.azure.com/" + parts[0] + "/" + parts[1] + "/_git/" + parts[2]
+		}
+	}
+	return "https://" + canon + ".git"
 }
 
 // ensureConnectionAccess tests access through conn, opening the browser authorization until it passes; false means the user gave up.

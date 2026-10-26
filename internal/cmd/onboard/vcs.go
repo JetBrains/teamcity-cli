@@ -14,13 +14,15 @@ var vcsRootMatchFields = []string{"id", "project.id", "properties.property.name"
 // isRepositoryAuthorized reports whether a VCS root usable by the onboarded project points at repo's remote;
 // usableFrom is that project and its ancestors, since TeamCity projects can only use roots defined there.
 func isRepositoryAuthorized(client api.ClientInterface, repo repository, usableFrom ...string) (bool, error) {
-	want := git.CanonicalURL(repo.remoteURL)
+	// Compare in HTTPS form, the one onboarding saves, so Azure DevOps SSH remotes match their roots.
+	remote := httpsURL(repo.remoteURL)
+	want := git.CanonicalURL(remote)
 	if want == "" {
 		return false, nil
 	}
 	// Server-side org/repo substring narrows the list; canonical equality then rejects forks and lookalikes.
 	roots, _, err := client.GetVcsRoots(api.VcsRootsOptions{
-		URL:    git.RepoPath(repo.remoteURL),
+		URL:    git.RepoPath(remote),
 		Fields: vcsRootMatchFields,
 	})
 	if err != nil {
