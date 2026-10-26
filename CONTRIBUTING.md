@@ -391,11 +391,23 @@ just release-dry-run  # full release process without publishing
 
 ### Cutting a release
 
-Tag and push — the [release pipeline](https://teamcity-nightly.labs.intellij.net/pipeline/TeamCity_TeamCityCLI_Release) on TeamCity handles everything else automatically (build, acceptance test, sign, publish to all package managers):
+Tag and push — the [release pipeline](https://teamcity-nightly.labs.intellij.net/pipeline/TeamCity_TeamCityCLI_Release) on TeamCity handles everything else automatically (build, acceptance test, sign, publish to the configured package managers):
 
 ```sh
 git tag -a v1.1.1 -m "Release v1.1.1"
 git push origin v1.1.1
+```
+
+The release pipeline is kept in [`.teamcity/release.yml`](.teamcity/release.yml).
+It selects Go 1.27.3 or a newer toolchain required by the module, verifies the
+codesign client download, and checks that each binary uses the selected Go
+toolchain before publishing. AUR and npm publishing are currently skipped.
+
+Validate and apply pipeline changes with:
+
+```sh
+TEAMCITY_URL=https://teamcity-nightly.labs.intellij.net teamcity pipeline validate .teamcity/release.yml
+TEAMCITY_URL=https://teamcity-nightly.labs.intellij.net teamcity pipeline push TeamCity_TeamCityCLI_Release .teamcity/release.yml
 ```
 
 ### Troubleshooting Chocolatey

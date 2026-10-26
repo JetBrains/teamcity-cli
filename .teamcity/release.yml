@@ -1,0 +1,66 @@
+version: 1
+parameters:
+  env.GOTOOLCHAIN: go1.27.3+auto
+  env.SIGN: 'true'
+  env.FINGERPRINT: B46DC71E03FEEB7F89D1F2491F7A8F87B9D8F501
+  env.CODESIGN_SHA256_AMD64: b71cdc4fcb9f8c83067690c3d846600cd980f7da8be373bae8ce31e1c829d4ab
+  env.CODESIGN_SHA256_ARM64: d5148833bbfb4f58282b5d2800813e21e35a4d0f3bc391d000ce0ad3da2fe533
+jobs:
+  goreleaser:
+    name: GoReleaser
+    allow-reuse: false
+    runs-on:
+      self-hosted:
+        - requirement: equals
+          name: Linux Docker engine
+          parameter: container.engine.osType
+          value: linux
+    files-publication:
+      - path: dist/**
+        publish-artifact: true
+        share-with-jobs: false
+    steps:
+      - type: script
+        name: Sign and publish
+        docker-image: goreleaser/goreleaser-pro:v2.19.0
+        docker-run-parameters: --user 0
+        script-content: |-
+          set -eu
+          apk add --no-cache curl coreutils just mono
+          git config --global --add safe.directory "$(pwd)"
+          git fetch --tags origin
+          RELEASE_TAG=$(git describe --tags --exact-match)
+          case "$(uname -m)" in
+            x86_64) arch=amd64; hash="$CODESIGN_SHA256_AMD64" ;;
+            aarch64|arm64) arch=arm64; hash="$CODESIGN_SHA256_ARM64" ;;
+            *) echo "unsupported arch $(uname -m)" >&2; exit 1 ;;
+          esac
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "https://codesign-distribution.labs.jb.gg/codesign-client-linux-$arch" -o "$HOME/.local/bin/codesign-client"
+          echo "$hash  $HOME/.local/bin/codesign-client" | sha256sum --check --strict
+          chmod +x "$HOME/.local/bin/codesign-client"
+          export PATH="$HOME/.local/bin:$PATH"
+          just install-choco
+          export HOMEBREW_TAP_GITHUB_TOKEN="$GITHUB_TOKEN"
+          export SCOOP_GITHUB_TOKEN="$GITHUB_TOKEN"
+          go version
+          goreleaser release --clean --skip=aur,npm
+          printf '%s' "$RELEASE_TAG" > dist/latest
+      - type: script
+        name: Upload install scripts
+        docker-image: amazon/aws-cli
+        script-content: |-
+          set -eu
+          aws s3 cp install.sh s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.sh --content-type text/plain --region eu-west-1 --no-guess-mime-type
+          aws s3 cp install.ps1 s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.ps1 --content-type text/plain --region eu-west-1 --no-guess-mime-type
+          aws s3 cp install.cmd s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/install.cmd --content-type text/plain --region eu-west-1 --no-guess-mime-type
+          aws s3 cp dist/latest s3://download-prod-cdn.jetbrains.com/resources/teamcity-cli/latest --content-type text/plain --region eu-west-1 --no-guess-mime-type
+secrets:
+  env.SERVICE_ACCOUNT_TOKEN: credentialsJSON:c76f3a7c-75ed-4118-b4bc-7571dd125418
+  env.SERVICE_ACCOUNT_NAME: credentialsJSON:18028022-d1af-440c-b33d-78b285f9dade
+  env.GITHUB_TOKEN: credentialsJSON:2fc99e26-11a5-41d6-beb7-903aa67b2c95
+  env.CHOCOLATEY_API_KEY: credentialsJSON:3b8a21fb-4f64-4ff8-a2f6-a8fd1c43ee2c
+  env.ANTHROPIC_API_KEY: credentialsJSON:3316520a-2a6b-48e4-8296-d665692a4030
+  env.TEAMCITY_TOKEN: credentialsJSON:1410f1df-7623-4958-85d0-2bb102c0bd63
+  env.GORELEASER_KEY: credentialsJSON:0277c80e-aafd-4fd2-af03-1fc840713709
+  env.WINGET_GITHUB_TOKEN: credentialsJSON:2767232c-8193-4c6e-8742-9ced9616eada

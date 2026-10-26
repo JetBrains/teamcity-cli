@@ -19,6 +19,12 @@ builds:
     hooks:
       post:
         - cmd: |
+            sh -ec '
+            go version -m "{{ .Path }}"
+            test "$(go version "{{ .Path }}")" = "{{ .Path }}: $(go env GOVERSION)"
+            '
+          output: true
+        - cmd: |
             sh -c '
             if [ "{{ .IsSnapshot }}" = "false" ] && [ "{{ .Os }}" = "$(go env GOOS)" ] && [ "{{ .Arch }}" = "$(go env GOARCH)" ]; then
               ver=$(chmod +x "{{ .Path }}"; "{{ .Path }}" --version)
@@ -203,7 +209,7 @@ winget:
       owner: tiulpin
       name: winget-pkgs
       branch: "JetBrains.TeamCityCLI-{{.Version}}"
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.WINGET_GITHUB_TOKEN }}"
       pull_request:
         enabled: true
         base:
