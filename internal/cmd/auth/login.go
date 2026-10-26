@@ -77,7 +77,7 @@ For CI/CD, set TEAMCITY_URL and TEAMCITY_TOKEN environment variables
 	cmd.Flags().BoolVar(&opts.guest, "guest", false, "Use guest authentication (no token needed; must be enabled on the server)")
 	cmd.Flags().BoolVar(&opts.insecureStorage, "insecure-storage", false, "Store token in plain text config file instead of system keyring")
 	cmd.Flags().BoolVar(&opts.noBrowser, "no-browser", false, "Skip browser-based auth, use manual token entry")
-	cmd.Flags().BoolVar(&opts.web, "web", false, "Sign in through the browser, even without a terminal; fails instead of prompting for a token")
+	cmd.Flags().BoolVar(&opts.web, "web", false, "Sign in through the browser with default permissions and no prompts; works without a terminal")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output JSON lines: the authorization URL, then the login result")
 	cmd.MarkFlagsMutuallyExclusive("web", "token")
 	cmd.MarkFlagsMutuallyExclusive("web", "guest")
@@ -106,7 +106,7 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 	var jsonOut *output.Printer
 	if opts.json {
 		jsonOut = f.Printer
-		f.Printer = &output.Printer{Out: io.Discard, ErrOut: jsonOut.ErrOut, Quiet: true, Verbose: jsonOut.Verbose}
+		f.Printer = &output.Printer{Out: io.Discard, ErrOut: jsonOut.ErrOut, Quiet: jsonOut.Quiet, Verbose: jsonOut.Verbose}
 		defer func() { f.Printer = jsonOut }()
 	}
 
@@ -245,7 +245,7 @@ func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 				_ = jsonOut.PrintJSONLine(loginEvent{Event: "authorize", URL: authURL, BrowserOpened: &opened})
 			}
 		}
-		resp, err := webLogin(ctx, p, serverURL, interactive, announce)
+		resp, err := webLogin(ctx, p, serverURL, announce)
 		if err != nil {
 			return err
 		}

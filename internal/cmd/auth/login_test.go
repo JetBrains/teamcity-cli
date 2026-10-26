@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -9,9 +10,11 @@ import (
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/cmd"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,12 +77,18 @@ func TestAuthLoginWebJSON(T *testing.T) {
 	} {
 		T.Run(tc.name, func(t *testing.T) {
 			ts := newWebLoginServer(t, true)
+			t.Setenv("TC_INSECURE_SKIP_WARN", "")
 			approveInBrowser(t, tc.openErr)
 
-			got := cmdtest.CaptureOutput(t, ts.Factory, "auth", "login", "--server", ts.URL, "--web", "--json", "--insecure-storage")
+			var stdout, stderr bytes.Buffer
+			ts.Factory.Printer = &output.Printer{Out: &stdout, ErrOut: &stderr}
+			root := cmd.NewCommand(ts.Factory)
+			root.SetArgs([]string{"auth", "login", "--server", ts.URL, "--web", "--json", "--insecure-storage"})
+			require.NoError(t, root.Execute())
 
-			lines := strings.Split(strings.TrimSpace(got), "\n")
-			require.Len(t, lines, 2, got)
+			assert.Contains(t, stderr.String(), "insecure HTTP", "warnings stay on stderr in JSON mode")
+			lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+			require.Len(t, lines, 2, stdout.String())
 			var authorize, login map[string]any
 			require.NoError(t, json.Unmarshal([]byte(lines[0]), &authorize))
 			require.NoError(t, json.Unmarshal([]byte(lines[1]), &login))
