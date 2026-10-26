@@ -76,7 +76,7 @@ Browser-based login normally needs an interactive terminal. To start it from a s
 teamcity auth login --server https://teamcity.example.com --web --json
 ```
 
-With `--web`, the CLI does not prompt when no terminal is attached: it requests the default permissions, prints the authorization URL on its own line, waits for the browser callback, and stores the token. If the server does not support PKCE or the login fails, the command exits with a non-zero code instead of falling back to manual token entry. With `--json`, the CLI writes one JSON object per line:
+With `--web`, the CLI never prompts, even in a terminal: it requests the default permissions, prints the authorization URL on its own line, waits for the browser callback, and stores the token. If the server does not support PKCE or the login fails, the command exits with a non-zero code instead of falling back to manual token entry. With `--json`, the CLI writes one JSON object per line:
 
 ```Shell
 {"event":"authorize","url":"https://teamcity.example.com/pkce/authorize.html?...","browser_opened":true}

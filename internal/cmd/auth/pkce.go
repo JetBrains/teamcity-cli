@@ -42,8 +42,8 @@ func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) 
 	return resp.AccessToken, resp.ValidUntil
 }
 
-// webLogin runs the browser flow without any fallback; scopes are picked interactively only when a terminal is attached.
-func webLogin(ctx context.Context, p *output.Printer, serverURL string, interactive bool, announce func(authURL string, opened bool)) (*api.TokenResponse, error) {
+// webLogin runs the browser flow with the default scopes and no prompts or fallback, so callers without a terminal can drive it.
+func webLogin(ctx context.Context, p *output.Printer, serverURL string, announce func(authURL string, opened bool)) (*api.TokenResponse, error) {
 	client := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
 	if !pkceEnabled(ctx, client) {
 		return nil, api.Validation(
@@ -51,13 +51,7 @@ func webLogin(ctx context.Context, p *output.Printer, serverURL string, interact
 			"Requires TeamCity 2026.1+ with PKCE enabled; use --token instead",
 		)
 	}
-	scopes := api.DefaultScopes()
-	if interactive {
-		if err := cmdutil.Prompt(newPkceScopePicker(&scopes)); err != nil {
-			return nil, err
-		}
-	}
-	resp, err := runPkceLogin(ctx, p, client, scopes, announce)
+	resp, err := runPkceLogin(ctx, p, client, api.DefaultScopes(), announce)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return nil, err
@@ -74,13 +68,14 @@ func pkceEnabled(ctx context.Context, client *api.Client) bool {
 	return enabled
 }
 
-// announceAuthorizeURL prints the authorization URL on its own line so it can be opened manually.
+// announceAuthorizeURL prints the authorization URL on its own line, even with --quiet, so it can be opened manually.
 func announceAuthorizeURL(p *output.Printer) func(string, bool) {
 	return func(authURL string, opened bool) {
 		if !opened {
 			p.Warn("Could not open browser automatically")
 		}
-		p.Info("  %s Approve access in TeamCity:\n%s", output.Yellow(output.Sym().Arrow), authURL)
+		p.Info("  %s Approve access in TeamCity:", output.Yellow(output.Sym().Arrow))
+		_, _ = fmt.Fprintln(p.Out, authURL)
 	}
 }
 

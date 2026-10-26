@@ -88,10 +88,10 @@ Report issues:  https://jb.gg/tc/issues`,
 
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		f.InitOutput()
-		output.StartSpinner(f.Quiet)
 		if jsonOutputEnabled(cmd) {
 			f.JSONOutput = true
 		}
+		output.StartSpinner(f.Quiet || f.JSONOutput)
 		if cmd.Name() != "update" && f.UpdateNotice == nil {
 			f.UpdateNotice = update.CheckInBackground(f.Context(), f.Printer.ErrOut, f.Quiet)
 		}
