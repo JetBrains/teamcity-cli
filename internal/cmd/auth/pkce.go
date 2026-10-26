@@ -25,10 +25,7 @@ const authCodeLifetime = 5 * time.Minute
 // attemptPkceLogin probes for PKCE support, lets the user pick which scopes to grant, then runs the browser flow.
 func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) (token, validUntil string) {
 	client := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
-	pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	enabled, _ := client.IsPkceEnabled(pctx)
-	cancel()
-	if !enabled {
+	if !pkceEnabled(ctx, client) {
 		return "", ""
 	}
 	scopes := selectPkceScopes()
@@ -36,13 +33,55 @@ func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) 
 		p.Info("Skipping browser login, entering token manually...")
 		return "", ""
 	}
-	resp, err := runPkceLogin(ctx, p, client, scopes)
+	resp, err := runPkceLogin(ctx, p, client, scopes, announceAuthorizeURL(p))
 	if err != nil {
 		p.Warn("Browser auth failed: %v", err)
 		p.Info("Falling back to manual token entry...")
 		return "", ""
 	}
 	return resp.AccessToken, resp.ValidUntil
+}
+
+// webLogin runs the browser flow without any fallback; scopes are picked interactively only when a terminal is attached.
+func webLogin(ctx context.Context, p *output.Printer, serverURL string, interactive bool, announce func(authURL string, opened bool)) (*api.TokenResponse, error) {
+	client := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
+	if !pkceEnabled(ctx, client) {
+		return nil, api.Validation(
+			"browser sign-in is not available on "+serverURL,
+			"Requires TeamCity 2026.1+ with PKCE enabled; use --token instead",
+		)
+	}
+	scopes := api.DefaultScopes()
+	if interactive {
+		if err := cmdutil.Prompt(newPkceScopePicker(&scopes)); err != nil {
+			return nil, err
+		}
+	}
+	resp, err := runPkceLogin(ctx, p, client, scopes, announce)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil, err
+		}
+		return nil, api.Validation(fmt.Sprintf("browser sign-in failed: %v", err), "Run the command again, or use --token")
+	}
+	return resp, nil
+}
+
+func pkceEnabled(ctx context.Context, client *api.Client) bool {
+	pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	enabled, _ := client.IsPkceEnabled(pctx)
+	return enabled
+}
+
+// announceAuthorizeURL prints the authorization URL on its own line so it can be opened manually.
+func announceAuthorizeURL(p *output.Printer) func(string, bool) {
+	return func(authURL string, opened bool) {
+		if !opened {
+			p.Warn("Could not open browser automatically")
+		}
+		p.Info("  %s Approve access in TeamCity:\n%s", output.Yellow(output.Sym().Arrow), authURL)
+	}
 }
 
 // describeScope returns the server description of scope with the raw scope name appended faintly for auditability.
@@ -90,7 +129,7 @@ func newPkceScopePicker(selected *[]string) *huh.MultiSelect[string] {
 }
 
 // runPkceLogin orchestrates the browser-based PKCE auth flow with the given scopes and returns the minted access token.
-func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client, scopes []string) (*api.TokenResponse, error) {
+func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client, scopes []string, announce func(authURL string, opened bool)) (*api.TokenResponse, error) {
 	verifier, err := generatePkceVerifier()
 	if err != nil {
 		return nil, fmt.Errorf("generate code verifier: %w", err)
@@ -114,15 +153,17 @@ func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client,
 		opening = fmt.Sprintf("Opening browser to authenticate with %d of %d permissions...", len(scopes), total)
 	}
 	p.Info("%s", opening)
-	_, _ = fmt.Fprintf(p.Out, "  %s Approve access in TeamCity\n", output.Yellow(output.Sym().Arrow))
 
 	result, err := browserflow.Run(parent, browserflow.Options{
-		Listener:     listener,
-		State:        state,
-		OpenURL:      authURL,
+		Listener: listener,
+		State:    state,
+		OpenURL:  authURL,
+		Open: func(u string) error {
+			announce(u, cmdutil.OpenInBrowser(u) == nil)
+			return nil
+		},
 		CallbackPath: browserflow.DefaultCallbackPath,
 		Timeout:      authCodeLifetime,
-		Logger:       p,
 	})
 	if err != nil {
 		return nil, err
