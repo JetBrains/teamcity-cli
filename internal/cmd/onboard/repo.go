@@ -20,38 +20,40 @@ type repoSource string
 const (
 	sourceCurrent repoSource = "current"
 	sourcePath    repoSource = "path"
-	sourceDemo    repoSource = "demo"
+	sourceSample  repoSource = "sample"
 )
 
-// repository is the repository picked for onboarding; dir is empty for demos.
+// repository is the repository picked for onboarding; dir is empty for samples.
 type repository struct {
 	source    repoSource
 	dir       string
 	remoteURL string
+	revision  string // optional commit the clone and runs are pinned to; empty means the branch head
 }
 
-// demoRepo is a public sample repository offered when the user has none at hand.
-type demoRepo struct {
-	name  string
-	stack string // shown next to the name in the picker
-	url   string
+// sampleRepo is a public sample repository offered when the user has none at hand.
+type sampleRepo struct {
+	name     string
+	stack    string // shown next to the name in the picker
+	url      string
+	revision string // optional commit SHA to pin to, so onboarding sees the same files every time
 }
 
-// demoRepos lists the sample repositories offered by the picker.
-var demoRepos = []demoRepo{
-	// TODO: update final demo list
-	{name: "Spring PetClinic", stack: "Java, Spring Boot, Maven", url: "https://github.com/spring-projects/spring-petclinic"},
+// sampleRepos lists the sample repositories offered by the picker.
+var sampleRepos = []sampleRepo{
+	{name: "Conductor", stack: "Java, Spring Boot, Gradle", url: "https://github.com/conductor-oss/conductor", revision: "ab2de6da6c7b5935e6c6d09da29953b8d4cfe291"},
+	{name: "FluentValidation", stack: "C#, .NET", url: "https://github.com/FluentValidation/FluentValidation", revision: "299ef377bde844af7d28b7aa21786a6853f930e3"},
 }
 
-// label renders a demo as "Name (stack)" for the picker.
-func (d demoRepo) label() string {
+// label renders a sample as "Name (stack)" for the picker.
+func (d sampleRepo) label() string {
 	if d.stack == "" {
 		return d.name
 	}
 	return d.name + " (" + d.stack + ")"
 }
 
-// chooseRepository asks whether to use the current directory, another path, or a demo repository.
+// chooseRepository asks whether to use the current directory, another path, or a sample repository.
 func chooseRepository(f *cmdutil.Factory) (repository, error) {
 	_, inRepo := git.RepoRoot(".")
 	source, err := promptSource(f, inRepo)
@@ -61,8 +63,8 @@ func chooseRepository(f *cmdutil.Factory) (repository, error) {
 	switch source {
 	case sourcePath:
 		return promptPath(f)
-	case sourceDemo:
-		return promptDemo(f)
+	case sourceSample:
+		return promptSample(f)
 	default:
 		return resolveRepository(sourceCurrent, ".")
 	}
@@ -94,7 +96,7 @@ func promptSource(f *cmdutil.Factory, inRepo bool) (repoSource, error) {
 	}
 	options = append(options,
 		huh.NewOption("Another directory", sourcePath),
-		huh.NewOption("Demo repository", sourceDemo),
+		huh.NewOption("Sample repository", sourceSample),
 	)
 	var source repoSource
 	if err := cmdutil.Select(f.Printer, "Choose a repository to onboard", options, &source); err != nil {
@@ -155,15 +157,15 @@ func normalizePath(input string) (string, error) {
 	return filepath.Abs(path)
 }
 
-// promptDemo lets the user pick one of demoRepos.
-func promptDemo(f *cmdutil.Factory) (repository, error) {
-	options := make([]huh.Option[string], 0, len(demoRepos))
-	for _, d := range demoRepos {
-		options = append(options, huh.NewOption(d.label(), d.url))
+// promptSample lets the user pick one of sampleRepos.
+func promptSample(f *cmdutil.Factory) (repository, error) {
+	options := make([]huh.Option[sampleRepo], 0, len(sampleRepos))
+	for _, d := range sampleRepos {
+		options = append(options, huh.NewOption(d.label(), d))
 	}
-	var url string
-	if err := cmdutil.Select(f.Printer, "Select a demo repository", options, &url); err != nil {
+	var picked sampleRepo
+	if err := cmdutil.Select(f.Printer, "Select a sample repository", options, &picked); err != nil {
 		return repository{}, err
 	}
-	return repository{source: sourceDemo, remoteURL: url}, nil
+	return repository{source: sourceSample, remoteURL: picked.url, revision: picked.revision}, nil
 }

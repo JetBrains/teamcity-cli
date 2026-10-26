@@ -14,13 +14,13 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
 
-// authorizeRepository creates a VCS root for repo in projectID: anonymous for demos, via an instance-project connection matching the repo otherwise; false means the user declined.
+// authorizeRepository creates a VCS root for repo in projectID: anonymous for samples, via an instance-project connection matching the repo otherwise; false means the user declined.
 func authorizeRepository(f *cmdutil.Factory, client api.ClientInterface, repo repository, instanceID, projectID string) (bool, error) {
 	if repo.remoteURL == "" {
 		return false, nil // see resolveRepository's no-remotes TODO
 	}
 
-	if repo.source == sourceDemo {
+	if repo.source == sourceSample {
 		f.Printer.Info("Creating a VCS root with anonymous access for %s", output.Cyan(repo.remoteURL))
 		return true, createVcsRoot(f, client, projectID, repo.remoteURL, defaultBranch(f.Context(), repo.remoteURL), "", api.Property{Name: "authMethod", Value: "ANONYMOUS"})
 	}

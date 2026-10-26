@@ -149,16 +149,19 @@ func TestResolveRepository(t *testing.T) {
 	})
 }
 
-func TestDemoReposAreValid(t *testing.T) {
-	require.NotEmpty(t, demoRepos)
-	for _, d := range demoRepos {
+func TestSampleReposAreValid(t *testing.T) {
+	require.NotEmpty(t, sampleRepos)
+	for _, d := range sampleRepos {
 		assert.NotEmpty(t, d.name)
-		assert.NotEmpty(t, d.stack, "demo %q needs a tech stack", d.name)
-		assert.NotEmpty(t, git.CanonicalURL(d.url), "demo URL %q must be a parseable remote", d.url)
+		assert.NotEmpty(t, d.stack, "sample %q needs a tech stack", d.name)
+		assert.NotEmpty(t, git.CanonicalURL(d.url), "sample URL %q must be a parseable remote", d.url)
+		if d.revision != "" {
+			assert.Regexp(t, `^[0-9a-f]{40}$`, d.revision, "sample %q revision must be a full commit SHA", d.name)
+		}
 	}
 }
 
-func TestDemoRepoLabel(t *testing.T) {
-	assert.Equal(t, "Spring PetClinic (Java, Spring Boot, Maven)", demoRepo{name: "Spring PetClinic", stack: "Java, Spring Boot, Maven"}.label())
-	assert.Equal(t, "Spring PetClinic", demoRepo{name: "Spring PetClinic"}.label())
+func TestSampleRepoLabel(t *testing.T) {
+	assert.Equal(t, "Spring PetClinic (Java, Spring Boot, Maven)", sampleRepo{name: "Spring PetClinic", stack: "Java, Spring Boot, Maven"}.label())
+	assert.Equal(t, "Spring PetClinic", sampleRepo{name: "Spring PetClinic"}.label())
 }

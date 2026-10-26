@@ -2,10 +2,13 @@ package onboard
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/git"
@@ -21,8 +24,8 @@ const (
 	cloneSkip  cloneChoice = "skip"
 )
 
-// cloneDemo asks for consent and clones a demo repository locally so the agent can read its files; dir stays empty when declined.
-func cloneDemo(f *cmdutil.Factory, repo repository) (repository, error) {
+// cloneSample asks for consent and clones a sample repository locally so the agent can read its files; dir stays empty when declined.
+func cloneSample(f *cmdutil.Factory, repo repository) (repository, error) {
 	// TODO: copy pending design review
 	name := cloneDirName(repo.remoteURL)
 	cwd, err := os.Getwd()
@@ -69,7 +72,7 @@ func cloneDemo(f *cmdutil.Factory, repo repository) (repository, error) {
 		}
 	}
 	f.Printer.Progress("Cloning %s into %s... ", output.Cyan(repo.remoteURL), target)
-	if err := git.Clone(repo.remoteURL, target); err != nil {
+	if err := cloneAt(repo.remoteURL, target, repo.revision); err != nil {
 		f.Printer.Info("%s", output.Red(output.Sym().Cross))
 		return repo, fmt.Errorf("clone %s: %w", repo.remoteURL, err)
 	}
@@ -78,9 +81,25 @@ func cloneDemo(f *cmdutil.Factory, repo repository) (repository, error) {
 	return repo, nil
 }
 
+// cloneAt clones remoteURL into dir and resets its default branch to revision (HEAD when empty); a full clone, since a shallow one can't reach older commits.
+func cloneAt(remoteURL, dir, revision string) error {
+	for _, args := range [][]string{
+		{"clone", "--no-checkout", "--", remoteURL, dir},
+		{"-C", dir, "reset", "--hard", cmp.Or(revision, "HEAD")},
+	} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			if msg := strings.TrimSpace(string(out)); msg != "" {
+				return errors.New(msg)
+			}
+			return err
+		}
+	}
+	return nil
+}
+
 // cloneDirName is the directory a clone of remoteURL lands in, e.g. "spring-petclinic".
 func cloneDirName(remoteURL string) string {
-	return path.Base(cmp.Or(git.RepoPath(remoteURL), "demo"))
+	return path.Base(cmp.Or(git.RepoPath(remoteURL), "sample"))
 }
 
 // promptExistingTarget asks whether to reuse an existing clone target or delete it and clone again; true means overwrite.

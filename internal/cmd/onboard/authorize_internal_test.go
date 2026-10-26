@@ -150,22 +150,22 @@ func TestAuthorizeRepository(t *testing.T) {
 		assert.False(t, ok)
 	})
 
-	t.Run("demo creates anonymous root in repo project without a connection lookup", func(t *testing.T) {
+	t.Run("sample creates anonymous root in repo project without a connection lookup", func(t *testing.T) {
 		remote := initRepoWithCommit(t, "main")
 		var got api.VcsRoot
 		client := newTestClient(t, map[string]http.HandlerFunc{
 			vcsRootsPath: func(w http.ResponseWriter, r *http.Request) {
 				decodeJSON(t, r, &got)
-				writeJSON(w, api.VcsRoot{ID: "Instance_Demo_Root", Name: got.Name})
+				writeJSON(w, api.VcsRoot{ID: "Instance_Sample_Root", Name: got.Name})
 			},
 		})
 		f, _ := testFactory()
 
-		ok, err := authorizeRepository(f, client, repository{source: sourceDemo, remoteURL: remote}, "Instance", "Instance_Demo")
+		ok, err := authorizeRepository(f, client, repository{source: sourceSample, remoteURL: remote}, "Instance", "Instance_Sample")
 		require.NoError(t, err)
 		assert.True(t, ok)
 		require.NotNil(t, got.Project)
-		assert.Equal(t, "Instance_Demo", got.Project.ID)
+		assert.Equal(t, "Instance_Sample", got.Project.ID)
 		assert.Empty(t, got.ConnectionID)
 		assert.Equal(t, "ANONYMOUS", property(got.Properties.Property, "authMethod"))
 		assert.Equal(t, remote, property(got.Properties.Property, "url"))

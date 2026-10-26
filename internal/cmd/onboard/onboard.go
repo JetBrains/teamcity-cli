@@ -21,8 +21,8 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "Onboard a repository to TeamCity",
 		Long: `Exchange a short-lived onboarding token for a TeamCity access token (or use
 your existing login when --token is omitted), pick a repository (current directory,
-another path, or a demo), check that TeamCity can access it, and hand over to an AI
-agent to finish the setup.`,
+another path, or a sample repository), check that TeamCity can access it, and hand
+over to an AI agent to finish the setup.`,
 		Example: `  # With an onboarding token generated in TeamCity
   teamcity onboard https://teamcity.example.com --token <onboarding-token>
 
@@ -80,8 +80,8 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		}
 	}
 
-	if repo.source == sourceDemo {
-		if repo, err = cloneDemo(f, repo); err != nil {
+	if repo.source == sourceSample {
+		if repo, err = cloneSample(f, repo); err != nil {
 			return err
 		}
 	}
