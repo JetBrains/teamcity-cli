@@ -88,6 +88,8 @@ Log in once and the CLI remembers the server:
 teamcity auth login
 ```
 
+Scripts and desktop apps can sign in through the browser without a terminal: `teamcity auth login --server <url> --web --json` never prompts and prints the authorization URL as a JSON line.
+
 Then:
 
 ```bash
