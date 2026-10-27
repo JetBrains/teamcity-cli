@@ -75,11 +75,12 @@ func TestPickAgentSingleSkipsPrompt(t *testing.T) {
 	assert.Equal(t, supportedAgents[0], got)
 }
 
-func TestPromptSkillScopeWithoutCloneIsGlobal(t *testing.T) {
+func TestHandOverToAgentNeedsLocalCopy(t *testing.T) {
+	client := newTestClient(t, nil) // any request fails the test
 	f, _ := testFactory()
-	got, err := promptSkillScope(f, repository{source: sourceSample, remoteURL: "https://github.com/acme/app"})
-	require.NoError(t, err)
-	assert.Equal(t, scopeGlobal, got)
+
+	err := handOverToAgent(f, client, repository{source: sourceSample, remoteURL: "https://github.com/acme/app"}, "Instance_App", true)
+	assert.ErrorContains(t, err, "needs a local copy")
 }
 
 func TestHandOverToAgentNoSupportedAgents(t *testing.T) {
@@ -92,25 +93,17 @@ func TestHandOverToAgentNoSupportedAgents(t *testing.T) {
 	assert.Contains(t, out.String(), "Supported agents: Claude Code, Codex, Junie")
 }
 
-func TestInstallSkills(t *testing.T) {
+func TestSkillInstallCmd(t *testing.T) {
 	claude := supportedAgents[0]
 
 	t.Run("global", func(t *testing.T) {
-		configDir := filepath.Join(t.TempDir(), ".claude")
-		t.Setenv("CLAUDE_CONFIG_DIR", configDir)
-		f, _ := testFactory()
-
-		require.NoError(t, installSkills(f, claude, scopeGlobal))
-		assert.FileExists(t, filepath.Join(configDir, "skills", "teamcity-cli", "SKILL.md"))
+		cmd := skillInstallCmd(t.Context(), "/bin/teamcity", claude, scopeGlobal, "/work/app")
+		assert.Equal(t, []string{"/bin/teamcity", "skill", "install", "teamcity-cli", "teamcity-onboard", "--agent", "claude-code"}, cmd.Args)
 	})
 
-	t.Run("project installs into the current directory", func(t *testing.T) {
-		t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(t.TempDir(), ".claude"))
-		project := t.TempDir()
-		t.Chdir(project)
-		f, _ := testFactory()
-
-		require.NoError(t, installSkills(f, claude, scopeProject))
-		assert.FileExists(t, filepath.Join(project, ".claude", "skills", "teamcity-cli", "SKILL.md"))
+	t.Run("project installs into the target repo, not the current directory", func(t *testing.T) {
+		cmd := skillInstallCmd(t.Context(), "/bin/teamcity", claude, scopeProject, "/work/app")
+		assert.Equal(t, "--project", cmd.Args[len(cmd.Args)-1])
+		assert.Equal(t, "/work/app", cmd.Dir)
 	})
 }
