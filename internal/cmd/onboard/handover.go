@@ -2,30 +2,33 @@ package onboard
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/JetBrains/teamcity-cli/internal/cmd/skill"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/charmbracelet/huh"
 )
 
 // agent is a local AI coding agent onboarding can hand over to.
 type agent struct {
-	name    string // instill agent name, as `teamcity skill install --agent` expects
-	label   string
-	bin     string // executable looked up on PATH
-	path    string // set by detectAgents
-	version string // first line of `<bin> --version`, set by detectAgents
+	name  string // instill agent name, as `teamcity skill install --agent` expects
+	label string
+	bin   string // executable looked up on PATH
+	// promptFlag passes the initial prompt to an interactive session; empty means a positional argument.
+	promptFlag string
+	path       string // set by detectAgents
+	version    string // first line of `<bin> --version`, set by detectAgents
 }
 
 // supportedAgents are the only agents onboarding hands over to.
 var supportedAgents = []agent{
 	{name: "claude-code", label: "Claude Code", bin: "claude"},
 	{name: "codex", label: "Codex", bin: "codex"},
-	{name: "junie", label: "Junie", bin: "junie"},
+	{name: "junie", label: "Junie", bin: "junie", promptFlag: "--prompt"}, // a positional arg runs a non-interactive task
 }
 
 // supportedAgentLabels lists supportedAgents for messages, e.g. "Claude Code, Codex, Junie".
@@ -57,6 +60,10 @@ type handoverContext struct {
 
 // handOverToAgent passes the onboarding context (repo, its TeamCity project, VCS root status) to an AI agent to finish the setup.
 func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool) error {
+	// The agent works in the checkout, and per-project skills land there; a sample left uncloned has none.
+	if repo.dir == "" {
+		return api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
+	}
 	agents := detectAgents(f.Context())
 	if len(agents) == 0 {
 		f.Printer.Warn("No supported agents found, install one and try again.")
@@ -81,7 +88,7 @@ func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo reposi
 	if err != nil {
 		return err
 	}
-	if err := installSkills(f, ag, scope); err != nil {
+	if err := installSkills(f, ag, scope, repo.dir); err != nil {
 		return err
 	}
 
@@ -142,11 +149,8 @@ func pickAgent(f *cmdutil.Factory, agents []agent) (agent, error) {
 	return picked, nil
 }
 
-// promptSkillScope asks where to install the skills; per-project needs a local clone, so samples without one install globally.
+// promptSkillScope asks whether to install the skills globally or only into repo.dir.
 func promptSkillScope(f *cmdutil.Factory, repo repository) (skillScope, error) {
-	if repo.dir == "" {
-		return scopeGlobal, nil
-	}
 	// TODO: copy pending design review
 	options := []huh.Option[skillScope]{
 		huh.NewOption("Globally, for all projects", scopeGlobal),
@@ -159,22 +163,30 @@ func promptSkillScope(f *cmdutil.Factory, repo repository) (skillScope, error) {
 	return scope, nil
 }
 
-// installSkills runs `teamcity skill install` for ag in scope.
-func installSkills(f *cmdutil.Factory, ag agent, scope skillScope) error {
-	// TODO: per-project installs into the current directory, not repo.dir
-	args := []string{"install", "--agent", ag.name}
+// onboardSkill carries the agent's onboarding steps; the handover prompt only points at it.
+const onboardSkill = "teamcity-onboard"
+
+// installSkills installs the onboard skill and the teamcity-cli skill it builds on for ag, into dir when scope is per-project.
+func installSkills(f *cmdutil.Factory, ag agent, scope skillScope, dir string) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("locate teamcity executable: %w", err)
+	}
+	cmd := skillInstallCmd(f.Context(), exe, ag, scope, dir)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("install skills: %w", err)
+	}
+	return nil
+}
+
+// skillInstallCmd runs this binary's own `skill install` in dir, since --project installs into the working directory.
+func skillInstallCmd(ctx context.Context, exe string, ag agent, scope skillScope, dir string) *exec.Cmd {
+	args := []string{"skill", "install", "teamcity-cli", onboardSkill, "--agent", ag.name}
 	if scope == scopeProject {
 		args = append(args, "--project")
 	}
-	cmd := skill.NewCmd(f)
-	cmd.SetArgs(args)
-	cmd.SilenceUsage = true
-	cmd.SilenceErrors = true
-	return cmd.ExecuteContext(f.Context())
-}
-
-// launchAgent starts the agent with the staged context and hands it the terminal.
-func launchAgent(_ *cmdutil.Factory, _ agent, _ handoverContext) error {
-	// TODO: stub, launch agent handover
-	return nil
+	cmd := exec.CommandContext(ctx, exe, args...)
+	cmd.Dir = dir
+	return cmd
 }
