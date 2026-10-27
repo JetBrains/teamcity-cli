@@ -50,6 +50,7 @@ func TestNormalizePath(t *testing.T) {
 		{"spaces inside path", filepath.Join(base, "my repo"), filepath.Join(base, "my repo")},
 		{"tilde", "~", home},
 		{"tilde subdir", "~/projects", filepath.Join(home, "projects")},
+		{"tilde subdir with platform separator", "~" + string(filepath.Separator) + "projects", filepath.Join(home, "projects")},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

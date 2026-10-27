@@ -146,7 +146,7 @@ func normalizePath(input string) (string, error) {
 	if strings.ContainsFunc(path, unicode.IsControl) {
 		return "", errors.New("path contains invalid characters")
 	}
-	if path == "~" || strings.HasPrefix(path, "~/") {
+	if path == "~" || strings.HasPrefix(path, "~/") || strings.HasPrefix(path, "~"+string(filepath.Separator)) {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("resolve home directory: %w", err)
