@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -30,7 +31,7 @@ var verifierAlphabet = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 func TestPkceScopePicker(t *testing.T) {
 	t.Parallel()
 	for _, extra := range []string{"", "EDIT_VERSIONED_SETTINGS", "CHANGE_SERVER_SETTINGS"} {
-		t.Run("optional="+extra, func(t *testing.T) {
+		t.Run("toggle="+extra, func(t *testing.T) {
 			selected := api.DefaultScopes()
 			picker := newPkceScopePicker(&selected)
 			picker.WithKeyMap(huh.NewDefaultKeyMap())
@@ -43,7 +44,9 @@ func TestPkceScopePicker(t *testing.T) {
 			}
 			_, _ = picker.Update(tea.KeyMsg{Type: tea.KeyEnter})
 			want := api.DefaultScopes()
-			if extra != "" {
+			if extra == "EDIT_VERSIONED_SETTINGS" {
+				want = slices.DeleteFunc(want, func(scope string) bool { return scope == extra })
+			} else if extra != "" {
 				want = append(want, extra)
 			}
 			assert.ElementsMatch(t, want, selected)

@@ -47,6 +47,7 @@ var fallbackScopes = []string{
 	// Project administration
 	"PAUSE_ACTIVATE_BUILD_CONFIGURATION",
 	"EDIT_PROJECT",
+	"EDIT_VERSIONED_SETTINGS",
 	"CREATE_SUB_PROJECT",
 	"CREATE_DELETE_VCS_ROOT",
 
