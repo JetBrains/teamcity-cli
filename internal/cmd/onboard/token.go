@@ -11,7 +11,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/version"
 )
 
-// accessToken exchanges the onboarding token, or uses the saved login when none is given or the exchange is unsupported or rejected.
+// accessToken exchanges the onboarding token, or uses the saved login when none is given or the exchange is rejected.
 func accessToken(f *cmdutil.Factory, serverURL, onboardingToken string) (string, error) {
 	if onboardingToken == "" {
 		return savedLogin(f, serverURL, "")

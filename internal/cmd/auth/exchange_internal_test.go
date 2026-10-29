@@ -16,8 +16,6 @@ func TestExchangeErrorRejectedSentinel(t *testing.T) {
 		rejected bool
 	}{
 		{http.StatusUnauthorized, true},
-		{http.StatusNotFound, true},
-		{http.StatusForbidden, false},
 		{http.StatusBadRequest, false},
 	}
 	for _, tc := range tests {

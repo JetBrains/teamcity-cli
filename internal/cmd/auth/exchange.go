@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"net/http"
@@ -29,7 +30,7 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 	}
 
 	p.Progress("Exchanging onboarding token... ")
-	exchanged, err := newClient(token).ExchangeTemporaryToken()
+	exchanged, err := newClient(token).ExchangeOneTimeToken("teamcity-cli-" + rand.Text())
 	if err != nil {
 		p.Info("%s", output.Red(output.Sym().Cross))
 		return "", exchangeError(err, serverURL)
@@ -57,7 +58,7 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 	return exchanged.Value, nil
 }
 
-// ErrExchangeRejected marks a 401/404 from the exchange endpoint; servers without the endpoint answer 401 too, so callers may fall back to a saved login.
+// ErrExchangeRejected marks a 401 from the exchange endpoint (token used or expired), so callers may fall back to a saved login.
 var ErrExchangeRejected = errors.New("onboarding token exchange rejected")
 
 // rejectedError tags a validation error with ErrExchangeRejected; it still unwraps to *api.ValidationError for rendering.
@@ -73,17 +74,8 @@ func exchangeError(err error, serverURL string) error {
 			fmt.Sprintf("%s; if the token limit is reached, first delete unused tokens at %s/profile.html?item=accessTokens", regenerateTip, serverURL),
 		)
 	}
-	ue, ok := errors.AsType[api.UserError](err)
-	if !ok {
-		return err
-	}
-	switch ue.Category() {
-	case api.CatAuth:
+	if ue, ok := errors.AsType[api.UserError](err); ok && ue.Category() == api.CatAuth {
 		return rejectedError{api.Validation("onboarding token is expired or invalid", regenerateTip)}
-	case api.CatPermission:
-		return api.Validation("not a valid onboarding token", regenerateTip)
-	case api.CatNotFound:
-		return rejectedError{api.Validation("this TeamCity server doesn't support onboarding tokens", "Log in with teamcity auth login instead")}
 	}
 	return err
 }

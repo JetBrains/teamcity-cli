@@ -88,29 +88,32 @@ func TestCreateAPIToken(t *testing.T) {
 	assert.Equal(t, "secret-value", token.Value)
 }
 
-func TestExchangeTemporaryToken(t *testing.T) {
+func TestExchangeOneTimeToken(t *testing.T) {
 	t.Parallel()
 
-	client := NewClient("https://teamcity.example.com", "temp-token")
+	client := NewClient("https://teamcity.example.com", "one-time-token")
 	client.HTTPClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		assert.Equal(t, "POST", r.Method)
-		assert.Equal(t, "/app/rest/users/current/temporaryTokens/exchange", r.URL.Path)
-		assert.Equal(t, "Bearer temp-token", r.Header.Get("Authorization"))
-		assert.Nil(t, r.Body)
+		assert.Equal(t, "/app/rest/users/current/tokens", r.URL.Path)
+		assert.Equal(t, "Bearer one-time-token", r.Header.Get("Authorization"))
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"name":"teamcity-cli-abc"}`, string(body))
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Header:     http.Header{"Content-Type": []string{"application/json"}},
-			Body:       io.NopCloser(strings.NewReader(`{"name":"teamcity-cli","value":"perm-token"}`)),
+			Body:       io.NopCloser(strings.NewReader(`{"name":"teamcity-cli-abc","creationTime":"20261029T143005+0100","value":"perm-token"}`)),
 		}, nil
 	})
 
-	token, err := client.ExchangeTemporaryToken()
+	token, err := client.ExchangeOneTimeToken("teamcity-cli-abc")
 	require.NoError(t, err)
-	assert.Equal(t, "teamcity-cli", token.Name)
+	assert.Equal(t, "teamcity-cli-abc", token.Name)
 	assert.Equal(t, "perm-token", token.Value)
 }
 
-func TestExchangeTemporaryTokenNoRetry(t *testing.T) {
+func TestExchangeOneTimeTokenNoRetry(t *testing.T) {
 	t.Parallel()
 
 	calls := 0
@@ -120,7 +123,7 @@ func TestExchangeTemporaryTokenNoRetry(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusServiceUnavailable, Body: io.NopCloser(strings.NewReader(""))}, nil
 	})
 
-	_, err := client.ExchangeTemporaryToken()
+	_, err := client.ExchangeOneTimeToken("teamcity-cli-abc")
 	require.Error(t, err)
 	assert.Equal(t, 1, calls)
 }

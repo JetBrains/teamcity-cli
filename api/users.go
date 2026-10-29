@@ -86,10 +86,15 @@ func (c *Client) CreateAPIToken(name string) (*Token, error) {
 	return &token, nil
 }
 
-// ExchangeTemporaryToken trades the client's temporary token (consumed either way) for a permanent one; never retried since it's single-use.
-func (c *Client) ExchangeTemporaryToken() (*Token, error) {
+// ExchangeOneTimeToken trades the client's one-time token (consumed either way) for a permanent one named name; never retried since it's single-use.
+func (c *Client) ExchangeOneTimeToken(name string) (*Token, error) {
+	body, err := json.Marshal(Token{Name: name})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
 	var token Token
-	if err := c.post(c.ctx(), "/app/rest/users/current/temporaryTokens/exchange", nil, &token); err != nil {
+	if err := c.post(c.ctx(), "/app/rest/users/current/tokens", bytes.NewReader(body), &token); err != nil {
 		return nil, err
 	}
 	return &token, nil

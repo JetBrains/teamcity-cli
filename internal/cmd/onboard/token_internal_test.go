@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const exchangeRoute = "POST /app/rest/users/current/temporaryTokens/exchange"
+const exchangeRoute = "POST /app/rest/users/current/tokens"
 
 // exchangeServer answers the exchange endpoint with exchangeStatus and /users/current with 200 only for "saved-token".
 func exchangeServer(t *testing.T, exchangeStatus int) string {
@@ -38,21 +38,14 @@ func saveLogin(serverURL, token string) {
 }
 
 func TestAccessTokenFallsBackToSavedLogin(t *testing.T) {
-	for name, status := range map[string]int{
-		"401: server rejects unknown token": http.StatusUnauthorized,
-		"404: endpoint missing":             http.StatusNotFound,
-	} {
-		t.Run(name, func(t *testing.T) {
-			serverURL := exchangeServer(t, status)
-			saveLogin(serverURL, "saved-token")
-			f, out := testFactory()
+	serverURL := exchangeServer(t, http.StatusUnauthorized)
+	saveLogin(serverURL, "saved-token")
+	f, out := testFactory()
 
-			got, err := accessToken(f, serverURL, "onboarding-token")
-			require.NoError(t, err)
-			assert.Equal(t, "saved-token", got)
-			assert.Contains(t, out.String(), "using your existing login")
-		})
-	}
+	got, err := accessToken(f, serverURL, "onboarding-token")
+	require.NoError(t, err)
+	assert.Equal(t, "saved-token", got)
+	assert.Contains(t, out.String(), "using your existing login")
 }
 
 func TestAccessTokenNoUsableLogin(t *testing.T) {
@@ -115,10 +108,10 @@ func TestAccessTokenWithoutOnboardingToken(t *testing.T) {
 }
 
 func TestAccessTokenOtherFailuresDoNotFallBack(t *testing.T) {
-	serverURL := exchangeServer(t, http.StatusForbidden)
+	serverURL := exchangeServer(t, http.StatusBadRequest)
 	saveLogin(serverURL, "saved-token")
 	f, _ := testFactory()
 
 	_, err := accessToken(f, serverURL, "onboarding-token")
-	assert.ErrorContains(t, err, "not a valid onboarding token")
+	assert.ErrorContains(t, err, "onboarding token exchange failed")
 }
