@@ -134,6 +134,7 @@ type ClientInterface interface {
 	CreateVcsRoot(root VcsRoot) (*VcsRoot, error)
 	DeleteVcsRoot(id string) error
 	TestVcsConnection(req TestConnectionRequest, projectID string) (*TestConnectionResult, error)
+	IssueGitHubAppInstallationToken(projectID, connectionID, repoURL, tokenName string) (string, error)
 
 	GetSSHKeys(projectID string) (*SSHKeyList, error)
 	UploadSSHKey(projectID, name string, privateKey []byte) error
