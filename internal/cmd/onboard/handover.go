@@ -64,7 +64,10 @@ func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo reposi
 	if repo.dir == "" {
 		return api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
 	}
-	agents := detectAgents(f.Context())
+	agents, err := detectAgents(f.Context())
+	if err != nil {
+		return err
+	}
 	if len(agents) == 0 {
 		f.Printer.Warn("No supported agents found, install one and try again.")
 		f.Printer.Tip("Supported agents: %s", supportedAgentLabels())
@@ -101,7 +104,7 @@ func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo reposi
 }
 
 // detectAgents returns the supportedAgents on PATH whose `--version` succeeds, so broken installs aren't offered.
-func detectAgents(ctx context.Context) []agent {
+func detectAgents(ctx context.Context) ([]agent, error) {
 	var found []agent
 	for _, a := range supportedAgents {
 		path, err := exec.LookPath(a.bin)
@@ -110,12 +113,16 @@ func detectAgents(ctx context.Context) []agent {
 		}
 		version, err := agentVersion(ctx, path)
 		if err != nil {
+			// An interrupted command isn't a broken install.
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			continue
 		}
 		a.path, a.version = path, version
 		found = append(found, a)
 	}
-	return found
+	return found, nil
 }
 
 // agentVersion runs `path --version` within versionTimeout and returns its first output line.

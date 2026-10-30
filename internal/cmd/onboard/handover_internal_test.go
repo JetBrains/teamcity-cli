@@ -48,11 +48,25 @@ func TestDetectAgents(t *testing.T) {
 	fakeBin(t, dir, "cursor-agent", "echo 1.0.0") // unsupported
 	t.Setenv("PATH", dir)                         // junie is absent
 
-	got := detectAgents(t.Context())
+	got, err := detectAgents(t.Context())
+	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "claude-code", got[0].name)
 	assert.Equal(t, claude, got[0].path)
 	assert.Equal(t, "2.1.0 (Claude Code)", got[0].version)
+}
+
+func TestDetectAgentsCancelled(t *testing.T) {
+	skipOnWindows(t)
+	dir := t.TempDir()
+	fakeBin(t, dir, "claude", "echo 2.1.0")
+	t.Setenv("PATH", dir)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	got, err := detectAgents(ctx)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Empty(t, got)
 }
 
 func TestAgentVersionTimesOut(t *testing.T) {
