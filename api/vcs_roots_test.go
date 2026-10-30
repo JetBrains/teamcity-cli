@@ -31,6 +31,20 @@ func TestGetVcsRoots(t *testing.T) {
 	assert.Equal(t, "jetbrains.git", result.VcsRoot[0].VcsName)
 }
 
+func TestGetVcsRootsURLFilter(t *testing.T) {
+	t.Parallel()
+	var seenLocator string
+	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		seenLocator = r.URL.Query().Get("locator")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(VcsRootList{Count: 0})
+	})
+
+	_, _, err := client.GetVcsRoots(VcsRootsOptions{URL: "acme/repo"})
+	require.NoError(t, err)
+	assert.Contains(t, seenLocator, "property:(name:url,value:acme/repo,matchType:contains)")
+}
+
 func TestGetVcsRoot(t *testing.T) {
 	t.Parallel()
 	client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {

@@ -533,6 +533,7 @@ type VcsRootList struct {
 // VcsRootsOptions represents options for listing VCS roots
 type VcsRootsOptions struct {
 	Project string // affectedProject locator
+	URL     string // server-side substring filter on the `url` property
 	Limit   int
 	Fields  []string
 }

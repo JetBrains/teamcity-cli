@@ -14,6 +14,12 @@ func (c *Client) GetVcsRoots(opts VcsRootsOptions) (*VcsRootList, bool, error) {
 	locator := NewLocator().
 		Add("affectedProject", opts.Project).
 		AddInt("count", pageCount(opts.Limit))
+	if opts.URL != "" {
+		locator.AddLocator("property", NewLocator().
+			Add("name", "url").
+			Add("value", opts.URL).
+			Add("matchType", "contains"))
+	}
 
 	fields := opts.Fields
 	if len(fields) == 0 {

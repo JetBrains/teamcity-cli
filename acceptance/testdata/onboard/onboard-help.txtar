@@ -1,0 +1,9 @@
+# `teamcity onboard` help surface and validation.
+
+exec teamcity onboard --help
+stdout 'server-url'
+stdout '--token'
+! stderr 'Error'
+
+! exec teamcity onboard https://x.example --no-input
+stderr 'interactive terminal'

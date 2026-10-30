@@ -101,6 +101,7 @@ func TestAcceptance(t *testing.T) {
 		"queue",
 		"alias",
 		"link",
+		"onboard",
 		"skill",
 		"analytics",
 	}
