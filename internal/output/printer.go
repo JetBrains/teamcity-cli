@@ -110,6 +110,18 @@ func (p *Printer) PrintJSON(data any) error {
 	return nil
 }
 
+// PrintJSONLine writes data as a single compact JSON line, for streams of events.
+func (p *Printer) PrintJSONLine(data any) error {
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(data); err != nil {
+		return err
+	}
+	p.write(p.Out, buf.String())
+	return nil
+}
+
 func (p *Printer) PrintField(label, value string) {
 	p.write(p.Out, fmt.Sprintf("%s: %s\n", label, value))
 }

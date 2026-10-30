@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -25,6 +26,20 @@ type loginOpts struct {
 	guest           bool
 	insecureStorage bool
 	noBrowser       bool
+	web             bool
+	json            bool
+}
+
+// loginEvent is one JSON line written by `auth login --json`: "authorize" while waiting for the browser, then "login".
+type loginEvent struct {
+	Event         string    `json:"event"`
+	URL           string    `json:"url,omitempty"`
+	BrowserOpened *bool     `json:"browser_opened,omitempty"`
+	Server        string    `json:"server,omitempty"`
+	AuthMethod    string    `json:"auth_method,omitempty"`
+	User          *authUser `json:"user,omitempty"`
+	TokenStorage  string    `json:"token_storage,omitempty"`
+	TokenExpiry   string    `json:"token_expiry,omitempty"`
 }
 
 func newAuthLoginCmd(f *cmdutil.Factory) *cobra.Command {
@@ -44,6 +59,9 @@ For CI/CD, set TEAMCITY_URL and TEAMCITY_TOKEN environment variables
 		Example: `  # Interactive login with auto-discovered browser-based auth
   teamcity auth login
 
+  # Browser sign-in without a terminal (for scripts and apps); never prompts
+  teamcity auth login -s https://teamcity.example.com --web --json
+
   # Skip browser-based auth, enter a token manually
   teamcity auth login -s https://teamcity.example.com --no-browser
 
@@ -59,6 +77,11 @@ For CI/CD, set TEAMCITY_URL and TEAMCITY_TOKEN environment variables
 	cmd.Flags().BoolVar(&opts.guest, "guest", false, "Use guest authentication (no token needed; must be enabled on the server)")
 	cmd.Flags().BoolVar(&opts.insecureStorage, "insecure-storage", false, "Store token in plain text config file instead of system keyring")
 	cmd.Flags().BoolVar(&opts.noBrowser, "no-browser", false, "Skip browser-based auth, use manual token entry")
+	cmd.Flags().BoolVar(&opts.web, "web", false, "Sign in through the browser with default permissions and no prompts; works without a terminal")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output JSON lines: the authorization URL, then the login result")
+	cmd.MarkFlagsMutuallyExclusive("web", "token")
+	cmd.MarkFlagsMutuallyExclusive("web", "guest")
+	cmd.MarkFlagsMutuallyExclusive("web", "no-browser")
 
 	_ = cmd.RegisterFlagCompletionFunc("server", completion.ConfiguredServers())
 
@@ -78,6 +101,13 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 			"cannot use --guest with --token",
 			"Use either --guest for guest access or --token for token authentication",
 		)
+	}
+
+	var jsonOut *output.Printer
+	if opts.json {
+		jsonOut = f.Printer
+		f.Printer = &output.Printer{Out: io.Discard, ErrOut: jsonOut.ErrOut, Quiet: jsonOut.Quiet, Verbose: jsonOut.Verbose}
+		defer func() { f.Printer = jsonOut }()
 	}
 
 	p := f.Printer
@@ -102,10 +132,10 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 
 	if opts.guest {
 		failedStep = analytics.AuthStepVerify
-		return finishGuestLogin(ctx, f, serverURL)
+		return finishGuestLogin(ctx, f, serverURL, jsonOut)
 	}
 	failedStep = analytics.AuthStepToken
-	return finishTokenLogin(ctx, f, serverURL, opts, interactive)
+	return finishTokenLogin(ctx, f, serverURL, opts, interactive, jsonOut)
 }
 
 // resolveServerURL prompts and probes in a loop until a reachable TeamCity server is found or the user cancels.
@@ -169,7 +199,7 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 	}
 }
 
-func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string) error {
+func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string, jsonOut *output.Printer) error {
 	p := f.Printer
 	p.Progress("Validating guest access... ")
 
@@ -193,18 +223,35 @@ func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string)
 
 	_ = analytics.SaveServerInfo(serverURL, formatServerVersion(server), classifyServerType(server))
 
+	if jsonOut != nil {
+		return jsonOut.PrintJSONLine(loginEvent{Event: "login", Server: serverURL, AuthMethod: "guest"})
+	}
 	p.Success("Guest access to %s", output.Cyan(serverURL))
 	_, _ = fmt.Fprintf(p.Out, "  Server: TeamCity %d.%d (build %s)\n",
 		server.VersionMajor, server.VersionMinor, server.BuildNumber)
 	return nil
 }
 
-func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string, opts *loginOpts, interactive bool) error {
+func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string, opts *loginOpts, interactive bool, jsonOut *output.Printer) error {
 	p := f.Printer
 	token := opts.token
 	var tokenValidUntil string
 	pkceTried := token == "" && !opts.noBrowser && interactive
-	if pkceTried {
+	switch {
+	case opts.web:
+		announce := announceAuthorizeURL(p)
+		if jsonOut != nil {
+			announce = func(authURL string, opened bool) {
+				_ = jsonOut.PrintJSONLine(loginEvent{Event: "authorize", URL: authURL, BrowserOpened: &opened})
+			}
+		}
+		resp, err := webLogin(ctx, p, serverURL, announce)
+		if err != nil {
+			return err
+		}
+		token, tokenValidUntil = resp.AccessToken, resp.ValidUntil
+		interactive = false
+	case pkceTried:
 		token, tokenValidUntil = attemptPkceLogin(ctx, p, serverURL)
 	}
 
@@ -223,6 +270,20 @@ func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 		api.WithVersion(version.String()),
 	).WithContext(ctx))
 
+	if jsonOut != nil {
+		storage := "keyring"
+		if insecureFallback {
+			storage = "config"
+		}
+		return jsonOut.PrintJSONLine(loginEvent{
+			Event:        "login",
+			Server:       serverURL,
+			AuthMethod:   "token",
+			User:         &authUser{ID: user.ID, Username: user.Username, Name: user.Name},
+			TokenStorage: storage,
+			TokenExpiry:  tokenValidUntil,
+		})
+	}
 	p.Success("Logged in to %s as %s", output.Cyan(serverURL), output.Cyan(user.Name))
 	if insecureFallback {
 		p.Warn("Token stored in plain text at %s", config.ConfigPath())
