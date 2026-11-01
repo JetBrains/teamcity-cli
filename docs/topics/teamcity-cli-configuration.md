@@ -419,7 +419,7 @@ Setting `TERM=dumb` also disables colored output. Color is automatically disable
 
 HTTPS redirects never downgrade to HTTP. Cross-origin API and artifact redirects are followed only for body-free GET/HEAD requests, without the original request headers (including tokens, cookies, and proxy credentials). Agent terminal redirects must stay on the same origin.
 
-If your TeamCity server sits behind an authenticating proxy such as **Cloudflare Access** or **Google IAP**, the proxy needs its own credentials on every request. `TEAMCITY_HEADER_*` lets you supply them via env vars without editing the config file. The CLI applies them to every API call, the auth login probe, the PKCE exchange, and the agent terminal WebSocket — anywhere a request might pass through the proxy.
+If your TeamCity server sits behind an authenticating proxy such as **Cloudflare Access** or **Google IAP**, the proxy needs its own credentials on every request. `TEAMCITY_HEADER_*` lets you supply them via env vars without editing the config file. The CLI applies them to every API call, the auth login probe, the PKCE exchange, and the agent terminal WebSocket.
 
 Header names follow these rules:
 
@@ -451,7 +451,7 @@ teamcity-iap run list
 
 #### Reverse-proxy SSO (SiteMinder, Kerberos/SPNEGO)
 
-If the proxy enforces SSO (for example, **CA/Broadcom SiteMinder**), it expects its own session cookie — a TeamCity token in the `Authorization` header means nothing to the proxy, so requests without the cookie get a `302` to the login IDP and never reach TeamCity. Send the session cookie as a header; the cookie name is whatever your proxy uses (`SMSESSION` for SiteMinder), not a fixed default.
+If the proxy enforces SSO (for example, **CA/Broadcom SiteMinder**), it expects its own session cookie. The proxy ignores a TeamCity token in the `Authorization` header, so requests without the cookie get a `302` to the login IDP and never reach TeamCity. Send the session cookie as a header; the cookie name is whatever your proxy uses (`SMSESSION` for SiteMinder), not a fixed default.
 
 Mint the cookie with a tool that speaks your SSO handshake, then feed it in. `curl --negotiate` performs SPNEGO/Kerberos against your existing ticket (run `kinit` first):
 
@@ -466,7 +466,7 @@ teamcity-sso() {
 teamcity-sso run list
 ```
 
-Adjust the fetch to your IDP (any command that yields the cookie works). Note: a stale cookie triggers the proxy's `302`, and Go strips `Cookie` on cross-host redirects — refreshing the cookie (as the wrapper does per call) avoids this.
+Adjust the fetch to your IDP (any command that yields the cookie works). A stale cookie triggers the proxy's `302`, and Go strips `Cookie` on cross-host redirects. Refreshing the cookie on every call, as the wrapper does, avoids this.
 
 For repository-scoped configuration, set these in [direnv](https://direnv.net/) `.envrc` so they're only present when you `cd` into the project directory.
 

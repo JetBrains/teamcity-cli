@@ -19,7 +19,7 @@ teamcity auth login
 This starts an interactive flow:
 
 1. Enter your TeamCity server URL (for example, `https://teamcity.example.com`).
-2. The CLI opens your browser to approve access directly using the OAuth PKCE flow — no token copying needed.
+2. The CLI opens your browser to approve access using the OAuth PKCE flow, so you don't have to copy a token.
 3. If your server runs a TeamCity version older than 2026.1, it does not support the PKCE flow. In this case, the CLI guides you to the TeamCity __Access Tokens__ page so you can create and paste a token manually.
 4. The CLI validates the token and stores it securely.
 
@@ -46,7 +46,7 @@ teamcity auth login --server https://teamcity.example.com --token <token>
 
 TeamCity 2026.1 and newer servers support the streamlined authorization flow that does not require issuing access tokens manually: [OAuth 2.0 PKCE standard (RFC 7636)](https://datatracker.ietf.org/doc/html/rfc7636). When you run the `teamcity auth login` command, the following chain of events occurs:
 
-The permission picker preselects common permissions, including **Enable / disable versioned settings** (`EDIT_VERSIONED_SETTINGS`). Additional permissions, including **Change server settings** (`CHANGE_SERVER_SETTINGS`), are unchecked by default. You can adjust the selection before continuing; your server role and the server's PKCE policy limit the effective grant. Existing tokens do not change: log in again to request additional permissions.
+The permission picker preselects the existing common permissions. Additional permissions, including **Enable / disable versioned settings** (`EDIT_VERSIONED_SETTINGS`) and **Change server settings** (`CHANGE_SERVER_SETTINGS`), are unchecked by default. Select them explicitly when needed; your server role and the server's PKCE policy limit the effective grant. Existing tokens do not change: log in again to request additional permissions.
 
 1. The CLI starts a temporary local server on your machine.
 2. Your browser opens a TeamCity authorization page.
@@ -119,7 +119,7 @@ Guest authentication provides read-only access. It uses the `/guestAuth/` API pr
 
 <img src="auth-login.gif" alt="Authenticating with guest access" border-effect="rounded"/>
 
-> Guest access must be [enabled in the TeamCity server settings](https://www.jetbrains.com/help/teamcity/enabling-guest-login.html). Otherwise, the login will fail.
+> Guest access must be [enabled in the TeamCity server settings](enabling-guest-login.md). Otherwise, the login will fail.
 >
 {style="note"}
 
@@ -288,13 +288,13 @@ set TEAMCITY_GUEST=1
 </tabs>
 
 Environment variables take precedence over the configuration file and keyring.
-If you set `TEAMCITY_URL`, set `TEAMCITY_TOKEN` for that same URL too — `TEAMCITY_URL` alone bypasses stored credentials from `teamcity auth login`. To use stored credentials, leave `TEAMCITY_URL` unset.
+If you set `TEAMCITY_URL`, set `TEAMCITY_TOKEN` for that same URL too. `TEAMCITY_URL` alone bypasses stored credentials from `teamcity auth login`. To use stored credentials, leave `TEAMCITY_URL` unset.
 
 > To restrict the CLI to read-only operations (no builds triggered, no data modified), set `TEAMCITY_RO=1`. See [Read-only mode](teamcity-cli-scripting.md#Read-only+mode).
 >
 {style="tip"}
 
-> Do not pass tokens as command-line flags in scripts — they may appear in process listings and shell history. Use environment variables instead.
+> Do not pass tokens as command-line flags in scripts. They may appear in process listings and shell history. Use environment variables instead.
 >
 {style="warning"}
 

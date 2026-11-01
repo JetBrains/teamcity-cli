@@ -8,7 +8,7 @@ This guide walks you through installing TeamCity CLI, authenticating with a Team
 
 ### Prerequisites
 
-TeamCity CLI requires a running TeamCity server (version 2020.1 or later) to connect to. Some features may require newer TeamCity versions (for example, 2024.04 or later). No additional runtime dependencies are needed — the CLI is distributed as a standalone binary.
+TeamCity CLI requires a running TeamCity server (version 2020.1 or later) to connect to. Some features may require newer TeamCity versions (for example, 2024.04 or later). The CLI is a standalone binary with no additional runtime dependencies.
 
 ### Installation {id="installation"}
 
@@ -205,7 +205,7 @@ TeamCity CLI uses shorter names for TeamCity concepts. Knowing these mappings wi
         <code-block lang="Shell">teamcity run list</code-block>
     </def>
     <def title="Job" id="term-job">
-        A build configuration — the set of instructions that define how to run a build. Job IDs look like <code>MyProject_Build</code>.
+        A build configuration: the set of instructions that define how to run a build. Job IDs look like <code>MyProject_Build</code>.
         <code-block lang="Shell">teamcity job list</code-block>
     </def>
     <def title="Project" id="term-project">
@@ -367,13 +367,13 @@ teamcity project view MyProject --web
 
 <deflist>
     <def title="Shell completion">
-        Set up tab completion for Bash, Zsh, Fish, or PowerShell — see <a href="teamcity-cli-configuration.md#Shell+completion">Configuration</a>.
+        Set up tab completion for Bash, Zsh, Fish, or PowerShell. See <a href="teamcity-cli-configuration.md#Shell+completion">Configuration</a>.
     </def>
     <def title="Authentication">
         Learn about <a href="teamcity-cli-authentication.md">authentication methods</a> including multi-server setup and CI/CD usage.
     </def>
     <def title="Managing runs">
-        Go deeper with <a href="teamcity-cli-managing-runs.md">build management</a> — artifacts, personal builds, pinning, tagging, and more.
+        Go deeper with <a href="teamcity-cli-managing-runs.md">build management</a>: artifacts, personal builds, pinning, and tagging.
     </def>
     <def title="Aliases">
         Set up <a href="teamcity-cli-aliases.md">custom shortcuts</a> for frequently used commands.

@@ -25,7 +25,7 @@ Add `--web` to open the new job in your browser, or `--json` for machine-readabl
 
 ## Listing jobs
 
-List build configurations across all projects. Jobs backed by pipelines are hidden by default — pass `--all` to include them:
+List build configurations across all projects. Jobs backed by pipelines are hidden by default. Pass `--all` to include them:
 
 ```Shell
 teamcity job list
@@ -217,7 +217,7 @@ View one step's full configuration, including its parameter keys:
 teamcity job step view MyBuild RUNNER_1
 ```
 
-Add a step. `--type` is the runner type ID used by TeamCity's REST API, which differs from the display name in the UI — Command Line is `simpleRunner`, Gradle is `gradle-runner`, Maven is `Maven2`. Repeat `--param key=value` for each runner setting:
+Add a step. `--type` is the runner type ID used by TeamCity's REST API, which differs from the display name in the UI. For example, Command Line is `simpleRunner`, Gradle is `gradle-runner`, Maven is `Maven2`. Repeat `--param key=value` for each runner setting:
 
 ```Shell
 teamcity job step add MyBuild --type simpleRunner --name "Run Tests" --param use.custom.script=true --param script.content="./gradlew test"
@@ -291,7 +291,7 @@ teamcity job param delete MyProject_Build MY_PARAM
 
 ## Managing job settings
 
-Settings are the build-configuration options that control how a job runs — build
+Settings are the build-configuration options that control how a job runs: build
 number format, execution timeout, artifact rules, and similar. Unlike
 parameters, settings always have server defaults and cannot be deleted.
 

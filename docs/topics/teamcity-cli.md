@@ -14,12 +14,12 @@ TeamCity CLI is the official command-line interface for TeamCity. Type `teamcity
 
 ## Features
 
-- **Stay in your terminal** — Start builds, view logs, manage queues — no browser needed.
-- **Remote agent access** — Shell into any build agent with `teamcity agent term`, or run commands with `teamcity agent exec`.
-- **Real-time logs** — Stream build output as it happens with `teamcity run watch --logs`.
-- **Scriptable** — `--json` and `--plain` output for pipelines, plus direct REST API access via `teamcity api`.
-- **Multi-server support** — Authenticate with and switch between multiple TeamCity instances.
-- **AI agent ready** — Built-in [skill](https://agentskills.io) for Claude Code, Cursor, and other AI coding agents — just run `teamcity skill install`.
+- Start builds, view logs, and manage queues from the terminal.
+- Shell into a build agent with `teamcity agent term`, or run commands on it with `teamcity agent exec`.
+- Stream build output as it happens with `teamcity run watch --logs`.
+- Script against `--json` and `--plain` output, or call the REST API directly with `teamcity api`.
+- Authenticate with several TeamCity servers and switch between them.
+- Install the built-in [skill](https://agentskills.io) for Claude Code, Cursor, and other AI coding agents with `teamcity skill install`.
 
 ## Installing TeamCity CLI {id="installing"}
 

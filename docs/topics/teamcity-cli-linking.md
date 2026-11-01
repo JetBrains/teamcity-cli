@@ -2,7 +2,7 @@
 
 <show-structure for="chapter" depth="2"/>
 
-`teamcity link` binds a repository to one or more TeamCity projects and jobs by writing a small `teamcity.toml` file at the repo root. Once linked, commands like `teamcity run start`, `teamcity run list`, and `teamcity job list` pick up the default project and job automatically — no `--project`/`--job` flags required.
+`teamcity link` binds a repository to one or more TeamCity projects and jobs by writing a small `teamcity.toml` file at the repo root. Once linked, commands like `teamcity run start`, `teamcity run list`, and `teamcity job list` pick up the default project and job, so you can omit `--project` and `--job`.
 
 `teamcity.toml` is meant to be committed alongside your code. It is portable across machines, CI agents, and AI coding agents, and it supports monorepos with per-path bindings and multi-server setups.
 
@@ -20,7 +20,7 @@ To skip the prompts, pass the IDs explicitly:
 teamcity link --project Acme_Backend --job Acme_Backend_Build
 ```
 
-The first run creates `teamcity.toml`. Subsequent runs upsert the matching `[[server]]` entry — fields you do not pass are preserved.
+The first run creates `teamcity.toml`. Subsequent runs upsert the matching `[[server]]` entry and preserve fields you do not pass.
 
 ### Auto-discover from git remotes
 
@@ -59,7 +59,7 @@ job = "Acme_Backend_Build"
 jobs = ["Acme_Backend_Build", "Acme_Backend_Deploy"]
 ```
 
-`teamcity.toml` is plain TOML — you can edit it by hand, inspect it with `cat teamcity.toml`, or remove it with `rm teamcity.toml`.
+`teamcity.toml` is plain TOML. You can edit it by hand, inspect it with `cat teamcity.toml`, or remove it with `rm teamcity.toml`.
 
 ## Monorepos: per-path scopes
 
@@ -100,7 +100,7 @@ teamcity link --project Acme_Backend --job Acme_Backend_Build --scope=
 
 ## Multiple servers
 
-A single `teamcity.toml` can list multiple `[[server]]` entries — useful when, for example, your nightly pipelines run on a separate instance:
+A single `teamcity.toml` can list multiple `[[server]]` entries, for example when your nightly pipelines run on a separate instance:
 
 ```Shell
 teamcity link --server https://nightly.example \
