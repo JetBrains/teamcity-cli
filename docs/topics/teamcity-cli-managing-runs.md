@@ -114,9 +114,20 @@ teamcity run list --limit 20
 teamcity run list --limit 0
 ```
 
-Use `--limit 0` to fetch every matching run. When a finite `--limit` hides
+Use `--limit 0` to remove the result limit. When a finite `--limit` hides
 additional results, the CLI prints a hint on stderr (stdout and `--json` stay
 unchanged).
+
+Without a job filter, searches start with a window of 5,000 recent builds.
+`--limit 0` does not remove this search limit. If runs are missing, narrow the
+search with `--project` or `--job`, or increase the search window:
+
+```Shell
+TEAMCITY_LOOKUP_LIMIT=100000 teamcity run list --user @me
+```
+
+`TEAMCITY_LOOKUP_LIMIT` accepts a positive integer; zero and invalid values use
+5,000.
 
 ### Output options
 
@@ -755,7 +766,7 @@ teamcity run view 12345 --web
 teamcity run view 12345 --json
 ```
 
-For queued runs, `run view` lists compatible and incompatible agents plus cloud images that can start an agent. Incompatible entries include unmet requirements, such as a missing parameter. Large pool groups are summarized with unique reasons; the JSON result adds every entry in `compatibility`. On servers without this API, the command keeps its existing agent summary.
+On TeamCity 2026.3 and later, `run view` lists compatible and incompatible agents plus cloud images that can start an agent for queued runs. Incompatible entries include unmet requirements, such as a missing parameter. Large pool groups are summarized with unique reasons; the JSON result adds every entry in `compatibility`. On servers without this API, the command keeps its existing agent summary.
 
 ## Snapshot dependency tree
 
@@ -948,7 +959,7 @@ teamcity run log --job MyProject_Build
 
 <img src="run-log.gif" alt="Viewing build logs" border-effect="rounded"/>
 
-Show failure diagnostics — build problems, failed tests with full stack traces, and whether each failure is new or pre-existing:
+Show failure diagnostics: build problems, failed tests with full stack traces, and whether each failure is new or pre-existing:
 
 ```Shell
 teamcity run log 12345 --failed
@@ -1077,7 +1088,7 @@ teamcity run tests 12345 --json
 ### Test history across builds
 
 Pass `--test NAME` to follow a single test across builds instead of inspecting one
-run — the answer to "is this test flaky?". Scope it to a job, or leave `--job` off
+run. Use it to check whether a test is flaky. Scope it to a job, or leave `--job` off
 for a server-wide history:
 
 ```Shell
@@ -1117,7 +1128,7 @@ teamcity run changes 12345 --json
 
 ## Comparing runs
 
-Compare two runs side-by-side and highlight what changed between them — status, duration, agent, parameters, test results, problems, and VCS changes:
+Compare two runs side-by-side and highlight what changed between them: status, duration, agent, parameters, test results, problems, and VCS changes:
 
 ```Shell
 teamcity run diff 12345 12346
@@ -1125,7 +1136,7 @@ teamcity run diff 12345 12346
 
 <img src="run-diff.gif" alt="Comparing two runs" border-effect="rounded"/>
 
-If only one run ID is given, the CLI compares it against the previous finished run of the same job — handy for "what changed since last time?":
+If only one run ID is given, the CLI compares it against the previous finished run of the same job:
 
 ```Shell
 teamcity run diff 12345

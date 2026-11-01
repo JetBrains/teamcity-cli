@@ -1,4 +1,4 @@
-[//]: # (title: Glossary)
+[//]: # (title: CLI Glossary)
 
 <show-structure for="chapter" depth="2"/>
 
@@ -105,7 +105,7 @@ teamcity project cloud profile list --project MyProject
 
 ## Cloud Image
 
-A template for spinning up ephemeral agents from a cloud profile — for example, an AMI on EC2 or a container image on Kubernetes. Each image specifies the agent runtime that TeamCity boots when builds need capacity.
+A template for spinning up ephemeral agents from a cloud profile, for example, an AMI on EC2 or a container image on Kubernetes. Each image specifies the agent runtime that TeamCity boots when builds need capacity.
 
 ```Shell
 teamcity project cloud image list --project MyProject

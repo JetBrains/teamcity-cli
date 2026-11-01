@@ -58,7 +58,7 @@ teamcity alias delete rl
 
 ## Useful alias examples
 
-Here is a collection of commonly useful aliases:
+Examples grouped by task:
 
 ### Quick shortcuts
 

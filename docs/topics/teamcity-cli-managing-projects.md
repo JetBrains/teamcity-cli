@@ -421,7 +421,7 @@ The first column shows the connection ID (for example, `PROJECT_EXT_42`). That I
 
 Register a GitHub App in a project. A GitHub App authenticates as itself (no per-user token), which is the right choice for CI workflows that don't need user-context OAuth.
 
-In interactive mode, the CLI registers a brand-new App via GitHub's manifest flow — it opens a browser, you click **Create**, and the credentials come back automatically:
+In interactive mode, the CLI registers a brand-new App via GitHub's manifest flow. It opens a browser, you click **Create**, and the CLI receives the credentials automatically:
 
 ```Shell
 teamcity project connection create github-app -p Backend
@@ -453,7 +453,7 @@ echo "$DOCKER_TOKEN" | teamcity project connection create docker -p Backend \
     --name GHCR --url https://ghcr.io --username my-org --stdin
 ```
 
-> The connection stores a long-lived password — prefer a service account or robot user over a personal account.
+> The connection stores a long-lived password. Prefer a service account or robot user over a personal account.
 >
 {style="note"}
 
@@ -474,7 +474,7 @@ teamcity project connection delete PROJECT_EXT_42 -p Backend
 teamcity project connection delete PROJECT_EXT_42 -p Backend --force
 ```
 
-Pass `--force` (or `-f`) to skip the interactive confirmation prompt — useful in scripts.
+Pass `--force` (or `-f`) to skip the interactive confirmation prompt, for example in scripts.
 
 ## Managing project parameters
 
@@ -654,7 +654,7 @@ teamcity project settings status MyProject
 teamcity project settings status MyProject --json
 ```
 
-This displays the server’s runtime status message, configuration, processing errors, and missing DSL context parameters. “Recorded” is the status timestamp, not a successful synchronization time. An informational status can mean synchronization is disabled or has never been enabled.
+This displays the server's runtime status message, configuration, processing errors, and missing DSL context parameters. "Recorded" is when the status was recorded, which may differ from the last successful synchronization. An informational status can mean synchronization is disabled or has never been enabled.
 
 ### Validating Kotlin DSL
 

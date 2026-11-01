@@ -334,12 +334,12 @@ The `suggestion` field is omitted when there is no actionable fix. The `code` fi
 
 ## JSON compatibility policy
 
-The `--json` output is a machine-readable contract. The following rules apply:
+The `--json` output is a machine-readable contract:
 
-- **No field removals or renames** without a deprecation period in a prior release.
-- **Additive fields are always allowed** — new keys may appear in any release.
-- **Error codes are stable** — existing codes will not change meaning.
-- **Envelope structure is fixed** — success output is the resource data; error output uses the `{"error": {...}}` envelope on stderr.
+- Fields are not removed or renamed without a deprecation period in a prior release.
+- New fields may appear in any release.
+- Existing error codes keep their meaning.
+- Success output is the resource data; error output uses the `{"error": {...}}` envelope on stderr.
 
 Consumers should ignore unknown fields and avoid relying on field ordering.
 
