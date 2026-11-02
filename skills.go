@@ -5,6 +5,7 @@ import (
 
 	migratesk "github.com/JetBrains/teamcity-skills/skills/migrate-to-teamcity"
 	teamcityclisk "github.com/JetBrains/teamcity-skills/skills/teamcity-cli"
+	onboardsk "github.com/JetBrains/teamcity-skills/skills/teamcity-onboard"
 	"github.com/tiulpin/instill"
 )
 
@@ -17,7 +18,7 @@ import (
 // returns fs.SkipDir once it finds one, which would end the walk after the
 // first skill — and merging by path would collide the two SKILL.md files
 // anyway.
-var skillFilesystems = []fs.FS{teamcityclisk.FS, migratesk.FS}
+var skillFilesystems = []fs.FS{teamcityclisk.FS, migratesk.FS, onboardsk.FS}
 
 // ListSkills returns metadata for every skill bundled with this build.
 func ListSkills() []instill.SkillMeta {
