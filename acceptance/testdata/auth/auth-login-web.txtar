@@ -1,0 +1,12 @@
+# Browser login with --web never prompts: missing input or conflicting flags fail immediately.
+
+env TEAMCITY_URL=
+env TEAMCITY_TOKEN=
+env TEAMCITY_GUEST=
+
+! exec teamcity auth login --web --json --no-input
+stderr '"code": "validation_error"'
+stderr 'server is required'
+
+! exec teamcity auth login --server $TC_HOST --web --token some-token --no-input
+stderr 'none of the others can be'

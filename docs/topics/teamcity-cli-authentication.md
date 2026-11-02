@@ -67,6 +67,24 @@ $ teamcity auth status
 >
 {style="note"}
 
+#### Browser login from scripts and apps
+{id="pkce-web"}
+
+Browser-based login normally needs an interactive terminal. To start it from a script or a desktop app, pass `--web`:
+
+```Shell
+teamcity auth login --server https://teamcity.example.com --web --json
+```
+
+With `--web`, the CLI never prompts, even in a terminal: it requests the default permissions, prints the authorization URL on its own line, waits for the browser callback, and stores the token. If the server does not support PKCE or the login fails, the command exits with a non-zero code instead of falling back to manual token entry. With `--json`, the CLI writes one JSON object per line:
+
+```Shell
+{"event":"authorize","url":"https://teamcity.example.com/pkce/authorize.html?...","browser_opened":true}
+{"event":"login","server":"https://teamcity.example.com","auth_method":"token","user":{"id":1,"username":"john.doe","name":"John Doe"},"token_storage":"keyring","token_expiry":"2026-04-24T10:00:00Z"}
+```
+
+Show the `url` to the user when `browser_opened` is `false`.
+
 ### Access token login
 
 If you prefer the traditional access token flow, skip browser-based login and enter a token manually:

@@ -39,16 +39,17 @@ type Logger interface {
 
 // Options configure a single browser-driven flow run.
 type Options struct {
-	Listener     net.Listener  // ownership transfers to Run; closed on return
-	State        string        // expected state value; required
-	OpenURL      string        // URL the browser is sent to; required
-	StartHandler http.Handler  // optional; mounted at /start so OpenURL can be the local listener
-	CallbackPath string        // path that captures code+state; defaults to DefaultCallbackPath
-	Timeout      time.Duration // 0 → DefaultTimeout
-	Logger       Logger        // optional
-	SuccessTitle string        // shown on the callback page; defaults to "Authentication successful"
-	SuccessBody  string        // shown on the callback page; defaults to a generic close-tab message
-	ErrorTitle   string        // shown on the callback page when GitHub/upstream returns an error
+	Listener     net.Listener       // ownership transfers to Run; closed on return
+	State        string             // expected state value; required
+	OpenURL      string             // URL the browser is sent to; required
+	Open         func(string) error // optional; replaces the default browser opener once the listener is serving
+	StartHandler http.Handler       // optional; mounted at /start so OpenURL can be the local listener
+	CallbackPath string             // path that captures code+state; defaults to DefaultCallbackPath
+	Timeout      time.Duration      // 0 → DefaultTimeout
+	Logger       Logger             // optional
+	SuccessTitle string             // shown on the callback page; defaults to "Authentication successful"
+	SuccessBody  string             // shown on the callback page; defaults to a generic close-tab message
+	ErrorTitle   string             // shown on the callback page when GitHub/upstream returns an error
 }
 
 // Result holds the validated callback code; state is checked in the callback handler and not exposed.
@@ -148,7 +149,11 @@ func Run(ctx context.Context, opts Options) (*Result, error) {
 		_ = srv.Shutdown(shutdownCtx)
 	}()
 
-	if err := openBrowser(opts.OpenURL); err != nil {
+	open := opts.Open
+	if open == nil {
+		open = openBrowser
+	}
+	if err := open(opts.OpenURL); err != nil {
 		if opts.Logger != nil {
 			opts.Logger.Warn("Could not open browser automatically: %v", err)
 			opts.Logger.Info("Open this URL in your browser:\n  %s", opts.OpenURL)
