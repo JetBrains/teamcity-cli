@@ -20,6 +20,7 @@ type agent struct {
 	bin   string // executable looked up on PATH
 	// promptFlag passes the initial prompt to an interactive session; empty means a positional argument.
 	promptFlag string
+	failTip    string // shown when the agent exits with an error
 	path       string // set by detectAgents
 	version    string // first line of `<bin> --version`, set by detectAgents
 }
@@ -28,7 +29,11 @@ type agent struct {
 var supportedAgents = []agent{
 	{name: "claude-code", label: "Claude Code", bin: "claude"},
 	{name: "codex", label: "Codex", bin: "codex"},
-	{name: "junie", label: "Junie", bin: "junie", promptFlag: "--prompt"}, // a positional arg runs a non-interactive task
+	{
+		name: "junie", label: "Junie", bin: "junie",
+		promptFlag: "--prompt", // a positional arg runs a non-interactive task
+		failTip:    "Older Junie CLI versions don't support --prompt; update Junie, then run it again",
+	},
 }
 
 // supportedAgentLabels lists supportedAgents for messages, e.g. "Claude Code, Codex, Junie".

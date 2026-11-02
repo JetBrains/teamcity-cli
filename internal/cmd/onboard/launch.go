@@ -29,6 +29,9 @@ func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) error {
 		}
 
 		f.Printer.Warn("%s stopped with an error (%s). See its message above.", ag.label, exitErr.ProcessState)
+		if ag.failTip != "" {
+			f.Printer.Tip("%s", ag.failTip)
+		}
 		// TODO: copy pending design review
 		rerun := false
 		if err := cmdutil.Confirm("Run "+ag.label+" again? It may repeat changes it already made.", &rerun); err != nil {
