@@ -184,7 +184,7 @@ func installSkills(f *cmdutil.Factory, ag agent, scope skillScope, dir string) e
 	if err != nil {
 		return fmt.Errorf("locate teamcity executable: %w", err)
 	}
-	cmd := skillInstallCmd(f.Context(), exe, ag, scope, dir)
+	cmd := skillInstallCmd(f, exe, ag, scope, dir)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("install skills: %w", err)
@@ -193,12 +193,19 @@ func installSkills(f *cmdutil.Factory, ag agent, scope skillScope, dir string) e
 }
 
 // skillInstallCmd runs this binary's own `skill install` in dir, since --project installs into the working directory.
-func skillInstallCmd(ctx context.Context, exe string, ag agent, scope skillScope, dir string) *exec.Cmd {
+// It passes on --quiet and --no-color; the color env vars reach the child on their own.
+func skillInstallCmd(f *cmdutil.Factory, exe string, ag agent, scope skillScope, dir string) *exec.Cmd {
 	args := []string{"skill", "install", "teamcity-cli", onboardSkill, "--agent", ag.name}
 	if scope == scopeProject {
 		args = append(args, "--project")
 	}
-	cmd := exec.CommandContext(ctx, exe, args...)
+	if f.Quiet {
+		args = append(args, "--quiet")
+	}
+	if f.NoColor {
+		args = append(args, "--no-color")
+	}
+	cmd := exec.CommandContext(f.Context(), exe, args...)
 	cmd.Dir = dir
 	return cmd
 }

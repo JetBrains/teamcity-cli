@@ -1,12 +1,14 @@
 package onboard
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -51,6 +53,21 @@ func TestLaunchAgentRunsInRepoWithPrompt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, wantDir+"\n--prompt\n", string(got), "runs in the repo dir with the prompt flag first")
 	assert.Contains(t, out.String(), "Junie exited.")
+}
+
+func TestLaunchAgentCancelledSkipsRerun(t *testing.T) {
+	skipOnWindows(t)
+	ag := agent{label: "Codex", bin: "codex", path: fakeBin(t, t.TempDir(), "codex", "exit 130")}
+	f, out := testFactory()
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	f.SetContext(ctx)
+
+	err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
+	exitErr, ok := errors.AsType[*cmdutil.ExitError](err)
+	require.True(t, ok, "want *cmdutil.ExitError, got %v", err)
+	assert.Equal(t, 130, exitErr.Code)
+	assert.NotContains(t, out.String(), "stopped with an error")
 }
 
 func TestLaunchAgentStartFailure(t *testing.T) {

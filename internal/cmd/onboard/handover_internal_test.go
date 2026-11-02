@@ -111,13 +111,22 @@ func TestSkillInstallCmd(t *testing.T) {
 	claude := supportedAgents[0]
 
 	t.Run("global", func(t *testing.T) {
-		cmd := skillInstallCmd(t.Context(), "/bin/teamcity", claude, scopeGlobal, "/work/app")
+		f, _ := testFactory()
+		cmd := skillInstallCmd(f, "/bin/teamcity", claude, scopeGlobal, "/work/app")
 		assert.Equal(t, []string{"/bin/teamcity", "skill", "install", "teamcity-cli", "teamcity-onboard", "--agent", "claude-code"}, cmd.Args)
 	})
 
 	t.Run("project installs into the target repo, not the current directory", func(t *testing.T) {
-		cmd := skillInstallCmd(t.Context(), "/bin/teamcity", claude, scopeProject, "/work/app")
+		f, _ := testFactory()
+		cmd := skillInstallCmd(f, "/bin/teamcity", claude, scopeProject, "/work/app")
 		assert.Equal(t, "--project", cmd.Args[len(cmd.Args)-1])
 		assert.Equal(t, "/work/app", cmd.Dir)
+	})
+
+	t.Run("passes on quiet and no-color", func(t *testing.T) {
+		f, _ := testFactory()
+		f.Quiet, f.NoColor = true, true
+		cmd := skillInstallCmd(f, "/bin/teamcity", claude, scopeGlobal, "/work/app")
+		assert.Equal(t, []string{"--quiet", "--no-color"}, cmd.Args[len(cmd.Args)-2:])
 	})
 }

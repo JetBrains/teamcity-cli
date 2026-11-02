@@ -27,6 +27,11 @@ func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) error {
 		if !ok {
 			return fmt.Errorf("start %s: %w", ag.label, err)
 		}
+		code := max(exitErr.ExitCode(), 1) // -1 when killed by a signal
+		// Ctrl+C or SIGTERM ended it; the user asked to stop, so don't offer a rerun.
+		if f.Context().Err() != nil {
+			return &cmdutil.ExitError{Code: code}
+		}
 
 		f.Printer.Warn("%s stopped with an error (%s). See its message above.", ag.label, exitErr.ProcessState)
 		if ag.failTip != "" {
@@ -38,7 +43,7 @@ func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) error {
 			return err
 		}
 		if !rerun {
-			return &cmdutil.ExitError{Code: max(exitErr.ExitCode(), 1)} // -1 when killed by a signal
+			return &cmdutil.ExitError{Code: code}
 		}
 		// A manual repair or update may have replaced the executable.
 		path, err := exec.LookPath(ag.bin)
