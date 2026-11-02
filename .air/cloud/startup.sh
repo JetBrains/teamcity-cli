@@ -37,6 +37,14 @@ done
 [ -f "$HOME/.bash_profile" ] || [ -f "$HOME/.bash_login" ] || [ -f "$HOME/.profile" ] || append_source "$HOME/.profile"
 append_source "$HOME/.bashrc"
 
+# --- System packages ---------------------------------------------------------
+# gcc: the test recipes use -race, which needs cgo and a C toolchain.
+if ! command -v gcc >/dev/null 2>&1; then
+  log "installing gcc (required for go test -race)"
+  sudo apt-get update -qq
+  sudo apt-get install -y -qq gcc libc6-dev
+fi
+
 # --- Go toolchain (preinstalled on the Air image; install if missing) -------
 if ! go version 2>/dev/null | grep -q 'go1\.\(2[6-9]\|[3-9][0-9]\)'; then
   log "installing Go 1.26 from go.dev"
