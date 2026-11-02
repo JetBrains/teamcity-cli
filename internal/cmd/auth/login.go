@@ -112,7 +112,7 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 
 	p := f.Printer
 	ctx := f.Context()
-	interactive := f.IsInteractive()
+	interactive := !opts.web && f.IsInteractive()
 
 	if interactive && (opts.serverURL == "" || (!opts.guest && opts.token == "")) {
 		p.Tip(output.TipCancelAnytime)
@@ -250,7 +250,6 @@ func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 			return err
 		}
 		token, tokenValidUntil = resp.AccessToken, resp.ValidUntil
-		interactive = false
 	case pkceTried:
 		token, tokenValidUntil = attemptPkceLogin(ctx, p, serverURL)
 	}
