@@ -142,6 +142,32 @@ download_to_stdout() {
     fail "neither curl nor wget is installed"
 }
 
+sha256_of() {
+    local file="$1"
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$file" | cut -d' ' -f1
+        return
+    fi
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$file" | cut -d' ' -f1
+        return
+    fi
+    fail "neither sha256sum nor shasum is installed; cannot verify the download"
+}
+
+verify_checksum() {
+    local archive="$1" checksums="$2" name expected actual
+    name="$(basename "$archive")"
+    expected="$(awk -v name="$name" '$2 == name { print $1 }' "$checksums" | head -n 1)"
+    [[ -n "$expected" ]] || fail "no checksum for $name in checksums.txt"
+    actual="$(sha256_of "$archive")"
+    [[ "$actual" == "$expected" ]] || fail "checksum mismatch for $name
+expected: $expected
+actual:   $actual
+The download may be corrupted or tampered with. Retry the install; if it keeps failing, report it at https://jb.gg/tc/issues"
+    echo -e "${CHECK_MARK} Verified archive checksum"
+}
+
 resolve_latest_release() {
     if [[ "$JETBRAINS_CDN" == 1 ]]; then
         local tag
@@ -179,6 +205,9 @@ install_teamcity() {
     need_cmd mktemp
     need_cmd uname
     need_cmd cp
+    need_cmd awk
+    need_cmd cut
+    need_cmd basename
 
     if [[ -z "$RELEASE" ]]; then
         RELEASE="$(resolve_latest_release)"
@@ -186,12 +215,15 @@ install_teamcity() {
 
     [[ "$RELEASE" =~ ^v?[0-9A-Za-z._-]+$ ]] || fail "invalid release: $RELEASE"
 
-    local os arch version gh_url jb_url tmp_bin target
+    local os arch version archive_name gh_url jb_url gh_sums_url jb_sums_url tmp_bin target
     os="$(detect_os)"
     arch="$(detect_arch)"
     version="${RELEASE#v}"
-    gh_url="https://github.com/JetBrains/teamcity-cli/releases/download/${RELEASE}/${PROG}_${version}_${os}_${arch}.tar.gz"
-    jb_url="https://download.jetbrains.com/resources/teamcity-cli/${version}/${PROG}_${version}_${os}_${arch}.tar.gz"
+    archive_name="${PROG}_${version}_${os}_${arch}.tar.gz"
+    gh_url="https://github.com/JetBrains/teamcity-cli/releases/download/${RELEASE}/${archive_name}"
+    jb_url="https://download.jetbrains.com/resources/teamcity-cli/${version}/${archive_name}"
+    gh_sums_url="https://github.com/JetBrains/teamcity-cli/releases/download/${RELEASE}/checksums.txt"
+    jb_sums_url="https://download.jetbrains.com/resources/teamcity-cli/${version}/checksums.txt"
 
     echo -e "\033[0;90m\nInstalling $PROG ($RELEASE)\033[0m\n"
 
@@ -205,13 +237,17 @@ install_teamcity() {
     cd "$TMP_DIR"
 
     if [[ "$JETBRAINS_CDN" == 1 ]]; then
-        download_to_stdout "$jb_url" | tar -xzf - || fail "download or extract failed"
+        download_to_stdout "$jb_url" > "$archive_name" || fail "download failed"
+        download_to_stdout "$jb_sums_url" > checksums.txt || fail "failed to download checksums.txt"
     else
-        download_to_stdout "$gh_url" | tar -xzf - || fail "download or extract failed
+        download_to_stdout "$gh_url" > "$archive_name" || fail "download failed
 
 If GitHub is unreachable, retry using the JetBrains CDN:
   curl -fsSL https://jb.gg/tc/install | bash -s -- ${RELEASE:+$RELEASE }--jetbrains-cdn"
+        download_to_stdout "$gh_sums_url" > checksums.txt || fail "failed to download checksums.txt"
     fi
+    verify_checksum "$archive_name" checksums.txt
+    tar -xzf "$archive_name" || fail "extract failed"
 
     tmp_bin="$(find . -type f -name "$PROG" -print -quit)"
     [[ -n "$tmp_bin" && -f "$tmp_bin" ]] || fail "could not find ${PROG} binary in archive"

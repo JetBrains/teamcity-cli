@@ -3,6 +3,8 @@ package scripts_test
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,7 +22,7 @@ func TestInstallScript(t *testing.T) {
 	}
 	script, err := filepath.Abs("../install.sh")
 	require.NoError(t, err)
-	for _, scenario := range []string{"zsh", "bash", "unknown shell", "existing", "explicit", "relative", "symlink", "failed download"} {
+	for _, scenario := range []string{"zsh", "bash", "unknown shell", "existing", "explicit", "relative", "symlink", "failed download", "wrong checksum"} {
 		t.Run(scenario, func(t *testing.T) {
 			t.Parallel()
 			home := t.TempDir()
@@ -38,7 +40,18 @@ func TestInstallScript(t *testing.T) {
 			require.NoError(t, writer.Close())
 			require.NoError(t, compressed.Close())
 			require.NoError(t, archive.Close())
-			curl := "#!/bin/sh\ncat \"$INSTALL_TEST_ARCHIVE\"\n"
+			archiveBytes, err := os.ReadFile(archivePath)
+			require.NoError(t, err)
+			digest := fmt.Sprintf("%x", sha256.Sum256(archiveBytes))
+			if scenario == "wrong checksum" {
+				digest = strings.Repeat("0", 64)
+			}
+			arch := map[string]string{"amd64": "x86_64", "arm64": "arm64"}[runtime.GOARCH]
+			require.NotEmpty(t, arch)
+			checksumsPath := filepath.Join(home, "checksums.txt")
+			checksums := fmt.Sprintf("%s  teamcity_9.9.9_%s_%s.tar.gz\n", digest, runtime.GOOS, arch)
+			require.NoError(t, os.WriteFile(checksumsPath, []byte(checksums), 0600))
+			curl := "#!/bin/sh\nfor arg; do url=$arg; done\ncase \"$url\" in\n*checksums.txt) cat \"$INSTALL_TEST_CHECKSUMS\" ;;\n*) cat \"$INSTALL_TEST_ARCHIVE\" ;;\nesac\n"
 			if scenario == "failed download" {
 				curl = "#!/bin/sh\nexit 22\n"
 			}
@@ -54,7 +67,7 @@ func TestInstallScript(t *testing.T) {
 				profile = filepath.Join(home, ".bashrc")
 			case "unknown shell":
 				shell = "/bin/fish"
-			case "existing", "failed download", "symlink":
+			case "existing", "failed download", "symlink", "wrong checksum":
 				destination = filepath.Join(home, "existing bin")
 				require.NoError(t, os.MkdirAll(destination, 0755))
 				if scenario == "symlink" {
@@ -74,13 +87,16 @@ func TestInstallScript(t *testing.T) {
 			run := func() ([]byte, error) {
 				command := exec.Command("bash", args...)
 				command.Dir = home
-				command.Env = append(os.Environ(), "HOME="+home, "PATH="+searchPath, "SHELL="+shell, "ZDOTDIR="+home, "INSTALL_TEST_ARCHIVE="+archivePath)
+				command.Env = append(os.Environ(), "HOME="+home, "PATH="+searchPath, "SHELL="+shell, "ZDOTDIR="+home, "INSTALL_TEST_ARCHIVE="+archivePath, "INSTALL_TEST_CHECKSUMS="+checksumsPath)
 				return command.CombinedOutput()
 			}
 			output, err := run()
-			if scenario == "symlink" || scenario == "failed download" {
+			if scenario == "symlink" || scenario == "failed download" || scenario == "wrong checksum" {
 				require.Error(t, err, string(output))
-				if scenario == "failed download" {
+				if scenario == "wrong checksum" {
+					assert.Contains(t, string(output), "checksum mismatch")
+				}
+				if scenario == "failed download" || scenario == "wrong checksum" {
 					contents, err := os.ReadFile(filepath.Join(destination, "teamcity"))
 					require.NoError(t, err)
 					assert.Equal(t, "old version", string(contents))

@@ -1,6 +1,6 @@
 module github.com/JetBrains/teamcity-cli
 
-go 1.26.0
+go 1.26.10
 
 require (
 	github.com/JetBrains/fus-reporting-api-go v0.2.0
