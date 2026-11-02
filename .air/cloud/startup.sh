@@ -74,8 +74,10 @@ if ! command -v gotestsum >/dev/null 2>&1; then
 fi
 
 if ! command -v golangci-lint >/dev/null 2>&1; then
-  log "installing golangci-lint"
-  curl -fsSL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$GOBIN_DIR"
+  # Built from source via the Go module proxy: the binary-release installer's
+  # checksum verification fails behind the environment's egress proxy.
+  log "installing golangci-lint (go install)"
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 fi
 log "$(golangci-lint version 2>&1 | head -1)"
 
