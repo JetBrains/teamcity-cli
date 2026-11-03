@@ -3,6 +3,7 @@ package onboard
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -82,7 +83,7 @@ func handoverPrompt(hc handoverContext) string {
 		"Project: " + hc.projectID + ".",
 	}
 	if hc.repo.remoteURL != "" {
-		parts = append(parts, "Repository: "+hc.repo.remoteURL+".")
+		parts = append(parts, "Repository: "+withoutUserinfo(hc.repo.remoteURL)+".")
 	}
 	if hc.repo.dir != "" {
 		parts = append(parts, "Local checkout: "+hc.repo.dir+".")
@@ -96,4 +97,15 @@ func handoverPrompt(hc handoverContext) string {
 		parts = append(parts, "VCS root: none.")
 	}
 	return strings.Join(parts, " ")
+}
+
+// withoutUserinfo drops credentials from an http(s) remote, e.g. https://token@host/org/repo → https://host/org/repo.
+// Not url.Redacted: it keeps the username, and hosts like GitHub accept a token there.
+func withoutUserinfo(remote string) string {
+	u, err := url.Parse(remote)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return remote // scp-style git@host:org/repo and ssh:// carry a username, not a secret
+	}
+	u.User = nil
+	return u.String()
 }
