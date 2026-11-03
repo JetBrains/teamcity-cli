@@ -107,8 +107,8 @@ func promptSource(f *cmdutil.Factory, inRepo bool) (repoSource, error) {
 // promptPath asks for an absolute or relative path and resolves it as a git repository.
 func promptPath(f *cmdutil.Factory) (repository, error) {
 	// TODO: copy pending design review
-	var input string
-	if err := cmdutil.PromptValidatedString(f.Printer, "Provide a path to a git repository", "", validateRepoPath, &input); err != nil {
+	input, err := promptDir(f, "Provide a path to a git repository", validateRepoPath)
+	if err != nil {
 		return repository{}, err
 	}
 	path, err := normalizePath(input)
