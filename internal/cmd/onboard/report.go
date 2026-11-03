@@ -2,6 +2,7 @@ package onboard
 
 import (
 	"context"
+	"slices"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/analytics"
@@ -75,19 +76,34 @@ func reportLoginCompleted(f *cmdutil.Factory, client api.ClientInterface) {
 	onboarding.Notify(f.Context(), f.Printer.Debug, "login-completed", client.OnboardingLoginCompleted)
 }
 
+// detectedAgentFields maps the detected agents to one has_<agent> boolean per supported agent, from its AI agent enum value.
+func detectedAgentFields(agents []agent) map[string]any {
+	fields := make(map[string]any, len(supportedAgents))
+	for _, s := range supportedAgents {
+		fields["has_"+analytics.NormalizeAIAgent(s.name)] = slices.ContainsFunc(agents, func(a agent) bool { return a.name == s.name })
+	}
+	return fields
+}
+
 func reportAgentsDetected(f *cmdutil.Factory, client api.ClientInterface, agents []agent) {
+	f.Analytics.Track(analytics.GroupOnboarding, analytics.EventAgentsDetected, detectedAgentFields(agents))
 	onboarding.Notify(f.Context(), f.Printer.Debug, "agents-detected", func(ctx context.Context) error {
 		return client.OnboardingAgentsDetected(ctx, api.OnboardingAgentsDetectedRequest{Agents: reportedAgents(agents)})
 	})
 }
 
 func reportHandoverStarted(f *cmdutil.Factory, client api.ClientInterface, rt api.OnboardingRepositoryType) {
+	f.Analytics.Track(analytics.GroupOnboarding, analytics.EventHandoverStarted, map[string]any{"repository": string(rt)})
 	onboarding.Notify(f.Context(), f.Printer.Debug, "handover-started", func(ctx context.Context) error {
 		return client.OnboardingHandoverStarted(ctx, api.OnboardingHandoverStartedRequest{RepositoryType: rt})
 	})
 }
 
 func reportHandoverFinished(f *cmdutil.Factory, client api.ClientInterface, rt api.OnboardingRepositoryType, status api.OnboardingHandoverStatus) {
+	f.Analytics.Track(analytics.GroupOnboarding, analytics.EventHandoverFinished, map[string]any{
+		"repository": string(rt),
+		"outcome":    string(status),
+	})
 	onboarding.Notify(f.Context(), f.Printer.Debug, "handover-finished", func(ctx context.Context) error {
 		return client.OnboardingHandoverFinished(ctx, api.OnboardingHandoverFinishedRequest{RepositoryType: rt, Status: status})
 	})

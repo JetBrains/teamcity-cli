@@ -410,6 +410,7 @@ func runRunView(f *cmdutil.Factory, runID string, opts *cmdutil.ViewOptions) err
 	if err != nil {
 		return err
 	}
+	reportOnboardingBuild(f, build)
 
 	if done, err := opts.EmitWebURL(p, build.WebURL); done {
 		return err

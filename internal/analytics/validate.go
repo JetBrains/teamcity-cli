@@ -131,6 +131,27 @@ func SampleEvents() []fus.LogEvent {
 			"source": MigrateSourceGitHubActions, "outcome": MigrateOutcomeClean,
 			"validation_status": MigrateValidationValid, "is_dry_run": false,
 		}),
+		mk(GroupOnboarding, EventAgentsDetected, false, map[string]any{
+			"has_claude_code": true, "has_codex": false, "has_junie": true,
+		}),
+		mk(GroupOnboarding, EventHandoverStarted, false, map[string]any{
+			"repository": OnboardingRepositoryOwn,
+		}),
+		mk(GroupOnboarding, EventHandoverFinished, false, map[string]any{
+			"repository": OnboardingRepositoryDemo, "outcome": "handover_rerun_declined",
+		}),
+		mk(GroupOnboarding, EventPipelineCreated, false, map[string]any{
+			"repository": OnboardingRepositoryOwn,
+		}),
+		mk(GroupOnboarding, EventBuildQueued, false, map[string]any{
+			"repository": OnboardingRepositoryOwn,
+		}),
+		mk(GroupOnboarding, EventBuildStarted, false, map[string]any{
+			"repository": OnboardingRepositoryDemo,
+		}),
+		mk(GroupOnboarding, EventBuildFinished, false, map[string]any{
+			"repository": OnboardingRepositoryDemo, "final_status": BuildStatusCanceled,
+		}),
 	}
 }
 

@@ -59,6 +59,7 @@ func TestPipeline_EndToEnd(t *testing.T) {
 		ExitCode:   0,
 		DurationMS: 1500,
 	})
+	c.Track(GroupOnboarding, EventBuildQueued, map[string]any{"repository": OnboardingRepositoryDemo})
 	if err := c.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
@@ -74,11 +75,11 @@ func TestPipeline_EndToEnd(t *testing.T) {
 	if err := json.Unmarshal(body, &report); err != nil {
 		t.Fatalf("invalid report JSON: %v", err)
 	}
-	if len(report.Events) != 2 {
-		t.Fatalf("expected 2 events (session + command), got %d", len(report.Events))
+	if len(report.Events) != 3 {
+		t.Fatalf("expected 3 events (session + command + onboarding), got %d", len(report.Events))
 	}
 
-	var gotSession, gotCommand bool
+	var gotSession, gotCommand, gotOnboarding bool
 	for _, e := range report.Events {
 		if e.Product != ProductCode {
 			t.Errorf("product = %q, want %q", e.Product, ProductCode)
@@ -108,9 +109,17 @@ func TestPipeline_EndToEnd(t *testing.T) {
 			if e.Event.Data["command"] != "run.start" {
 				t.Errorf("command field = %v, want run.start", e.Event.Data["command"])
 			}
+		case GroupOnboarding:
+			gotOnboarding = true
+			if e.Event.ID != EventBuildQueued {
+				t.Errorf("onboarding event = %q, want %q", e.Event.ID, EventBuildQueued)
+			}
+			if e.Event.Data["repository"] != OnboardingRepositoryDemo {
+				t.Errorf("repository = %v, want %q", e.Event.Data["repository"], OnboardingRepositoryDemo)
+			}
 		}
 	}
-	if !gotSession || !gotCommand {
-		t.Errorf("expected both session and command events, got session=%v command=%v", gotSession, gotCommand)
+	if !gotSession || !gotCommand || !gotOnboarding {
+		t.Errorf("expected session, command and onboarding events, got session=%v command=%v onboarding=%v", gotSession, gotCommand, gotOnboarding)
 	}
 }

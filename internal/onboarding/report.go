@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 )
 
@@ -13,17 +14,24 @@ func PipelineCreated(f *cmdutil.Factory, client api.ClientInterface, pipelineID 
 	if !ok {
 		return
 	}
+	f.Analytics.Track(analytics.GroupOnboarding, analytics.EventPipelineCreated, map[string]any{
+		"repository": string(rt),
+	})
 	Notify(f.Context(), f.Printer.Debug, "pipeline-created", func(ctx context.Context) error {
 		return client.OnboardingPipelineCreated(ctx, api.OnboardingPipelineCreatedRequest{RepositoryType: rt, PipelineID: pipelineID})
 	})
 }
 
-// BuildQueued reports a build that `run start` queued inside the onboarding; outside it, it does nothing.
+// BuildQueued reports a build that `run start` queued inside the onboarding, and remembers it to report its start and finish later; outside the onboarding, it does nothing.
 func BuildQueued(f *cmdutil.Factory, client api.ClientInterface, buildID int) {
 	rt, ok := Current()
 	if !ok {
 		return
 	}
+	f.Analytics.Track(analytics.GroupOnboarding, analytics.EventBuildQueued, map[string]any{
+		"repository": string(rt),
+	})
+	RememberBuild(buildID, rt)
 	Notify(f.Context(), f.Printer.Debug, "build-queued", func(ctx context.Context) error {
 		return client.OnboardingBuildQueued(ctx, api.OnboardingBuildQueuedRequest{RepositoryType: rt, BuildID: buildID})
 	})

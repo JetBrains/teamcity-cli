@@ -52,6 +52,18 @@ func allAIAgents() []string {
 	}
 }
 
+// OnboardingOutcomes enumerates how the onboarding hand-over ends; they match the statuses `teamcity onboard` reports to the server.
+func OnboardingOutcomes() []string {
+	return []string{
+		"success", "no_checkout", "no_agent", "handover_declined", "skill_install_failure",
+		"agent_failed_to_start", "agent_interrupted", "agent_error", "handover_rerun_declined", "error",
+	}
+}
+
+func buildFinalStatuses() []string {
+	return []string{BuildStatusSuccess, BuildStatusFailure, BuildStatusError, BuildStatusCanceled}
+}
+
 func skillAgentEnum() []string {
 	return slices.DeleteFunc(allAIAgents(), func(a string) bool { return a == "none" })
 }

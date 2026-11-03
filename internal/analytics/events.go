@@ -27,6 +27,14 @@ const (
 	EventLinked = "linked"
 
 	EventCompleted = "completed"
+
+	EventAgentsDetected   = "agents.detected"
+	EventHandoverStarted  = "handover.started"
+	EventHandoverFinished = "handover.finished"
+	EventPipelineCreated  = "pipeline.created"
+	EventBuildQueued      = "build.queued"
+	EventBuildStarted     = "build.started"
+	EventBuildFinished    = "build.finished"
 )
 
 const (
@@ -48,6 +56,11 @@ const (
 	MigrateValidationValid   = "valid"
 	MigrateValidationInvalid = "invalid"
 	MigrateValidationSkipped = "skipped"
+)
+
+const (
+	OnboardingRepositoryOwn  = "own"
+	OnboardingRepositoryDemo = "demo"
 )
 
 const (
