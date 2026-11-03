@@ -13,13 +13,14 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/charmbracelet/x/ansi v0.11.8
+	github.com/charmbracelet/x/ansi v0.11.9
+	github.com/creack/pty v1.1.24
 	github.com/dustin/go-humanize v1.1.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/magiconair/properties v1.18.12
-	github.com/mattn/go-runewidth v0.0.30
-	github.com/moby/moby/api v1.56.0
+	github.com/mattn/go-runewidth v0.0.31
+	github.com/moby/moby/api v1.56.1
 	github.com/muesli/termenv v0.16.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -33,9 +34,9 @@ require (
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/tiulpin/instill v0.0.0-20260521174322-b563ba2627d7
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/net v0.59.0
-	golang.org/x/sys v0.48.0
-	golang.org/x/term v0.46.0
+	golang.org/x/net v0.62.0
+	golang.org/x/sys v0.49.0
+	golang.org/x/term v0.47.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -65,7 +66,6 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
-	github.com/creack/pty v1.1.24 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.7.0 // indirect
@@ -83,7 +83,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
-	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.4.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -123,8 +123,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
-	golang.org/x/crypto v0.57.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 )
