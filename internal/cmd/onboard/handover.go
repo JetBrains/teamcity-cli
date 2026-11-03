@@ -63,41 +63,55 @@ type handoverContext struct {
 	authorized bool // a VCS root usable by projectID points at repo
 }
 
-// handOverToAgent passes the onboarding context (repo, its TeamCity project, VCS root status) to an AI agent to finish the setup.
+// confirm asks a yes/no question; tests replace it, since prompts need a terminal.
+var confirm = cmdutil.Confirm
+
+// handOverToAgent passes the onboarding context (repo, its TeamCity project, VCS root status) to an AI agent to finish the setup,
+// and reports the start and the final status of the hand-over.
 func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool) error {
+	rt := repositoryType(repo.source)
+	reportHandoverStarted(f, client, rt)
+	end, err := handOver(f, client, repo, projectID, authorized)
+	reportHandoverFinished(f, client, rt, handoverStatus(end))
+	return err
+}
+
+// handOver runs the hand-over and returns where it stopped.
+func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool) (handoverEnd, error) {
 	// The agent works in the checkout, and per-project skills land there; a sample left uncloned has none.
 	if repo.dir == "" {
-		return api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
+		return endNoCheckout, api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
 	}
 	agents, err := detectAgents(f.Context())
 	if err != nil {
-		return err
+		return endFailed, err
 	}
+	reportAgentsDetected(f, client, agents)
 	if len(agents) == 0 {
 		f.Printer.Warn("No supported agents found, install one and try again.")
 		f.Printer.Tip("Supported agents: %s", supportedAgentLabels())
-		return nil
+		return endNoAgent, nil
 	}
 	ag, err := pickAgent(f, agents)
 	if err != nil {
-		return err
+		return endFailed, err
 	}
 
 	// TODO: copy pending design review
 	proceed := true
-	if err := cmdutil.Confirm("Continue onboarding with "+ag.label+"?", &proceed); err != nil {
-		return err
+	if err := confirm("Continue onboarding with "+ag.label+"?", &proceed); err != nil {
+		return endFailed, err
 	}
 	if !proceed {
-		return nil
+		return endDeclined, nil
 	}
 
 	scope, err := promptSkillScope(f, repo)
 	if err != nil {
-		return err
+		return endFailed, err
 	}
 	if err := installSkills(f, ag, scope, repo.dir); err != nil {
-		return err
+		return endSkillInstallFailed, err
 	}
 
 	return launchAgent(f, ag, handoverContext{

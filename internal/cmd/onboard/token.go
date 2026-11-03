@@ -11,8 +11,18 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/version"
 )
 
-// accessToken exchanges the onboarding token, or uses the saved login when none is given or the exchange is rejected.
+// accessToken returns a working access token for serverURL and reports the login to it.
 func accessToken(f *cmdutil.Factory, serverURL, onboardingToken string) (string, error) {
+	token, err := resolveToken(f, serverURL, onboardingToken)
+	if err != nil {
+		return "", err
+	}
+	reportLoginCompleted(f, newClient(f, serverURL, token))
+	return token, nil
+}
+
+// resolveToken exchanges the onboarding token, or uses the saved login when none is given or the exchange is rejected.
+func resolveToken(f *cmdutil.Factory, serverURL, onboardingToken string) (string, error) {
 	if onboardingToken == "" {
 		return savedLogin(f, serverURL, "")
 	}
@@ -46,7 +56,11 @@ func savedLogin(f *cmdutil.Factory, serverURL, reason string) (string, error) {
 
 // loginWorks reports whether token authenticates against serverURL.
 func loginWorks(f *cmdutil.Factory, serverURL, token string) bool {
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
-	_, err := client.GetCurrentUser()
+	_, err := newClient(f, serverURL, token).GetCurrentUser()
 	return err == nil
+}
+
+// newClient returns a client for serverURL authenticated with token, bound to f's context.
+func newClient(f *cmdutil.Factory, serverURL, token string) *api.Client {
+	return api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +55,7 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(opts.serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := newClient(f, opts.serverURL, token)
 
 	repo, err := chooseRepository(f)
 	if err != nil {

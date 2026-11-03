@@ -9,6 +9,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
+	"github.com/JetBrains/teamcity-cli/internal/onboarding"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
@@ -71,6 +72,7 @@ func runPipelineCreate(f *cmdutil.Factory, name string, opts *createOptions) err
 	}
 
 	f.Analytics.Track(analytics.GroupPipeline, analytics.EventCreated, map[string]any{"is_from_file": true})
+	onboarding.PipelineCreated(f, client, pipeline.ID)
 	f.Printer.Success("Created pipeline %q (%s)", pipeline.Name, pipeline.ID)
 	if pipeline.WebURL != "" {
 		_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", pipeline.WebURL)
