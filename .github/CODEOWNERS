@@ -1,15 +1,15 @@
 # Default owners for everything in the repo
-* @tiulpin
+* @tiulpin @treggit @vbedrosova
 
 # API client
-/api/ @tiulpin
+/api/ @tiulpin @treggit @vbedrosova
 
 # CLI commands
-/internal/cmd/ @tiulpin
+/internal/cmd/ @tiulpin @treggit @vbedrosova
 
 # Documentation
-/docs/ @tiulpin
+/docs/ @tiulpin @treggit @vbedrosova
 
 # Release & CI
-/.goreleaser.yaml @tiulpin
-/justfile @tiulpin
+/.goreleaser.yaml @tiulpin @treggit @vbedrosova
+/justfile @tiulpin @treggit @vbedrosova
