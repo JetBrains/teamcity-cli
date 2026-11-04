@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	teamcitycli "github.com/JetBrains/teamcity-cli"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,6 +54,14 @@ func TestSkillInstallRemoveDefault(t *testing.T) {
 	cmdtest.RunCmd(t, "skill", "remove", "--agent", "claude-code")
 	_, err = os.Stat(skillDir)
 	assert.ErrorIs(t, err, os.ErrNotExist, "skill dir should be gone after remove")
+}
+
+// TestSkillEnumCoversBundledSkills fails when teamcity-skills adds a skill the FUS skill enum doesn't know.
+func TestSkillEnumCoversBundledSkills(t *testing.T) {
+	t.Parallel()
+	for _, s := range teamcitycli.ListSkills() {
+		assert.Equal(t, s.Name, analytics.NormalizeSkill(s.Name), "add %q to analytics.allSkills", s.Name)
+	}
 }
 
 func TestSkillGuideUnknown(t *testing.T) {

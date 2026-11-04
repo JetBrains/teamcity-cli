@@ -44,6 +44,7 @@ const (
 	enumAPIResource     = "api_resource"
 	enumCommand         = "command"
 	enumSkillAgent      = "skill_agent"
+	enumSkill           = "skill"
 )
 
 // Definition is the source for event registration and fallback validation metadata.
@@ -65,6 +66,7 @@ var Definition = &fus.Definition{
 			enumAPIResource: {"builds", "build_types", "projects", "agents", "users", "vcs", "queue", "tests", "problems", "changes", "pipelines", "cloud", "server", "other"},
 			enumCommand:     allCommands(),
 			enumSkillAgent:  skillAgentEnum(),
+			enumSkill:       allSkills(),
 		},
 		Regexps: map[string]string{
 			regexpUUID:          `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`,
@@ -266,6 +268,11 @@ func skillGroup() fus.GroupDefinition {
 				{Path: "agent", Rules: []string{fus.EnumRefExpr(enumSkillAgent)}},
 				{Path: "scope", Rules: []string{fus.EnumExpr("global", "project")}},
 				{Path: "is_auto_detected", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+				{Path: "is_success", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+			}},
+			{ID: EventGuideViewed, Description: "Skill guide printed", Fields: []fus.FieldDefinition{
+				{Path: "skill", Rules: []string{fus.EnumRefExpr(enumSkill)}},
+				{Path: "is_overview", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 				{Path: "is_success", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 			}},
 		},

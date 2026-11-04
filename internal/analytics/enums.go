@@ -60,6 +60,19 @@ func allAIAgents() []string {
 	}
 }
 
+// allSkills enumerates the skills the CLI bundles from teamcity-skills.
+func allSkills() []string {
+	return []string{"teamcity-cli", "migrate-to-teamcity", "teamcity-onboard", "other"}
+}
+
+// NormalizeSkill returns the wire-safe value for a bundled skill name; unknown → "other".
+func NormalizeSkill(name string) string {
+	if slices.Contains(allSkills(), name) {
+		return name
+	}
+	return "other"
+}
+
 func skillAgentEnum() []string {
 	return slices.DeleteFunc(allAIAgents(), func(a string) bool { return a == "none" })
 }

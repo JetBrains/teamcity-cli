@@ -31,7 +31,7 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 - The total number of flags you set (count only, not the values).
 - Exit code (`0`, `1`, `2`), duration in milliseconds, and an error category if the command failed: `auth`, `permission`, `not_found`, `network`, `validation`, `read_only`, `internal`, or `none`.
 
-**For specific command groups** (build runs, agent sessions, pipeline operations, skill install/update, REST API calls, login, link) the CLI also records some booleans and counts, for example, `is_personal` for `run start`, `error_count` for `pipeline validate`, `had_timeout` for `agent term`. The full schema is in [`internal/analytics/scheme.go`](https://github.com/JetBrains/teamcity-cli/blob/main/internal/analytics/scheme.go).
+**For specific command groups** (build runs, agent sessions, pipeline operations, skill install/update, skill guide reads, REST API calls, login, link) the CLI also records some booleans and counts, for example, `is_personal` for `run start`, `error_count` for `pipeline validate`, `had_timeout` for `agent term`, and for `skill guide` the bundled skill name and whether the agent read the overview or a topic. The full schema is in [`internal/analytics/scheme.go`](https://github.com/JetBrains/teamcity-cli/blob/main/internal/analytics/scheme.go).
 
 ## What we don't collect
 

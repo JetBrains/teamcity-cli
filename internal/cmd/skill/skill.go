@@ -91,6 +91,11 @@ followed by its topics. Without a skill, uses the default skill (teamcity-cli).`
 				topic = args[1]
 			}
 			page, err := teamcitycli.SkillGuide(skill, topic)
+			f.Analytics.Track(analytics.GroupSkill, analytics.EventGuideViewed, map[string]any{
+				"skill":       analytics.NormalizeSkill(skill),
+				"is_overview": topic == "",
+				"is_success":  err == nil,
+			})
 			if err != nil {
 				return err
 			}
