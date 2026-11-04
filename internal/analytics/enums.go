@@ -38,17 +38,25 @@ func allCommands() []string {
 		"api", "link", "migrate", "onboard", "server.plugin.upload",
 		"alias.list", "alias.set", "alias.delete",
 		"config.list", "config.get", "config.set",
-		"skill.list", "skill.install", "skill.update", "skill.remove",
+		"skill.list", "skill.install", "skill.update", "skill.remove", "skill.guide",
 		"update", "other",
 	}
 }
 
-// allAIAgents enumerates AI agent identifiers; mirrors instill names with `-` → `_`.
+// allAIAgents enumerates AI agent identifiers: every instill agent name with `-` → `_`, plus instill's runtime-only "cowork".
 func allAIAgents() []string {
 	return []string{
-		"claude_code", "junie", "cursor", "gemini_cli", "codex", "goose",
-		"augment", "github_copilot", "amp", "windsurf", "opencode", "trae",
-		"roo", "other", "none",
+		"adal", "aider_desk", "amp", "antigravity", "antigravity_cli", "astrbot", "augment", "autohand_code",
+		"bob", "claude_code", "cline", "codearts_agent", "codebuddy", "codemaker", "codestudio", "codex",
+		"command_code", "continue", "cortex", "cowork", "crush", "cursor", "deepagents", "devin", "dexto",
+		"droid", "eve", "firebender", "forgecode", "fx", "gemini_cli", "github_copilot", "goose", "grok",
+		"hermes_agent", "iflow_cli", "inference_sh", "jazz", "junie", "kilo", "kimchi", "kimi_code_cli",
+		"kiro_cli", "kode", "lingma", "loaf", "mcpjam", "minimax_code", "mistral_vibe", "moxby", "mux",
+		"neovate", "ona", "openclaw", "opencode", "openhands", "pi", "pochi", "posit_assistant",
+		"promptscript", "qoder", "qoder_cn", "qwen_code", "reasonix", "replit", "roo", "rovodev",
+		"sarvam_code", "tabnine_cli", "terramind", "tinycloud", "trae", "trae_cn", "warp", "windsurf",
+		"zcode", "zed", "zencoder", "zenflow",
+		"other", "none",
 	}
 }
 

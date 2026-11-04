@@ -107,7 +107,7 @@ func buildScheme() *fus.Scheme {
 
 func sessionGroup() fus.GroupDefinition {
 	return fus.GroupDefinition{
-		ID: GroupSession, Version: 1, Type: fus.GroupTypeState, Description: "Session telemetry",
+		ID: GroupSession, Version: 2, Type: fus.GroupTypeState, Description: "Session telemetry",
 		Events: []fus.EventDefinition{
 			{ID: EventInvoked, Description: "CLI session", Fields: []fus.FieldDefinition{
 				{Path: "session_id", Rules: []string{fus.RegexpRefExpr(regexpUUID)}, Anonymized: true},
@@ -127,7 +127,7 @@ func sessionGroup() fus.GroupDefinition {
 
 func commandGroup() fus.GroupDefinition {
 	return fus.GroupDefinition{
-		ID: GroupCommand, Version: 3, Type: fus.GroupTypeCounter, Description: "Command telemetry",
+		ID: GroupCommand, Version: 4, Type: fus.GroupTypeCounter, Description: "Command telemetry",
 		Events: []fus.EventDefinition{
 			{ID: EventExecuted, Description: "Command completed", Fields: []fus.FieldDefinition{
 				{Path: "session_id", Rules: []string{fus.RegexpRefExpr(regexpUUID)}, Anonymized: true},
@@ -259,7 +259,7 @@ func pipelineGroup() fus.GroupDefinition {
 
 func skillGroup() fus.GroupDefinition {
 	return fus.GroupDefinition{
-		ID: GroupSkill, Version: 1, Type: fus.GroupTypeCounter, Description: "Skill telemetry",
+		ID: GroupSkill, Version: 2, Type: fus.GroupTypeCounter, Description: "Skill telemetry",
 		Events: []fus.EventDefinition{
 			{ID: EventManaged, Description: "Skill managed", Fields: []fus.FieldDefinition{
 				{Path: "action", Rules: []string{fus.EnumExpr("install", "update", "remove")}},

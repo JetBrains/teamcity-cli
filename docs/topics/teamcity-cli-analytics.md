@@ -17,7 +17,7 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 - CLI version, TeamCity server version (for example, `2026.1`), and server type (`cloud` or `on_prem`).
 - OS (`darwin`, `linux`, `windows`, `freebsd`, `other`) and CPU architecture (`amd64`, `arm64`, `386`, `other`).
 - The CI system the CLI is running inside, if any: `github_actions`, `gitlab`, `jenkins`, `circleci`, `buildkite`, `azure`, `travis`, `teamcity`, `other`, or `none`.
-- The AI coding agent that invoked the CLI, if any: `claude_code`, `junie`, `cursor`, `gemini_cli`, `codex`, `goose`, `augment`, `github_copilot`, `amp`, `windsurf`, `opencode`, `trae`, `roo`, `other`, or `none`.
+- The AI coding agent that invoked the CLI, if any, as one of the agent names [instill](https://github.com/tiulpin/instill/blob/main/agents.go) supports with `-` replaced by `_` (for example `claude_code`, `cursor` or `codex`), `cowork`, `other`, or `none`.
 - How you authenticated: `keyring`, `env`, `build_properties`, `guest`, or `none`. The token itself is never sent.
 - Whether the working directory has a `teamcity.toml` linked-project file (a boolean).
 - A randomly-generated session ID that rotates after 30 minutes of inactivity. The ID is hashed locally before it leaves your machine.

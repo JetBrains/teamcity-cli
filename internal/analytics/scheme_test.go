@@ -6,6 +6,7 @@ import (
 	fus "github.com/JetBrains/fus-reporting-api-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tiulpin/instill"
 )
 
 // TestScheme_BuildsValidator ensures every group/event/field in the scheme is
@@ -78,6 +79,15 @@ func TestNormalizeCommand(t *testing.T) {
 	}
 	if got := NormalizeCommand("never.heard.of"); got != "other" {
 		t.Errorf("unknown command: got %q, want other", got)
+	}
+}
+
+// TestAIAgentEnumCoversInstill fails when an instill bump adds agents the FUS enum doesn't know; extend allAIAgents and bump the session and skill group versions.
+func TestAIAgentEnumCoversInstill(t *testing.T) {
+	for _, name := range append(instill.AgentNames(), "cowork") {
+		if got := NormalizeAIAgent(name); got == "other" {
+			t.Errorf("instill agent %q normalizes to other; add it to allAIAgents", name)
+		}
 	}
 }
 
