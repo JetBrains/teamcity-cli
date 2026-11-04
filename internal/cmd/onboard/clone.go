@@ -48,7 +48,7 @@ func cloneSample(f *cmdutil.Factory, repo repository) (repository, error) {
 	case cloneSkip:
 		return repo, nil
 	case cloneOther:
-		input, err := promptDir(f, "Provide a directory to clone into", validateCloneParent)
+		input, err := promptDir(f, "Where should we create the "+name+" directory?", "", validateCloneParent)
 		if err != nil {
 			return repo, err
 		}

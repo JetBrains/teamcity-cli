@@ -149,13 +149,12 @@ func pickAgent(f *cmdutil.Factory, agents []agent) (agent, error) {
 	if len(agents) == 1 {
 		return agents[0], nil
 	}
-	// TODO: copy pending design review
 	options := make([]huh.Option[agent], 0, len(agents))
 	for _, a := range agents {
 		options = append(options, huh.NewOption(a.label, a))
 	}
 	var picked agent
-	if err := cmdutil.Select(f.Printer, "Choose an agent to finish onboarding", options, &picked); err != nil {
+	if err := cmdutil.Select(f.Printer, "Which AI agent should set up your build?", options, &picked); err != nil {
 		return agent{}, err
 	}
 	return picked, nil
@@ -163,13 +162,12 @@ func pickAgent(f *cmdutil.Factory, agents []agent) (agent, error) {
 
 // promptSkillScope asks whether to install the skills globally or only into repo.dir.
 func promptSkillScope(f *cmdutil.Factory, repo repository) (skillScope, error) {
-	// TODO: copy pending design review
 	options := []huh.Option[skillScope]{
-		huh.NewOption("Globally, for all projects", scopeGlobal),
-		huh.NewOption("Only for "+repo.dir, scopeProject),
+		huh.NewOption("All my repositories", scopeGlobal),
+		huh.NewOption("Only this repository ("+repo.dir+")", scopeProject),
 	}
 	var scope skillScope
-	if err := cmdutil.Select(f.Printer, "Where should the TeamCity skills be installed?", options, &scope); err != nil {
+	if err := cmdutil.Select(f.Printer, "Install TeamCity skills for all your repositories or just this one?", options, &scope); err != nil {
 		return "", err
 	}
 	return scope, nil

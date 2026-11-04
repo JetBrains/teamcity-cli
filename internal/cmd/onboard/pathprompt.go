@@ -14,10 +14,11 @@ import (
 )
 
 // promptDir asks for a directory path, completing subdirectories with ctrl+e, and echoes the answer like cmdutil.PromptString.
-func promptDir(f *cmdutil.Factory, title string, validate func(string) error) (string, error) {
+func promptDir(f *cmdutil.Factory, title, description string, validate func(string) error) (string, error) {
 	var input string
 	field := huh.NewInput().
 		Title(title).
+		Description(description).
 		Validate(validate).
 		Value(&input).
 		SuggestionsFunc(func() []string { return dirSuggestions(input) }, &input)

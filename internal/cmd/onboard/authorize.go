@@ -49,9 +49,8 @@ func authorizeRepository(f *cmdutil.Factory, client api.ClientInterface, repo re
 		return false, err
 	}
 
-	// TODO: copy pending design review
 	proceed := true
-	title := fmt.Sprintf("%s isn't connected to TeamCity yet. Create a VCS root using connection %s?", repo.remoteURL, conn.label())
+	title := fmt.Sprintf("Connect %s to TeamCity using %s?", repo.remoteURL, conn.label())
 	if err := cmdutil.Confirm(title, &proceed); err != nil {
 		return false, err
 	}
