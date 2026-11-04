@@ -48,8 +48,8 @@ func cloneSample(f *cmdutil.Factory, repo repository) (repository, error) {
 	case cloneSkip:
 		return repo, nil
 	case cloneOther:
-		var input string
-		if err := cmdutil.PromptValidatedString(f.Printer, "Where should we create the "+name+" directory?", "", validateCloneParent, &input); err != nil {
+		input, err := promptDir(f, "Where should we create the "+name+" directory?", "", validateCloneParent)
+		if err != nil {
 			return repo, err
 		}
 		if parent, err = normalizePath(input); err != nil {

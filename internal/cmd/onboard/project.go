@@ -11,11 +11,18 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/git"
 )
 
-// rootProjectID is the server root; the instance project is its direct child.
+// rootProjectID is the server root; it is the instance project except on Dorm, where the instance is its direct child.
 const rootProjectID = "_Root"
 
-// findInstanceProject returns the TeamCity Cloud instance project, the direct child of the server root.
+// findInstanceProject returns the instance project: the root's direct child on Dorm servers, the root otherwise.
 func findInstanceProject(client api.ClientInterface) (string, error) {
+	dorm, err := isDorm(client)
+	if err != nil {
+		return "", err
+	}
+	if !dorm {
+		return rootProjectID, nil
+	}
 	children, _, err := client.GetProjects(api.ProjectsOptions{Parent: rootProjectID, ExcludeArchived: true, Fields: []string{"id"}})
 	if err != nil {
 		return "", fmt.Errorf("list projects in %s: %w", rootProjectID, err)
@@ -25,6 +32,32 @@ func findInstanceProject(client api.ClientInterface) (string, error) {
 	}
 	// TODO: handle multiple root children
 	return children.Projects[0].ID, nil
+}
+
+// isDorm reports whether _Root has the "Dorm Keycloak" Keycloak connection, which marks a shared Dorm server.
+func isDorm(client api.ClientInterface) (bool, error) {
+	feats, err := client.GetProjectConnections(rootProjectID)
+	if err != nil {
+		return false, fmt.Errorf("list connections in %s: %w", rootProjectID, err)
+	}
+	for _, feat := range feats.ProjectFeature {
+		if feat.Properties == nil {
+			continue
+		}
+		var name, providerType string
+		for _, p := range feat.Properties.Property {
+			switch p.Name {
+			case "displayName":
+				name = p.Value
+			case "providerType":
+				providerType = p.Value
+			}
+		}
+		if name == "Dorm Keycloak" && providerType == "Keycloak" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // ensureRepoProject returns the ID of the project named after repo under instanceID, creating it when missing.
