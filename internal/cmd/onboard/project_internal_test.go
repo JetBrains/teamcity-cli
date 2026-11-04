@@ -10,9 +10,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// rootConnections serves feats as the _Root project's connections.
+func rootConnections(feats ...api.ProjectFeature) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, api.ProjectFeatureList{Count: len(feats), ProjectFeature: feats})
+	}
+}
+
 func TestFindInstanceProject(t *testing.T) {
-	t.Run("direct child of root", func(t *testing.T) {
+	const rootConnectionsPath = "GET /app/rest/projects/id:_Root/projectFeatures"
+	dormKeycloak := oauthConnection("Dorm Keycloak", "Keycloak")
+
+	t.Run("single tenant uses root", func(t *testing.T) {
 		client := newTestClient(t, map[string]http.HandlerFunc{
+			rootConnectionsPath: rootConnections(oauthConnection("GitHub.com", "GitHub"), oauthConnection("Company SSO", "Keycloak")),
+		})
+
+		got, err := findInstanceProject(client)
+		require.NoError(t, err)
+		assert.Equal(t, "_Root", got)
+	})
+
+	t.Run("dorm uses direct child of root", func(t *testing.T) {
+		client := newTestClient(t, map[string]http.HandlerFunc{
+			rootConnectionsPath: rootConnections(dormKeycloak),
 			"GET /app/rest/projects": func(w http.ResponseWriter, r *http.Request) {
 				locator := r.URL.Query().Get("locator")
 				assert.Contains(t, locator, "parentProject:_Root")
@@ -26,8 +47,9 @@ func TestFindInstanceProject(t *testing.T) {
 		assert.Equal(t, "Instance", got)
 	})
 
-	t.Run("no children", func(t *testing.T) {
+	t.Run("dorm without children", func(t *testing.T) {
 		client := newTestClient(t, map[string]http.HandlerFunc{
+			rootConnectionsPath: rootConnections(dormKeycloak),
 			"GET /app/rest/projects": func(w http.ResponseWriter, r *http.Request) {
 				writeJSON(w, api.ProjectList{})
 			},

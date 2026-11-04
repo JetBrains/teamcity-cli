@@ -45,8 +45,8 @@ func supportedAgentLabels() string {
 	return strings.Join(labels, ", ")
 }
 
-// versionTimeout bounds `--version`, so a hanging binary can't stall onboarding.
-const versionTimeout = 3 * time.Second
+// versionTimeout bounds `--version` so a hanging binary can't stall onboarding; cold starts of npm installs and self-updating launchers can exceed 3s.
+const versionTimeout = 10 * time.Second
 
 type skillScope string
 
