@@ -88,7 +88,6 @@ func resolveRepository(source repoSource, dir string) (repository, error) {
 
 // promptSource asks where the repository comes from; "current" is offered only inside a git repository.
 func promptSource(f *cmdutil.Factory, inRepo bool) (repoSource, error) {
-	// TODO: copy pending design review
 	var options []huh.Option[repoSource]
 	if inRepo {
 		options = append(options, huh.NewOption("Current directory", sourceCurrent))
@@ -98,7 +97,7 @@ func promptSource(f *cmdutil.Factory, inRepo bool) (repoSource, error) {
 		huh.NewOption("Sample repository", sourceSample),
 	)
 	var source repoSource
-	if err := cmdutil.Select(f.Printer, "Choose a repository to onboard", options, &source); err != nil {
+	if err := cmdutil.Select(f.Printer, "Which repository would you like to build?", options, &source); err != nil {
 		return "", err
 	}
 	return source, nil
@@ -106,9 +105,8 @@ func promptSource(f *cmdutil.Factory, inRepo bool) (repoSource, error) {
 
 // promptPath asks for an absolute or relative path and resolves it as a git repository.
 func promptPath(f *cmdutil.Factory) (repository, error) {
-	// TODO: copy pending design review
 	var input string
-	if err := cmdutil.PromptValidatedString(f.Printer, "Provide a path to a git repository", "", validateRepoPath, &input); err != nil {
+	if err := cmdutil.PromptValidatedString(f.Printer, "Where is your local Git repository?", "Enter a local path, for example ~/projects/my-app.", validateRepoPath, &input); err != nil {
 		return repository{}, err
 	}
 	path, err := normalizePath(input)

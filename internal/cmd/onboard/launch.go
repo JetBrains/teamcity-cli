@@ -15,8 +15,7 @@ import (
 // launchAgent runs ag in the foreground on this terminal with the staged context, offering a rerun when it exits with an error.
 func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) error {
 	args := ag.promptArgs(handoverPrompt(hc))
-	// TODO: copy pending design review
-	f.Printer.Info("Handing over to %s. It uses this terminal; exit it to return to teamcity.\n", ag.label)
+	f.Printer.Info("Starting %s in this terminal. Exit it to return to your shell.\n", ag.label)
 	for {
 		err := runAgent(ag.path, args, hc.repo.dir)
 		if err == nil {
