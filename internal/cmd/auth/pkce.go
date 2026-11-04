@@ -2,9 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"maps"
@@ -18,6 +15,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/charmbracelet/huh"
+	"golang.org/x/oauth2"
 )
 
 const authCodeLifetime = 5 * time.Minute
@@ -125,10 +123,7 @@ func newPkceScopePicker(selected *[]string) *huh.MultiSelect[string] {
 
 // runPkceLogin orchestrates the browser-based PKCE auth flow with the given scopes and returns the minted access token.
 func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client, scopes []string, announce func(authURL string, opened bool)) (*api.TokenResponse, error) {
-	verifier, err := generatePkceVerifier()
-	if err != nil {
-		return nil, fmt.Errorf("generate code verifier: %w", err)
-	}
+	verifier := oauth2.GenerateVerifier()
 	state, err := browserflow.GenerateState()
 	if err != nil {
 		return nil, fmt.Errorf("generate state: %w", err)
@@ -141,7 +136,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client,
 
 	port := listener.Addr().(*net.TCPAddr).Port
 	redirectURI := fmt.Sprintf("http://localhost:%d%s", port, browserflow.DefaultCallbackPath)
-	authURL := api.BuildAuthorizeURL(client.BaseURL, redirectURI, pkceCodeChallenge(verifier), state, scopes)
+	authURL := api.BuildAuthorizeURL(client.BaseURL, redirectURI, oauth2.S256ChallengeFromVerifier(verifier), state, scopes)
 
 	opening := fmt.Sprintf("Opening browser to authenticate with %d permissions...", len(scopes))
 	if total := len(api.KnownPermissions); len(scopes) < total {
@@ -168,19 +163,4 @@ func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client,
 	exchangeCtx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	return client.ExchangeCodeForToken(exchangeCtx, result.Code, verifier, redirectURI)
-}
-
-// generatePkceVerifier returns 32 random bytes encoded as base64url, satisfying RFC 7636 §4.1.
-func generatePkceVerifier() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("generate random bytes: %w", err)
-	}
-	return base64.RawURLEncoding.EncodeToString(b), nil
-}
-
-// pkceCodeChallenge returns the SHA256 base64url challenge for a PKCE verifier per RFC 7636 §4.2.
-func pkceCodeChallenge(verifier string) string {
-	h := sha256.Sum256([]byte(verifier))
-	return base64.RawURLEncoding.EncodeToString(h[:])
 }

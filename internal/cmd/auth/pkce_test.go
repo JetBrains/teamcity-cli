@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
 )
 
 // TestPkceCodeChallenge_RFC7636Vector pins the verifier→challenge derivation against the RFC 7636 §B worked example.
@@ -22,7 +23,7 @@ func TestPkceCodeChallenge_RFC7636Vector(t *testing.T) {
 	const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 	const want = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
 
-	got := pkceCodeChallenge(verifier)
+	got := oauth2.S256ChallengeFromVerifier(verifier)
 	assert.Equal(t, want, got, "RFC 7636 §B test vector failed — PKCE is broken")
 }
 
@@ -65,8 +66,7 @@ func TestGeneratePkceVerifier_RFC7636Constraints(t *testing.T) {
 	seen := make(map[string]struct{}, samples)
 
 	for range samples {
-		v, err := generatePkceVerifier()
-		require.NoError(t, err)
+		v := oauth2.GenerateVerifier()
 		assert.Len(t, v, 43, "verifier must be 43 chars (32 raw bytes, base64url no-padding)")
 		assert.True(t, verifierAlphabet.MatchString(v), "verifier %q has illegal chars", v)
 
