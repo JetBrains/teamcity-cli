@@ -80,6 +80,19 @@ func SkillNames() CompFunc {
 	}
 }
 
+// SkillGuideArgs completes `skill guide [skill] [topic]`: skill names, then that skill's topics.
+func SkillGuideArgs() CompFunc {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) == 0 {
+			return SkillNames()(cmd, args, toComplete)
+		}
+		if len(args) == 1 {
+			return teamcitycli.SkillTopics(args[0]), cobra.ShellCompDirectiveNoFileComp
+		}
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+}
+
 // SkillAgents completes `skill --agent` from instill.AgentNames.
 func SkillAgents() CompFunc {
 	return func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

@@ -1525,6 +1525,18 @@ Description
 <tr>
 <td>
 
+`teamcity skill guide`
+
+</td>
+<td>
+
+Print a skill's guide for AI coding agents
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity skill install`
 
 </td>

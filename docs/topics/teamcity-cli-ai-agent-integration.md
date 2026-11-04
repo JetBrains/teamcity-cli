@@ -47,6 +47,20 @@ Install the skill for the current project only, rather than globally:
 teamcity skill install --project
 ```
 
+## Reading the guide
+
+`teamcity skill install` writes a short stub `SKILL.md` into each agent's skills directory. The stub keeps the skill's name and description, so agents still pick it for TeamCity tasks, and tells the agent to run `teamcity skill guide`. The guide ships inside the `teamcity` binary, so after you upgrade the CLI, agents read the instructions for the new version without a reinstall.
+
+Print the guide yourself:
+
+```Shell
+teamcity skill guide
+teamcity skill guide teamcity-cli references/commands
+teamcity skill guide migrate-to-teamcity
+```
+
+Without a topic, the command prints the overview followed by the list of topics.
+
 ## Updating the skill
 
 Update the skill to the latest version bundled with your current `teamcity` release:
