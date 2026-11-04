@@ -52,6 +52,10 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		)
 	}
 
+	if err := showBanner(f.Printer.Out); err != nil {
+		return err
+	}
+
 	token, err := accessToken(f, opts.serverURL, opts.token)
 	if err != nil {
 		return err

@@ -24,6 +24,8 @@ const LogoASCII = `######## ######
    ##    ##
    ##    ######`
 
+var LogoGlyphs = []rune("01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン@#$%&*<>[]{}=+-~")
+
 func PrintLogo(w io.Writer) {
 	if ASCII {
 		_, _ = fmt.Fprintln(w, Cyan("\n"+LogoASCII))
@@ -47,7 +49,6 @@ func PrintLogo(w io.Writer) {
 	}
 	rand.Shuffle(len(chars), func(i, j int) { chars[i], chars[j] = chars[j], chars[i] })
 	revealed := make(map[struct{ r, c int }]bool)
-	glyphs := []rune("01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン@#$%&*<>[]{}=+-~")
 	render := func() {
 		for r, line := range lines {
 			for c, ch := range []rune(line) {
@@ -57,7 +58,7 @@ func PrintLogo(w io.Writer) {
 				case revealed[struct{ r, c int }{r, c}]:
 					_, _ = fmt.Fprint(w, cyan.Render(string(ch)))
 				default:
-					_, _ = fmt.Fprint(w, dim.Render(string(glyphs[rand.Intn(len(glyphs))])))
+					_, _ = fmt.Fprint(w, dim.Render(string(LogoGlyphs[rand.Intn(len(LogoGlyphs))])))
 				}
 			}
 			_, _ = fmt.Fprint(w, "\033[K\n")
