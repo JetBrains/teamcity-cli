@@ -15,7 +15,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 
-GRADER_MODEL = "claude-sonnet-4-5-20250929"
+GRADER_MODEL = "claude-sonnet-5-5"
 
 _CLAUDE_BIN = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or "claude"
 
@@ -59,9 +59,10 @@ def _call_anthropic_sdk(prompt: str) -> str | None:
         response = client.messages.create(
             model=GRADER_MODEL,
             max_tokens=500,
+            thinking={"type": "between_tools"},
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.content[0].text
+        return next((b.text for b in response.content if b.type == "text"), None)
     except Exception:
         return None
 
