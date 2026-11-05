@@ -214,6 +214,11 @@ teamcity agent jobs 1 --json
 
 ## Executing remote commands
 
+`agent exec` preserves POSIX shell exit codes and maps PowerShell success/failure to
+zero/one. A disconnect before the completion marker is an execution error. Commands
+that exit their shell directly, including `exit 0`, bypass that marker; use a child
+shell such as `sh -c 'exit 0'` to capture the result.
+
 Run a command on a build agent and return the output:
 
 ```Shell
