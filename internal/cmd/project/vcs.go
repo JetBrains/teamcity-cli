@@ -444,7 +444,7 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 				return nil, testReq, err
 			}
 			if password == "" && !opts.stdin {
-				if err := cmdutil.PromptSecret("Password / Token", &password); err != nil {
+				if err := cmdutil.PromptSecret(f.Printer, "Password / Token", &password); err != nil {
 					return nil, testReq, err
 				}
 			}
@@ -699,7 +699,7 @@ func runVcsDelete(f *cmdutil.Factory, id string, opts *vcsDeleteOptions) error {
 
 	if !opts.yes && f.IsInteractive() {
 		var confirm bool
-		if err := cmdutil.Confirm(fmt.Sprintf("Delete VCS root %q?", id), &confirm); err != nil {
+		if err := cmdutil.Confirm(f.Printer, fmt.Sprintf("Delete VCS root %q?", id), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

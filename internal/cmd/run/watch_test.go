@@ -57,7 +57,7 @@ func TestDoRunWatchLogsFallsBackWithoutTTY(t *testing.T) {
 	}
 
 	tuiCalled := false
-	runWatchTUIFn = func(_ context.Context, client api.ClientInterface, runID string, interval int) error {
+	runWatchTUIFn = func(_ context.Context, client api.ClientInterface, runID string, interval int, printer *output.Printer) error {
 		tuiCalled = true
 		return errors.New("runWatchTUI should not be called without TTY")
 	}
@@ -171,7 +171,7 @@ func TestDoRunWatchLogsUsesTUIWhenTTYIsAvailable(t *testing.T) {
 
 	sentinelErr := errors.New("tui path reached")
 	tuiCalled := false
-	runWatchTUIFn = func(_ context.Context, client api.ClientInterface, runID string, interval int) error {
+	runWatchTUIFn = func(_ context.Context, client api.ClientInterface, runID string, interval int, printer *output.Printer) error {
 		tuiCalled = true
 		if runID != "123" {
 			t.Fatalf("unexpected runID: %s", runID)

@@ -51,7 +51,7 @@ func authorizeRepository(f *cmdutil.Factory, client api.ClientInterface, repo re
 
 	proceed := true
 	title := fmt.Sprintf("Connect %s to TeamCity using %s?", repo.remoteURL, conn.label())
-	if err := cmdutil.Confirm(title, &proceed); err != nil {
+	if err := cmdutil.Confirm(f.Printer, title, &proceed); err != nil {
 		return false, err
 	}
 	if !proceed {
@@ -114,7 +114,7 @@ func ensureConnectionAccess(f *cmdutil.Factory, client api.ClientInterface, repo
 		cmdutil.OpenURLOrWarn(f.Printer, authURL)
 		// TODO: copy pending design review
 		done := true
-		if err := cmdutil.Confirm("Finished authorizing in the browser?", &done); err != nil {
+		if err := cmdutil.Confirm(f.Printer, "Finished authorizing in the browser?", &done); err != nil {
 			return false, err
 		}
 		if !done {

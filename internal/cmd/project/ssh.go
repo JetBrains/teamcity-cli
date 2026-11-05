@@ -279,7 +279,7 @@ func runSSHDelete(f *cmdutil.Factory, name string, opts *sshDeleteOptions) error
 
 	if !opts.yes && f.IsInteractive() {
 		var confirm bool
-		if err := cmdutil.Confirm(fmt.Sprintf("Delete SSH key %q from project %s?", name, projectID), &confirm); err != nil {
+		if err := cmdutil.Confirm(f.Printer, fmt.Sprintf("Delete SSH key %q from project %s?", name, projectID), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

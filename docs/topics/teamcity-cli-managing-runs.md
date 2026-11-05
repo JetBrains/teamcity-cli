@@ -833,6 +833,18 @@ Output as JSON
 
 ## Watching a run
 
+Watches (including `run start --watch` and `run restart --watch`) and `run log --follow`
+report their lifecycle using the [program status sequence](https://www.superlogical.com/rex/docs/build/program-status)
+(OSC 7501). Supporting terminals such as Rex show working, successful, or failed status.
+Stopping observation reports idle and leaves the build running. A watch timeout or connection
+error reports an observation failure, not a failed build.
+
+Artifact downloads also report working and then done or error once downloading starts.
+
+Reports go only to terminal stderr, including with `--quiet`; they are suppressed for
+`--json`, CI, and `TERM=dumb`. Other terminals ignore the sequence. Exit codes are unchanged:
+stopping observation can still return zero, so zero alone does not prove the build succeeded.
+
 Monitor a running build with live updates:
 
 ```Shell

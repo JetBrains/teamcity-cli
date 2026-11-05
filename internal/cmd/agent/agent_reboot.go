@@ -95,7 +95,7 @@ func runAgentReboot(f *cmdutil.Factory, ctx context.Context, nameOrID string, op
 	needsConfirmation := !opts.yes && f.IsInteractive()
 	if needsConfirmation {
 		var confirm bool
-		if err := cmdutil.Confirm(fmt.Sprintf("Reboot agent %s?", agentName), &confirm); err != nil {
+		if err := cmdutil.Confirm(f.Printer, fmt.Sprintf("Reboot agent %s?", agentName), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

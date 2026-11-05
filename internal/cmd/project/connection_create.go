@@ -142,7 +142,7 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 			"You'll be taken to GitHub to confirm the App registration.")
 		_, _ = fmt.Fprintf(f.Printer.Out, "  %s On GitHub, click %q.\n", output.Yellow(output.Sym().Arrow), "Create GitHub App for "+target)
 		ok := true
-		if err := cmdutil.Confirm("Open a browser to register the App?", &ok); err != nil {
+		if err := cmdutil.Confirm(f.Printer, "Open a browser to register the App?", &ok); err != nil {
 			return err
 		}
 		if !ok {
@@ -225,7 +225,7 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 				"Allows TeamCity to view and clone repos available to you.")
 		}
 		ask := true
-		if err := cmdutil.Confirm("Open a browser to authorize?", &ask); err != nil {
+		if err := cmdutil.Confirm(f.Printer, "Open a browser to authorize?", &ask); err != nil {
 			return err
 		}
 		if ask {
@@ -242,7 +242,7 @@ func runConnectionCreateGitHubApp(f *cmdutil.Factory, opts *githubAppOptions) er
 		printWizardStep(f.Printer, stepNum, totalSteps, "Install on a repository",
 			"GitHub Apps grant access per repo - install on the ones TeamCity should clone.")
 		ok := true
-		if err := cmdutil.Confirm("Open a browser to install the App?", &ok); err != nil {
+		if err := cmdutil.Confirm(f.Printer, "Open a browser to install the App?", &ok); err != nil {
 			return err
 		}
 		if ok {
@@ -477,7 +477,7 @@ func resolveSecret(f *cmdutil.Factory, value string, stdin, interactive bool, la
 			"Provide --"+flagName+", --stdin, or run interactively",
 		)
 	}
-	if err := cmdutil.PromptSecret(label, &value); err != nil {
+	if err := cmdutil.PromptSecret(f.Printer, label, &value); err != nil {
 		return "", err
 	}
 	return value, nil

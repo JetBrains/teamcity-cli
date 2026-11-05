@@ -346,6 +346,11 @@ func printMessages(f *cmdutil.Factory, runID string, messages []api.BuildMessage
 func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, opts *runLogOptions) (resErr error) {
 	p := f.Printer
 	ctx := f.Context()
+	finished := false
+	if !opts.json {
+		p.ProgramStatus(output.ProgramWorking, "Following run "+runID)
+		defer func() { cmdutil.WatchEnded(p, ctx, runID, finished, resErr) }()
+	}
 
 	defer func() {
 		if ctx.Err() == nil {
@@ -390,6 +395,7 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		return err
 	}
 	if build.State == "finished" {
+		finished = true
 		return buildFinishedResult(ctx, p, client, build, opts.json)
 	}
 
@@ -407,6 +413,7 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 		})
 		if err != nil {
 			if build, err := client.GetBuild(ctx, runID); err == nil && build.State == "finished" {
+				finished = true
 				return buildFinishedResult(ctx, p, client, build, opts.json)
 			}
 			continue
@@ -451,6 +458,7 @@ func runLogFollow(f *cmdutil.Factory, client api.ClientInterface, runID string, 
 					printFollowMessage(p.Out, msg, showVerbose, opts.raw, opts.json)
 				}
 			}
+			finished = true
 			return buildFinishedResult(ctx, p, client, build, opts.json)
 		}
 	}

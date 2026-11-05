@@ -262,7 +262,7 @@ func runProjectTokenPut(f *cmdutil.Factory, projectID, value string, opts *proje
 	}
 
 	if value == "" {
-		if err := cmdutil.PromptSecret("Enter secure value to scramble", &value); err != nil {
+		if err := cmdutil.PromptSecret(f.Printer, "Enter secure value to scramble", &value); err != nil {
 			return fmt.Errorf("failed to read value: %w", err)
 		}
 	}
@@ -654,7 +654,7 @@ func runInteractiveForm(f *cmdutil.Factory, project *string, permission string, 
 	if len(groups) == 0 {
 		return nil
 	}
-	if err := cmdutil.RunForm(groups...); err != nil {
+	if err := cmdutil.RunForm(f.Printer, groups...); err != nil {
 		return err
 	}
 

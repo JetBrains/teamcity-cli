@@ -39,7 +39,7 @@ func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) error {
 		}
 		// TODO: copy pending design review
 		rerun := false
-		if err := cmdutil.Confirm("Run "+ag.label+" again? It may repeat changes it already made.", &rerun); err != nil {
+		if err := cmdutil.Confirm(f.Printer, "Run "+ag.label+" again? It may repeat changes it already made.", &rerun); err != nil {
 			return err
 		}
 		if !rerun {

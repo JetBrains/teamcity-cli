@@ -57,7 +57,7 @@ artifact tree). Use --output to choose the local destination directory
 	return cmd
 }
 
-func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) error {
+func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) (resErr error) {
 	p := f.Printer
 	client, err := f.Client()
 	if err != nil {
@@ -119,6 +119,8 @@ func runRunDownload(f *cmdutil.Factory, runID string, opts *runDownloadOptions) 
 		humanize.IBytes(uint64(totalSize)), opts.output)
 	_, _ = fmt.Fprintf(p.Out, "%-*s  %10s\n", nameWidth, "NAME", "SIZE")
 
+	p.ProgramStatus(output.ProgramWorking, "Downloading artifacts for run "+runID)
+	defer func() { cmdutil.ProgramEnded(p, ctx, resErr, "Artifacts downloaded", "Artifact download failed") }()
 	downloaded := 0
 	for _, artifact := range flatList {
 		rel, err := filepath.Rel(absOutput, filepath.Join(absOutput, artifact.Name))

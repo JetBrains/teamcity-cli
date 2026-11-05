@@ -95,7 +95,7 @@ func runPicker(f *cmdutil.Factory, serverOverride string, cfg *link.Config, scop
 
 	groups := buildGroups(hits, hitByURL, cfg, scopePath, &action, &inputs)
 	if len(groups) > 0 {
-		if err := cmdutil.RunForm(groups...); err != nil {
+		if err := cmdutil.RunForm(f.Printer, groups...); err != nil {
 			return ambig, err
 		}
 	}

@@ -233,7 +233,16 @@ teamcity agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh
 >
 {style="note"}
 
+In supporting terminals such as Rex, `agent exec` reports working while the session
+runs, done when it ends normally, and error on a connection failure or timeout.
+Interrupting the local command reports idle. Terminal status follows the CLI result;
+it does not independently determine whether the remote command succeeded.
+
 ## Interactive shell sessions
+
+`agent term` reports connection progress and failures using OSC 7501, then hands status
+ownership to the remote shell before relaying its output. It does not infer whether that
+shell is busy or waiting for input. Closing the session clears remote child-status records and normally reports idle.
 
 Open an interactive terminal session to a build agent:
 

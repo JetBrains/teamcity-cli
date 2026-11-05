@@ -256,10 +256,13 @@ func (m watchModel) renderLogs(height int) string {
 }
 
 // RunWatchTUI launches the interactive TUI for watching a build.
-func RunWatchTUI(ctx context.Context, client api.ClientInterface, runID string, interval int) error {
+func RunWatchTUI(ctx context.Context, client api.ClientInterface, runID string, interval int, printer *output.Printer) (resErr error) {
+	finished := false
+	printer.ProgramStatus(output.ProgramWorking, "Watching run "+runID)
+	defer func() { cmdutil.WatchEnded(printer, ctx, runID, finished, resErr) }()
 	m := newWatchModel(ctx, client, runID, interval)
 	output.StopSpinner() // hand the terminal to bubbletea's alt screen
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithOutput(printer.Out))
 
 	finalModel, err := p.Run()
 	if err != nil {
@@ -267,17 +270,17 @@ func RunWatchTUI(ctx context.Context, client api.ClientInterface, runID string, 
 	}
 
 	fm := finalModel.(watchModel)
+	finished = fm.build != nil && fm.build.State == "finished"
 
 	// A clean tea.Quit (p.Run err is nil) can still leave fm.err set; surface it instead of reporting success.
 	if fm.err != nil {
 		if errors.Is(fm.err, context.DeadlineExceeded) {
 			// Execute renders ExitError silently, so print the timeout notice first (like the non-TUI path).
-			_, _ = fmt.Fprintf(output.DefaultPrinter().Out, "\n%s Timeout exceeded\n", output.Red(output.Sym().Cross))
+			_, _ = fmt.Fprintf(printer.Out, "\n%s Timeout exceeded\n", output.Red(output.Sym().Cross))
 		}
 		return watchErrToExit(fm.err)
 	}
 
-	printer := output.DefaultPrinter()
 	_, _ = fmt.Fprintln(printer.Out)
 
 	if fm.build == nil || fm.build.State != "finished" {

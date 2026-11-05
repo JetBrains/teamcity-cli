@@ -49,7 +49,7 @@ func runPipelineDelete(f *cmdutil.Factory, id string, opts *deleteOptions) error
 			return errors.New("--yes is required in non-interactive mode")
 		}
 		var confirm bool
-		if err := cmdutil.Confirm(fmt.Sprintf("Delete pipeline %q (%s)?", pipeline.Name, pipeline.ID), &confirm); err != nil {
+		if err := cmdutil.Confirm(f.Printer, fmt.Sprintf("Delete pipeline %q (%s)?", pipeline.Name, pipeline.ID), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

@@ -106,12 +106,16 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 	var jsonOut *output.Printer
 	if opts.json {
 		jsonOut = f.Printer
-		f.Printer = &output.Printer{Out: io.Discard, ErrOut: jsonOut.ErrOut, Quiet: jsonOut.Quiet, Verbose: jsonOut.Verbose}
+		f.Printer = &output.Printer{Out: io.Discard, ErrOut: jsonOut.ErrOut, Quiet: jsonOut.Quiet, Verbose: jsonOut.Verbose, SuppressProgramStatus: true}
 		defer func() { f.Printer = jsonOut }()
 	}
 
 	p := f.Printer
 	ctx := f.Context()
+	if !opts.json {
+		p.ProgramStatus(output.ProgramWorking, "Signing in to TeamCity")
+		defer func() { cmdutil.ProgramEnded(p, ctx, err, "Signed in to TeamCity", "Sign-in failed") }()
+	}
 	interactive := !opts.web && f.IsInteractive()
 
 	if interactive && (opts.serverURL == "" || (!opts.guest && opts.token == "")) {
@@ -167,7 +171,7 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 					serverURL = savedDefault
 					savedDefault = ""
 				}
-				if err := cmdutil.Prompt(huh.NewInput().
+				if err := cmdutil.Prompt(p, huh.NewInput().
 					Title("TeamCity server URL").
 					Description("e.g., https://teamcity.example.com").
 					Validate(cmdutil.RequireNonEmpty).
@@ -316,7 +320,7 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 				}
 				instructionsShown = true
 			}
-			if err := cmdutil.PromptSecret("Paste your access token", &token); err != nil {
+			if err := cmdutil.PromptSecret(p, "Paste your access token", &token); err != nil {
 				return "", nil, err
 			}
 		}
@@ -357,7 +361,7 @@ func printTokenInstructions(p *output.Printer, serverURL string, pkceTried bool)
 	_, _ = fmt.Fprintln(p.Out)
 
 	openBrowser := true
-	if err := cmdutil.Confirm("Open browser to generate token?", &openBrowser); err != nil {
+	if err := cmdutil.Confirm(p, "Open browser to generate token?", &openBrowser); err != nil {
 		return err
 	}
 	if !openBrowser {

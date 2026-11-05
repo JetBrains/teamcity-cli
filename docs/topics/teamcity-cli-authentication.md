@@ -10,6 +10,14 @@ TeamCity CLI supports several authentication methods. This page covers interacti
 
 ## Interactive login
 
+In supporting terminals such as Rex, login reports its state with OSC 7501: working while
+signing in, blocked while waiting for browser authorization or credentials, and done only
+after authentication is saved. Canceling reports idle. Reports never contain credentials
+or authorization URLs and are suppressed with `--json` and in CI.
+
+Interactive prompts throughout the CLI also report when input or approval is needed,
+then restore the enclosing operation's status when the prompt closes.
+
 The standard way to authenticate is with the `teamcity auth login` command:
 
 ```Shell

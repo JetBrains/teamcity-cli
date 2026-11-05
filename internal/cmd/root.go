@@ -92,6 +92,7 @@ Report issues:  https://jb.gg/tc/issues`,
 		if jsonOutputEnabled(cmd) {
 			f.JSONOutput = true
 		}
+		f.Printer.SuppressProgramStatus = f.JSONOutput
 		output.StartSpinner(f.Quiet || f.JSONOutput)
 		if cmd.Name() != "update" && f.UpdateNotice == nil {
 			f.UpdateNotice = update.CheckInBackground(f.Context(), f.Printer.ErrOut, f.Quiet)

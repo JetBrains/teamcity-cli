@@ -658,6 +658,9 @@ This displays the server's runtime status message, configuration, processing err
 
 ### Validating Kotlin DSL
 
+In supporting terminals, settings validation reports working and then done or error
+using OSC 7501. JSON output and CI remain free of status sequences.
+
 Validate Kotlin DSL configuration by running the TeamCity configuration generator:
 
 ```Shell

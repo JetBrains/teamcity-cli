@@ -346,7 +346,7 @@ type validateResultJSON struct {
 	Path  string `json:"path"`
 }
 
-func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidateOptions) error {
+func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidateOptions) (resErr error) {
 	var dslDir string
 	if opts.path != "" {
 		abs, err := filepath.Abs(opts.path)
@@ -377,7 +377,13 @@ func runProjectSettingsValidate(f *cmdutil.Factory, opts *projectSettingsValidat
 		_, _ = fmt.Fprintf(p.Out, "Validating %s\n", output.Faint(dslDir))
 	}
 
-	cmd := exec.Command(mvnCmd, "teamcity-configs:generate", "-f", pomPath)
+	if !opts.json {
+		p.ProgramStatus(output.ProgramWorking, "Validating TeamCity settings")
+		defer func() {
+			cmdutil.ProgramEnded(p, f.Context(), resErr, "Settings validated", "Settings validation failed")
+		}()
+	}
+	cmd := exec.CommandContext(f.Context(), mvnCmd, "teamcity-configs:generate", "-f", pomPath)
 	cmd.Dir = dslDir
 
 	var stdout, stderr bytes.Buffer

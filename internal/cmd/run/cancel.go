@@ -48,7 +48,7 @@ func runRunCancel(f *cmdutil.Factory, runID string, opts *runCancelOptions) erro
 
 	if needsConfirmation {
 		var confirm bool
-		if err := cmdutil.Confirm(fmt.Sprintf("Cancel run #%s?", runID), &confirm); err != nil {
+		if err := cmdutil.Confirm(f.Printer, fmt.Sprintf("Cancel run #%s?", runID), &confirm); err != nil {
 			return err
 		}
 		if !confirm {
