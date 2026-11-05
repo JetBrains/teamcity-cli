@@ -62,6 +62,17 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 	}
 	client := api.NewClient(opts.serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
 
+	agents, err := detectAgents(f.Context())
+	if err != nil {
+		return err
+	}
+	if len(agents) == 0 {
+		f.Printer.Warn("No supported agents found.")
+		f.Printer.Tip("Supported agents: %s", supportedAgentLabels())
+		f.Printer.Tip("Install one, then rerun without --token: teamcity onboard %s", client.ServerURL())
+		return nil
+	}
+
 	repo, err := chooseRepository(f)
 	if err != nil {
 		return err
@@ -87,5 +98,5 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		}
 	}
 
-	return handOverToAgent(f, client, repo, projectID, authorized)
+	return handOverToAgent(f, client, repo, projectID, authorized, agents)
 }

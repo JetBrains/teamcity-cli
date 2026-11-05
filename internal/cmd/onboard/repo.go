@@ -93,7 +93,7 @@ func promptSource(f *cmdutil.Factory, inRepo bool) (repoSource, error) {
 		options = append(options, huh.NewOption("Current directory", sourceCurrent))
 	}
 	options = append(options,
-		huh.NewOption("Another directory", sourcePath),
+		huh.NewOption("Repository on your computer", sourcePath),
 		huh.NewOption("Sample repository", sourceSample),
 	)
 	var source repoSource

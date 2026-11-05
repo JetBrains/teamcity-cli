@@ -93,18 +93,16 @@ func TestHandOverToAgentNeedsLocalCopy(t *testing.T) {
 	client := newTestClient(t, nil) // any request fails the test
 	f, _ := testFactory()
 
-	err := handOverToAgent(f, client, repository{source: sourceSample, remoteURL: "https://github.com/acme/app"}, "Instance_App", true)
+	err := handOverToAgent(f, client, repository{source: sourceSample, remoteURL: "https://github.com/acme/app"}, "Instance_App", true, supportedAgents[:1])
 	assert.ErrorContains(t, err, "needs a local copy")
 }
 
-func TestHandOverToAgentNoSupportedAgents(t *testing.T) {
+func TestDetectAgentsNone(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	client := newTestClient(t, nil) // any request fails the test
-	f, out := testFactory()
 
-	require.NoError(t, handOverToAgent(f, client, repository{dir: t.TempDir()}, "Instance_App", true))
-	assert.Contains(t, out.String(), "No supported agents found, install one and try again.")
-	assert.Contains(t, out.String(), "Supported agents: Claude Code, Codex, Junie")
+	agents, err := detectAgents(t.Context())
+	require.NoError(t, err)
+	assert.Empty(t, agents)
 }
 
 func TestSkillInstallCmd(t *testing.T) {
