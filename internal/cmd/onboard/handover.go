@@ -64,19 +64,10 @@ type handoverContext struct {
 }
 
 // handOverToAgent passes the onboarding context (repo, its TeamCity project, VCS root status) to an AI agent to finish the setup.
-func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool) error {
+func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool, agents []agent) error {
 	// The agent works in the checkout, and per-project skills land there; a sample left uncloned has none.
 	if repo.dir == "" {
 		return api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
-	}
-	agents, err := detectAgents(f.Context())
-	if err != nil {
-		return err
-	}
-	if len(agents) == 0 {
-		f.Printer.Warn("No supported agents found, install one and try again.")
-		f.Printer.Tip("Supported agents: %s", supportedAgentLabels())
-		return nil
 	}
 	ag, err := pickAgent(f, agents)
 	if err != nil {
