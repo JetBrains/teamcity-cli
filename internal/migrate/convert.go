@@ -197,16 +197,16 @@ func classifyOS(label string) string {
 	return ""
 }
 
-// RunnerMap holds the default GHA-label → JetBrains-hosted-agent mapping per the 2026.2 schema enum; overridden by schema- or cloud-derived names when connected.
+// RunnerMap holds the default GHA-label → JetBrains-hosted-agent mapping per the 2026.2 schema enum (macOS names are the real TeamCity Cloud images, the enum is stale); overridden by schema- or cloud-derived names when connected.
 var RunnerMap = map[string]string{
 	"ubuntu-latest":  "Linux-Large",
 	"ubuntu-24.04":   "Linux-Large",
 	"ubuntu-22.04":   "Linux-Large",
 	"ubuntu-20.04":   "Linux-Large",
-	"macos-latest":   "Mac-Medium",
-	"macos-15":       "Mac-Medium",
-	"macos-14":       "Mac-Medium",
-	"macos-13":       "Mac-Medium",
+	"macos-latest":   "macOS-26-Tahoe-Medium-Arm64",
+	"macos-15":       "macOS-26-Tahoe-Medium-Arm64",
+	"macos-14":       "macOS-14-Sonoma-Medium-Arm64",
+	"macos-13":       "macOS-14-Sonoma-Medium-Arm64",
 	"windows-latest": "Windows-Medium",
 	"windows-2022":   "Windows-Medium",
 	"windows-2019":   "Windows-Medium",
