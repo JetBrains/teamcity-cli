@@ -1,7 +1,6 @@
 package pipeline
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -18,6 +17,7 @@ type createOptions struct {
 	project string
 	vcsRoot string
 	file    string
+	json    bool
 }
 
 func newPipelineCreateCmd(f *cmdutil.Factory) *cobra.Command {
@@ -29,15 +29,17 @@ func newPipelineCreateCmd(f *cmdutil.Factory) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Example: `  teamcity pipeline create my-pipeline --project CLI --vcs-root MyVcsRoot
   teamcity pipeline create my-pipeline --project CLI --file pipeline.yml
-  teamcity pipeline create my-pipeline --project CLI  # interactive VCS root selection`,
+  teamcity pipeline create my-pipeline --project CLI  # interactive VCS root selection
+  teamcity pipeline create my-pipeline --project CLI --no-input  # no VCS root, runs with a patch of the local repository`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPipelineCreate(f, args[0], opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.project, "project", "p", "", "Parent project ID (required)")
-	cmd.Flags().StringVar(&opts.vcsRoot, "vcs-root", "", "VCS root ID (interactive selection if omitted)")
+	cmd.Flags().StringVar(&opts.vcsRoot, "vcs-root", "", "VCS root ID (interactive selection if omitted; none with --no-input or --json)")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", ".teamcity.yml", "Path to pipeline YAML file")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output as JSON")
 	_ = cmd.MarkFlagRequired("project")
 	_ = cmd.MarkFlagFilename("file", "yml", "yaml")
 
@@ -58,7 +60,8 @@ func runPipelineCreate(f *cmdutil.Factory, name string, opts *createOptions) err
 	}
 
 	vcsRootID := opts.vcsRoot
-	if vcsRootID == "" {
+	// --json is for scripts: no picker, so stdout stays valid JSON
+	if vcsRootID == "" && !opts.json {
 		selected, err := selectVcsRoot(f, client, opts.project)
 		if err != nil {
 			return err
@@ -73,6 +76,9 @@ func runPipelineCreate(f *cmdutil.Factory, name string, opts *createOptions) err
 
 	f.Analytics.Track(analytics.GroupPipeline, analytics.EventCreated, map[string]any{"is_from_file": true})
 	onboarding.NotifyPipelineCreated(f, client, pipeline.ID)
+	if opts.json {
+		return f.Printer.PrintJSON(pipeline)
+	}
 	f.Printer.Success("Created pipeline %q (%s)", pipeline.Name, pipeline.ID)
 	if pipeline.WebURL != "" {
 		_, _ = fmt.Fprintf(f.Printer.Out, "  %s\n", pipeline.WebURL)
@@ -81,9 +87,10 @@ func runPipelineCreate(f *cmdutil.Factory, name string, opts *createOptions) err
 	return nil
 }
 
+// selectVcsRoot returns the VCS root to attach, or "" for a pipeline without a VCS root.
 func selectVcsRoot(f *cmdutil.Factory, client api.ClientInterface, projectID string) (string, error) {
 	if !f.IsInteractive() {
-		return "", errors.New("--vcs-root is required (or use interactive mode)")
+		return "", nil
 	}
 
 	roots, _, err := client.GetVcsRoots(api.VcsRootsOptions{Project: projectID, Limit: 100})
@@ -91,14 +98,11 @@ func selectVcsRoot(f *cmdutil.Factory, client api.ClientInterface, projectID str
 		return "", fmt.Errorf("failed to list VCS roots: %w", err)
 	}
 
-	if len(roots.VcsRoot) == 0 {
-		return "", fmt.Errorf("no VCS roots found in project %s, create one first", projectID)
+	options := make([]huh.Option[string], 0, len(roots.VcsRoot)+1)
+	for _, r := range roots.VcsRoot {
+		options = append(options, huh.NewOption(fmt.Sprintf("%s (%s)", r.Name, r.ID), r.ID))
 	}
-
-	options := make([]huh.Option[string], len(roots.VcsRoot))
-	for i, r := range roots.VcsRoot {
-		options[i] = huh.NewOption(fmt.Sprintf("%s (%s)", r.Name, r.ID), r.ID)
-	}
+	options = append(options, huh.NewOption("No VCS root (run with a patch of the local repository)", ""))
 
 	var selected string
 	if err := cmdutil.Select(f.Printer, "Select VCS root", options, &selected); err != nil {

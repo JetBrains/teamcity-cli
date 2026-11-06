@@ -91,3 +91,44 @@ func TestGetPipelineSchemaErrors(t *testing.T) {
 		})
 	}
 }
+
+// TestCreatePipeline verifies the create body carries vcsRoot only when a root is given:
+// a pipeline without a root runs personal builds with a patch of the local repository.
+func TestCreatePipeline(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name    string
+		root    string
+		wantKey bool
+	}{
+		{"with vcs root", "MyRepo", true},
+		{"without vcs root", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var body map[string]any
+			client := setupTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				assert.Equal(t, "/app/pipeline", r.URL.Path)
+				assert.Equal(t, "CLI", r.URL.Query().Get("parentProjectExtId"))
+				raw, err := io.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.NoError(t, json.Unmarshal(raw, &body))
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"id":"CLI_New","name":"New"}`))
+			})
+
+			p, err := client.CreatePipeline("CLI", "New", "jobs: {}", tc.root)
+			require.NoError(t, err)
+			assert.Equal(t, "CLI_New", p.ID)
+			assert.Equal(t, "New", body["name"])
+			assert.Equal(t, "jobs: {}", body["yaml"])
+			if tc.wantKey {
+				assert.Equal(t, map[string]any{"externalVcsRootId": "MyRepo"}, body["vcsRoot"])
+			} else {
+				assert.NotContains(t, body, "vcsRoot")
+			}
+		})
+	}
+}

@@ -2,6 +2,7 @@ package pipeline_test
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -54,6 +55,26 @@ func TestPipelineViewJSON(t *testing.T) {
 	out := cmdtest.CaptureOutput(t, ts.Factory, "pipeline", "view", "TestProject_CI", "--json")
 	assert.Contains(t, out, `"id"`)
 	assert.Contains(t, out, `"TestProject_CI"`)
+}
+
+// TestPipelineCreateNoInputWithoutVcsRoot: --no-input and no --vcs-root creates a pipeline
+// without a VCS root instead of failing; --json prints the created pipeline.
+func TestPipelineCreateNoInputWithoutVcsRoot(t *testing.T) {
+	ts := cmdtest.SetupMockClient(t)
+	var body map[string]any
+	ts.Handle("POST /app/pipeline", func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(raw, &body))
+		cmdtest.JSON(w, map[string]any{"id": "TestProject_New", "name": "New"})
+	})
+	file := filepath.Join(t.TempDir(), ".teamcity.yml")
+	require.NoError(t, os.WriteFile(file, []byte("jobs: {}\n"), 0o600))
+
+	out := cmdtest.CaptureOutput(t, ts.Factory, "pipeline", "create", "New", "--project", "TestProject", "--file", file, "--no-input", "--json")
+	assert.Contains(t, out, `"TestProject_New"`)
+	assert.Equal(t, "New", body["name"])
+	assert.NotContains(t, body, "vcsRoot")
 }
 
 func TestPipelineSchema(t *testing.T) {

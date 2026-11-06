@@ -80,16 +80,17 @@ func (c *Client) GetPipelineYAML(id string) (string, error) {
 	return yaml, nil
 }
 
-// CreatePipeline creates a new pipeline in the given project with a VCS root.
+// CreatePipeline creates a new pipeline in the given project.
+// An empty vcsRootID creates the pipeline without a VCS root; such a pipeline runs only
+// personal builds with a patch of the local repository (run start --local-changes --personal).
 func (c *Client) CreatePipeline(parentProjectID, name, yaml, vcsRootID string) (*Pipeline, error) {
 	if c.ReadOnly {
 		return nil, fmt.Errorf("%w: POST /app/pipeline", ErrReadOnly)
 	}
 
-	req := CreatePipelineRequest{
-		Name:    name,
-		YAML:    yaml,
-		VcsRoot: &PipelineVcsRootRef{ExternalVcsRootID: vcsRootID},
+	req := CreatePipelineRequest{Name: name, YAML: yaml}
+	if vcsRootID != "" {
+		req.VcsRoot = &PipelineVcsRootRef{ExternalVcsRootID: vcsRootID}
 	}
 	body, err := json.Marshal(req)
 	if err != nil {
