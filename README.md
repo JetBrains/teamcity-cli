@@ -120,6 +120,8 @@ For a queued run, `teamcity run view <id>` reports agent and cloud-image compati
 
 `teamcity run download` writes only inside `--output`, and a failed or incomplete transfer leaves existing files untouched.
 
+`agent exec` reports remote command failures and incomplete execution. Run commands that exit their shell inside a child shell, for example `teamcity agent exec 1 "sh -c 'exit 0'"`.
+
 ## Commands
 
 | Group        | Commands                                                                                                                                                                                                                                                                                                        |
