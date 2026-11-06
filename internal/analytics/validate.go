@@ -124,6 +124,9 @@ func SampleEvents() []fus.LogEvent {
 			"action": SkillActionInstall, "agent": "claude_code", "scope": SkillScopeProject,
 			"is_auto_detected": true, "is_success": true,
 		}),
+		mk(GroupSkill, EventGuideViewed, false, map[string]any{
+			"skill": "teamcity-cli", "is_overview": true, "is_success": true,
+		}),
 		mk(GroupWorkspace, EventLinked, false, map[string]any{
 			"source": WorkspaceSourceFlag, "is_ambiguous": false, "is_subdir": true,
 		}),

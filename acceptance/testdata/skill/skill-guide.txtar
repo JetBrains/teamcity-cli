@@ -1,0 +1,19 @@
+# Installed skills are stubs that point at skill guide, which prints the pages.
+
+exec teamcity skill install --agent claude-code --project --no-input
+stdout 'Installed'
+grep 'teamcity skill guide teamcity-cli' .claude/skills/teamcity-cli/SKILL.md
+! exists .claude/skills/teamcity-cli/references
+
+exec teamcity skill guide --no-input
+stdout 'teamcity skill guide teamcity-cli references/commands'
+stdout '## Topics'
+
+exec teamcity skill guide teamcity-cli commands --no-input
+stdout 'Command Reference'
+
+exec teamcity skill guide migrate-to-teamcity --no-input
+stdout 'Migrate to TeamCity'
+
+! exec teamcity skill guide teamcity-cli nonexistent-topic --no-input
+stderr 'unknown topic'

@@ -22,7 +22,8 @@ const (
 	EventCreated   = "created"
 	EventSynced    = "synced"
 
-	EventManaged = "managed"
+	EventManaged     = "managed"
+	EventGuideViewed = "guide.viewed"
 
 	EventLinked = "linked"
 

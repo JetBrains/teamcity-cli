@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	teamcitycli "github.com/JetBrains/teamcity-cli"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,6 +21,7 @@ func TestSkillHelp(t *testing.T) {
 		{"skill", "install", "--help"},
 		{"skill", "update", "--help"},
 		{"skill", "remove", "--help"},
+		{"skill", "guide", "--help"},
 	} {
 		t.Run(args[1], func(t *testing.T) {
 			t.Parallel()
@@ -39,18 +42,32 @@ func TestSkillInstallRemoveDefault(t *testing.T) {
 	skillDir := filepath.Join(tmp, ".claude", "skills", "teamcity-cli")
 
 	cmdtest.RunCmd(t, "skill", "install", "--agent", "claude-code")
-	_, err := os.Stat(filepath.Join(skillDir, "SKILL.md"))
+	stub, err := os.ReadFile(filepath.Join(skillDir, "SKILL.md"))
 	require.NoError(t, err, "SKILL.md should exist after install")
+	assert.Contains(t, string(stub), "teamcity skill guide teamcity-cli", "SKILL.md should be a stub pointing at the guide")
 
-	refs, err := os.ReadDir(filepath.Join(skillDir, "references"))
-	require.NoError(t, err, "references dir should exist")
-	assert.NotEmpty(t, refs, "references should contain files")
+	_, err = os.Stat(filepath.Join(skillDir, "references"))
+	assert.ErrorIs(t, err, os.ErrNotExist, "references are served by skill guide, not installed")
 
 	cmdtest.RunCmd(t, "skill", "update", "--agent", "claude-code")
 
 	cmdtest.RunCmd(t, "skill", "remove", "--agent", "claude-code")
 	_, err = os.Stat(skillDir)
 	assert.ErrorIs(t, err, os.ErrNotExist, "skill dir should be gone after remove")
+}
+
+// TestSkillEnumCoversBundledSkills fails when teamcity-skills adds a skill the FUS skill enum doesn't know.
+func TestSkillEnumCoversBundledSkills(t *testing.T) {
+	t.Parallel()
+	for _, s := range teamcitycli.ListSkills() {
+		assert.Equal(t, s.Name, analytics.NormalizeSkill(s.Name), "add %q to analytics.allSkills", s.Name)
+	}
+}
+
+func TestSkillGuideUnknown(t *testing.T) {
+	t.Parallel()
+	cmdtest.RunCmdExpectErr(t, "unknown skill", "skill", "guide", "nonexistent-skill")
+	cmdtest.RunCmdExpectErr(t, "unknown topic", "skill", "guide", "teamcity-cli", "nonexistent-topic")
 }
 
 func TestSkillInstallUnknownSkill(t *testing.T) {

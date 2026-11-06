@@ -32,6 +32,7 @@ globally for the current user or locally into a project.`,
 	cmd.AddCommand(newSkillInstallCmd(f))
 	cmd.AddCommand(newSkillUpdateCmd(f))
 	cmd.AddCommand(newSkillRemoveCmd(f))
+	cmd.AddCommand(newSkillGuideCmd(f))
 
 	return cmd
 }
@@ -67,6 +68,43 @@ func newSkillListCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 }
 
+func newSkillGuideCmd(f *cmdutil.Factory) *cobra.Command {
+	return &cobra.Command{
+		Use:   "guide [skill] [topic]",
+		Short: "Print a skill's guide for AI coding agents",
+		Long: `Print the guide of a bundled skill.
+
+Installed skills are short stubs that tell agents to run this command, so the
+guide always matches this teamcity release. Without a topic, prints the overview
+followed by its topics. Without a skill, uses the default skill (teamcity-cli).`,
+		Example: `  teamcity skill guide
+  teamcity skill guide teamcity-cli references/commands
+  teamcity skill guide migrate-to-teamcity`,
+		Args:              cobra.MaximumNArgs(2),
+		ValidArgsFunction: completion.SkillGuideArgs(),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			skill, topic := defaultSkill, ""
+			if len(args) > 0 {
+				skill = args[0]
+			}
+			if len(args) > 1 {
+				topic = args[1]
+			}
+			page, err := teamcitycli.SkillGuide(skill, topic)
+			f.Analytics.Track(analytics.GroupSkill, analytics.EventGuideViewed, map[string]any{
+				"skill":       analytics.NormalizeSkill(skill),
+				"is_overview": topic == "",
+				"is_success":  err == nil,
+			})
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprint(f.Printer.Out, page)
+			return nil
+		},
+	}
+}
+
 func newSkillInstallCmd(f *cmdutil.Factory) *cobra.Command {
 	opts := &skillOptions{}
 
@@ -75,6 +113,8 @@ func newSkillInstallCmd(f *cmdutil.Factory) *cobra.Command {
 		Short: "Install skills for AI coding agents",
 		Long: `Install TeamCity skills so AI coding agents can use teamcity commands.
 
+Each skill is installed as a short stub that tells the agent to run
+'teamcity skill guide <skill>', so instructions follow the installed teamcity.
 When no skill name is given, installs the default skill (teamcity-cli).
 Use --all to install every bundled skill.
 Installs globally by default. Use --project to install to the current project only.

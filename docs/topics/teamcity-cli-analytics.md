@@ -17,7 +17,7 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 - CLI version, TeamCity server version (for example, `2026.1`), and server type (`cloud` or `on_prem`).
 - OS (`darwin`, `linux`, `windows`, `freebsd`, `other`) and CPU architecture (`amd64`, `arm64`, `386`, `other`).
 - The CI system the CLI is running inside, if any: `github_actions`, `gitlab`, `jenkins`, `circleci`, `buildkite`, `azure`, `travis`, `teamcity`, `other`, or `none`.
-- The AI coding agent that invoked the CLI, if any: `claude_code`, `junie`, `cursor`, `gemini_cli`, `codex`, `goose`, `augment`, `github_copilot`, `amp`, `windsurf`, `opencode`, `trae`, `roo`, `other`, or `none`.
+- The AI coding agent that invoked the CLI, if any, as one of the agent names [instill](https://github.com/tiulpin/instill/blob/main/agents.go) supports with `-` replaced by `_` (for example `claude_code`, `cursor` or `codex`), `cowork`, `other`, or `none`.
 - How you authenticated: `keyring`, `env`, `build_properties`, `guest`, or `none`. The token itself is never sent.
 - Whether the working directory has a `teamcity.toml` linked-project file (a boolean).
 - A randomly-generated session ID that rotates after 30 minutes of inactivity. The ID is hashed locally before it leaves your machine.
@@ -31,7 +31,7 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 - The total number of flags you set (count only, not the values).
 - Exit code (`0`, `1`, `2`), duration in milliseconds, and an error category if the command failed: `auth`, `permission`, `not_found`, `network`, `validation`, `read_only`, `internal`, or `none`.
 
-**For specific command groups** (build runs, agent sessions, pipeline operations, skill install/update, REST API calls, login, link) the CLI also records some booleans and counts, for example, `is_personal` for `run start`, `error_count` for `pipeline validate`, `had_timeout` for `agent term`. The full schema is in [`internal/analytics/scheme.go`](https://github.com/JetBrains/teamcity-cli/blob/main/internal/analytics/scheme.go).
+**For specific command groups** (build runs, agent sessions, pipeline operations, skill install/update, skill guide reads, REST API calls, login, link) the CLI also records some booleans and counts, for example, `is_personal` for `run start`, `error_count` for `pipeline validate`, `had_timeout` for `agent term`, and for `skill guide` the bundled skill name and whether the agent read the overview or a topic. The full schema is in [`internal/analytics/scheme.go`](https://github.com/JetBrains/teamcity-cli/blob/main/internal/analytics/scheme.go).
 
 ## What we don't collect
 

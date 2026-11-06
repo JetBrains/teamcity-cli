@@ -137,7 +137,7 @@ For a queued run, `teamcity run view <id>` reports agent and cloud-image compati
 | **link**     | Bind this repository to a TeamCity project via `teamcity.toml`                                                                                                                                                                                                                                                  |
 | **config**   | `list`, `get`, `set`                                                                                                                                                                                                                                                                                            |
 | **alias**    | `set`, `list`, `delete`                                                                                                                                                                                                                                                                                         |
-| **skill**    | `list`, `install`, `remove`, `update`                                                                                                                                                                                                                                                                           |
+| **skill**    | `list`, `install`, `remove`, `update`, `guide`                                                                                                                                                                                                                                                                  |
 | **update**   | Check for and install CLI updates (`--check`/`--json` for status only, `--yes` for non-interactive installation) |
 
 Run `teamcity <command> --help` for usage, or see the [command reference](https://www.jetbrains.com/help/teamcity/teamcity-cli-commands.html).
@@ -151,7 +151,10 @@ teamcity skill install           # auto-detects installed agents
 teamcity skill install --project # install to current project only
 teamcity skill update            # update to the version bundled with teamcity
 teamcity skill remove            # uninstall
+teamcity skill guide             # print the guide that installed skills point to
 ```
+
+Installed skills are short stubs that tell the agent to run `teamcity skill guide`, so after a CLI upgrade agents read the instructions for the new version without reinstalling.
 
 For **Claude Code**, you can install the `teamcity` plugin instead, which
 bundles these skills from
