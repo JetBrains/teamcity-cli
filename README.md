@@ -88,6 +88,8 @@ teamcity auth login
 
 Scripts and desktop apps can sign in through the browser without a terminal: `teamcity auth login --server <url> --web --json` never prompts and prints the authorization URL as a JSON line.
 
+Run watches, log following, artifact downloads, authentication, agent commands, update installation, and settings validation report terminal status with [OSC 7501](https://www.superlogical.com/rex/docs/build/program-status). Supporting terminals such as Rex show when work finishes or needs input. Interactive prompts report input, approval, or credential waits. Status reports are suppressed for JSON output and CI.
+
 Then:
 
 ```bash

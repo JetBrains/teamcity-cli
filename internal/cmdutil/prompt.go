@@ -20,7 +20,13 @@ func RequireNonEmpty(s string) error {
 }
 
 // Prompt runs a single huh field with the CLI theme; does not echo — use PromptString / Select / Confirm for that.
-func Prompt(field huh.Field) error {
+func Prompt(p *output.Printer, field huh.Field) error {
+	return prompt(p, field, "question", "Waiting for input")
+}
+
+func prompt(p *output.Printer, field huh.Field, kind, message string) error {
+	restore := p.ProgramWait(kind, message)
+	defer restore()
 	output.StopSpinner() // hand the terminal to huh's prompt UI
 	if in, ok := field.(*huh.Input); ok {
 		in.Prompt("")
@@ -32,7 +38,9 @@ func Prompt(field huh.Field) error {
 }
 
 // RunForm runs a multi-group huh form with shift+tab navigation; use it instead of chaining Prompt calls so groups can navigate between each other.
-func RunForm(groups ...*huh.Group) error {
+func RunForm(p *output.Printer, groups ...*huh.Group) error {
+	restore := p.ProgramWait("question", "Waiting for input")
+	defer restore()
 	output.StopSpinner() // hand the terminal to huh's form UI
 	return huh.NewForm(groups...).
 		WithTheme(promptTheme()).
@@ -54,7 +62,7 @@ func PromptValidatedString(p *output.Printer, title, description string, validat
 	if description != "" {
 		input.Description(description)
 	}
-	if err := Prompt(input); err != nil {
+	if err := Prompt(p, input); err != nil {
 		return err
 	}
 	echo(p, title, *value)
@@ -69,7 +77,7 @@ func PromptOptionalString(p *output.Printer, title, description string, value *s
 	if description != "" {
 		input.Description(description)
 	}
-	if err := Prompt(input); err != nil {
+	if err := Prompt(p, input); err != nil {
 		return err
 	}
 	echo(p, title, *value)
@@ -77,12 +85,12 @@ func PromptOptionalString(p *output.Printer, title, description string, value *s
 }
 
 // PromptSecret asks for a hidden value and never echoes it back.
-func PromptSecret(title string, value *string) error {
-	return Prompt(huh.NewInput().
+func PromptSecret(p *output.Printer, title string, value *string) error {
+	return prompt(p, huh.NewInput().
 		Title(title).
 		EchoMode(huh.EchoModePassword).
 		Validate(RequireNonEmpty).
-		Value(value))
+		Value(value), "auth", "Waiting for a secret")
 }
 
 // Select presents a typed picker (filtering auto-enabled for 5+ options) and echoes the picked label back.
@@ -94,7 +102,7 @@ func Select[T comparable](p *output.Printer, title string, options []huh.Option[
 	if len(options) >= 5 {
 		s.Filtering(true)
 	}
-	if err := Prompt(s); err != nil {
+	if err := Prompt(p, s); err != nil {
 		return err
 	}
 	for _, o := range options {
@@ -107,14 +115,14 @@ func Select[T comparable](p *output.Printer, title string, options []huh.Option[
 }
 
 // Confirm asks a yes/no question inline with left-aligned compact buttons.
-func Confirm(title string, value *bool) error {
-	return Prompt(huh.NewConfirm().
+func Confirm(p *output.Printer, title string, value *bool) error {
+	return prompt(p, huh.NewConfirm().
 		Title(title).
 		Affirmative("yes").
 		Negative("no").
 		Inline(true).
 		WithButtonAlignment(lipgloss.Left).
-		Value(value))
+		Value(value), "permission", "Waiting for confirmation")
 }
 
 func echo(p *output.Printer, label, value string) {

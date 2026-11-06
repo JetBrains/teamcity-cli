@@ -41,7 +41,7 @@ func runQueueRemove(f *cmdutil.Factory, runID string, opts *queueRemoveOptions) 
 
 	if needsConfirmation {
 		var confirm bool
-		if err := cmdutil.Confirm(fmt.Sprintf("Remove run %s from queue?", runID), &confirm); err != nil {
+		if err := cmdutil.Confirm(f.Printer, fmt.Sprintf("Remove run %s from queue?", runID), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

@@ -52,7 +52,7 @@ func runConnectionDelete(f *cmdutil.Factory, opts *connectionDeleteOptions, id s
 
 	if !opts.force && f.IsInteractive() {
 		confirm := false
-		if err := cmdutil.Confirm(fmt.Sprintf("Delete connection %s from %s?", id, projectID), &confirm); err != nil {
+		if err := cmdutil.Confirm(f.Printer, fmt.Sprintf("Delete connection %s from %s?", id, projectID), &confirm); err != nil {
 			return err
 		}
 		if !confirm {

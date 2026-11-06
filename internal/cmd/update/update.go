@@ -60,7 +60,7 @@ Use --yes to install without prompting. Non-interactive invocations require
 	return cmd
 }
 
-func runUpdate(f *cmdutil.Factory, opts *updateOptions) error {
+func runUpdate(f *cmdutil.Factory, opts *updateOptions) (resErr error) {
 	p := f.Printer
 
 	if !opts.json {
@@ -105,7 +105,7 @@ func runUpdate(f *cmdutil.Factory, opts *updateOptions) error {
 			return api.Validation("confirmation required to install the update", "Run 'teamcity update --yes' to install or 'teamcity update --check' to only check")
 		}
 		var confirmed bool
-		if err := cmdutil.Confirm("Install this update?", &confirmed); err != nil {
+		if err := cmdutil.Confirm(f.Printer, "Install this update?", &confirmed); err != nil {
 			return err
 		}
 		if !confirmed {
@@ -113,6 +113,8 @@ func runUpdate(f *cmdutil.Factory, opts *updateOptions) error {
 			return nil
 		}
 	}
+	p.ProgramStatus(output.ProgramWorking, "Installing TeamCity CLI update")
+	defer func() { cmdutil.ProgramEnded(p, f.Context(), resErr, "Update installed", "Update failed") }()
 	output.StopSpinner()
 	if err := upgrade(f.Context(), method, release.Version, f.IOStreams.Out, f.IOStreams.ErrOut); err != nil {
 		return fmt.Errorf("update failed: %w", err)

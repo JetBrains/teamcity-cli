@@ -76,7 +76,7 @@ func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo reposi
 
 	// TODO: copy pending design review
 	proceed := true
-	if err := cmdutil.Confirm("Continue onboarding with "+ag.label+"?", &proceed); err != nil {
+	if err := cmdutil.Confirm(f.Printer, "Continue onboarding with "+ag.label+"?", &proceed); err != nil {
 		return err
 	}
 	if !proceed {

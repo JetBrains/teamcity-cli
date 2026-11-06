@@ -32,12 +32,23 @@ shell exits or the connection drops.`,
 		Args: cobra.ExactArgs(1),
 		Example: `  teamcity agent term 1
   teamcity agent term Agent-Linux-01`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (resErr error) {
+			p := f.Printer
+			p.ProgramStatus(output.ProgramWorking, "Connecting to agent "+args[0])
+			defer func() {
+				if resErr == nil || errors.Is(f.Context().Err(), context.Canceled) || errors.Is(resErr, context.Canceled) {
+					p.ProgramStatus(output.ProgramIdle, "")
+				} else {
+					p.ProgramStatus(output.ProgramError, "Agent terminal connection failed")
+				}
+			}()
 			conn, err := connectToAgent(f, f.Context(), args[0], true)
 			if err != nil {
 				return err
 			}
 			start := time.Now()
+			p.ProgramStatus(output.ProgramIdle, "")        // Hand status ownership to the remote shell before relaying its output.
+			defer p.ProgramStatus(output.ProgramClear, "") // Remove remote child records before reporting the local outcome.
 			termErr := conn.RunInteractive(f.Context())
 			f.Analytics.Track(analytics.GroupAgent, analytics.EventTerminalClosed, map[string]any{
 				"duration_seconds": int(time.Since(start).Seconds()),
@@ -75,7 +86,12 @@ agent-side commands from teamcity flags.`,
 		Example: `  teamcity agent exec 1 "ls -la"
   teamcity agent exec Agent-Linux-01 "cat /etc/os-release"
   teamcity agent exec Agent-Linux-01 --timeout 10m -- long-running-script.sh`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (resErr error) {
+			p := f.Printer
+			p.ProgramStatus(output.ProgramWorking, "Connecting to agent "+args[0])
+			defer func() {
+				cmdutil.ProgramEnded(p, f.Context(), resErr, "Remote command session ended", "Remote command session failed")
+			}()
 			conn, err := connectToAgent(f, f.Context(), args[0], false)
 			if err != nil {
 				return err
@@ -84,6 +100,7 @@ agent-side commands from teamcity flags.`,
 			defer cancel()
 
 			start := time.Now()
+			p.ProgramStatus(output.ProgramWorking, "Executing on agent "+args[0])
 			execErr := conn.Exec(ctx, strings.Join(args[1:], " "))
 			exitCode := 0
 			if execErr != nil {

@@ -26,7 +26,7 @@ func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) 
 	if !pkceEnabled(ctx, client) {
 		return "", ""
 	}
-	scopes := selectPkceScopes()
+	scopes := selectPkceScopes(p)
 	if len(scopes) == 0 {
 		p.Info("Skipping browser login, entering token manually...")
 		return "", ""
@@ -86,9 +86,9 @@ func describeScope(scope string) string {
 }
 
 // selectPkceScopes lets the user review defaults and opt into additional permissions; returns nil if canceled.
-func selectPkceScopes() []string {
+func selectPkceScopes(p *output.Printer) []string {
 	selected := api.DefaultScopes()
-	if err := cmdutil.Prompt(newPkceScopePicker(&selected)); err != nil {
+	if err := cmdutil.Prompt(p, newPkceScopePicker(&selected)); err != nil {
 		return nil
 	}
 	return selected
@@ -144,6 +144,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client,
 	}
 	p.Info("%s", opening)
 
+	restore := p.ProgramWait("auth", "Waiting for browser sign-in")
 	result, err := browserflow.Run(parent, browserflow.Options{
 		Listener: listener,
 		State:    state,
@@ -155,6 +156,7 @@ func runPkceLogin(parent context.Context, p *output.Printer, client *api.Client,
 		CallbackPath: browserflow.DefaultCallbackPath,
 		Timeout:      authCodeLifetime,
 	})
+	restore()
 	if err != nil {
 		return nil, err
 	}

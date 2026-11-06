@@ -86,7 +86,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 	if opts.logs && !opts.quiet {
 		if watchHasTTYFn() {
 			tuiStart := time.Now()
-			tuiErr := runWatchTUIFn(ctx, client, runID, opts.interval)
+			tuiErr := runWatchTUIFn(ctx, client, runID, opts.interval, p)
 			status := watchExitStatus(tuiErr)
 			// TUI returns nil even when the user quits early; treat any context cancel as canceled.
 			if errors.Is(ctx.Err(), context.Canceled) || errors.Is(topCtx.Err(), context.Canceled) {
@@ -105,6 +105,12 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 
 	watchStart := time.Now()
 	var lastBuild *api.Build
+	if !opts.json {
+		p.ProgramStatus(output.ProgramWorking, "Watching run "+runID)
+		defer func() {
+			cmdutil.WatchEnded(p, ctx, runID, lastBuild != nil && lastBuild.State == "finished", resErr)
+		}()
+	}
 	defer func() {
 		status := analytics.BuildStatusError
 		timedOut := false

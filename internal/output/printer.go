@@ -15,8 +15,11 @@ type Printer struct {
 	ErrOut  io.Writer
 	Quiet   bool
 	Verbose bool
+	// SuppressProgramStatus keeps terminal metadata out of machine-readable command output.
+	SuppressProgramStatus bool
 
-	mu sync.Mutex
+	mu            sync.Mutex
+	programStatus string
 }
 
 // DefaultPrinter returns a Printer writing to os.Stdout/os.Stderr, wrapped so the activity spinner clears on the first byte of output.

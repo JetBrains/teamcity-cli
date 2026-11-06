@@ -22,7 +22,7 @@ func promptDir(f *cmdutil.Factory, title, description string, validate func(stri
 		Validate(validate).
 		Value(&input).
 		SuggestionsFunc(func() []string { return dirSuggestions(input) }, &input)
-	if err := cmdutil.Prompt(field); err != nil {
+	if err := cmdutil.Prompt(f.Printer, field); err != nil {
 		return "", err
 	}
 	_, _ = fmt.Fprintf(f.Printer.Out, "%s: %s\n", title, output.Cyan(input))
