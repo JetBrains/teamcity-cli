@@ -2,12 +2,14 @@ package onboard
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tiulpin/instill"
@@ -89,12 +91,62 @@ func TestPickAgentSingleSkipsPrompt(t *testing.T) {
 	assert.Equal(t, supportedAgents[0], got)
 }
 
+// stubConfirm answers every confirm prompt with answer for the test.
+func stubConfirm(t *testing.T, answer bool) {
+	t.Helper()
+	orig := confirm
+	confirm = func(_ string, v *bool) error {
+		*v = answer
+		return nil
+	}
+	t.Cleanup(func() { confirm = orig })
+}
+
 func TestHandOverToAgentNeedsLocalCopy(t *testing.T) {
-	client := newTestClient(t, nil) // any request fails the test
+	client, rec := newRecordingClient(t, nil) // any other request fails the test
 	f, _ := testFactory()
 
 	err := handOverToAgent(f, client, repository{source: sourceSample, remoteURL: "https://github.com/acme/app"}, "Instance_App", true, supportedAgents[:1])
 	assert.ErrorContains(t, err, "needs a local copy")
+	assert.Equal(t, []string{"handover-finished"}, rec.endpoints(), "no agent launched, so no handover-started")
+	assert.JSONEq(t, `{"repositoryType":"demo","status":"no_checkout"}`, rec.body(t, "handover-finished"))
+}
+
+func TestHandOverToAgentDeclined(t *testing.T) {
+	stubConfirm(t, false) // decline, so no skills get installed
+	client, rec := newRecordingClient(t, nil)
+	f, _ := testFactory()
+
+	require.NoError(t, handOverToAgent(f, client, repository{source: sourcePath, dir: t.TempDir()}, "Instance_App", true, supportedAgents[:1]))
+	assert.Equal(t, []string{"handover-finished"}, rec.endpoints(), "declined before the agent was launched")
+	assert.JSONEq(t, `{"repositoryType":"own","status":"handover_declined"}`, rec.body(t, "handover-finished"))
+}
+
+func TestHandOverToAgentIgnoresOlderServer(t *testing.T) {
+	stubConfirm(t, false)
+	run := func(status int) (string, error) {
+		client, rec := newRecordingClient(t, nil)
+		rec.respond(status)
+		f, out := testFactory()
+		err := handOverToAgent(f, client, repository{dir: t.TempDir()}, "Instance_App", true, supportedAgents[:1])
+		assert.Len(t, rec.endpoints(), 1)
+		return out.String(), err
+	}
+
+	wantOut, wantErr := run(http.StatusNoContent)
+	gotOut, gotErr := run(http.StatusNotFound)
+	assert.Equal(t, wantErr, gotErr)
+	assert.Equal(t, wantOut, gotOut)
+}
+
+func TestHandOverToAgentSkippedWhenOptedOut(t *testing.T) {
+	stubConfirm(t, false)
+	client, rec := newRecordingClient(t, nil)
+	t.Setenv("DO_NOT_TRACK", "1")
+	f, _ := testFactory()
+
+	require.NoError(t, handOverToAgent(f, client, repository{dir: t.TempDir()}, "Instance_App", true, supportedAgents[:1]))
+	assert.Empty(t, rec.endpoints())
 }
 
 func TestDetectAgentsNone(t *testing.T) {
@@ -103,6 +155,63 @@ func TestDetectAgentsNone(t *testing.T) {
 	agents, err := detectAgents(t.Context())
 	require.NoError(t, err)
 	assert.Empty(t, agents)
+}
+
+func TestNotifyAgentsDetected(t *testing.T) {
+	tests := []struct {
+		name   string
+		agents []agent
+		want   string
+	}{
+		{"none", nil, `{"agents":["none"]}`},
+		{"one", supportedAgents[:1], `{"agents":["claude_code"]}`},
+		{"all", supportedAgents, `{"agents":["claude_code","codex","junie"]}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			client, rec := newRecordingClient(t, nil)
+			f, _ := testFactory()
+
+			notifyAgentsDetected(f, client, tc.agents)
+			assert.JSONEq(t, tc.want, rec.body(t, "agents-detected"))
+		})
+	}
+}
+
+func TestNotifyHandoverStarted(t *testing.T) {
+	client, rec := newRecordingClient(t, nil)
+	f, _ := testFactory()
+
+	notifyHandoverStarted(f, client, api.OnboardingRepositoryDemo, supportedAgents[0])
+	assert.JSONEq(t, `{"repositoryType":"demo","agent":"claude_code"}`, rec.body(t, "handover-started"))
+}
+
+func TestHandoverStatus(t *testing.T) {
+	tests := []struct {
+		end  handoverEnd
+		want api.OnboardingHandoverStatus
+	}{
+		{endNoCheckout, "no_checkout"},
+		{endDeclined, "handover_declined"},
+		{endSkillInstallFailed, "skill_install_failure"},
+		{endAgentStartFailed, "agent_failed_to_start"},
+		{endAgentInterrupted, "agent_interrupted"},
+		{endAgentError, "agent_error"},
+		{endRerunDeclined, "handover_rerun_declined"},
+		{endAgentExited, "success"},
+		{endFailed, "error"},
+	}
+	for _, tc := range tests {
+		t.Run(string(tc.want), func(t *testing.T) {
+			assert.Equal(t, tc.want, handoverStatus(tc.end))
+		})
+	}
+}
+
+func TestRepositoryType(t *testing.T) {
+	assert.Equal(t, api.OnboardingRepositoryDemo, repositoryType(sourceSample))
+	assert.Equal(t, api.OnboardingRepositoryOwn, repositoryType(sourceCurrent))
+	assert.Equal(t, api.OnboardingRepositoryOwn, repositoryType(sourcePath))
 }
 
 func TestSkillInstallCmd(t *testing.T) {

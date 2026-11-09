@@ -10,27 +10,30 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/onboarding"
 )
 
 // launchAgent runs ag in the foreground on this terminal with the staged context, offering a rerun when it exits with an error.
-func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) error {
+// It returns where the hand-over stopped.
+func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) (handoverEnd, error) {
 	args := ag.promptArgs(handoverPrompt(hc))
+	rt := repositoryType(hc.repo.source)
 	f.Printer.Info("Starting %s in this terminal. Exit it to return to your shell.\n", ag.label)
 	for {
-		err := runAgent(ag.path, args, hc.repo.dir)
+		err := runAgent(ag.path, args, hc.repo.dir, rt)
 		if err == nil {
 			// A clean exit doesn't prove the setup is done, only that the agent ended normally.
 			f.Printer.Info("\n%s exited.", ag.label)
-			return nil
+			return endAgentExited, nil
 		}
 		exitErr, ok := errors.AsType[*exec.ExitError](err)
 		if !ok {
-			return fmt.Errorf("start %s: %w", ag.label, err)
+			return endAgentStartFailed, fmt.Errorf("start %s: %w", ag.label, err)
 		}
 		code := max(exitErr.ExitCode(), 1) // -1 when killed by a signal
 		// Ctrl+C or SIGTERM ended it; the user asked to stop, so don't offer a rerun.
 		if f.Context().Err() != nil {
-			return &cmdutil.ExitError{Code: code}
+			return endAgentInterrupted, &cmdutil.ExitError{Code: code}
 		}
 
 		f.Printer.Warn("%s stopped with an error (%s). See its message above.", ag.label, exitErr.ProcessState)
@@ -39,27 +42,29 @@ func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) error {
 		}
 		// TODO: copy pending design review
 		rerun := false
-		if err := cmdutil.Confirm("Run "+ag.label+" again? It may repeat changes it already made.", &rerun); err != nil {
-			return err
+		if err := confirm("Run "+ag.label+" again? It may repeat changes it already made.", &rerun); err != nil {
+			return endFailed, err
 		}
 		if !rerun {
-			return &cmdutil.ExitError{Code: code}
+			return endRerunDeclined, &cmdutil.ExitError{Code: code}
 		}
 		// A manual repair or update may have replaced the executable.
 		path, err := exec.LookPath(ag.bin)
 		if err != nil {
-			return api.Validation(ag.bin+" is no longer on PATH", "Fix the "+ag.label+" installation, then rerun teamcity onboard")
+			return endAgentError, api.Validation(ag.bin+" is no longer on PATH", "Fix the "+ag.label+" installation, then rerun teamcity onboard")
 		}
 		ag.path = path
 	}
 }
 
-// runAgent runs path as a foreground child sharing this terminal; an *exec.ExitError means it ran and failed, any other error that it didn't start.
-func runAgent(path string, args []string, dir string) error {
+// runAgent runs path as a foreground child sharing this terminal, telling the teamcity commands it runs that they're inside the onboarding of an rt repository.
+// An *exec.ExitError means it ran and failed, any other error that it didn't start.
+func runAgent(path string, args []string, dir string, rt api.OnboardingRepositoryType) error {
 	// Not CommandContext: Ctrl+C reaches the agent through the terminal, and it handles it itself;
 	// tc/main.go traps the signal, so teamcity waits instead of dying, and canceling would kill the agent mid-session.
 	cmd := exec.Command(path, args...)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), onboarding.Env(rt))
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return cmd.Run()
 }

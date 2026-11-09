@@ -15,6 +15,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/completion"
 	"github.com/JetBrains/teamcity-cli/internal/git"
+	"github.com/JetBrains/teamcity-cli/internal/onboarding"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -492,6 +493,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		"is_watched":        opts.watch,
 		"is_dry_run":        false,
 	})
+	onboarding.NotifyBuildQueued(f, client, build.ID)
 
 	if opts.json {
 		if opts.watch {

@@ -144,6 +144,13 @@ type ClientInterface interface {
 	CreateProjectFeature(projectID string, feat ProjectFeature) (*ProjectFeature, error)
 	DeleteProjectFeature(projectID, featureID string) error
 
+	OnboardingLoginCompleted(ctx context.Context) error
+	OnboardingAgentsDetected(ctx context.Context, req OnboardingAgentsDetectedRequest) error
+	OnboardingHandoverStarted(ctx context.Context, req OnboardingHandoverStartedRequest) error
+	OnboardingHandoverFinished(ctx context.Context, req OnboardingHandoverFinishedRequest) error
+	OnboardingPipelineCreated(ctx context.Context, req OnboardingPipelineCreatedRequest) error
+	OnboardingBuildQueued(ctx context.Context, req OnboardingBuildQueuedRequest) error
+
 	RawRequest(ctx context.Context, method, path string, body io.Reader, headers map[string]string) (*RawResponse, error)
 	NormalizePaginationPath(href string) string
 
