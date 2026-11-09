@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-// promptDir asks for a directory path, completing subdirectories with ctrl+e, and echoes the answer like cmdutil.PromptString.
+// promptDir asks for a directory path, completing subdirectories with tab, and echoes the answer like cmdutil.PromptString.
 func promptDir(f *cmdutil.Factory, title, description string, validate func(string) error) (string, error) {
 	var input string
 	field := huh.NewInput().

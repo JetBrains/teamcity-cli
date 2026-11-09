@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/JetBrains/teamcity-cli/internal/output"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -27,8 +28,17 @@ func Prompt(field huh.Field) error {
 	}
 	return huh.NewForm(huh.NewGroup(field)).
 		WithTheme(promptTheme()).
+		WithKeyMap(singleFieldKeyMap()).
 		WithShowHelp(true).
 		Run()
+}
+
+// singleFieldKeyMap completes input suggestions with tab, like a shell; with one field there is nothing for tab to move to.
+func singleFieldKeyMap() *huh.KeyMap {
+	k := huh.NewDefaultKeyMap()
+	k.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "complete"))
+	k.Input.Next = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "next"))
+	return k
 }
 
 // RunForm runs a multi-group huh form with shift+tab navigation; use it instead of chaining Prompt calls so groups can navigate between each other.
