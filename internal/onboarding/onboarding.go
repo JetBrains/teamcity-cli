@@ -35,9 +35,19 @@ func Enabled() bool {
 
 // Notify runs call, which reports one onboarding step to the server, unless CLI analytics is opted out; a failure is only logged at debug level.
 func Notify(ctx context.Context, debug func(string, ...any), endpoint string, call func(context.Context) error) {
-	if !Enabled() {
-		return
+	if Enabled() {
+		send(ctx, debug, endpoint, call)
 	}
+}
+
+// NotifyInBackground is Notify without waiting for the server; a report still in flight when the process exits is lost.
+func NotifyInBackground(ctx context.Context, debug func(string, ...any), endpoint string, call func(context.Context) error) {
+	if Enabled() {
+		go send(ctx, debug, endpoint, call)
+	}
+}
+
+func send(ctx context.Context, debug func(string, ...any), endpoint string, call func(context.Context) error) {
 	// Not canceled with ctx, so an interrupted onboarding still reports how it ended; the client bounds the call with a short timeout.
 	if err := call(context.WithoutCancel(ctx)); err != nil {
 		debug("onboarding: %s not sent: %v", endpoint, err)

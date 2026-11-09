@@ -15,6 +15,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/JetBrains/teamcity-cli/internal/onboarding"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,11 +82,15 @@ func (r *onboardingRecorder) body(t *testing.T, endpoint string) string {
 }
 
 // newRecordingClient is newTestClient that also returns the recorder of onboarding endpoint calls.
-// It clears the analytics opt-outs, since the onboarding endpoints aren't called without analytics.
+// It clears the analytics opt-outs, since the onboarding endpoints aren't called without analytics,
+// and sends background reports synchronously, so each is recorded when the call that sends it returns.
 func newRecordingClient(t *testing.T, routes map[string]http.HandlerFunc) (*api.Client, *onboardingRecorder) {
 	t.Helper()
 	t.Setenv(analytics.EnvDoNotTrack, "")
 	t.Setenv(analytics.EnvAnalytics, "")
+	orig := notifyInBackground
+	notifyInBackground = onboarding.Notify
+	t.Cleanup(func() { notifyInBackground = orig })
 	rec := &onboardingRecorder{}
 	mux := http.NewServeMux()
 	if _, ok := routes["GET /app/rest/server"]; !ok {

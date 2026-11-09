@@ -56,6 +56,9 @@ func handoverStatus(end handoverEnd) api.OnboardingHandoverStatus {
 	}
 }
 
+// notifyInBackground sends reports the onboarding doesn't wait for; tests replace it with onboarding.Notify to see them when the call returns.
+var notifyInBackground = onboarding.NotifyInBackground
+
 // reportedAgent is a's AI agent enum value.
 func reportedAgent(a agent) api.OnboardingAgent {
 	return api.OnboardingAgent(analytics.NormalizeAIAgent(a.name))
@@ -74,18 +77,18 @@ func reportedAgents(agents []agent) []api.OnboardingAgent {
 }
 
 func notifyLoginCompleted(f *cmdutil.Factory, client api.ClientInterface) {
-	onboarding.Notify(f.Context(), f.Printer.Debug, "login-completed", client.OnboardingLoginCompleted)
+	notifyInBackground(f.Context(), f.Printer.Debug, "login-completed", client.OnboardingLoginCompleted)
 }
 
 func notifyAgentsDetected(f *cmdutil.Factory, client api.ClientInterface, agents []agent) {
-	onboarding.Notify(f.Context(), f.Printer.Debug, "agents-detected", func(ctx context.Context) error {
+	notifyInBackground(f.Context(), f.Printer.Debug, "agents-detected", func(ctx context.Context) error {
 		return client.OnboardingAgentsDetected(ctx, api.OnboardingAgentsDetectedRequest{Agents: reportedAgents(agents)})
 	})
 }
 
 // notifyHandoverStarted reports that ag is about to be launched with the onboarding prompt; reruns don't report it again.
 func notifyHandoverStarted(f *cmdutil.Factory, client api.ClientInterface, rt api.OnboardingRepositoryType, ag agent) {
-	onboarding.Notify(f.Context(), f.Printer.Debug, "handover-started", func(ctx context.Context) error {
+	notifyInBackground(f.Context(), f.Printer.Debug, "handover-started", func(ctx context.Context) error {
 		return client.OnboardingHandoverStarted(ctx, api.OnboardingHandoverStartedRequest{RepositoryType: rt, Agent: reportedAgent(ag)})
 	})
 }

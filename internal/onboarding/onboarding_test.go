@@ -82,3 +82,28 @@ func TestNotify(t *testing.T) {
 		})
 	}
 }
+
+func TestNotifyInBackground(t *testing.T) {
+	t.Run("returns before the call finishes", func(t *testing.T) {
+		enableAnalytics(t)
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		release, done := make(chan struct{}), make(chan error)
+		NotifyInBackground(ctx, t.Logf, "handover-started", func(ctx context.Context) error {
+			<-release
+			done <- ctx.Err()
+			return nil
+		})
+		close(release) // reached only because NotifyInBackground didn't wait for the blocked call
+		assert.NoError(t, <-done, "the context outlives cancellation")
+	})
+
+	t.Run("skipped when opted out", func(t *testing.T) {
+		enableAnalytics(t)
+		t.Setenv(analytics.EnvDoNotTrack, "1")
+		NotifyInBackground(t.Context(), t.Logf, "handover-started", func(context.Context) error {
+			t.Error("no call expected when opted out")
+			return nil
+		})
+	})
+}
