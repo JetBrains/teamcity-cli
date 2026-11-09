@@ -80,10 +80,12 @@ type handoverContext struct {
 var confirm = cmdutil.Confirm
 
 // handOverToAgent passes the onboarding context (repo, its TeamCity project, VCS root status) to the picked AI agent to finish the setup,
-// and reports how the hand-over ended.
+// and tracks and reports how the hand-over ended.
 func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool, agents []agent) error {
 	end, err := handOver(f, client, repo, projectID, authorized, agents)
-	notifyHandoverFinished(f, client, repositoryType(repo.source), handoverStatus(end))
+	rt, status := repositoryType(repo.source), handoverStatus(end)
+	trackHandoverFinished(f, rt, status)
+	notifyHandoverFinished(f, client, rt, status)
 	return err
 }
 
@@ -95,13 +97,13 @@ func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, p
 	}
 	ag, err := pickAgent(f, agents)
 	if err != nil {
-		return endFailed, err
+		return promptEnd(err, endDeclined), err
 	}
 
 	// TODO: copy pending design review
 	proceed := true
 	if err := confirm("Continue onboarding with "+ag.label+"?", &proceed); err != nil {
-		return endFailed, err
+		return promptEnd(err, endDeclined), err
 	}
 	if !proceed {
 		return endDeclined, nil
@@ -109,18 +111,21 @@ func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, p
 
 	scope, err := promptSkillScope(f, repo)
 	if err != nil {
-		return endFailed, err
+		return promptEnd(err, endDeclined), err
 	}
 	if err := installSkills(f, ag, scope, repo.dir); err != nil {
 		return endSkillInstallFailed, err
 	}
 	sandbox, err := allowOutsideSandbox(f, ag, repo.dir)
 	if err != nil {
-		return endFailed, err
+		return promptEnd(err, endDeclined), err
 	}
 
+	trackSandboxChecked(f, ag, sandbox.status)
 	notifySandboxChecked(f, client, ag, sandbox.status)
-	notifyHandoverStarted(f, client, repositoryType(repo.source), ag)
+	rt := repositoryType(repo.source)
+	trackHandoverStarted(f, rt, ag)
+	notifyHandoverStarted(f, client, rt, ag)
 	return launchAgent(f, ag, handoverContext{
 		serverURL:  client.ServerURL(),
 		projectID:  projectID,

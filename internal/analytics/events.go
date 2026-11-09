@@ -31,6 +31,11 @@ const (
 	EventLinked = "linked"
 
 	EventCompleted = "completed"
+
+	EventAgentsDetected   = "agents.detected"
+	EventSandboxChecked   = "sandbox.checked"
+	EventHandoverStarted  = "handover.started"
+	EventHandoverFinished = "handover.finished"
 )
 
 const (
@@ -52,6 +57,18 @@ const (
 	MigrateValidationValid   = "valid"
 	MigrateValidationInvalid = "invalid"
 	MigrateValidationSkipped = "skipped"
+)
+
+const (
+	OnboardingRepositoryOwn  = "own"
+	OnboardingRepositoryDemo = "demo"
+)
+
+const (
+	OnboardingSandboxNotSandboxed = "not_sandboxed"
+	OnboardingSandboxAllowed      = "allowed"
+	OnboardingSandboxDeclined     = "declined"
+	OnboardingSandboxAllowFailed  = "allow_failed"
 )
 
 const (

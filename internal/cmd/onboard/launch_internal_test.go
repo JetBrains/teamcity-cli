@@ -10,6 +10,7 @@ import (
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
+	"github.com/charmbracelet/huh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -113,6 +114,16 @@ func TestLaunchAgentFailure(t *testing.T) {
 		require.True(t, ok, "want *cmdutil.ExitError, got %v", err)
 		assert.Equal(t, 3, exitErr.Code)
 		assert.Contains(t, out.String(), "stopped with an error")
+		assert.Equal(t, api.OnboardingStatusHandoverRerunDeclined, handoverStatus(end))
+	})
+
+	t.Run("rerun prompt aborted", func(t *testing.T) {
+		stubConfirmErr(t, huh.ErrUserAborted)
+		ag := agent{label: "Codex", bin: "codex", path: fakeBin(t, t.TempDir(), "codex", "exit 3")}
+		f, _ := testFactory()
+
+		end, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
+		assert.ErrorIs(t, err, huh.ErrUserAborted)
 		assert.Equal(t, api.OnboardingStatusHandoverRerunDeclined, handoverStatus(end))
 	})
 

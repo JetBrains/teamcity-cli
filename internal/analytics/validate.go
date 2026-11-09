@@ -137,6 +137,18 @@ func SampleEvents() []fus.LogEvent {
 			"source": MigrateSourceGitHubActions, "outcome": MigrateOutcomeClean,
 			"validation_status": MigrateValidationValid, "is_dry_run": false,
 		}),
+		mk(GroupOnboarding, EventAgentsDetected, false, map[string]any{
+			"has_claude_code": true, "has_codex": false, "has_junie": true,
+		}),
+		mk(GroupOnboarding, EventSandboxChecked, false, map[string]any{
+			"agent": "claude_code", "status": OnboardingSandboxAllowFailed,
+		}),
+		mk(GroupOnboarding, EventHandoverStarted, false, map[string]any{
+			"repository": OnboardingRepositoryOwn, "agent": "codex",
+		}),
+		mk(GroupOnboarding, EventHandoverFinished, false, map[string]any{
+			"repository": OnboardingRepositoryDemo, "outcome": "handover_rerun_declined",
+		}),
 	}
 }
 

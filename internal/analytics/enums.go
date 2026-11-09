@@ -73,6 +73,24 @@ func NormalizeSkill(name string) string {
 	return "other"
 }
 
+// OnboardingAgents enumerates the AI agents `teamcity onboard` can hand over to.
+func OnboardingAgents() []string {
+	return []string{"claude_code", "codex", "junie"}
+}
+
+// OnboardingSandboxStatuses enumerates how the step that lets teamcity run outside the agent's sandbox ends.
+func OnboardingSandboxStatuses() []string {
+	return []string{OnboardingSandboxNotSandboxed, OnboardingSandboxAllowed, OnboardingSandboxDeclined, OnboardingSandboxAllowFailed}
+}
+
+// OnboardingOutcomes enumerates how the onboarding hand-over ends; they match the statuses `teamcity onboard` reports to the server.
+func OnboardingOutcomes() []string {
+	return []string{
+		"success", "no_checkout", "handover_declined", "skill_install_failure",
+		"agent_failed_to_start", "agent_interrupted", "agent_error", "handover_rerun_declined", "error",
+	}
+}
+
 func skillAgentEnum() []string {
 	return slices.DeleteFunc(allAIAgents(), func(a string) bool { return a == "none" })
 }
