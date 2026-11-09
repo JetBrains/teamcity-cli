@@ -23,7 +23,7 @@ func TestScheme_HasAllExpectedGroups(t *testing.T) {
 		GroupSession: false, GroupCommand: false, GroupAPI: false,
 		GroupAuth: false, GroupBuild: false,
 		GroupAgent: false, GroupPipeline: false, GroupSkill: false,
-		GroupWorkspace: false, GroupMigrate: false,
+		GroupWorkspace: false, GroupMigrate: false, GroupOnboarding: false,
 	}
 	for _, g := range Scheme.Groups {
 		if _, ok := want[g.ID]; ok {

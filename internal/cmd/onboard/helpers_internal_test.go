@@ -125,6 +125,23 @@ func decodeJSON(t *testing.T, r *http.Request, v any) {
 	require.NoError(t, json.NewDecoder(r.Body).Decode(v))
 }
 
+type trackedEvent struct {
+	event string
+	data  map[string]any
+}
+
+// stubTrack records the onboarding analytics events instead of tracking them.
+func stubTrack(t *testing.T) *[]trackedEvent {
+	t.Helper()
+	var events []trackedEvent
+	orig := track
+	track = func(_ *cmdutil.Factory, event string, data map[string]any) {
+		events = append(events, trackedEvent{event, data})
+	}
+	t.Cleanup(func() { track = orig })
+	return &events
+}
+
 // testFactory returns a non-interactive Factory whose output goes to the returned buffer.
 func testFactory() (*cmdutil.Factory, *bytes.Buffer) {
 	var buf bytes.Buffer

@@ -2,6 +2,7 @@ package onboard
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,6 +11,8 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
+	"github.com/charmbracelet/huh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tiulpin/instill"
@@ -33,6 +36,7 @@ func skipOnWindows(t *testing.T) {
 func TestSupportedAgentsAreValid(t *testing.T) {
 	for _, a := range supportedAgents {
 		assert.Contains(t, instill.AgentNames(), a.name, "skill install must accept agent %q", a.name)
+		assert.Contains(t, analytics.OnboardingAgents(), analytics.NormalizeAIAgent(a.name), "the onboarding analytics must accept agent %q", a.name)
 		assert.NotEmpty(t, a.label)
 		assert.NotEmpty(t, a.bin)
 	}
@@ -102,24 +106,78 @@ func stubConfirm(t *testing.T, answer bool) {
 	t.Cleanup(func() { confirm = orig })
 }
 
+// stubConfirmErr makes confirm fail with err, like a prompt the user aborted.
+func stubConfirmErr(t *testing.T, err error) {
+	t.Helper()
+	orig := confirm
+	confirm = func(string, *bool) error { return err }
+	t.Cleanup(func() { confirm = orig })
+}
+
 func TestHandOverToAgentNeedsLocalCopy(t *testing.T) {
 	client, rec := newRecordingClient(t, nil) // any other request fails the test
+	tracked := stubTrack(t)
 	f, _ := testFactory()
 
 	err := handOverToAgent(f, client, repository{source: sourceSample, remoteURL: "https://github.com/acme/app"}, "Instance_App", true, supportedAgents[:1])
 	assert.ErrorContains(t, err, "needs a local copy")
 	assert.Equal(t, []string{"handover-finished"}, rec.endpoints(), "no agent launched, so no handover-started")
 	assert.JSONEq(t, `{"repositoryType":"demo","status":"no_checkout"}`, rec.body(t, "handover-finished"))
+	assert.Equal(t, []trackedEvent{
+		{analytics.EventHandoverFinished, map[string]any{"repository": "demo", "outcome": "no_checkout"}},
+	}, *tracked)
 }
 
 func TestHandOverToAgentDeclined(t *testing.T) {
 	stubConfirm(t, false) // decline, so no skills get installed
 	client, rec := newRecordingClient(t, nil)
+	tracked := stubTrack(t)
 	f, _ := testFactory()
 
 	require.NoError(t, handOverToAgent(f, client, repository{source: sourcePath, dir: t.TempDir()}, "Instance_App", true, supportedAgents[:1]))
 	assert.Equal(t, []string{"handover-finished"}, rec.endpoints(), "declined before the agent was launched")
 	assert.JSONEq(t, `{"repositoryType":"own","status":"handover_declined"}`, rec.body(t, "handover-finished"))
+	assert.Equal(t, []trackedEvent{
+		{analytics.EventHandoverFinished, map[string]any{"repository": "own", "outcome": "handover_declined"}},
+	}, *tracked)
+}
+
+func TestHandOverToAgentPromptAborted(t *testing.T) {
+	stubConfirmErr(t, huh.ErrUserAborted)
+	client, _ := newRecordingClient(t, nil)
+	tracked := stubTrack(t)
+	f, _ := testFactory()
+
+	err := handOverToAgent(f, client, repository{source: sourcePath, dir: t.TempDir()}, "Instance_App", true, supportedAgents[:1])
+	assert.ErrorIs(t, err, huh.ErrUserAborted)
+	assert.Equal(t, []trackedEvent{
+		{analytics.EventHandoverFinished, map[string]any{"repository": "own", "outcome": "handover_declined"}},
+	}, *tracked)
+}
+
+func TestPromptEnd(t *testing.T) {
+	assert.Equal(t, endDeclined, promptEnd(huh.ErrUserAborted, endDeclined))
+	assert.Equal(t, endFailed, promptEnd(errors.New("no tty"), endDeclined))
+}
+
+func TestTrackSandboxChecked(t *testing.T) {
+	tracked := stubTrack(t)
+	f, _ := testFactory()
+
+	trackSandboxChecked(f, supportedAgents[1], api.OnboardingSandboxDeclined)
+	assert.Equal(t, []trackedEvent{
+		{analytics.EventSandboxChecked, map[string]any{"agent": "codex", "status": "declined"}},
+	}, *tracked)
+}
+
+func TestTrackHandoverStarted(t *testing.T) {
+	tracked := stubTrack(t)
+	f, _ := testFactory()
+
+	trackHandoverStarted(f, api.OnboardingRepositoryDemo, supportedAgents[0])
+	assert.Equal(t, []trackedEvent{
+		{analytics.EventHandoverStarted, map[string]any{"repository": "demo", "agent": "claude_code"}},
+	}, *tracked)
 }
 
 func TestHandOverToAgentIgnoresOlderServer(t *testing.T) {
@@ -209,11 +267,53 @@ func TestHandoverStatus(t *testing.T) {
 		{endAgentExited, "success"},
 		{endFailed, "error"},
 	}
+	statuses := []string{}
 	for _, tc := range tests {
 		t.Run(string(tc.want), func(t *testing.T) {
 			assert.Equal(t, tc.want, handoverStatus(tc.end))
 		})
+		statuses = append(statuses, string(tc.want))
 	}
+	assert.ElementsMatch(t, analytics.OnboardingOutcomes(), statuses, "the analytics outcome takes the same values")
+}
+
+func TestDetectedAgentFields(t *testing.T) {
+	claude, codex, junie := supportedAgents[0], supportedAgents[1], supportedAgents[2]
+	tests := []struct {
+		name   string
+		agents []agent
+		want   map[string]any
+	}{
+		{"none", nil, map[string]any{"has_claude_code": false, "has_codex": false, "has_junie": false}},
+		{"claude code", []agent{claude}, map[string]any{"has_claude_code": true, "has_codex": false, "has_junie": false}},
+		{"codex", []agent{codex}, map[string]any{"has_claude_code": false, "has_codex": true, "has_junie": false}},
+		{"junie", []agent{junie}, map[string]any{"has_claude_code": false, "has_codex": false, "has_junie": true}},
+		{"several", []agent{claude, junie}, map[string]any{"has_claude_code": true, "has_codex": false, "has_junie": true}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, detectedAgentFields(tc.agents))
+		})
+	}
+}
+
+// TestDetectedAgentFieldsMatchScheme fails when a new supported agent would send a has_<agent> field the scheme doesn't declare.
+func TestDetectedAgentFieldsMatchScheme(t *testing.T) {
+	var declared []string
+	for _, g := range analytics.Definition.Groups {
+		for _, e := range g.Events {
+			if g.ID == analytics.GroupOnboarding && e.ID == analytics.EventAgentsDetected {
+				for _, fd := range e.Fields {
+					declared = append(declared, fd.Path)
+				}
+			}
+		}
+	}
+	var sent []string
+	for field := range detectedAgentFields(supportedAgents) {
+		sent = append(sent, field)
+	}
+	assert.ElementsMatch(t, declared, sent)
 }
 
 func TestRepositoryType(t *testing.T) {

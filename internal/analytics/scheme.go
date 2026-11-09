@@ -13,16 +13,17 @@ const (
 )
 
 const (
-	GroupSession   = "teamcity.cli.session"
-	GroupCommand   = "teamcity.cli.command"
-	GroupAPI       = "teamcity.cli.api"
-	GroupAuth      = "teamcity.cli.auth"
-	GroupBuild     = "teamcity.cli.build"
-	GroupAgent     = "teamcity.cli.agent"
-	GroupPipeline  = "teamcity.cli.pipeline"
-	GroupSkill     = "teamcity.cli.skill"
-	GroupWorkspace = "teamcity.cli.workspace"
-	GroupMigrate   = "teamcity.cli.migrate"
+	GroupSession    = "teamcity.cli.session"
+	GroupCommand    = "teamcity.cli.command"
+	GroupAPI        = "teamcity.cli.api"
+	GroupAuth       = "teamcity.cli.auth"
+	GroupBuild      = "teamcity.cli.build"
+	GroupAgent      = "teamcity.cli.agent"
+	GroupPipeline   = "teamcity.cli.pipeline"
+	GroupSkill      = "teamcity.cli.skill"
+	GroupWorkspace  = "teamcity.cli.workspace"
+	GroupMigrate    = "teamcity.cli.migrate"
+	GroupOnboarding = "teamcity.cli.onboarding"
 )
 
 const (
@@ -86,6 +87,7 @@ var Definition = &fus.Definition{
 		skillGroup(),
 		workspaceGroup(),
 		migrateGroup(),
+		onboardingGroup(),
 	},
 }
 
@@ -310,6 +312,33 @@ func workspaceGroup() fus.GroupDefinition {
 				{Path: "source", Rules: []string{fus.EnumExpr(WorkspaceSourceFlag, WorkspaceSourceAuto, WorkspaceSourceInteractive)}},
 				{Path: "is_ambiguous", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 				{Path: "is_subdir", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+			}},
+		},
+	}
+}
+
+func onboardingGroup() fus.GroupDefinition {
+	repository := fus.FieldDefinition{Path: "repository", Rules: []string{fus.EnumExpr(OnboardingRepositoryOwn, OnboardingRepositoryDemo)}}
+	agent := fus.FieldDefinition{Path: "agent", Rules: []string{fus.EnumExpr(OnboardingAgents()...)}}
+	return fus.GroupDefinition{
+		ID: GroupOnboarding, Version: 1, Type: fus.GroupTypeCounter, Description: "teamcity onboard telemetry",
+		Events: []fus.EventDefinition{
+			{ID: EventAgentsDetected, Description: "Supported AI agents found by teamcity onboard", Fields: []fus.FieldDefinition{
+				{Path: "has_claude_code", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+				{Path: "has_codex", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+				{Path: "has_junie", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+			}},
+			{ID: EventSandboxChecked, Description: "teamcity onboard checked whether the picked AI agent runs teamcity in its sandbox, and handled the answer", Fields: []fus.FieldDefinition{
+				agent,
+				{Path: "status", Rules: []string{fus.EnumExpr(OnboardingSandboxStatuses()...)}},
+			}},
+			{ID: EventHandoverStarted, Description: "teamcity onboard launched an AI agent with the onboarding prompt", Fields: []fus.FieldDefinition{
+				repository,
+				agent,
+			}},
+			{ID: EventHandoverFinished, Description: "Hand-over to an AI agent finished", Fields: []fus.FieldDefinition{
+				repository,
+				{Path: "outcome", Rules: []string{fus.EnumExpr(OnboardingOutcomes()...)}},
 			}},
 		},
 	}
