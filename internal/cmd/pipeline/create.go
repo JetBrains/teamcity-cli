@@ -72,6 +72,7 @@ func runPipelineCreate(f *cmdutil.Factory, name string, opts *createOptions) err
 	}
 
 	f.Analytics.Track(analytics.GroupPipeline, analytics.EventCreated, map[string]any{"is_from_file": true})
+	onboarding.TrackPipelineCreated(f)
 	onboarding.NotifyPipelineCreated(f, client, pipeline.ID)
 	f.Printer.Success("Created pipeline %q (%s)", pipeline.Name, pipeline.ID)
 	if pipeline.WebURL != "" {

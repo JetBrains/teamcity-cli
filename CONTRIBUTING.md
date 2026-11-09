@@ -236,6 +236,25 @@ Every CLI command and subcommand has acceptance test coverage. The following is 
 - **Cloud agents**: ephemeral — tests that need agents must start a build, wait for assignment, then clean up
 - **Isolation**: each test gets its own `HOME` directory, no cross-test state leakage
 
+## Analytics events
+
+The CLI's FUS events (product and recorder `TCX`) are declared in `internal/analytics/scheme.go`.
+
+When you add or change an event:
+
+- Bump the group's `Version` when its events, fields or values change; a new group starts at 1.
+- Add one sample per event to `SampleEvents()` in `validate.go`. `TestLintScheme` and `TestDefinitionMatchesEvents` check the samples against the declaration.
+- Only the fields listed in `TestDefinitionMatchesEvents` may be `Anonymized` (hashed with the salt before sending).
+- `go run scripts/generate-fus-schema.go` writes the registration metadata (`internal/analytics/events-scheme.json`) and the embedded fallback scheme (`internal/analytics/schema.json`). Both are gitignored.
+
+Which scheme validates events (`internal/analytics/client.go`, `fus-reporting-api-go` v0.2.0):
+
+1. At the first `Track`, the CLI loads the FUS config for `TCX` from `https://resources.jetbrains.com/storage/fus/config/v4/TCX/TCX.json`, cached for 10 minutes in `~/.config/tc/.analytics/fus_config.json`.
+2. When the config names a metadata endpoint, which it does for `TCX`, the CLI validates and anonymizes against the scheme served there (`<metadata endpoint>/TCX.json`, the CDN scheme). It uses the embedded `analytics.Scheme` only when the CDN scheme can't be loaded, and then doesn't retry the CDN for an hour.
+3. So the CDN scheme decides what reaches the backend. An event of a group the CDN scheme doesn't have arrives as `validation.undefined_rule` with its data replaced. A group version outside the CDN's version range is dropped. A field or value the CDN doesn't allow is replaced with a `validation.*` value. Fields are hashed only if the CDN scheme lists them in `anonymized_fields`.
+
+A new group or version is therefore only useful once the FUS metadata behind the CDN includes it. That metadata is not generated from this repository: nothing here uploads `events-scheme.json`. The `fus-reporting-api-go` README says to coordinate product registration and event metadata with the Data Office. Who registers the metadata, and whether it is reviewed, is not documented here (unverified).
+
 ## Linting
 
 Run `just lint` before pushing. The CI lint job uses `golangci-lint` with

@@ -33,7 +33,13 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 
 **For specific command groups** (build runs, agent sessions, pipeline operations, skill install/update, skill guide reads, REST API calls, login, link) the CLI also records some booleans and counts, for example, `is_personal` for `run start`, `error_count` for `pipeline validate`, `had_timeout` for `agent term`, and for `skill guide` the bundled skill name and whether the agent read the overview or a topic. The full schema is in [`internal/analytics/scheme.go`](https://github.com/JetBrains/teamcity-cli/blob/main/internal/analytics/scheme.go).
 
-**During `teamcity onboard`** the CLI reports its steps to the TeamCity server you onboard to, which records them in the server's own usage statistics: that you logged in, which supported AI agents it found, whether the repository is your own or a sample (`own` or `demo`), which agent it launched and how the hand-over ended, and the ID of a pipeline the agent created with `teamcity pipeline create` or of a run it started with `teamcity run start`. These reports go to your TeamCity server, not into the CLI's usage statistics. The CLI skips them when you opt out as described below.
+**During `teamcity onboard`** the CLI also records:
+
+- Which supported AI agents it found (one boolean each for Claude Code, Codex, and Junie).
+- Whether the onboarded repository is your own or a sample (`own` or `demo`), which agent it launched, and how the hand-over to the agent ended, for example `success`, `handover_declined`, or `agent_interrupted`.
+- That the agent created a pipeline with `teamcity pipeline create` or started a run with `teamcity run start`. For such a run, the CLI also records when it first sees the run running and finished, with its final status (`success`, `failure`, `error`, `canceled`). To do that, it keeps the IDs of these runs in `~/.config/tc/.analytics/onboarding-builds.json` on your machine until the run finishes, for up to 7 days. The CLI never sends these IDs in its usage statistics.
+
+`teamcity onboard` also reports its steps to the TeamCity server you onboard to, which records them in the server's own usage statistics: that you logged in, which supported AI agents it found, whether the repository is your own or a sample, which agent it launched and how the hand-over ended, and the ID of a pipeline the agent created or of a run it started. These reports go to your TeamCity server, not into the CLI's usage statistics. The CLI skips them, and doesn't write `onboarding-builds.json`, when you opt out as described below.
 
 ## What we don't collect
 

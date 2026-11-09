@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tiulpin/instill"
@@ -201,9 +202,32 @@ func TestHandoverStatus(t *testing.T) {
 		{endAgentExited, "success"},
 		{endFailed, "error"},
 	}
+	statuses := []string{}
 	for _, tc := range tests {
 		t.Run(string(tc.want), func(t *testing.T) {
 			assert.Equal(t, tc.want, handoverStatus(tc.end))
+		})
+		statuses = append(statuses, string(tc.want))
+	}
+	assert.ElementsMatch(t, analytics.OnboardingOutcomes(), statuses, "the analytics outcome takes the same values")
+}
+
+func TestDetectedAgentFields(t *testing.T) {
+	claude, codex, junie := supportedAgents[0], supportedAgents[1], supportedAgents[2]
+	tests := []struct {
+		name   string
+		agents []agent
+		want   map[string]any
+	}{
+		{"none", nil, map[string]any{"has_claude_code": false, "has_codex": false, "has_junie": false}},
+		{"claude code", []agent{claude}, map[string]any{"has_claude_code": true, "has_codex": false, "has_junie": false}},
+		{"codex", []agent{codex}, map[string]any{"has_claude_code": false, "has_codex": true, "has_junie": false}},
+		{"junie", []agent{junie}, map[string]any{"has_claude_code": false, "has_codex": false, "has_junie": true}},
+		{"several", []agent{claude, junie}, map[string]any{"has_claude_code": true, "has_codex": false, "has_junie": true}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, detectedAgentFields(tc.agents))
 		})
 	}
 }

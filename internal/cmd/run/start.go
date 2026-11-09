@@ -493,6 +493,7 @@ func runRunStart(f *cmdutil.Factory, jobID string, opts *runStartOptions) error 
 		"is_watched":        opts.watch,
 		"is_dry_run":        false,
 	})
+	onboarding.TrackBuildQueued(f, build.ID)
 	onboarding.NotifyBuildQueued(f, client, build.ID)
 
 	if opts.json {

@@ -13,16 +13,17 @@ const (
 )
 
 const (
-	GroupSession   = "teamcity.cli.session"
-	GroupCommand   = "teamcity.cli.command"
-	GroupAPI       = "teamcity.cli.api"
-	GroupAuth      = "teamcity.cli.auth"
-	GroupBuild     = "teamcity.cli.build"
-	GroupAgent     = "teamcity.cli.agent"
-	GroupPipeline  = "teamcity.cli.pipeline"
-	GroupSkill     = "teamcity.cli.skill"
-	GroupWorkspace = "teamcity.cli.workspace"
-	GroupMigrate   = "teamcity.cli.migrate"
+	GroupSession    = "teamcity.cli.session"
+	GroupCommand    = "teamcity.cli.command"
+	GroupAPI        = "teamcity.cli.api"
+	GroupAuth       = "teamcity.cli.auth"
+	GroupBuild      = "teamcity.cli.build"
+	GroupAgent      = "teamcity.cli.agent"
+	GroupPipeline   = "teamcity.cli.pipeline"
+	GroupSkill      = "teamcity.cli.skill"
+	GroupWorkspace  = "teamcity.cli.workspace"
+	GroupMigrate    = "teamcity.cli.migrate"
+	GroupOnboarding = "teamcity.cli.onboarding"
 )
 
 const (
@@ -86,6 +87,7 @@ var Definition = &fus.Definition{
 		skillGroup(),
 		workspaceGroup(),
 		migrateGroup(),
+		onboardingGroup(),
 	},
 }
 
@@ -189,7 +191,7 @@ func buildGroup() fus.GroupDefinition {
 	return fus.GroupDefinition{
 		ID: GroupBuild, Version: 2, Type: fus.GroupTypeCounter, Description: "Build telemetry",
 		Events: []fus.EventDefinition{
-			{ID: EventStarted, Description: "Build started", Fields: []fus.FieldDefinition{
+			{ID: EventStarted, Description: "run start triggered a build; the build beginning to run is teamcity.cli.onboarding/build.started", Fields: []fus.FieldDefinition{
 				{Path: "is_personal", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 				{Path: "has_local_changes", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 				{Path: "has_branch", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
@@ -200,7 +202,7 @@ func buildGroup() fus.GroupDefinition {
 			}},
 			{ID: EventWatchFinished, Description: "Build watch finished", Fields: []fus.FieldDefinition{
 				{Path: "duration_seconds", Rules: []string{fus.RegexpRefExpr(regexpInteger)}},
-				{Path: "final_status", Rules: []string{fus.EnumExpr("success", "failure", "error", "canceled")}},
+				{Path: "final_status", Rules: []string{fus.EnumExpr(buildFinalStatuses()...)}},
 				{Path: "had_logs", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 				{Path: "is_timed_out", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 			}},
@@ -301,6 +303,35 @@ func workspaceGroup() fus.GroupDefinition {
 				{Path: "source", Rules: []string{fus.EnumExpr(WorkspaceSourceFlag, WorkspaceSourceAuto, WorkspaceSourceInteractive)}},
 				{Path: "is_ambiguous", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 				{Path: "is_subdir", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+			}},
+		},
+	}
+}
+
+func onboardingGroup() fus.GroupDefinition {
+	repository := fus.FieldDefinition{Path: "repository", Rules: []string{fus.EnumExpr(OnboardingRepositoryOwn, OnboardingRepositoryDemo)}}
+	return fus.GroupDefinition{
+		ID: GroupOnboarding, Version: 1, Type: fus.GroupTypeCounter, Description: "teamcity onboard telemetry",
+		Events: []fus.EventDefinition{
+			{ID: EventAgentsDetected, Description: "Supported AI agents found by teamcity onboard", Fields: []fus.FieldDefinition{
+				{Path: "has_claude_code", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+				{Path: "has_codex", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+				{Path: "has_junie", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+			}},
+			{ID: EventHandoverStarted, Description: "teamcity onboard launched an AI agent with the onboarding prompt", Fields: []fus.FieldDefinition{
+				repository,
+				{Path: "agent", Rules: []string{fus.EnumRefExpr(enumSkillAgent)}},
+			}},
+			{ID: EventHandoverFinished, Description: "Hand-over to an AI agent finished", Fields: []fus.FieldDefinition{
+				repository,
+				{Path: "outcome", Rules: []string{fus.EnumExpr(OnboardingOutcomes()...)}},
+			}},
+			{ID: EventPipelineCreated, Description: "pipeline create created a pipeline inside the onboarding", Fields: []fus.FieldDefinition{repository}},
+			{ID: EventBuildQueued, Description: "run start queued a build inside the onboarding", Fields: []fus.FieldDefinition{repository}},
+			{ID: EventBuildStarted, Description: "A build queued inside the onboarding was seen running; run start triggering it is teamcity.cli.build/started", Fields: []fus.FieldDefinition{repository}},
+			{ID: EventBuildFinished, Description: "A build queued inside the onboarding was seen finished", Fields: []fus.FieldDefinition{
+				repository,
+				{Path: "final_status", Rules: []string{fus.EnumExpr(buildFinalStatuses()...)}},
 			}},
 		},
 	}

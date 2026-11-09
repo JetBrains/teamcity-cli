@@ -70,6 +70,7 @@ func runRunTree(f *cmdutil.Factory, runID string, depth int, jsonOut bool) error
 	if err != nil {
 		return err
 	}
+	trackOnboardingBuild(f, build)
 
 	if depth > 0 {
 		depth++

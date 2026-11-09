@@ -140,11 +140,21 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 		resErr = nil
 	}()
 
+	// Track onboarding builds on state changes only, not on every poll.
+	observedState := ""
+	observe := func(b *api.Build) {
+		if b.State != observedState {
+			observedState = b.State
+			trackOnboardingBuild(f, b)
+		}
+	}
+
 	build, err := client.GetBuild(ctx, runID)
 	if err != nil {
 		return err
 	}
 	lastBuild = build
+	observe(build)
 
 	switch {
 	case opts.json:
@@ -178,6 +188,7 @@ func doRunWatch(f *cmdutil.Factory, runID string, opts *runWatchOptions) (resErr
 			return err
 		}
 		lastBuild = build
+		observe(build)
 
 		jobName := build.BuildTypeID
 		if build.BuildType != nil {
