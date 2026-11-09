@@ -80,8 +80,9 @@ func notifyLoginCompleted(f *cmdutil.Factory, client api.ClientInterface) {
 	notifyInBackground(f.Context(), f.Printer.Debug, "login-completed", client.OnboardingLoginCompleted)
 }
 
+// notifyAgentsDetected reports the detected agents, waiting since teamcity onboard exits right after when there are none.
 func notifyAgentsDetected(f *cmdutil.Factory, client api.ClientInterface, agents []agent) {
-	notifyInBackground(f.Context(), f.Printer.Debug, "agents-detected", func(ctx context.Context) error {
+	onboarding.Notify(f.Context(), f.Printer.Debug, "agents-detected", func(ctx context.Context) error {
 		return client.OnboardingAgentsDetected(ctx, api.OnboardingAgentsDetectedRequest{Agents: reportedAgents(agents)})
 	})
 }
