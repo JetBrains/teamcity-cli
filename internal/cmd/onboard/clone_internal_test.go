@@ -24,7 +24,10 @@ func TestValidateCloneParent(t *testing.T) {
 
 	require.NoError(t, os.Mkdir(filepath.Join(parent, "sample"), 0o755))
 	assert.NoError(t, validateCloneParent(parent), "an existing clone target is resolved by the overwrite/reuse prompt, not rejected")
-	assert.ErrorContains(t, validateCloneParent(filepath.Join(parent, "missing")), "does not exist")
+	missing := filepath.Join(parent, "missing", "nested")
+	assert.NoError(t, validateCloneParent(missing), "a missing directory is created")
+	assert.DirExists(t, missing)
+	assert.ErrorContains(t, validateCloneParent(filepath.Join(file, "child")), "does not exist and could not be created")
 	assert.ErrorContains(t, validateCloneParent(file), "is not a directory")
 	assert.ErrorContains(t, validateCloneParent(""), "path is required")
 }

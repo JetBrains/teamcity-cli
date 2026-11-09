@@ -117,7 +117,8 @@ func promptExistingTarget(f *cmdutil.Factory, target string) (bool, error) {
 	return overwrite, nil
 }
 
-// validateCloneParent rejects input that is not an existing directory; an existing clone target is handled by promptExistingTarget.
+// validateCloneParent creates a missing directory and rejects input that is not a directory; an existing clone target is handled by promptExistingTarget.
+// huh validates on submit and blur, not on every key, so no half-typed directories are created.
 func validateCloneParent(input string) error {
 	parent, err := normalizePath(input)
 	if err != nil {
@@ -125,7 +126,12 @@ func validateCloneParent(input string) error {
 	}
 	info, err := os.Stat(parent)
 	if err != nil {
-		return fmt.Errorf("%s does not exist", parent)
+		if err := os.MkdirAll(parent, 0o755); err != nil {
+			return fmt.Errorf("%s does not exist and could not be created: %w", parent, err)
+		}
+		if info, err = os.Stat(parent); err != nil {
+			return err
+		}
 	}
 	if !info.IsDir() {
 		return fmt.Errorf("%s is not a directory", parent)
