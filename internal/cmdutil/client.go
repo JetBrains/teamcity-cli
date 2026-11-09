@@ -82,6 +82,10 @@ func NotAuthenticatedError(ctx context.Context, serverURL string, keyringErr err
 	}
 
 	suggestion := "If you use environment overrides, set both TEAMCITY_URL and TEAMCITY_TOKEN; TEAMCITY_URL alone bypasses stored credentials. Otherwise unset TEAMCITY_URL to use stored auth, or run 'teamcity auth login --insecure-storage'"
+	sc, ok := config.Get().Servers[serverURL]
+	if tip := CredentialsTip(serverURL, ok && sc.User != "" && sc.Token == ""); tip != "" {
+		suggestion = tip // a sandbox or a keyring login: a token override isn't the fix
+	}
 	if ProbeGuestAccess(ctx, serverURL) {
 		suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
 	}

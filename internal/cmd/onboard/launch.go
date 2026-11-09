@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -16,7 +17,7 @@ import (
 // launchAgent runs ag in the foreground on this terminal with the staged context, offering a rerun when it exits with an error.
 // It returns where the hand-over stopped.
 func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) (handoverEnd, error) {
-	args := ag.promptArgs(handoverPrompt(hc))
+	args := ag.promptArgs(handoverPrompt(hc), hc.sandbox.launchArgs)
 	rt := repositoryType(hc.repo.source)
 	f.Printer.Info("Starting %s in this terminal. Exit it to return to your shell.\n", ag.label)
 	for {
@@ -69,12 +70,13 @@ func runAgent(path string, args []string, dir string, rt api.OnboardingRepositor
 	return cmd.Run()
 }
 
-// promptArgs builds the arguments that start an interactive session with prompt already submitted.
-func (a agent) promptArgs(prompt string) []string {
-	if a.promptFlag == "" {
-		return []string{prompt}
+// promptArgs builds the arguments that start an interactive session with prompt already submitted, after the agent's launchArgs.
+func (a agent) promptArgs(prompt string, launchArgs []string) []string {
+	args := slices.Clone(launchArgs)
+	if a.promptFlag != "" {
+		args = append(args, a.promptFlag)
 	}
-	return []string{a.promptFlag, prompt}
+	return append(args, prompt)
 }
 
 // handoverPrompt passes the staged context and points at the onboard skill, which carries the steps.
@@ -85,6 +87,9 @@ func handoverPrompt(hc handoverContext) string {
 		"Use the " + onboardSkill + " skill to set up TeamCity for this repository.",
 		"Server: " + hc.serverURL + ".",
 		"Project: " + hc.projectID + ".",
+	}
+	if hc.sandbox.agentMustAsk {
+		parts = append(parts, "Ask to run teamcity commands outside the sandbox: they need the system keyring and the server.")
 	}
 	if hc.repo.remoteURL != "" {
 		parts = append(parts, "Repository: "+withoutUserinfo(hc.repo.remoteURL)+".")

@@ -338,11 +338,15 @@ func renderCredentialsDiagnostic(ctx context.Context, p *output.Printer, s authS
 		_, _ = fmt.Fprintln(p.Out, "  Token is missing or could not be retrieved")
 	}
 
-	_, _ = fmt.Fprintf(p.Out, "  %s To authenticate in this environment:\n", output.Yellow("!"))
-	_, _ = fmt.Fprintf(p.Out, "    "+output.Sym().Bullet+" Set %s and %s environment variables\n",
-		output.Cyan("TEAMCITY_URL"), output.Cyan("TEAMCITY_TOKEN"))
-	_, _ = fmt.Fprintf(p.Out, "    "+output.Sym().Bullet+" Or run %s\n",
-		output.Cyan("teamcity auth login --server "+s.Server+" --insecure-storage"))
+	if tip := cmdutil.CredentialsTip(s.Server, s.configUser != ""); tip != "" {
+		_, _ = fmt.Fprintf(p.Out, "  %s %s\n", output.Yellow("!"), tip)
+	} else {
+		_, _ = fmt.Fprintf(p.Out, "  %s To authenticate in this environment:\n", output.Yellow("!"))
+		_, _ = fmt.Fprintf(p.Out, "    "+output.Sym().Bullet+" Set %s and %s environment variables\n",
+			output.Cyan("TEAMCITY_URL"), output.Cyan("TEAMCITY_TOKEN"))
+		_, _ = fmt.Fprintf(p.Out, "    "+output.Sym().Bullet+" Or run %s\n",
+			output.Cyan("teamcity auth login --server "+s.Server+" --insecure-storage"))
+	}
 	if cmdutil.ProbeGuestAccess(ctx, s.Server) {
 		_, _ = fmt.Fprintf(p.Out, "    "+output.Sym().Bullet+" Or set %s for read-only guest access\n", output.Cyan("TEAMCITY_GUEST=1"))
 	}
