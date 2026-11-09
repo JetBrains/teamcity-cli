@@ -129,8 +129,9 @@ func TestLaunchAgentStartFailure(t *testing.T) {
 }
 
 func TestPromptArgs(t *testing.T) {
-	assert.Equal(t, []string{"task"}, agent{}.promptArgs("task"))
-	assert.Equal(t, []string{"--prompt", "task"}, agent{promptFlag: "--prompt"}.promptArgs("task"))
+	assert.Equal(t, []string{"task"}, agent{}.promptArgs("task", nil))
+	assert.Equal(t, []string{"--prompt", "task"}, agent{promptFlag: "--prompt"}.promptArgs("task", nil))
+	assert.Equal(t, []string{"--settings", "{}", "--prompt", "task"}, agent{promptFlag: "--prompt"}.promptArgs("task", []string{"--settings", "{}"}))
 }
 
 func TestWithoutUserinfo(t *testing.T) {
@@ -164,6 +165,11 @@ func TestHandoverPrompt(t *testing.T) {
 		assert.NotContains(t, got, "Repository:")
 		assert.NotContains(t, got, "Revision:")
 		assert.Contains(t, got, "VCS root: none.")
+	})
+
+	t.Run("asks to leave the sandbox only when teamcity stays in it", func(t *testing.T) {
+		assert.NotContains(t, handoverPrompt(handoverContext{projectID: "Instance_App"}), "sandbox")
+		assert.Contains(t, handoverPrompt(handoverContext{projectID: "Instance_App", sandbox: sandboxOutcome{agentMustAsk: true}}), "Ask to run teamcity commands outside the sandbox")
 	})
 
 	t.Run("keeps remote credentials out of the command line", func(t *testing.T) {

@@ -33,6 +33,20 @@ func TipNoLogFor(runID string) string {
 	return fmt.Sprintf("The run may still be queued; 'teamcity run view %s' shows its state", runID)
 }
 
+// TipSandboxed returns the tip for a command that runs in a sandbox, where teamcity can't access the server.
+func TipSandboxed(sandbox string) string {
+	return fmt.Sprintf("The TeamCity CLI runs in %s, where it can't access your TeamCity server: ask to run it outside the sandbox", sandbox)
+}
+
+// TipKeyringHiddenFor returns the tip for a keyring login whose token can't be read, most often because an agent sandbox hides the keyring.
+func TipKeyringHiddenFor(serverURL string) string {
+	login := "teamcity auth login"
+	if serverURL != "" {
+		login += " --server " + serverURL
+	}
+	return "If a sandbox runs this command, it hides the system keyring: ask to run teamcity outside the sandbox. Otherwise run '" + login + "'"
+}
+
 // TipNoCommentFor returns the tip for a run with no comment, pre-filling the
 // specific run ID in the suggested command.
 func TipNoCommentFor(runID string) string {

@@ -147,9 +147,17 @@ In read-only mode, the agent can list builds, view logs, inspect failures, and q
 
 ## Sandbox compatibility
 
-The CLI works inside sandboxed agent environments (for example, Claude Code `/sandbox`) out of the box. The CLI loads TLS root certificates from PEM bundle files and respects HTTP proxy settings, which allows it to function when platform certificate stores and direct network access are restricted.
+An agent's command sandbox, such as the Codex sandbox (on by default) or Claude Code and Junie `/sandbox`, hides the system keyring and blocks network access. Inside it, the CLI can't read the token saved by `teamcity auth login` or reach your TeamCity server, and reports the token as missing. Allowing the server domain in the sandbox's network settings isn't enough: the keyring stays hidden.
 
-If the sandbox blocks outbound requests to your TeamCity server, add the server domain to the sandbox's network allowlist.
+Run `teamcity` commands outside the sandbox:
+
+- **Claude Code**: add `teamcity *` to `sandbox.excludedCommands` in your settings. Claude Code still asks before each excluded command, and keeps a command with a pipe, a redirect, or `$(…)` sandboxed.
+- **Codex**: approve the agent's request to run `teamcity` outside the sandbox. To allow it in all sessions without asking, approve the `teamcity` prefix for good, or add `prefix_rule(pattern=["teamcity"], decision="allow")` to a `.rules` file in `~/.codex/rules/`.
+- **Junie**: turn sandbox mode off with `/sandbox`.
+
+When Claude Code or Codex run commands in a sandbox, `teamcity onboard` asks before it starts them, and sets this up when you agree. When the CLI detects an agent sandbox, its error messages say so instead of suggesting `TEAMCITY_TOKEN`.
+
+The CLI also loads TLS root certificates from PEM bundle files and respects HTTP proxy settings, so it works where platform certificate stores and direct network access are restricted.
 
 ## Alternative installation for Claude Code
 

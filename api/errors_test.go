@@ -119,6 +119,7 @@ func TestIsSandboxBlocked(t *testing.T) {
 		{"forbidden", &NetworkError{Cause: errors.New("dial tcp 1.2.3.4:443: Forbidden")}, true},
 		{"blocked", &NetworkError{Cause: errors.New("dial tcp: Blocked by policy")}, true},
 		{"sandbox literal", &NetworkError{Cause: errors.New("operation blocked by sandbox")}, true},
+		{"seatbelt connect", &NetworkError{Cause: errors.New("dial tcp 127.0.0.1:8111: connect: operation not permitted")}, true},
 		{"plain timeout", &NetworkError{Cause: errors.New("dial tcp: i/o timeout")}, false},
 		{"no cause", &NetworkError{URL: "https://x"}, false},
 		{"non-network", errors.New("kaboom"), false},

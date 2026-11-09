@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/config"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -299,11 +300,65 @@ func TestProbeGuestAccess(t *testing.T) {
 	})
 }
 
+func TestNotAuthenticatedErrorKeyringLogin(t *testing.T) {
+	t.Setenv("CODEX_SANDBOX", "")
+	t.Setenv("CODEX_SANDBOX_NETWORK_DISABLED", "")
+	t.Setenv("SANDBOX_RUNTIME", "")
+	config.SetConfigPathForTest(t.TempDir() + "/config.yml")
+	config.ResetForTest()
+	t.Cleanup(config.ResetForTest)
+	config.Get().Servers["https://tc.example.com"] = config.ServerConfig{User: "alice"}
+
+	err := NotAuthenticatedError(t.Context(), "https://tc.example.com", nil)
+	assert.Contains(t, err.Suggestion(), "sandbox")
+	assert.NotContains(t, err.Suggestion(), "TEAMCITY_TOKEN")
+	assert.NotContains(t, err.Suggestion(), "--insecure-storage")
+}
+
+func TestCredentialsTip(t *testing.T) {
+	const server = "https://tc.example.com"
+	for _, tc := range []struct {
+		name         string
+		env          map[string]string
+		keyringLogin bool
+		want         string
+	}{
+		{"no sandbox, no keyring login", nil, false, ""},
+		{"no sandbox, keyring login", nil, true, "Otherwise run 'teamcity auth login --server " + server + "'"},
+		{"sandbox-runtime", map[string]string{"SANDBOX_RUNTIME": "1"}, false, "runs in an agent sandbox"},
+		{"codex seatbelt", map[string]string{"CODEX_SANDBOX": "seatbelt", "CODEX_SANDBOX_NETWORK_DISABLED": "1"}, false, "runs in the Codex sandbox"},
+		// Codex sets it also outside its sandbox, and Linux and Windows set only this one: hint, don't claim.
+		{"codex network disabled only", map[string]string{"CODEX_SANDBOX_NETWORK_DISABLED": "1"}, false, "If a sandbox runs this command"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, k := range []string{"CODEX_SANDBOX", "CODEX_SANDBOX_NETWORK_DISABLED", "SANDBOX_RUNTIME"} {
+				t.Setenv(k, tc.env[k])
+			}
+			got := CredentialsTip(server, tc.keyringLogin)
+			if tc.want == "" {
+				assert.Empty(t, got)
+				return
+			}
+			assert.Contains(t, got, tc.want)
+		})
+	}
+
+	t.Run("no saved server", func(t *testing.T) {
+		t.Setenv("CODEX_SANDBOX", "")
+		t.Setenv("SANDBOX_RUNTIME", "")
+		t.Setenv("CODEX_SANDBOX_NETWORK_DISABLED", "1")
+		got := CredentialsTip("", false)
+		assert.Contains(t, got, "Otherwise run 'teamcity auth login'")
+		assert.NotContains(t, got, "--server")
+	})
+}
+
 func TestNotAuthenticatedError(t *testing.T) {
-	t.Parallel()
+	t.Setenv("CODEX_SANDBOX", "")
+	t.Setenv("CODEX_SANDBOX_NETWORK_DISABLED", "")
+	t.Setenv("SANDBOX_RUNTIME", "")
 
 	t.Run("no keyring err", func(t *testing.T) {
-		t.Parallel()
 		err := NotAuthenticatedError(t.Context(), "", nil)
 		require.NotNil(t, err)
 		assert.Equal(t, "Not authenticated", err.Error())
@@ -311,7 +366,6 @@ func TestNotAuthenticatedError(t *testing.T) {
 	})
 
 	t.Run("with keyring err mentions it", func(t *testing.T) {
-		t.Parallel()
 		ke := errors.New("keychain locked")
 		err := NotAuthenticatedError(t.Context(), "", ke)
 		require.NotNil(t, err)

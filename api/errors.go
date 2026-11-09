@@ -192,5 +192,6 @@ func IsSandboxBlocked(err error) bool {
 	msg := ne.Cause.Error()
 	return strings.Contains(msg, ": Forbidden") ||
 		strings.Contains(msg, ": Blocked") ||
-		strings.Contains(msg, "sandbox")
+		strings.Contains(msg, "sandbox") ||
+		strings.Contains(msg, "operation not permitted") // macOS Seatbelt denies connect()
 }

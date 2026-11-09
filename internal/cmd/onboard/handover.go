@@ -60,7 +60,8 @@ type handoverContext struct {
 	serverURL  string
 	projectID  string
 	repo       repository
-	authorized bool // a VCS root usable by projectID points at repo
+	authorized bool           // a VCS root usable by projectID points at repo
+	sandbox    sandboxOutcome // how the agent runs teamcity; see allowOutsideSandbox
 }
 
 // confirm asks a yes/no question; tests replace it, since prompts need a terminal.
@@ -101,6 +102,10 @@ func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, p
 	if err := installSkills(f, ag, scope, repo.dir); err != nil {
 		return endSkillInstallFailed, err
 	}
+	sandbox, err := allowOutsideSandbox(f, ag, repo.dir)
+	if err != nil {
+		return endFailed, err
+	}
 
 	notifyHandoverStarted(f, client, repositoryType(repo.source), ag)
 	return launchAgent(f, ag, handoverContext{
@@ -108,6 +113,7 @@ func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, p
 		projectID:  projectID,
 		repo:       repo,
 		authorized: authorized,
+		sandbox:    sandbox,
 	})
 }
 
