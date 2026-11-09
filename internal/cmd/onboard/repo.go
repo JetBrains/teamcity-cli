@@ -11,6 +11,7 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/git"
+	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/charmbracelet/huh"
 )
 
@@ -34,23 +35,28 @@ type repository struct {
 // sampleRepo is a public sample repository offered when the user has none at hand.
 type sampleRepo struct {
 	name     string
-	stack    string // shown next to the name in the picker
+	stack    string // shown as a tag next to the name in the picker
+	tag      string // what the pipeline will be like, shown as a tag after the stack
 	url      string
 	revision string // optional commit SHA to pin to, so onboarding sees the same files every time
 }
 
 // sampleRepos lists the sample repositories offered by the picker.
 var sampleRepos = []sampleRepo{
-	{name: "Conductor", stack: "Java, Spring Boot, Gradle", url: "https://github.com/conductor-oss/conductor", revision: "ab2de6da6c7b5935e6c6d09da29953b8d4cfe291"},
-	{name: "FluentValidation", stack: "C#, .NET", url: "https://github.com/FluentValidation/FluentValidation", revision: "299ef377bde844af7d28b7aa21786a6853f930e3"},
+	{name: "Conductor", stack: "Java, Spring Boot, Gradle", url: "https://github.com/conductor-oss/conductor", revision: "ab2de6da6c7b5935e6c6d09da29953b8d4cfe291", tag: "4,549 tests, long pipeline"},
+	{name: "FluentValidation", stack: "C#, .NET", url: "https://github.com/FluentValidation/FluentValidation", revision: "299ef377bde844af7d28b7aa21786a6853f930e3", tag: "839 tests, small and fast pipeline"},
 }
 
-// label renders a sample as "Name (stack)" for the picker.
+// label renders a sample as "Name [stack] [tag]" for the picker.
 func (d sampleRepo) label() string {
-	if d.stack == "" {
-		return d.name
+	label := d.name
+	if d.stack != "" {
+		label += " " + output.Faint("["+d.stack+"]")
 	}
-	return d.name + " (" + d.stack + ")"
+	if d.tag != "" {
+		label += " " + output.Cyan("["+d.tag+"]")
+	}
+	return label
 }
 
 // chooseRepository asks whether to use the current directory, another path, or a sample repository.
