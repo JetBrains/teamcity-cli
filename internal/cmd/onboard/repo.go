@@ -61,8 +61,11 @@ func (d sampleRepo) label() string {
 
 // chooseRepository asks whether to use the current directory, another path, or a sample repository.
 func chooseRepository(f *cmdutil.Factory) (repository, error) {
-	_, inRepo := git.RepoRoot(".")
-	source, err := promptSource(f, inRepo)
+	root, inRepo := git.RepoRoot(".")
+	if !inRepo {
+		root = ""
+	}
+	source, err := promptSource(f, root)
 	if err != nil {
 		return repository{}, err
 	}
@@ -92,11 +95,11 @@ func resolveRepository(source repoSource, dir string) (repository, error) {
 	return repo, nil
 }
 
-// promptSource asks where the repository comes from; "current" is offered only inside a git repository.
-func promptSource(f *cmdutil.Factory, inRepo bool) (repoSource, error) {
+// promptSource asks where the repository comes from; "current" is offered only inside a git repository, root is its top directory.
+func promptSource(f *cmdutil.Factory, root string) (repoSource, error) {
 	var options []huh.Option[repoSource]
-	if inRepo {
-		options = append(options, huh.NewOption("Current directory", sourceCurrent))
+	if root != "" {
+		options = append(options, huh.NewOption("Current directory ("+filepath.Base(root)+")", sourceCurrent))
 	}
 	options = append(options,
 		huh.NewOption("Repository on your computer", sourcePath),
