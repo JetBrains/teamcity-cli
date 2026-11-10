@@ -63,34 +63,46 @@ type handoverContext struct {
 	authorized bool // a VCS root usable by projectID points at repo
 }
 
-// handOverToAgent passes the onboarding context (repo, its TeamCity project, VCS root status) to an AI agent to finish the setup.
+// confirm asks a yes/no question; tests replace it, since prompts need a terminal.
+var confirm = cmdutil.Confirm
+
+// handOverToAgent passes the onboarding context (repo, its TeamCity project, VCS root status) to the picked AI agent to finish the setup,
+// and reports how the hand-over ended.
 func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool, agents []agent) error {
+	end, err := handOver(f, client, repo, projectID, authorized, agents)
+	notifyHandoverFinished(f, client, repositoryType(repo.source), handoverStatus(end))
+	return err
+}
+
+// handOver runs the hand-over and returns where it stopped.
+func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool, agents []agent) (handoverEnd, error) {
 	// The agent works in the checkout, and per-project skills land there; a sample left uncloned has none.
 	if repo.dir == "" {
-		return api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
+		return endNoCheckout, api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
 	}
 	ag, err := pickAgent(f, agents)
 	if err != nil {
-		return err
+		return endFailed, err
 	}
 
 	// TODO: copy pending design review
 	proceed := true
-	if err := cmdutil.Confirm("Continue onboarding with "+ag.label+"?", &proceed); err != nil {
-		return err
+	if err := confirm("Continue onboarding with "+ag.label+"?", &proceed); err != nil {
+		return endFailed, err
 	}
 	if !proceed {
-		return nil
+		return endDeclined, nil
 	}
 
 	scope, err := promptSkillScope(f, repo)
 	if err != nil {
-		return err
+		return endFailed, err
 	}
 	if err := installSkills(f, ag, scope, repo.dir); err != nil {
-		return err
+		return endSkillInstallFailed, err
 	}
 
+	notifyHandoverStarted(f, client, repositoryType(repo.source), ag)
 	return launchAgent(f, ag, handoverContext{
 		serverURL:  client.ServerURL(),
 		projectID:  projectID,

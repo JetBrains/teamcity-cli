@@ -5,7 +5,6 @@ import (
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/config"
-	"github.com/JetBrains/teamcity-cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -60,12 +59,13 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(opts.serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := newClient(f, opts.serverURL, token)
 
 	agents, err := detectAgents(f.Context())
 	if err != nil {
 		return err
 	}
+	notifyAgentsDetected(f, client, agents)
 	if len(agents) == 0 {
 		f.Printer.Warn("No supported agents found.")
 		f.Printer.Tip("Supported agents: %s", supportedAgentLabels())

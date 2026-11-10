@@ -33,6 +33,8 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 
 **For specific command groups** (build runs, agent sessions, pipeline operations, skill install/update, skill guide reads, REST API calls, login, link) the CLI also records some booleans and counts, for example, `is_personal` for `run start`, `error_count` for `pipeline validate`, `had_timeout` for `agent term`, and for `skill guide` the bundled skill name and whether the agent read the overview or a topic. The full schema is in [`internal/analytics/scheme.go`](https://github.com/JetBrains/teamcity-cli/blob/main/internal/analytics/scheme.go).
 
+**During `teamcity onboard`** the CLI reports its steps to the TeamCity server you onboard to, which records them in the server's own usage statistics: that you logged in, which supported AI agents it found, whether the repository is your own or a sample (`own` or `demo`), which agent it launched and how the hand-over ended, and the ID of a pipeline the agent created with `teamcity pipeline create` or of a run it started with `teamcity run start`. These reports go to your TeamCity server, not into the CLI's usage statistics. The CLI skips them when you opt out as described below.
+
 ## What we don't collect
 
 - Tokens, passwords, SSH keys, or anything stored in the keyring or `config.yml`.
