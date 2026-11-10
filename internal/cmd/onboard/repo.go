@@ -120,7 +120,9 @@ func promptSource(f *cmdutil.Factory, root string) (repoSource, error) {
 
 // promptPath asks for an absolute or relative path and resolves it as a git repository.
 func promptPath(f *cmdutil.Factory) (repository, error) {
-	input, err := promptDir(f, "Where is your local Git repository?", "Enter a local path, for example ~/projects/my-app.", validateRepoPath)
+	// filepath.Join gives ~\projects\my-app on Windows; normalizePath expands both separators after ~
+	example := filepath.Join("~", "projects", "my-app")
+	input, err := promptDir(f, "Where is your local Git repository?", "Enter a local path, for example "+example+".", validateRepoPath)
 	if err != nil {
 		return repository{}, err
 	}
