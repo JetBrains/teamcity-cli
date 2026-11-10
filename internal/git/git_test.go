@@ -54,6 +54,22 @@ func TestRepoRoot(t *testing.T) {
 	assert.False(t, ok, "RepoRoot must return false outside a git worktree")
 }
 
+func TestIsRepoRoot(t *testing.T) {
+	outer := t.TempDir()
+	repo := filepath.Join(outer, "repo")
+	deep := filepath.Join(repo, "a")
+	require.NoError(t, os.MkdirAll(deep, 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(repo, ".git"), 0o755))
+
+	assert.True(t, IsRepoRoot(repo))
+	assert.False(t, IsRepoRoot(deep), "a subdirectory is not the root")
+	assert.False(t, IsRepoRoot(outer), "a parent of a repository is not a root")
+
+	worktree := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(worktree, ".git"), []byte("gitdir: /elsewhere\n"), 0o644))
+	assert.True(t, IsRepoRoot(worktree), "a worktree has a .git file")
+}
+
 func TestIsRepo(t *testing.T) {
 	t.Run("inside repo", func(t *testing.T) {
 		t.Chdir(setupRepo(t))

@@ -61,11 +61,7 @@ func (d sampleRepo) label() string {
 
 // chooseRepository asks whether to use the current directory, another path, or a sample repository.
 func chooseRepository(f *cmdutil.Factory) (repository, error) {
-	root, inRepo := git.RepoRoot(".")
-	if !inRepo {
-		root = ""
-	}
-	source, err := promptSource(f, root)
+	source, err := promptSource(f, currentRepoRoot())
 	if err != nil {
 		return repository{}, err
 	}
@@ -79,13 +75,23 @@ func chooseRepository(f *cmdutil.Factory) (repository, error) {
 	}
 }
 
-// resolveRepository finds the git root containing dir and its preferred remote URL (origin first).
+// currentRepoRoot returns the absolute current directory when it is the root of a git repository, "" otherwise.
+// It never walks up: a plain folder inside another repository (for example a home folder under git) is not offered.
+func currentRepoRoot() string {
+	dir, err := filepath.Abs(".")
+	if err != nil || !git.IsRepoRoot(dir) {
+		return ""
+	}
+	return dir
+}
+
+// resolveRepository takes dir as the checkout, which must be the root of a git repository, and finds its preferred remote URL (origin first).
 func resolveRepository(source repoSource, dir string) (repository, error) {
-	root, ok := git.RepoRoot(dir)
-	if !ok {
+	root, err := filepath.Abs(dir)
+	if err != nil || !git.IsRepoRoot(root) {
 		return repository{}, api.Validation(
-			dir+" is not inside a git repository",
-			"Pick a directory that contains a .git folder",
+			dir+" is not the root of a git repository",
+			"Pick the directory that contains the .git folder",
 		)
 	}
 	repo := repository{source: source, dir: root}
@@ -95,7 +101,7 @@ func resolveRepository(source repoSource, dir string) (repository, error) {
 	return repo, nil
 }
 
-// promptSource asks where the repository comes from; "current" is offered only inside a git repository, root is its top directory.
+// promptSource asks where the repository comes from; "current" is offered only when the current directory is the root of a git repository, root is that directory.
 func promptSource(f *cmdutil.Factory, root string) (repoSource, error) {
 	var options []huh.Option[repoSource]
 	if root != "" {
@@ -125,7 +131,7 @@ func promptPath(f *cmdutil.Factory) (repository, error) {
 	return resolveRepository(sourcePath, path)
 }
 
-// validateRepoPath rejects input that is not an existing directory inside a git repository.
+// validateRepoPath rejects input that is not an existing directory at the root of a git repository.
 func validateRepoPath(input string) error {
 	path, err := normalizePath(input)
 	if err != nil {
@@ -138,8 +144,8 @@ func validateRepoPath(input string) error {
 	if !info.IsDir() {
 		return fmt.Errorf("%s is not a directory", path)
 	}
-	if _, ok := git.RepoRoot(path); !ok {
-		return fmt.Errorf("%s is not inside a git repository", path)
+	if !git.IsRepoRoot(path) {
+		return fmt.Errorf("%s is not the root of a git repository", path)
 	}
 	return nil
 }
