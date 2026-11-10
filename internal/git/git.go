@@ -34,6 +34,12 @@ func RepoRoot(start string) (string, bool) {
 	}
 }
 
+// IsRepoRoot reports whether dir itself is the top of a git working tree: it holds .git, a directory or, in a worktree or a submodule, a file.
+func IsRepoRoot(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, ".git"))
+	return err == nil
+}
+
 // IsRepo reports whether the current working directory is inside a git working tree.
 func IsRepo() bool {
 	return exec.Command("git", "rev-parse", "--is-inside-work-tree").Run() == nil
