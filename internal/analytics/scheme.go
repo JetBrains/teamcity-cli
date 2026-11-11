@@ -129,7 +129,7 @@ func sessionGroup() fus.GroupDefinition {
 
 func commandGroup() fus.GroupDefinition {
 	return fus.GroupDefinition{
-		ID: GroupCommand, Version: 4, Type: fus.GroupTypeCounter, Description: "Command telemetry",
+		ID: GroupCommand, Version: 5, Type: fus.GroupTypeCounter, Description: "Command telemetry",
 		Events: []fus.EventDefinition{
 			{ID: EventExecuted, Description: "Command completed", Fields: []fus.FieldDefinition{
 				{Path: "session_id", Rules: []string{fus.RegexpRefExpr(regexpUUID)}, Anonymized: true},
@@ -261,7 +261,7 @@ func pipelineGroup() fus.GroupDefinition {
 
 func skillGroup() fus.GroupDefinition {
 	return fus.GroupDefinition{
-		ID: GroupSkill, Version: 2, Type: fus.GroupTypeCounter, Description: "Skill telemetry",
+		ID: GroupSkill, Version: 4, Type: fus.GroupTypeCounter, Description: "Skill telemetry",
 		Events: []fus.EventDefinition{
 			{ID: EventManaged, Description: "Skill managed", Fields: []fus.FieldDefinition{
 				{Path: "action", Rules: []string{fus.EnumExpr("install", "update", "remove")}},
@@ -274,6 +274,15 @@ func skillGroup() fus.GroupDefinition {
 				{Path: "skill", Rules: []string{fus.EnumRefExpr(enumSkill)}},
 				{Path: "is_overview", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
 				{Path: "is_success", Rules: []string{fus.EnumRefExpr(enumBoolean)}},
+			}},
+			{ID: EventHookOffered, Description: "Agent reported a hook offer", Fields: []fus.FieldDefinition{
+				{Path: "skill", Rules: []string{fus.EnumRefExpr(enumSkill)}},
+			}},
+			{ID: EventHookAccepted, Description: "Agent reported explicit hook consent", Fields: []fus.FieldDefinition{
+				{Path: "skill", Rules: []string{fus.EnumRefExpr(enumSkill)}},
+			}},
+			{ID: EventHookDeclined, Description: "Agent reported an explicit hook refusal", Fields: []fus.FieldDefinition{
+				{Path: "skill", Rules: []string{fus.EnumRefExpr(enumSkill)}},
 			}},
 		},
 	}

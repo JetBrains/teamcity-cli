@@ -59,6 +59,9 @@ func TestPipeline_EndToEnd(t *testing.T) {
 		ExitCode:   0,
 		DurationMS: 1500,
 	})
+	for _, event := range []string{EventHookOffered, EventHookAccepted, EventHookDeclined} {
+		c.Track(GroupSkill, event, map[string]any{"skill": "teamcity-migrate-remaining-gha"})
+	}
 	if err := c.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
@@ -74,11 +77,12 @@ func TestPipeline_EndToEnd(t *testing.T) {
 	if err := json.Unmarshal(body, &report); err != nil {
 		t.Fatalf("invalid report JSON: %v", err)
 	}
-	if len(report.Events) != 2 {
-		t.Fatalf("expected 2 events (session + command), got %d", len(report.Events))
+	if len(report.Events) != 5 {
+		t.Fatalf("expected 5 events (session + command + hook lifecycle), got %d", len(report.Events))
 	}
 
 	var gotSession, gotCommand bool
+	hookEvents := map[string]bool{}
 	for _, e := range report.Events {
 		if e.Product != ProductCode {
 			t.Errorf("product = %q, want %q", e.Product, ProductCode)
@@ -97,6 +101,12 @@ func TestPipeline_EndToEnd(t *testing.T) {
 				t.Errorf("%s/%s field %q was sentinel-replaced: %q", e.Group.ID, e.Event.ID, k, s)
 			}
 		}
+		if e.Group.ID == GroupSkill {
+			hookEvents[e.Event.ID] = true
+			if e.Event.Data["skill"] != "teamcity-migrate-remaining-gha" {
+				t.Errorf("unexpected hook payload: %v", e.Event.Data)
+			}
+		}
 		switch e.Group.ID {
 		case GroupSession:
 			gotSession = true
@@ -108,6 +118,11 @@ func TestPipeline_EndToEnd(t *testing.T) {
 			if e.Event.Data["command"] != "run.start" {
 				t.Errorf("command field = %v, want run.start", e.Event.Data["command"])
 			}
+		}
+	}
+	for _, event := range []string{EventHookOffered, EventHookAccepted, EventHookDeclined} {
+		if !hookEvents[event] {
+			t.Errorf("missing wire event %s", event)
 		}
 	}
 	if !gotSession || !gotCommand {

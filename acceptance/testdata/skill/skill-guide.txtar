@@ -17,3 +17,11 @@ stdout 'Migrate to TeamCity'
 
 ! exec teamcity skill guide teamcity-cli nonexistent-topic --no-input
 stderr 'unknown topic'
+
+# Follow-up instructions can load mid-session without installing the hook.
+exec teamcity skill guide teamcity-migrate-remaining-gha --no-input
+stdout 'Migrate remaining GitHub Actions workflows'
+! exists .claude/skills/teamcity-migrate-remaining-gha/SKILL.md
+
+exec teamcity skill install teamcity-migrate-remaining-gha --agent claude-code --project --no-input
+grep 'teamcity skill guide teamcity-migrate-remaining-gha' .claude/skills/teamcity-migrate-remaining-gha/SKILL.md

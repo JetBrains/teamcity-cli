@@ -38,7 +38,7 @@ func allCommands() []string {
 		"api", "link", "migrate", "onboard", "server.plugin.upload",
 		"alias.list", "alias.set", "alias.delete",
 		"config.list", "config.get", "config.set",
-		"skill.list", "skill.install", "skill.update", "skill.remove", "skill.guide",
+		"skill.list", "skill.install", "skill.update", "skill.remove", "skill.guide", "skill.hook-event",
 		"update", "other",
 	}
 }
@@ -62,7 +62,7 @@ func allAIAgents() []string {
 
 // allSkills enumerates the skills the CLI bundles from teamcity-skills.
 func allSkills() []string {
-	return []string{"teamcity-cli", "migrate-to-teamcity", "teamcity-onboard", "other"}
+	return []string{"teamcity-cli", "migrate-to-teamcity", "teamcity-onboard", "teamcity-migrate-remaining-gha", "other"}
 }
 
 // NormalizeSkill returns the wire-safe value for a bundled skill name; unknown → "other".
