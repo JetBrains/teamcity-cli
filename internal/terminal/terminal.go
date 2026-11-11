@@ -3,6 +3,7 @@ package terminal
 import (
 	"cmp"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"errors"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/httpclient"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 	"github.com/gorilla/websocket"
@@ -179,8 +181,6 @@ type Conn struct {
 	debugf    func(string, ...any)
 }
 
-const execMarker = "__TC_EXEC_7f3a9e2b__"
-
 func (tc *Conn) RunInteractive(ctx context.Context) error {
 	stdin := os.Stdin
 	stdout := os.Stdout
@@ -234,6 +234,7 @@ func (tc *Conn) RunInteractive(ctx context.Context) error {
 }
 
 func (tc *Conn) Exec(ctx context.Context, command string) error {
+	marker := "__TC_EXEC_" + rand.Text() + "__"
 	stdout := os.Stdout
 	defer tc.Close()
 
@@ -251,14 +252,7 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 		for {
 			_, msg, err := tc.conn.ReadMessage()
 			if err != nil {
-				switch {
-				case buf.Len() > 0:
-					resultCh <- result{output: extractExecOutput(buf.String())}
-				case !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway):
-					resultCh <- result{err: sessionError(err)}
-				default:
-					resultCh <- result{}
-				}
+				resultCh <- result{output: extractExecOutput(buf.String(), marker), err: fmt.Errorf("connection closed before command completed: %w", sessionError(err))}
 				return
 			}
 
@@ -273,8 +267,12 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 			}
 
 			content := normalizeLineEndings(stripANSI(buf.String()))
-			if strings.Count(content, execMarker+"\n") >= 2 {
-				resultCh <- result{output: extractExecOutput(content)}
+			if exitCode, complete := execExitCode(content, marker); complete {
+				var err error
+				if exitCode != 0 {
+					err = &cmdutil.ExitError{Code: exitCode}
+				}
+				resultCh <- result{output: extractExecOutput(content, marker), err: err}
 				return
 			}
 		}
@@ -282,7 +280,7 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 
 	select {
 	case <-ctx.Done():
-		return errors.New("command timed out")
+		return ctx.Err()
 	case <-readyCh:
 	case res := <-resultCh:
 		if res.err != nil {
@@ -291,30 +289,63 @@ func (tc *Conn) Exec(ctx context.Context, command string) error {
 		return errors.New("connection closed before command started")
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(100 * time.Millisecond):
+	}
 
 	if err := tc.writeMessage(websocket.TextMessage, []byte("stty -echo\r")); err != nil {
 		return fmt.Errorf("failed to send stty: %w", err)
 	}
-	time.Sleep(100 * time.Millisecond)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(100 * time.Millisecond):
+	}
 
-	fullCmd := fmt.Sprintf("echo %s; %s; echo \"\"; echo %s; exit\r", execMarker, command, execMarker)
+	fullCmd := execCommand(command, marker)
 	if err := tc.writeMessage(websocket.TextMessage, []byte(fullCmd)); err != nil {
 		return fmt.Errorf("failed to send command: %w", err)
 	}
 
 	select {
 	case <-ctx.Done():
-		return errors.New("command timed out")
+		return ctx.Err()
 	case res := <-resultCh:
-		if res.err != nil {
-			return res.err
-		}
 		if res.output != "" {
 			_, _ = fmt.Fprintln(stdout, res.output)
 		}
-		return nil
+		return res.err
 	}
+}
+
+// execCommand captures $? before another command can overwrite it (numeric in sh, boolean in PowerShell).
+func execCommand(command, marker string) string {
+	return fmt.Sprintf("echo %s; %s; echo \"%s:$?\"; exit\r", marker, command, marker)
+}
+
+func execExitCode(content, marker string) (int, bool) {
+	_, after, started := strings.Cut(content, marker+"\n")
+	if !started {
+		return 0, false
+	}
+	_, after, marked := strings.Cut(after, marker+":")
+	if !marked {
+		return 0, false
+	}
+	status, _, complete := strings.Cut(after, "\n")
+	if !complete {
+		return 0, false
+	}
+	switch status {
+	case "True":
+		return 0, true
+	case "False":
+		return 1, true
+	}
+	code, err := strconv.Atoi(status)
+	return code, err == nil && code >= 0 && code <= 255
 }
 
 // sessionError explains the server's session-user rejection: since TW-101729 (TeamCity 2026.1.2+) token auth gets a fake HTTP session, so the terminal WebSocket handshake resolves no user.
@@ -340,14 +371,14 @@ func stripANSI(s string) string {
 	return ansiEscapeRE.ReplaceAllString(s, "")
 }
 
-func extractExecOutput(raw string) string {
+func extractExecOutput(raw, marker string) string {
 	raw = normalizeLineEndings(stripANSI(raw))
-	startPattern := execMarker + "\n"
+	startPattern := marker + "\n"
 	_, after, ok := strings.Cut(raw, startPattern)
 	if !ok {
 		return ""
 	}
-	raw, _, _ = strings.Cut(after, execMarker)
+	raw, _, _ = strings.Cut(after, marker)
 
 	return strings.TrimSpace(raw)
 }

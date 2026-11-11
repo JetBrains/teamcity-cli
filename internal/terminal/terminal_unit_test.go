@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const execMarker = "__TC_EXEC_7f3a9e2b__"
+
 func TestNormalizeLineEndings(T *testing.T) {
 	T.Parallel()
 
@@ -73,7 +75,7 @@ func TestExtractExecOutput(T *testing.T) {
 	for _, tc := range tests {
 		T.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tc.want, extractExecOutput(tc.input))
+			assert.Equal(t, tc.want, extractExecOutput(tc.input, execMarker))
 		})
 	}
 }
