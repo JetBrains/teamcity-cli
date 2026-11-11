@@ -7,6 +7,7 @@ import (
 
 	migratesk "github.com/JetBrains/teamcity-skills/skills/migrate-to-teamcity"
 	teamcityclisk "github.com/JetBrains/teamcity-skills/skills/teamcity-cli"
+	remainingghask "github.com/JetBrains/teamcity-skills/skills/teamcity-migrate-remaining-gha"
 	onboardsk "github.com/JetBrains/teamcity-skills/skills/teamcity-onboard"
 	"github.com/tiulpin/instill"
 )
@@ -20,7 +21,7 @@ import (
 // returns fs.SkipDir once it finds one, which would end the walk after the
 // first skill — and merging by path would collide the two SKILL.md files
 // anyway.
-var skillFilesystems = []fs.FS{teamcityclisk.FS, migratesk.FS, onboardsk.FS}
+var skillFilesystems = []fs.FS{teamcityclisk.FS, migratesk.FS, onboardsk.FS, remainingghask.FS}
 
 // ListSkills returns metadata for every skill bundled with this build.
 func ListSkills() []instill.SkillMeta {
@@ -74,4 +75,9 @@ func skillFS(skill string) (fs.FS, error) {
 		}
 	}
 	return nil, fmt.Errorf("unknown skill %q; run 'teamcity skill list' to see available skills", skill)
+}
+
+// IsHookSkill reports whether a bundled skill is an onboarding follow-up hook.
+func IsHookSkill(name string) bool {
+	return name == "teamcity-migrate-remaining-gha"
 }
