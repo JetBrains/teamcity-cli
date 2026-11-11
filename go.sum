@@ -6,8 +6,8 @@ github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c h1:udKWzYgxTojEK
 github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/JetBrains/fus-reporting-api-go v0.2.0 h1:XqVo9c+bwDo4dwvnsoNnLP8YpZfaOFvV7D0vefSIVgQ=
 github.com/JetBrains/fus-reporting-api-go v0.2.0/go.mod h1:jSymVxc/0N4r8EeR3kUU5QqpX/Exw+XbHkAgixkWta4=
-github.com/JetBrains/teamcity-skills v0.4.1-0.20261111135318-3bc2cce88b08 h1:QJZq0yE53Zptmb59yIU4mB20lqy3g2s6zmqkGJ1Swv0=
-github.com/JetBrains/teamcity-skills v0.4.1-0.20261111135318-3bc2cce88b08/go.mod h1:YweDy7mGULv1Au8lbaGLdJRFgN0a/1lgoXXm961N37I=
+github.com/JetBrains/teamcity-skills v0.4.1-0.20261111143758-7b637064b2fc h1:I0NopyapKgiU1y2DMG7OGIOcegn/+AoGD5XHD54gHrQ=
+github.com/JetBrains/teamcity-skills v0.4.1-0.20261111143758-7b637064b2fc/go.mod h1:YweDy7mGULv1Au8lbaGLdJRFgN0a/1lgoXXm961N37I=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=

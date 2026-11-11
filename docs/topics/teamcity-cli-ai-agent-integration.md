@@ -49,52 +49,29 @@ teamcity skill install --project
 
 ## Onboarding follow-ups
 
-After the core onboarding pipeline is green, the agent offers applicable
-follow-ups one at a time. Remaining GitHub Actions migration includes missing
-test matrix variants and preserves existing core jobs. It starts only after
-explicit agreement; declining or leaving the offer unanswered starts nothing.
-
-The agent loads the instructions in the same session:
+After a green core pipeline, the agent can offer to migrate remaining GitHub
+Actions jobs. It loads the hook after explicit consent, in the same session:
 
 ```Shell
 teamcity skill guide teamcity-migrate-remaining-gha
 ```
 
-A separate installation or agent restart is not required. To continue later,
-ask your agent to run this command and identify the existing server, project,
-and pipeline. The migration report records expected test matrix combinations,
-mapped TeamCity jobs, run evidence, and unresolved gaps.
-
-Each hook is a separate embedded skill. A new or changed hook requires a CLI
-release; installation with `skill install` is optional. The decision map runs
-after core work, offering one implemented hook in the order red-build,
-migrate, feedback, speed-up, deploy. Future hook tickets add their own rows.
-
-After refusal, the agent prints a ready-to-copy request containing the server,
-project and pipeline IDs, checkout and report paths, accepted scope, and guide
-command. A fresh session recovers context from the report and current pipeline
-settings before changing anything.
+Installation is optional. To continue later, use the request saved in the
+onboarding report. Hook instructions ship with each CLI release.
 
 ### Hook analytics
 
-Agents report actual offers and explicit answers:
+Agents report offers and explicit answers with:
 
 ```Shell
-teamcity skill hook-event teamcity-migrate-remaining-gha offered
-teamcity skill hook-event teamcity-migrate-remaining-gha accepted --json
-teamcity skill hook-event teamcity-migrate-remaining-gha declined
+teamcity skill hook-event <skill> <offered|accepted|declined> [--json]
 ```
 
-Use `accepted` only after explicit consent, `declined` only after explicit
-refusal. No answer emits neither response event. A direct continuation request
-records acceptance without a fabricated offer. Each observation is reported
-once. Loading a guide records `guide.viewed` separately and does not imply consent.
-
-`hook-event` records telemetry only: it does not authorize or run a hook. It
-accepts only registered bundled hooks and the three listed event values.
-The JSON result contains `skill` and `event`; it acknowledges command processing,
-not server receipt. Analytics respects opt-out and remains best effort.
-Hook events contain the skill name, without project or conversation details.
+The command accepts bundled hooks and records analytics only. Only explicit
+answers produce response events. Guide reads and installations are counted separately.
+JSON output contains `skill` and `event`; it confirms command processing.
+Hook events contain only the skill name. Delivery is best effort and respects
+analytics opt-out.
 
 ## Updating the skill
 

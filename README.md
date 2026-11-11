@@ -156,10 +156,9 @@ teamcity skill guide             # print the guide that installed skills point t
 
 Installed skills are short stubs that tell the agent to run `teamcity skill guide`, so after a CLI upgrade agents read the instructions for the new version without reinstalling.
 
-After the first green onboarding pipeline, the agent can offer remaining GitHub
-Actions migration. It loads `teamcity skill guide teamcity-migrate-remaining-gha`
-only after explicit agreement. You can ask your agent to run the same command
-later and continue migration into the existing pipeline, including test matrices.
+After a green onboarding pipeline, the agent can offer to migrate remaining
+GitHub Actions jobs. Hook instructions load through `teamcity skill guide`
+after explicit consent; installation is optional.
 
 For **Claude Code**, you can install the `teamcity` plugin instead, which
 bundles these skills from
@@ -173,20 +172,6 @@ bundles these skills from
 The plugin contains only the skills, so install the `teamcity` CLI itself as described above.
 
 See [AI agent integration](https://www.jetbrains.com/help/teamcity/teamcity-cli-ai-agent-integration.html) for details.
-
-Each hook is a separate embedded skill; adding or changing one requires a new
-CLI release. Hook installation is optional. Agents report offers and explicit
-answers separately from guide reads:
-
-```bash
-teamcity skill hook-event teamcity-migrate-remaining-gha offered
-# after an explicit yes:
-teamcity skill hook-event teamcity-migrate-remaining-gha accepted
-# after an explicit no, use declined; no answer emits neither response event.
-```
-
-These commands record best-effort analytics only; they neither grant consent
-nor execute the hook. Existing analytics opt-out applies.
 
 ## Learn more
 
