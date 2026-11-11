@@ -163,6 +163,7 @@ func TestSampleReposAreValid(t *testing.T) {
 }
 
 func TestSampleRepoLabel(t *testing.T) {
-	assert.Equal(t, "Spring PetClinic (Java, Spring Boot, Maven)", sampleRepo{name: "Spring PetClinic", stack: "Java, Spring Boot, Maven"}.label())
+	assert.Equal(t, "Spring PetClinic [Java, Spring Boot, Maven]", sampleRepo{name: "Spring PetClinic", stack: "Java, Spring Boot, Maven"}.label())
 	assert.Equal(t, "Spring PetClinic", sampleRepo{name: "Spring PetClinic"}.label())
+	assert.Equal(t, "Spring PetClinic [Java, Spring Boot, Maven] [100 tests, fast pipeline]", sampleRepo{name: "Spring PetClinic", stack: "Java, Spring Boot, Maven", tag: "100 tests, fast pipeline"}.label())
 }
