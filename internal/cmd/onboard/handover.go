@@ -107,6 +107,7 @@ func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, p
 		return endFailed, err
 	}
 
+	notifySandboxChecked(f, client, ag, sandbox.status)
 	notifyHandoverStarted(f, client, repositoryType(repo.source), ag)
 	return launchAgent(f, ag, handoverContext{
 		serverURL:  client.ServerURL(),

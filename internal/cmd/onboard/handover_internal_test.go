@@ -186,6 +186,14 @@ func TestNotifyHandoverStarted(t *testing.T) {
 	assert.JSONEq(t, `{"repositoryType":"demo","agent":"claude_code"}`, rec.body(t, "handover-started"))
 }
 
+func TestNotifySandboxChecked(t *testing.T) {
+	client, rec := newRecordingClient(t, nil)
+	f, _ := testFactory()
+
+	notifySandboxChecked(f, client, supportedAgents[1], api.OnboardingSandboxDeclined)
+	assert.JSONEq(t, `{"agent":"codex","status":"declined"}`, rec.body(t, "sandbox-checked"))
+}
+
 func TestHandoverStatus(t *testing.T) {
 	tests := []struct {
 		end  handoverEnd

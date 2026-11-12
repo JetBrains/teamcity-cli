@@ -87,6 +87,12 @@ func notifyAgentsDetected(f *cmdutil.Factory, client api.ClientInterface, agents
 	})
 }
 
+func notifySandboxChecked(f *cmdutil.Factory, client api.ClientInterface, ag agent, status api.OnboardingSandboxStatus) {
+	notifyInBackground(f.Context(), f.Printer.Debug, "sandbox-checked", func(ctx context.Context) error {
+		return client.OnboardingSandboxChecked(ctx, api.OnboardingSandboxCheckedRequest{Agent: reportedAgent(ag), Status: status})
+	})
+}
+
 // notifyHandoverStarted reports that ag is about to be launched with the onboarding prompt; reruns don't report it again.
 func notifyHandoverStarted(f *cmdutil.Factory, client api.ClientInterface, rt api.OnboardingRepositoryType, ag agent) {
 	notifyInBackground(f.Context(), f.Printer.Debug, "handover-started", func(ctx context.Context) error {
