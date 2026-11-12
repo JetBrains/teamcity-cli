@@ -45,6 +45,7 @@ type sampleRepo struct {
 var sampleRepos = []sampleRepo{
 	{name: "Conductor", stack: "Java, Spring Boot, Gradle", url: "https://github.com/conductor-oss/conductor", revision: "ab2de6da6c7b5935e6c6d09da29953b8d4cfe291", tag: "4,549 tests, long pipeline"},
 	{name: "FluentValidation", stack: "C#, .NET", url: "https://github.com/FluentValidation/FluentValidation", revision: "299ef377bde844af7d28b7aa21786a6853f930e3", tag: "839 tests, small and fast pipeline"},
+	{name: "tRPC", stack: "TypeScript, Node.js, pnpm", url: "https://github.com/trpc/trpc", revision: "5b993cfc71211a204fe2962f0433eb88b6be6543", tag: "2,421 tests, ~10 min pipeline"},
 }
 
 // label renders a sample as "Name [stack] [tag]" for the picker.
