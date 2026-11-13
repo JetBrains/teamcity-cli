@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,20 +19,31 @@ type agent struct {
 	name  string // instill agent name, as `teamcity skill install --agent` expects
 	label string
 	bin   string // executable looked up on PATH
-	// promptFlag passes the initial prompt to an interactive session; empty means a positional argument.
-	promptFlag string
+	// launchFlag goes right before the initial prompt, which is otherwise a positional argument.
+	launchFlag launchFlag
 	failTip    string // shown when the agent exits with an error
 	path       string // set by detectAgents
 	version    string // first line of `<bin> --version`, set by detectAgents
 }
 
+// launchFlag is a flag that starts the agent's interactive session; an empty name means none.
+type launchFlag struct {
+	name string
+	// ifListed passes the flag only when `<bin> --help` lists it, for a flag the session can do without.
+	ifListed bool
+}
+
 // supportedAgents are the only agents onboarding hands over to.
 var supportedAgents = []agent{
 	{name: "claude-code", label: "Claude Code", bin: "claude"},
-	{name: "codex", label: "Codex", bin: "codex"},
+	{
+		name: "codex", label: "Codex", bin: "codex",
+		// Codex's shared background server keeps the feature settings of the client that started it; a session that needs others stops to ask.
+		launchFlag: launchFlag{name: "--no-daemon", ifListed: true}, // older and future versions may not have it
+	},
 	{
 		name: "junie", label: "Junie", bin: "junie",
-		promptFlag: "--prompt", // a positional arg runs a non-interactive task
+		launchFlag: launchFlag{name: "--prompt"}, // a positional arg runs a non-interactive task
 		failTip:    "Older Junie CLI versions don't support --prompt; update Junie, then run it again",
 	},
 }
@@ -152,6 +164,16 @@ func agentVersion(ctx context.Context, path string) (string, error) {
 	}
 	first, _, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
 	return first, nil
+}
+
+// agentHasFlag reports whether `path --help`, run within versionTimeout, lists flag.
+func agentHasFlag(ctx context.Context, path, flag string) bool {
+	ctx, cancel := context.WithTimeout(ctx, versionTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, path, "--help")
+	cmd.WaitDelay = time.Second // don't wait on children still holding stdout after the kill
+	out, err := cmd.Output()
+	return err == nil && slices.Contains(strings.Fields(string(out)), flag)
 }
 
 // pickAgent returns the only detected agent, or asks the user to pick one.
