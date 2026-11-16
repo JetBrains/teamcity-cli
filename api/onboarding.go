@@ -43,8 +43,23 @@ const (
 	OnboardingStatusError                 OnboardingHandoverStatus = "error"
 )
 
+// OnboardingSandboxStatus is how the step that lets teamcity run outside the agent's sandbox ended.
+type OnboardingSandboxStatus string
+
+const (
+	OnboardingSandboxNotSandboxed OnboardingSandboxStatus = "not_sandboxed"
+	OnboardingSandboxAllowed      OnboardingSandboxStatus = "allowed"
+	OnboardingSandboxDeclined     OnboardingSandboxStatus = "declined"
+	OnboardingSandboxAllowFailed  OnboardingSandboxStatus = "allow_failed"
+)
+
 type OnboardingAgentsDetectedRequest struct {
 	Agents []OnboardingAgent `json:"agents"`
+}
+
+type OnboardingSandboxCheckedRequest struct {
+	Agent  OnboardingAgent         `json:"agent"`
+	Status OnboardingSandboxStatus `json:"status"`
 }
 
 type OnboardingHandoverStartedRequest struct {
@@ -78,6 +93,11 @@ func (c *Client) OnboardingLoginCompleted(ctx context.Context) error {
 // OnboardingAgentsDetected reports the AI agents `teamcity onboard` found.
 func (c *Client) OnboardingAgentsDetected(ctx context.Context, req OnboardingAgentsDetectedRequest) error {
 	return c.postOnboarding(ctx, "agents-detected", req)
+}
+
+// OnboardingSandboxChecked reports how the sandbox step ended for the picked AI agent.
+func (c *Client) OnboardingSandboxChecked(ctx context.Context, req OnboardingSandboxCheckedRequest) error {
+	return c.postOnboarding(ctx, "sandbox-checked", req)
 }
 
 // OnboardingHandoverStarted reports that `teamcity onboard` launched the picked AI agent.

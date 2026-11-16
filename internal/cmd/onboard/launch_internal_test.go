@@ -44,7 +44,7 @@ func TestLaunchAgentRunsInRepoWithPrompt(t *testing.T) {
 			t.Setenv("TEAMCITY_ONBOARDING", "") // the host's value must not leak through
 			bin, repoDir := t.TempDir(), t.TempDir()
 			record := filepath.Join(t.TempDir(), "record")
-			ag := agent{label: "Junie", bin: "junie", promptFlag: "--prompt"}
+			ag := agent{label: "Junie", bin: "junie", launchFlag: launchFlag{name: "--prompt"}}
 			ag.path = fakeBin(t, bin, "junie", `pwd -P > "`+record+`"; printf '%s\n' "$1" "$TEAMCITY_ONBOARDING" >> "`+record+`"`)
 			f, out := testFactory()
 
@@ -58,6 +58,28 @@ func TestLaunchAgentRunsInRepoWithPrompt(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, wantDir+"\n--prompt\n"+want+"\n", string(got), "runs in the repo dir with the prompt flag first and the onboarding context")
 			assert.Contains(t, out.String(), "Junie exited.")
+		})
+	}
+}
+
+func TestLaunchAgentFlagIfListed(t *testing.T) {
+	skipOnWindows(t)
+	for _, listed := range []bool{true, false} {
+		t.Run(map[bool]string{true: "listed", false: "not listed"}[listed], func(t *testing.T) {
+			help := "  --model  Model"
+			if listed {
+				help = "  --no-daemon  Run without the shared background server"
+			}
+			record := filepath.Join(t.TempDir(), "record")
+			ag := agent{label: "Codex", bin: "codex", launchFlag: launchFlag{name: "--no-daemon", ifListed: true}}
+			ag.path = fakeBin(t, t.TempDir(), "codex", `[ "$1" = --help ] && { echo '`+help+`'; exit 0; }; echo "$1" > "`+record+`"`)
+			f, _ := testFactory()
+
+			_, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
+			require.NoError(t, err)
+			got, err := os.ReadFile(record)
+			require.NoError(t, err)
+			assert.Equal(t, listed, string(got) == "--no-daemon\n", "passed first only when --help lists it, got %q", got)
 		})
 	}
 }
@@ -130,8 +152,8 @@ func TestLaunchAgentStartFailure(t *testing.T) {
 
 func TestPromptArgs(t *testing.T) {
 	assert.Equal(t, []string{"task"}, agent{}.promptArgs("task", nil))
-	assert.Equal(t, []string{"--prompt", "task"}, agent{promptFlag: "--prompt"}.promptArgs("task", nil))
-	assert.Equal(t, []string{"--settings", "{}", "--prompt", "task"}, agent{promptFlag: "--prompt"}.promptArgs("task", []string{"--settings", "{}"}))
+	assert.Equal(t, []string{"--prompt", "task"}, agent{launchFlag: launchFlag{name: "--prompt"}}.promptArgs("task", nil))
+	assert.Equal(t, []string{"--settings", "{}", "--prompt", "task"}, agent{launchFlag: launchFlag{name: "--prompt"}}.promptArgs("task", []string{"--settings", "{}"}))
 }
 
 func TestWithoutUserinfo(t *testing.T) {

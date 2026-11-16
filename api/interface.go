@@ -146,6 +146,7 @@ type ClientInterface interface {
 
 	OnboardingLoginCompleted(ctx context.Context) error
 	OnboardingAgentsDetected(ctx context.Context, req OnboardingAgentsDetectedRequest) error
+	OnboardingSandboxChecked(ctx context.Context, req OnboardingSandboxCheckedRequest) error
 	OnboardingHandoverStarted(ctx context.Context, req OnboardingHandoverStartedRequest) error
 	OnboardingHandoverFinished(ctx context.Context, req OnboardingHandoverFinishedRequest) error
 	OnboardingPipelineCreated(ctx context.Context, req OnboardingPipelineCreatedRequest) error

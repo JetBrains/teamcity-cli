@@ -17,6 +17,9 @@ import (
 // launchAgent runs ag in the foreground on this terminal with the staged context, offering a rerun when it exits with an error.
 // It returns where the hand-over stopped.
 func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) (handoverEnd, error) {
+	if ag.launchFlag.ifListed && !agentHasFlag(f.Context(), ag.path, ag.launchFlag.name) {
+		ag.launchFlag = launchFlag{}
+	}
 	args := ag.promptArgs(handoverPrompt(hc), hc.sandbox.launchArgs)
 	rt := repositoryType(hc.repo.source)
 	f.Printer.Info("Starting %s in this terminal. Exit it to return to your shell.\n", ag.label)
@@ -73,8 +76,8 @@ func runAgent(path string, args []string, dir string, rt api.OnboardingRepositor
 // promptArgs builds the arguments that start an interactive session with prompt already submitted, after the agent's launchArgs.
 func (a agent) promptArgs(prompt string, launchArgs []string) []string {
 	args := slices.Clone(launchArgs)
-	if a.promptFlag != "" {
-		args = append(args, a.promptFlag)
+	if a.launchFlag.name != "" {
+		args = append(args, a.launchFlag.name)
 	}
 	return append(args, prompt)
 }
