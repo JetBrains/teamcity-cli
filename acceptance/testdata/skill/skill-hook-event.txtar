@@ -1,0 +1,17 @@
+# Hook observations are independent of guide loading and installation.
+env TEAMCITY_ANALYTICS=0
+exec teamcity skill hook-event teamcity-migrate-remaining-gha offered --json --no-input
+stdout '"event": "offered"'
+stdout '"skill": "teamcity-migrate-remaining-gha"'
+exec teamcity skill hook-event teamcity-migrate-remaining-gha accepted --no-input
+stdout 'Hook event processed'
+exec teamcity skill hook-event teamcity-migrate-remaining-gha declined --no-input
+! exists .claude/skills/teamcity-migrate-remaining-gha/SKILL.md
+
+! exec teamcity skill hook-event teamcity-cli accepted --json --no-input
+stderr '"code": "validation_error"'
+stderr 'unknown hook skill'
+! exec teamcity skill hook-event teamcity-migrate-remaining-gha unanswered --json --no-input
+stderr 'unknown hook event'
+! exec teamcity skill hook-event teamcity-migrate-remaining-gha --no-input
+stderr 'accepts 2 arg'

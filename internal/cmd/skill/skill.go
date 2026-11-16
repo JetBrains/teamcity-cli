@@ -33,6 +33,7 @@ globally for the current user or locally into a project.`,
 	cmd.AddCommand(newSkillUpdateCmd(f))
 	cmd.AddCommand(newSkillRemoveCmd(f))
 	cmd.AddCommand(newSkillGuideCmd(f))
+	cmd.AddCommand(newSkillHookEventCmd(f))
 
 	return cmd
 }

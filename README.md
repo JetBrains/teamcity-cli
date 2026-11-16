@@ -156,6 +156,10 @@ teamcity skill guide             # print the guide that installed skills point t
 
 Installed skills are short stubs that tell the agent to run `teamcity skill guide`, so after a CLI upgrade agents read the instructions for the new version without reinstalling.
 
+After a green onboarding pipeline, the agent can offer to migrate remaining
+GitHub Actions jobs. Hook instructions load through `teamcity skill guide`
+after explicit consent; installation is optional.
+
 For **Claude Code**, you can install the `teamcity` plugin instead, which
 bundles these skills from
 [JetBrains/teamcity-skills](https://github.com/JetBrains/teamcity-skills):

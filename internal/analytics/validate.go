@@ -127,6 +127,9 @@ func SampleEvents() []fus.LogEvent {
 		mk(GroupSkill, EventGuideViewed, false, map[string]any{
 			"skill": "teamcity-cli", "is_overview": true, "is_success": true,
 		}),
+		mk(GroupSkill, EventHookOffered, false, map[string]any{"skill": "teamcity-migrate-remaining-gha"}),
+		mk(GroupSkill, EventHookAccepted, false, map[string]any{"skill": "teamcity-migrate-remaining-gha"}),
+		mk(GroupSkill, EventHookDeclined, false, map[string]any{"skill": "teamcity-migrate-remaining-gha"}),
 		mk(GroupWorkspace, EventLinked, false, map[string]any{
 			"source": WorkspaceSourceFlag, "is_ambiguous": false, "is_subdir": true,
 		}),

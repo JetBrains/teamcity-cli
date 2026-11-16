@@ -47,6 +47,32 @@ Install the skill for the current project only, rather than globally:
 teamcity skill install --project
 ```
 
+## Onboarding follow-ups
+
+After a green core pipeline, the agent can offer to migrate remaining GitHub
+Actions jobs. It loads the hook after explicit consent, in the same session:
+
+```Shell
+teamcity skill guide teamcity-migrate-remaining-gha
+```
+
+Installation is optional. To continue later, use the request saved in the
+onboarding report. Hook instructions ship with each CLI release.
+
+### Hook analytics
+
+Agents report offers and explicit answers with:
+
+```Shell
+teamcity skill hook-event <skill> <offered|accepted|declined> [--json]
+```
+
+The command accepts bundled hooks and records analytics only. Only explicit
+answers produce response events. Guide reads and installations are counted separately.
+JSON output contains `skill` and `event`; it confirms command processing.
+Hook events contain only the skill name. Delivery is best effort and respects
+analytics opt-out.
+
 ## Updating the skill
 
 Update the skill to the latest version bundled with your current `teamcity` release:

@@ -1537,6 +1537,18 @@ Print a skill's guide for AI coding agents
 <tr>
 <td>
 
+`teamcity skill hook-event`
+
+</td>
+<td>
+
+Report an onboarding hook offer or user response
+
+</td>
+</tr>
+<tr>
+<td>
+
 `teamcity skill install`
 
 </td>
