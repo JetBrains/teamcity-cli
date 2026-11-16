@@ -18,60 +18,6 @@ const (
 	OnboardingRepositoryDemo OnboardingRepositoryType = "demo"
 )
 
-// OnboardingAgent is a detected AI agent, or OnboardingAgentNone when there is none.
-type OnboardingAgent string
-
-const (
-	OnboardingAgentClaudeCode OnboardingAgent = "claude_code"
-	OnboardingAgentCodex      OnboardingAgent = "codex"
-	OnboardingAgentJunie      OnboardingAgent = "junie"
-	OnboardingAgentNone       OnboardingAgent = "none"
-)
-
-// OnboardingHandoverStatus is how the hand-over to the AI agent ended.
-type OnboardingHandoverStatus string
-
-const (
-	OnboardingStatusSuccess               OnboardingHandoverStatus = "success"
-	OnboardingStatusNoCheckout            OnboardingHandoverStatus = "no_checkout"
-	OnboardingStatusHandoverDeclined      OnboardingHandoverStatus = "handover_declined"
-	OnboardingStatusSkillInstallFailure   OnboardingHandoverStatus = "skill_install_failure"
-	OnboardingStatusAgentFailedToStart    OnboardingHandoverStatus = "agent_failed_to_start"
-	OnboardingStatusAgentInterrupted      OnboardingHandoverStatus = "agent_interrupted"
-	OnboardingStatusAgentError            OnboardingHandoverStatus = "agent_error"
-	OnboardingStatusHandoverRerunDeclined OnboardingHandoverStatus = "handover_rerun_declined"
-	OnboardingStatusError                 OnboardingHandoverStatus = "error"
-)
-
-// OnboardingSandboxStatus is how the step that lets teamcity run outside the agent's sandbox ended.
-type OnboardingSandboxStatus string
-
-const (
-	OnboardingSandboxNotSandboxed OnboardingSandboxStatus = "not_sandboxed"
-	OnboardingSandboxAllowed      OnboardingSandboxStatus = "allowed"
-	OnboardingSandboxDeclined     OnboardingSandboxStatus = "declined"
-	OnboardingSandboxAllowFailed  OnboardingSandboxStatus = "allow_failed"
-)
-
-type OnboardingAgentsDetectedRequest struct {
-	Agents []OnboardingAgent `json:"agents"`
-}
-
-type OnboardingSandboxCheckedRequest struct {
-	Agent  OnboardingAgent         `json:"agent"`
-	Status OnboardingSandboxStatus `json:"status"`
-}
-
-type OnboardingHandoverStartedRequest struct {
-	RepositoryType OnboardingRepositoryType `json:"repositoryType"`
-	Agent          OnboardingAgent          `json:"agent"`
-}
-
-type OnboardingHandoverFinishedRequest struct {
-	RepositoryType OnboardingRepositoryType `json:"repositoryType"`
-	Status         OnboardingHandoverStatus `json:"status"`
-}
-
 type OnboardingPipelineCreatedRequest struct {
 	RepositoryType OnboardingRepositoryType `json:"repositoryType"`
 	PipelineID     string                   `json:"pipelineId"`
@@ -88,26 +34,6 @@ const onboardingTimeout = 3 * time.Second
 // OnboardingLoginCompleted reports that `teamcity onboard` logged in.
 func (c *Client) OnboardingLoginCompleted(ctx context.Context) error {
 	return c.postOnboarding(ctx, "login-completed", nil)
-}
-
-// OnboardingAgentsDetected reports the AI agents `teamcity onboard` found.
-func (c *Client) OnboardingAgentsDetected(ctx context.Context, req OnboardingAgentsDetectedRequest) error {
-	return c.postOnboarding(ctx, "agents-detected", req)
-}
-
-// OnboardingSandboxChecked reports how the sandbox step ended for the picked AI agent.
-func (c *Client) OnboardingSandboxChecked(ctx context.Context, req OnboardingSandboxCheckedRequest) error {
-	return c.postOnboarding(ctx, "sandbox-checked", req)
-}
-
-// OnboardingHandoverStarted reports that `teamcity onboard` launched the picked AI agent.
-func (c *Client) OnboardingHandoverStarted(ctx context.Context, req OnboardingHandoverStartedRequest) error {
-	return c.postOnboarding(ctx, "handover-started", req)
-}
-
-// OnboardingHandoverFinished reports how the hand-over to the AI agent ended.
-func (c *Client) OnboardingHandoverFinished(ctx context.Context, req OnboardingHandoverFinishedRequest) error {
-	return c.postOnboarding(ctx, "handover-finished", req)
 }
 
 // OnboardingPipelineCreated reports a pipeline created inside the onboarding.

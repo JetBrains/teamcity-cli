@@ -72,6 +72,18 @@ const (
 )
 
 const (
+	OnboardingOutcomeSuccess             = "success"
+	OnboardingOutcomeNoCheckout          = "no_checkout"
+	OnboardingOutcomeHandoverDeclined    = "handover_declined"
+	OnboardingOutcomeSkillInstallFailure = "skill_install_failure"
+	OnboardingOutcomeAgentFailedToStart  = "agent_failed_to_start"
+	OnboardingOutcomeAgentInterrupted    = "agent_interrupted"
+	OnboardingOutcomeAgentError          = "agent_error"
+	OnboardingOutcomeRerunDeclined       = "handover_rerun_declined"
+	OnboardingOutcomeError               = "error"
+)
+
+const (
 	WorkspaceSourceFlag        = "flag"
 	WorkspaceSourceAuto        = "auto"
 	WorkspaceSourceInteractive = "interactive"

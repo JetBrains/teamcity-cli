@@ -29,10 +29,10 @@ func trackAgentsDetected(f *cmdutil.Factory, agents []agent) {
 }
 
 // trackSandboxChecked tracks how the step that lets teamcity run outside ag's sandbox ended.
-func trackSandboxChecked(f *cmdutil.Factory, ag agent, status api.OnboardingSandboxStatus) {
+func trackSandboxChecked(f *cmdutil.Factory, ag agent, status string) {
 	track(f, analytics.EventSandboxChecked, map[string]any{
 		"agent":  analytics.NormalizeAIAgent(ag.name),
-		"status": string(status),
+		"status": status,
 	})
 }
 
@@ -44,18 +44,18 @@ func trackHandoverStarted(f *cmdutil.Factory, rt api.OnboardingRepositoryType, a
 	})
 }
 
-// trackHandoverFinished tracks how the hand-over ended; the outcome takes the status the server report sends.
-func trackHandoverFinished(f *cmdutil.Factory, rt api.OnboardingRepositoryType, status api.OnboardingHandoverStatus) {
+// trackHandoverFinished tracks how the hand-over ended.
+func trackHandoverFinished(f *cmdutil.Factory, rt api.OnboardingRepositoryType, outcome string) {
 	track(f, analytics.EventHandoverFinished, map[string]any{
 		"repository": string(rt),
-		"outcome":    string(status),
+		"outcome":    outcome,
 	})
 }
 
-// promptEnd is declined when the user aborted a prompt (Ctrl+C), and endFailed for any other prompt failure.
-func promptEnd(err error, declined handoverEnd) handoverEnd {
+// promptOutcome is declined when the user aborted a prompt (Ctrl+C), and error for any other prompt failure.
+func promptOutcome(err error, declined string) string {
 	if errors.Is(err, huh.ErrUserAborted) {
 		return declined
 	}
-	return endFailed
+	return analytics.OnboardingOutcomeError
 }

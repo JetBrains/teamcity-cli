@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/charmbracelet/huh"
 )
@@ -80,52 +81,47 @@ type handoverContext struct {
 var confirm = cmdutil.Confirm
 
 // handOverToAgent passes the onboarding context (repo, its TeamCity project, VCS root status) to the picked AI agent to finish the setup,
-// and tracks and reports how the hand-over ended.
+// and tracks how the hand-over ended.
 func handOverToAgent(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool, agents []agent) error {
-	end, err := handOver(f, client, repo, projectID, authorized, agents)
-	rt, status := repositoryType(repo.source), handoverStatus(end)
-	trackHandoverFinished(f, rt, status)
-	notifyHandoverFinished(f, client, rt, status)
+	outcome, err := handOver(f, client, repo, projectID, authorized, agents)
+	trackHandoverFinished(f, repositoryType(repo.source), outcome)
 	return err
 }
 
-// handOver runs the hand-over and returns where it stopped.
-func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool, agents []agent) (handoverEnd, error) {
+// handOver runs the hand-over and returns how it ended, as a tracked outcome.
+func handOver(f *cmdutil.Factory, client api.ClientInterface, repo repository, projectID string, authorized bool, agents []agent) (string, error) {
 	// The agent works in the checkout, and per-project skills land there; a sample left uncloned has none.
 	if repo.dir == "" {
-		return endNoCheckout, api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
+		return analytics.OnboardingOutcomeNoCheckout, api.Validation("the agent needs a local copy of the repository", "Rerun teamcity onboard and clone the sample repository")
 	}
 	ag, err := pickAgent(f, agents)
 	if err != nil {
-		return promptEnd(err, endDeclined), err
+		return promptOutcome(err, analytics.OnboardingOutcomeHandoverDeclined), err
 	}
 
 	// TODO: copy pending design review
 	proceed := true
 	if err := confirm("Continue onboarding with "+ag.label+"?", &proceed); err != nil {
-		return promptEnd(err, endDeclined), err
+		return promptOutcome(err, analytics.OnboardingOutcomeHandoverDeclined), err
 	}
 	if !proceed {
-		return endDeclined, nil
+		return analytics.OnboardingOutcomeHandoverDeclined, nil
 	}
 
 	scope, err := promptSkillScope(f, repo)
 	if err != nil {
-		return promptEnd(err, endDeclined), err
+		return promptOutcome(err, analytics.OnboardingOutcomeHandoverDeclined), err
 	}
 	if err := installSkills(f, ag, scope, repo.dir); err != nil {
-		return endSkillInstallFailed, err
+		return analytics.OnboardingOutcomeSkillInstallFailure, err
 	}
 	sandbox, err := allowOutsideSandbox(f, ag, repo.dir)
 	if err != nil {
-		return promptEnd(err, endDeclined), err
+		return promptOutcome(err, analytics.OnboardingOutcomeHandoverDeclined), err
 	}
 
 	trackSandboxChecked(f, ag, sandbox.status)
-	notifySandboxChecked(f, client, ag, sandbox.status)
-	rt := repositoryType(repo.source)
-	trackHandoverStarted(f, rt, ag)
-	notifyHandoverStarted(f, client, rt, ag)
+	trackHandoverStarted(f, repositoryType(repo.source), ag)
 	return launchAgent(f, ag, handoverContext{
 		serverURL:  client.ServerURL(),
 		projectID:  projectID,

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -89,7 +89,7 @@ func TestAllowOutsideSandbox(t *testing.T) {
 		f, _ := testFactory()
 		got, err := allowOutsideSandbox(f, claude, t.TempDir())
 		require.NoError(t, err)
-		assert.Equal(t, api.OnboardingSandboxNotSandboxed, got.status)
+		assert.Equal(t, analytics.OnboardingSandboxNotSandboxed, got.status)
 		assert.False(t, got.agentMustAsk)
 		assert.Empty(t, got.launchArgs)
 	})
@@ -101,7 +101,7 @@ func TestAllowOutsideSandbox(t *testing.T) {
 		f, _ := testFactory()
 		got, err := allowOutsideSandbox(f, claude, t.TempDir())
 		require.NoError(t, err)
-		assert.Equal(t, api.OnboardingSandboxAllowed, got.status)
+		assert.Equal(t, analytics.OnboardingSandboxAllowed, got.status)
 		assert.False(t, got.agentMustAsk)
 		assert.Equal(t, []string{"--settings", `{"sandbox":{"excludedCommands":["teamcity *"]}}`}, got.launchArgs)
 	})
@@ -113,7 +113,7 @@ func TestAllowOutsideSandbox(t *testing.T) {
 		f, _ := testFactory()
 		got, err := allowOutsideSandbox(f, claude, t.TempDir())
 		require.NoError(t, err)
-		assert.Equal(t, api.OnboardingSandboxDeclined, got.status)
+		assert.Equal(t, analytics.OnboardingSandboxDeclined, got.status)
 		assert.True(t, got.agentMustAsk)
 		assert.Empty(t, got.launchArgs)
 	})
@@ -124,7 +124,7 @@ func TestAllowOutsideSandbox(t *testing.T) {
 		f, _ := testFactory()
 		got, err := allowOutsideSandbox(f, codex, t.TempDir())
 		require.NoError(t, err)
-		assert.Equal(t, api.OnboardingSandboxAllowed, got.status)
+		assert.Equal(t, analytics.OnboardingSandboxAllowed, got.status)
 		assert.False(t, got.agentMustAsk)
 		assert.Empty(t, got.launchArgs)
 		assert.FileExists(t, filepath.Join(codexDir, "rules", codexRuleFile))
@@ -136,7 +136,7 @@ func TestAllowOutsideSandbox(t *testing.T) {
 		f, _ := testFactory()
 		got, err := allowOutsideSandbox(f, codex, t.TempDir())
 		require.NoError(t, err)
-		assert.Equal(t, api.OnboardingSandboxDeclined, got.status)
+		assert.Equal(t, analytics.OnboardingSandboxDeclined, got.status)
 		assert.True(t, got.agentMustAsk)
 		assert.NoFileExists(t, filepath.Join(codexDir, "rules", codexRuleFile))
 	})
@@ -147,7 +147,7 @@ func TestAllowOutsideSandbox(t *testing.T) {
 		f, _ := testFactory()
 		got, err := allowOutsideSandbox(f, junie, t.TempDir())
 		require.NoError(t, err)
-		assert.Equal(t, api.OnboardingSandboxNotSandboxed, got.status)
+		assert.Equal(t, analytics.OnboardingSandboxNotSandboxed, got.status)
 		assert.False(t, got.agentMustAsk)
 		assert.Empty(t, got.launchArgs)
 	})
