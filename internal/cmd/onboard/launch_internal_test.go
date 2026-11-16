@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/charmbracelet/huh"
 	"github.com/stretchr/testify/assert"
@@ -49,9 +50,9 @@ func TestLaunchAgentRunsInRepoWithPrompt(t *testing.T) {
 			ag.path = fakeBin(t, bin, "junie", `pwd -P > "`+record+`"; printf '%s\n' "$1" "$TEAMCITY_ONBOARDING" >> "`+record+`"`)
 			f, out := testFactory()
 
-			end, err := launchAgent(f, ag, handoverContext{serverURL: "https://tc.example.com", projectID: "Instance_App", repo: repository{source: source, dir: repoDir}})
+			outcome, err := launchAgent(f, ag, handoverContext{serverURL: "https://tc.example.com", projectID: "Instance_App", repo: repository{source: source, dir: repoDir}})
 			require.NoError(t, err)
-			assert.Equal(t, api.OnboardingStatusSuccess, handoverStatus(end))
+			assert.Equal(t, analytics.OnboardingOutcomeSuccess, outcome)
 
 			got, err := os.ReadFile(record)
 			require.NoError(t, err)
@@ -93,12 +94,12 @@ func TestLaunchAgentCancelledSkipsRerun(t *testing.T) {
 	cancel()
 	f.SetContext(ctx)
 
-	end, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
+	outcome, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
 	exitErr, ok := errors.AsType[*cmdutil.ExitError](err)
 	require.True(t, ok, "want *cmdutil.ExitError, got %v", err)
 	assert.Equal(t, 130, exitErr.Code)
 	assert.NotContains(t, out.String(), "stopped with an error")
-	assert.Equal(t, api.OnboardingStatusAgentInterrupted, handoverStatus(end))
+	assert.Equal(t, analytics.OnboardingOutcomeAgentInterrupted, outcome)
 }
 
 func TestLaunchAgentFailure(t *testing.T) {
@@ -109,12 +110,12 @@ func TestLaunchAgentFailure(t *testing.T) {
 		ag := agent{label: "Codex", bin: "codex", path: fakeBin(t, t.TempDir(), "codex", "exit 3")}
 		f, out := testFactory()
 
-		end, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
+		outcome, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
 		exitErr, ok := errors.AsType[*cmdutil.ExitError](err)
 		require.True(t, ok, "want *cmdutil.ExitError, got %v", err)
 		assert.Equal(t, 3, exitErr.Code)
 		assert.Contains(t, out.String(), "stopped with an error")
-		assert.Equal(t, api.OnboardingStatusHandoverRerunDeclined, handoverStatus(end))
+		assert.Equal(t, analytics.OnboardingOutcomeRerunDeclined, outcome)
 	})
 
 	t.Run("rerun prompt aborted", func(t *testing.T) {
@@ -122,9 +123,9 @@ func TestLaunchAgentFailure(t *testing.T) {
 		ag := agent{label: "Codex", bin: "codex", path: fakeBin(t, t.TempDir(), "codex", "exit 3")}
 		f, _ := testFactory()
 
-		end, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
+		outcome, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
 		assert.ErrorIs(t, err, huh.ErrUserAborted)
-		assert.Equal(t, api.OnboardingStatusHandoverRerunDeclined, handoverStatus(end))
+		assert.Equal(t, analytics.OnboardingOutcomeRerunDeclined, outcome)
 	})
 
 	t.Run("agent gone on rerun", func(t *testing.T) {
@@ -133,9 +134,9 @@ func TestLaunchAgentFailure(t *testing.T) {
 		ag := agent{label: "Codex", bin: "codex", path: fakeBin(t, t.TempDir(), "codex", "exit 3")}
 		f, _ := testFactory()
 
-		end, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
+		outcome, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
 		assert.ErrorContains(t, err, "no longer on PATH")
-		assert.Equal(t, api.OnboardingStatusAgentError, handoverStatus(end))
+		assert.Equal(t, analytics.OnboardingOutcomeAgentError, outcome)
 	})
 
 	t.Run("rerun that succeeds", func(t *testing.T) {
@@ -146,9 +147,9 @@ func TestLaunchAgentFailure(t *testing.T) {
 		ag := agent{label: "Codex", bin: "codex", path: fakeBin(t, t.TempDir(), "codex", "exit 3")}
 		f, _ := testFactory()
 
-		end, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
+		outcome, err := launchAgent(f, ag, handoverContext{repo: repository{dir: t.TempDir()}})
 		require.NoError(t, err)
-		assert.Equal(t, api.OnboardingStatusSuccess, handoverStatus(end), "an accepted rerun isn't final")
+		assert.Equal(t, analytics.OnboardingOutcomeSuccess, outcome, "an accepted rerun isn't final")
 	})
 }
 
@@ -156,9 +157,9 @@ func TestLaunchAgentStartFailure(t *testing.T) {
 	f, _ := testFactory()
 	ag := agent{label: "Codex", bin: "codex", path: filepath.Join(t.TempDir(), "missing")}
 
-	end, err := launchAgent(f, ag, handoverContext{})
+	outcome, err := launchAgent(f, ag, handoverContext{})
 	assert.ErrorContains(t, err, "start Codex")
-	assert.Equal(t, api.OnboardingStatusAgentFailedToStart, handoverStatus(end))
+	assert.Equal(t, analytics.OnboardingOutcomeAgentFailedToStart, outcome)
 }
 
 func TestPromptArgs(t *testing.T) {

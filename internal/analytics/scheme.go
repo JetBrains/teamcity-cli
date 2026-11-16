@@ -330,7 +330,7 @@ func onboardingGroup() fus.GroupDefinition {
 			}},
 			{ID: EventSandboxChecked, Description: "teamcity onboard checked whether the picked AI agent runs teamcity in its sandbox, and handled the answer", Fields: []fus.FieldDefinition{
 				agent,
-				{Path: "status", Rules: []string{fus.EnumExpr(OnboardingSandboxStatuses()...)}},
+				{Path: "status", Rules: []string{fus.EnumExpr(onboardingSandboxStatuses()...)}},
 			}},
 			{ID: EventHandoverStarted, Description: "teamcity onboard launched an AI agent with the onboarding prompt", Fields: []fus.FieldDefinition{
 				repository,
@@ -338,7 +338,7 @@ func onboardingGroup() fus.GroupDefinition {
 			}},
 			{ID: EventHandoverFinished, Description: "Hand-over to an AI agent finished", Fields: []fus.FieldDefinition{
 				repository,
-				{Path: "outcome", Rules: []string{fus.EnumExpr(OnboardingOutcomes()...)}},
+				{Path: "outcome", Rules: []string{fus.EnumExpr(onboardingOutcomes()...)}},
 			}},
 		},
 	}

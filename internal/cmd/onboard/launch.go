@@ -10,13 +10,14 @@ import (
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/JetBrains/teamcity-cli/internal/onboarding"
 )
 
 // launchAgent runs ag in the foreground on this terminal with the staged context, offering a rerun when it exits with an error.
-// It returns where the hand-over stopped.
-func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) (handoverEnd, error) {
+// It returns how the hand-over ended, as a tracked outcome.
+func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) (string, error) {
 	if ag.launchFlag.ifListed && !agentHasFlag(f.Context(), ag.path, ag.launchFlag.name) {
 		ag.launchFlag = launchFlag{}
 	}
@@ -28,16 +29,16 @@ func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) (handoverEnd,
 		if err == nil {
 			// A clean exit doesn't prove the setup is done, only that the agent ended normally.
 			f.Printer.Info("\n%s exited.", ag.label)
-			return endAgentExited, nil
+			return analytics.OnboardingOutcomeSuccess, nil
 		}
 		exitErr, ok := errors.AsType[*exec.ExitError](err)
 		if !ok {
-			return endAgentStartFailed, fmt.Errorf("start %s: %w", ag.label, err)
+			return analytics.OnboardingOutcomeAgentFailedToStart, fmt.Errorf("start %s: %w", ag.label, err)
 		}
 		code := max(exitErr.ExitCode(), 1) // -1 when killed by a signal
 		// Ctrl+C or SIGTERM ended it; the user asked to stop, so don't offer a rerun.
 		if f.Context().Err() != nil {
-			return endAgentInterrupted, &cmdutil.ExitError{Code: code}
+			return analytics.OnboardingOutcomeAgentInterrupted, &cmdutil.ExitError{Code: code}
 		}
 
 		f.Printer.Warn("%s stopped with an error (%s). See its message above.", ag.label, exitErr.ProcessState)
@@ -47,15 +48,15 @@ func launchAgent(f *cmdutil.Factory, ag agent, hc handoverContext) (handoverEnd,
 		// TODO: copy pending design review
 		rerun := false
 		if err := confirm("Run "+ag.label+" again? It may repeat changes it already made.", &rerun); err != nil {
-			return promptEnd(err, endRerunDeclined), err
+			return promptOutcome(err, analytics.OnboardingOutcomeRerunDeclined), err
 		}
 		if !rerun {
-			return endRerunDeclined, &cmdutil.ExitError{Code: code}
+			return analytics.OnboardingOutcomeRerunDeclined, &cmdutil.ExitError{Code: code}
 		}
 		// A manual repair or update may have replaced the executable.
 		path, err := exec.LookPath(ag.bin)
 		if err != nil {
-			return endAgentError, api.Validation(ag.bin+" is no longer on PATH", "Fix the "+ag.label+" installation, then rerun teamcity onboard")
+			return analytics.OnboardingOutcomeAgentError, api.Validation(ag.bin+" is no longer on PATH", "Fix the "+ag.label+" installation, then rerun teamcity onboard")
 		}
 		ag.path = path
 	}

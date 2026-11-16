@@ -66,7 +66,6 @@ func runOnboard(f *cmdutil.Factory, opts *onboardOptions) error {
 		return err
 	}
 	trackAgentsDetected(f, agents)
-	notifyAgentsDetected(f, client, agents)
 	if len(agents) == 0 {
 		f.Printer.Warn("No supported agents found.")
 		f.Printer.Tip("Supported agents: %s", supportedAgentLabels())

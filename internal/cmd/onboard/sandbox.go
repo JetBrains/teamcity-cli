@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/JetBrains/teamcity-cli/api"
+	"github.com/JetBrains/teamcity-cli/internal/analytics"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
 	"github.com/pelletier/go-toml/v2"
 )
@@ -20,7 +20,7 @@ type sandboxOutcome struct {
 	// agentMustAsk means the agent will run teamcity commands in its sandbox: the user said no, or the yes
 	// couldn't be applied. The handover prompt then tells the agent to ask the user to run them outside.
 	agentMustAsk bool
-	status       api.OnboardingSandboxStatus // how the step ended, for the server report
+	status       string // how the step ended, for analytics
 }
 
 // sandboxAccess lets teamcity run outside an agent's command sandbox, which hides the system keyring and the TeamCity server from it.
@@ -65,7 +65,7 @@ var sandboxAccesses = map[string]sandboxAccess{
 func allowOutsideSandbox(f *cmdutil.Factory, ag agent, repoDir string) (sandboxOutcome, error) {
 	access, ok := sandboxAccesses[ag.name]
 	if !ok || !access.sandboxed(repoDir) {
-		return sandboxOutcome{status: api.OnboardingSandboxNotSandboxed}, nil
+		return sandboxOutcome{status: analytics.OnboardingSandboxNotSandboxed}, nil
 	}
 	for _, line := range access.why() {
 		f.Printer.Info("%s", line)
@@ -76,14 +76,14 @@ func allowOutsideSandbox(f *cmdutil.Factory, ag agent, repoDir string) (sandboxO
 	}
 	if !allowed {
 		f.Printer.Info("%s will ask you before it runs TeamCity CLI commands outside the sandbox.", ag.label)
-		return sandboxOutcome{agentMustAsk: true, status: api.OnboardingSandboxDeclined}, nil
+		return sandboxOutcome{agentMustAsk: true, status: analytics.OnboardingSandboxDeclined}, nil
 	}
 	args, err := access.allow()
 	if err != nil {
 		f.Printer.Warn("Couldn't let the TeamCity CLI run outside the sandbox: %v. %s will ask you during the session.", err, ag.label)
-		return sandboxOutcome{agentMustAsk: true, status: api.OnboardingSandboxAllowFailed}, nil
+		return sandboxOutcome{agentMustAsk: true, status: analytics.OnboardingSandboxAllowFailed}, nil
 	}
-	return sandboxOutcome{launchArgs: args, status: api.OnboardingSandboxAllowed}, nil
+	return sandboxOutcome{launchArgs: args, status: analytics.OnboardingSandboxAllowed}, nil
 }
 
 // claudeConfigDir is Claude Code's user config directory: $CLAUDE_CONFIG_DIR, or ~/.claude.

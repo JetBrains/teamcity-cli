@@ -147,7 +147,7 @@ func SampleEvents() []fus.LogEvent {
 			"repository": OnboardingRepositoryOwn, "agent": "codex",
 		}),
 		mk(GroupOnboarding, EventHandoverFinished, false, map[string]any{
-			"repository": OnboardingRepositoryDemo, "outcome": "handover_rerun_declined",
+			"repository": OnboardingRepositoryDemo, "outcome": OnboardingOutcomeRerunDeclined,
 		}),
 	}
 }

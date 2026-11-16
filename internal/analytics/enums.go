@@ -78,16 +78,16 @@ func OnboardingAgents() []string {
 	return []string{"claude_code", "codex", "junie"}
 }
 
-// OnboardingSandboxStatuses enumerates how the step that lets teamcity run outside the agent's sandbox ends.
-func OnboardingSandboxStatuses() []string {
+// onboardingSandboxStatuses enumerates how the step that lets teamcity run outside the agent's sandbox ends.
+func onboardingSandboxStatuses() []string {
 	return []string{OnboardingSandboxNotSandboxed, OnboardingSandboxAllowed, OnboardingSandboxDeclined, OnboardingSandboxAllowFailed}
 }
 
-// OnboardingOutcomes enumerates how the onboarding hand-over ends; they match the statuses `teamcity onboard` reports to the server.
-func OnboardingOutcomes() []string {
+// onboardingOutcomes enumerates how the onboarding hand-over ends.
+func onboardingOutcomes() []string {
 	return []string{
-		"success", "no_checkout", "handover_declined", "skill_install_failure",
-		"agent_failed_to_start", "agent_interrupted", "agent_error", "handover_rerun_declined", "error",
+		OnboardingOutcomeSuccess, OnboardingOutcomeNoCheckout, OnboardingOutcomeHandoverDeclined, OnboardingOutcomeSkillInstallFailure,
+		OnboardingOutcomeAgentFailedToStart, OnboardingOutcomeAgentInterrupted, OnboardingOutcomeAgentError, OnboardingOutcomeRerunDeclined, OnboardingOutcomeError,
 	}
 }
 

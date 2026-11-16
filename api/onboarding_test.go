@@ -22,18 +22,6 @@ var onboardingCalls = []struct {
 	{"login-completed", func(ctx context.Context, c *Client) error {
 		return c.OnboardingLoginCompleted(ctx)
 	}, ""},
-	{"agents-detected", func(ctx context.Context, c *Client) error {
-		return c.OnboardingAgentsDetected(ctx, OnboardingAgentsDetectedRequest{Agents: []OnboardingAgent{OnboardingAgentClaudeCode, OnboardingAgentJunie}})
-	}, `{"agents":["claude_code","junie"]}`},
-	{"sandbox-checked", func(ctx context.Context, c *Client) error {
-		return c.OnboardingSandboxChecked(ctx, OnboardingSandboxCheckedRequest{Agent: OnboardingAgentClaudeCode, Status: OnboardingSandboxAllowFailed})
-	}, `{"agent":"claude_code","status":"allow_failed"}`},
-	{"handover-started", func(ctx context.Context, c *Client) error {
-		return c.OnboardingHandoverStarted(ctx, OnboardingHandoverStartedRequest{RepositoryType: OnboardingRepositoryDemo, Agent: OnboardingAgentCodex})
-	}, `{"repositoryType":"demo","agent":"codex"}`},
-	{"handover-finished", func(ctx context.Context, c *Client) error {
-		return c.OnboardingHandoverFinished(ctx, OnboardingHandoverFinishedRequest{RepositoryType: OnboardingRepositoryOwn, Status: OnboardingStatusHandoverRerunDeclined})
-	}, `{"repositoryType":"own","status":"handover_rerun_declined"}`},
 	{"pipeline-created", func(ctx context.Context, c *Client) error {
 		return c.OnboardingPipelineCreated(ctx, OnboardingPipelineCreatedRequest{RepositoryType: OnboardingRepositoryOwn, PipelineID: "Instance_App_CI"})
 	}, `{"repositoryType":"own","pipelineId":"Instance_App_CI"}`},
