@@ -30,22 +30,20 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 	}
 
 	p.Progress("Exchanging onboarding token... ")
-	name := "teamcity-cli-" + rand.Text()
-	exchanged, err := newClient(token).ExchangeOneTimeToken(name + "-exchange")
+	exchanged, err := exchangeOneTimeToken(newClient(token))
 	if err != nil {
 		p.Info("%s", output.Red(output.Sym().Cross))
 		return "", exchangeError(err, serverURL)
 	}
 	p.Info("%s", output.Green(output.Sym().Check))
 
-	accessToken := restrictToken(p, newClient(exchanged.Value), exchanged, name)
-	client := newClient(accessToken)
+	client := newClient(exchanged.Value)
 	user, err := client.GetCurrentUser()
 	if err != nil {
 		return "", fmt.Errorf("failed to verify access token: %w", err)
 	}
 
-	insecureFallback, err := config.SetServerWithKeyring(serverURL, accessToken, user.Username, "", false)
+	insecureFallback, err := config.SetServerWithKeyring(serverURL, exchanged.Value, user.Username, "", false)
 	if err != nil {
 		return "", fmt.Errorf("failed to save configuration: %w", err)
 	}
@@ -57,7 +55,18 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 	} else {
 		p.Success("Token stored in system keyring")
 	}
-	return accessToken, nil
+	return exchanged.Value, nil
+}
+
+// exchangeOneTimeToken trades the one-time token of client for a token limited to onboardingTokenPermissions.
+// Workaround for TW-105776 (CLI side: TW-105780); once the server restricts exchanged tokens, go back to the regular
+// request: client.ExchangeOneTimeToken on POST /app/rest/users/current/tokens with the name only, without the user id and permissions.
+func exchangeOneTimeToken(client *api.Client) (*api.Token, error) {
+	userID, err := client.GetCurrentUserID()
+	if err != nil {
+		return nil, err
+	}
+	return client.ExchangeOneTimeToken(userID, "teamcity-cli-"+rand.Text(), onboardingTokenPermissions)
 }
 
 // ErrExchangeRejected marks a 401 from the exchange endpoint (token used or expired), so callers may fall back to a saved login.

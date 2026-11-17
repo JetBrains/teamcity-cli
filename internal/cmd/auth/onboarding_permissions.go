@@ -1,14 +1,10 @@
 package auth
 
-import (
-	"github.com/JetBrains/teamcity-cli/api"
-	"github.com/JetBrains/teamcity-cli/internal/output"
-)
-
-// onboardingTokenPermissions are the global permissions of the token from an onboarding exchange (TW-105780).
+// onboardingTokenPermissions are the global permissions of the token from an onboarding exchange,
+// a workaround for TW-105776 until the server restricts exchanged tokens itself (CLI side: TW-105780).
 // They are the permissions a TeamCity Cloud free account can have (its teamcity.security.globallyAllowedPermissions),
 // without CREATE_OWN_ACCESS_TOKEN and CHANGE_OWN_PROFILE: with them the token could create more tokens, and the server
-// rejects them in a restriction anyway. Every listed permission must be granted to the user, or the server rejects the token.
+// rejects them in a restriction anyway. Every listed permission must be granted to the user globally, or the exchange fails.
 var onboardingTokenPermissions = []string{
 	"RUN_BUILD", "CANCEL_BUILD", "CANCEL_ANY_PERSONAL_BUILD", "PIN_UNPIN_BUILD", "TAG_BUILD", "REMOVE_BUILD",
 	"PAUSE_ACTIVATE_BUILD_CONFIGURATION", "COMMENT_BUILD", "CLEAN_BUILD_CONFIGURATION_SOURCES", "ASSIGN_INVESTIGATION",
@@ -26,20 +22,4 @@ var onboardingTokenPermissions = []string{
 	"MANAGE_AGENT_POOLS", "VIEW_USER_PROFILE", "VIEW_ALL_USERS", "VIEW_AGENT_CLOUDS", "MANAGE_AUTHENTICATION_SETTINGS",
 	"MANAGE_CUSTOM_SSL_CERTIFICATES", "PATCH_BUILD_SOURCES", "MANAGE_AGENT_CLOUDS", "CHANGE_VCS_USERNAME_IN_PROJECT",
 	"MANAGE_EXPERIMENTAL_FEATURES", "CONNECT_TO_AGENT",
-}
-
-// restrictToken trades exchanged, the unrestricted token from the one-time token exchange, for a token named name
-// that has only onboardingTokenPermissions, then deletes exchanged.
-// It returns the value of the token to use; exchanged.Value when the restricted token can't be created,
-// for example on a server where the user lacks a listed permission, so onboarding still works.
-func restrictToken(p *output.Printer, client *api.Client, exchanged *api.Token, name string) string {
-	restricted, err := client.CreateRestrictedToken(name, onboardingTokenPermissions)
-	if err != nil {
-		p.Debug("Couldn't create a restricted token, keeping %s: %v", exchanged.Name, err)
-		return exchanged.Value
-	}
-	if err := client.DeleteAPIToken(exchanged.Name); err != nil {
-		p.Debug("Couldn't delete the exchange token %s: %v", exchanged.Name, err)
-	}
-	return restricted.Value
 }
