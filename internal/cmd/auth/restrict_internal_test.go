@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
@@ -36,7 +35,6 @@ func TestRestrictToken(t *testing.T) {
 				var req api.Token
 				require.NoError(t, json.Unmarshal(body, &req))
 				assert.Equal(t, "teamcity-cli-x", req.Name)
-				assert.NotEmpty(t, req.ExpirationTime)
 				require.NotNil(t, req.PermissionRestrictions)
 				ids := make([]string, 0, len(req.PermissionRestrictions.PermissionRestriction))
 				for _, pr := range req.PermissionRestrictions.PermissionRestriction {
@@ -52,7 +50,7 @@ func TestRestrictToken(t *testing.T) {
 			}
 		})
 
-		got := restrictToken(printer, client, exchanged, "teamcity-cli-x", time.Now().Add(time.Hour))
+		got := restrictToken(printer, client, exchanged, "teamcity-cli-x")
 		assert.Equal(t, "restricted", got)
 		assert.Equal(t, "/app/rest/users/current/tokens/teamcity-cli-x-exchange", deleted)
 	})
@@ -66,7 +64,7 @@ func TestRestrictToken(t *testing.T) {
 			w.WriteHeader(http.StatusForbidden)
 		})
 
-		got := restrictToken(printer, client, exchanged, "teamcity-cli-x", time.Now().Add(time.Hour))
+		got := restrictToken(printer, client, exchanged, "teamcity-cli-x")
 		assert.Equal(t, "unrestricted", got)
 		assert.False(t, deleteCalled, "the token still in use must not be deleted")
 	})
