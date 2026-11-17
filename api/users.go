@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"time"
 )
 
 // GetCurrentUser returns the authenticated user
@@ -70,8 +71,48 @@ func (c *Client) CreateUser(req CreateUserRequest) (*User, error) {
 
 // Token represents an API token
 type Token struct {
-	Name  string `json:"name"`
-	Value string `json:"value,omitempty"`
+	Name                   string                  `json:"name"`
+	Value                  string                  `json:"value,omitempty"`
+	ExpirationTime         string                  `json:"expirationTime,omitempty"`
+	PermissionRestrictions *PermissionRestrictions `json:"permissionRestrictions,omitempty"`
+}
+
+// PermissionRestrictions limits a token to the listed permissions.
+type PermissionRestrictions struct {
+	PermissionRestriction []PermissionRestriction `json:"permissionRestriction"`
+}
+
+// PermissionRestriction grants one permission to a token, globally.
+type PermissionRestriction struct {
+	IsGlobalScope bool          `json:"isGlobalScope"`
+	Permission    PermissionRef `json:"permission"`
+}
+
+// PermissionRef names a TeamCity permission, e.g. RUN_BUILD.
+type PermissionRef struct {
+	ID string `json:"id"`
+}
+
+// CreateRestrictedToken creates an access token of the current user that has only the given global permissions and expires at expires.
+func (c *Client) CreateRestrictedToken(name string, permissions []string, expires time.Time) (*Token, error) {
+	restrictions := make([]PermissionRestriction, len(permissions))
+	for i, p := range permissions {
+		restrictions[i] = PermissionRestriction{IsGlobalScope: true, Permission: PermissionRef{ID: p}}
+	}
+	body, err := json.Marshal(Token{
+		Name:                   name,
+		ExpirationTime:         FormatTeamCityTime(expires),
+		PermissionRestrictions: &PermissionRestrictions{PermissionRestriction: restrictions},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	var token Token
+	if err := c.post(c.ctx(), "/app/rest/users/current/tokens", bytes.NewReader(body), &token); err != nil {
+		return nil, err
+	}
+	return &token, nil
 }
 
 // CreateAPIToken creates an API token for the current user
