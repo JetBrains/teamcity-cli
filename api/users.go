@@ -80,7 +80,7 @@ type PermissionRestrictions struct {
 	PermissionRestriction []PermissionRestriction `json:"permissionRestriction"`
 }
 
-// PermissionRestriction grants one permission to a token, globally.
+// PermissionRestriction grants one permission to a token, in all projects.
 type PermissionRestriction struct {
 	IsGlobalScope bool          `json:"isGlobalScope"`
 	Permission    PermissionRef `json:"permission"`
@@ -89,27 +89,6 @@ type PermissionRestriction struct {
 // PermissionRef names a TeamCity permission, e.g. RUN_BUILD.
 type PermissionRef struct {
 	ID string `json:"id"`
-}
-
-// CreateRestrictedToken creates an access token of the current user that has only the given global permissions.
-func (c *Client) CreateRestrictedToken(name string, permissions []string) (*Token, error) {
-	restrictions := make([]PermissionRestriction, len(permissions))
-	for i, p := range permissions {
-		restrictions[i] = PermissionRestriction{IsGlobalScope: true, Permission: PermissionRef{ID: p}}
-	}
-	body, err := json.Marshal(Token{
-		Name:                   name,
-		PermissionRestrictions: &PermissionRestrictions{PermissionRestriction: restrictions},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	var token Token
-	if err := c.post(c.ctx(), "/app/rest/users/current/tokens", bytes.NewReader(body), &token); err != nil {
-		return nil, err
-	}
-	return &token, nil
 }
 
 // CreateAPIToken creates an API token for the current user
@@ -124,15 +103,34 @@ func (c *Client) CreateAPIToken(name string) (*Token, error) {
 	return &token, nil
 }
 
-// ExchangeOneTimeToken trades the client's one-time token (consumed either way) for a permanent one named name; never retried since it's single-use.
-func (c *Client) ExchangeOneTimeToken(name string) (*Token, error) {
-	body, err := json.Marshal(Token{Name: name})
+// GetCurrentUserID returns the id of the authenticated user; a one-time token can read it without being consumed.
+func (c *Client) GetCurrentUserID() (int, error) {
+	var user User
+	if err := c.get(c.ctx(), "/app/rest/users/current?fields=id", &user); err != nil {
+		return 0, err
+	}
+	return user.ID, nil
+}
+
+// ExchangeOneTimeToken trades the client's one-time token (consumed either way) for a permanent token of user userID named name,
+// limited to the given global permissions; never retried since it's single-use.
+//
+// Workaround for TW-105776: the regular exchange is POST /app/rest/users/current/tokens with {"name": name} only,
+// but the server then creates an unrestricted token that can create more tokens. Until the server restricts exchanged
+// tokens itself, the request lists the permissions, and addresses the user by id: for "current" the server checks
+// the listed permissions against the one-time token's own scope (CREATE_OWN_ACCESS_TOKEN only) and rejects them.
+func (c *Client) ExchangeOneTimeToken(userID int, name string, permissions []string) (*Token, error) {
+	restrictions := make([]PermissionRestriction, len(permissions))
+	for i, p := range permissions {
+		restrictions[i] = PermissionRestriction{IsGlobalScope: true, Permission: PermissionRef{ID: p}}
+	}
+	body, err := json.Marshal(Token{Name: name, PermissionRestrictions: &PermissionRestrictions{PermissionRestriction: restrictions}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	var token Token
-	if err := c.post(c.ctx(), "/app/rest/users/current/tokens", bytes.NewReader(body), &token); err != nil {
+	if err := c.post(c.ctx(), fmt.Sprintf("/app/rest/users/id:%d/tokens", userID), bytes.NewReader(body), &token); err != nil {
 		return nil, err
 	}
 	return &token, nil
