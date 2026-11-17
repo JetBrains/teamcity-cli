@@ -24,6 +24,12 @@ var releaseDownloadBaseURL = "https://github.com/JetBrains/teamcity-cli/releases
 
 var releaseVersionPattern = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 
+// UpgradeResult distinguishes a completed update from a handoff to an external updater.
+type UpgradeResult struct {
+	Deferred bool
+	LogPath  string
+}
+
 func (m InstallMethod) upgradeCommand() (string, []string) {
 	switch m {
 	case InstallHomebrew:
@@ -48,22 +54,25 @@ func (m InstallMethod) CanUpgrade() bool {
 }
 
 // Upgrade updates through the owning package manager or replaces an unmanaged Unix executable in place.
-func Upgrade(parent context.Context, method InstallMethod, version string, out, errOut io.Writer) error {
+func Upgrade(parent context.Context, method InstallMethod, version string, out, errOut io.Writer) (UpgradeResult, error) {
 	ctx, cancel := context.WithTimeout(parent, 10*time.Minute)
 	defer cancel()
 	if command, args := method.upgradeCommand(); command != "" {
+		if runtime.GOOS == "windows" && method == InstallWinGet {
+			return startWinGetUpgrade(ctx, args)
+		}
 		process := exec.CommandContext(ctx, command, args...)
 		process.Stdout, process.Stderr = out, errOut
-		return process.Run()
+		return UpgradeResult{}, process.Run()
 	}
 	if !method.CanUpgrade() {
-		return fmt.Errorf("automatic updates are unavailable for %s; %s", method, method.UpdateCommand())
+		return UpgradeResult{}, fmt.Errorf("automatic updates are unavailable for %s; %s", method, method.UpdateCommand())
 	}
 	executable, err := os.Executable()
 	if err != nil {
-		return err
+		return UpgradeResult{}, err
 	}
-	return installRelease(ctx, version, executable)
+	return UpgradeResult{}, installRelease(ctx, version, executable)
 }
 
 func installRelease(ctx context.Context, version, executable string) error {

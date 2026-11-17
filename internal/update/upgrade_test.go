@@ -152,11 +152,15 @@ func TestUpgradeRunsScopedPackageManager(t *testing.T) {
 	require.NoError(t, os.WriteFile(shim, []byte("#!/bin/sh\nprintf '%s\\n' \"$@\"\nexit \"${UPGRADE_TEST_EXIT:-0}\"\n"), 0755))
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	var output bytes.Buffer
-	require.NoError(t, Upgrade(t.Context(), InstallHomebrew, "9.9.9", &output, io.Discard))
+	result, err := Upgrade(t.Context(), InstallHomebrew, "9.9.9", &output, io.Discard)
+	require.NoError(t, err)
+	assert.False(t, result.Deferred)
 	assert.Equal(t, "upgrade\nteamcity\n", output.String())
 	t.Setenv("UPGRADE_TEST_EXIT", "1")
-	require.Error(t, Upgrade(t.Context(), InstallHomebrew, "9.9.9", io.Discard, io.Discard))
+	_, err = Upgrade(t.Context(), InstallHomebrew, "9.9.9", io.Discard, io.Discard)
+	require.Error(t, err)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	require.ErrorIs(t, Upgrade(ctx, InstallHomebrew, "9.9.9", io.Discard, io.Discard), context.Canceled)
+	_, err = Upgrade(ctx, InstallHomebrew, "9.9.9", io.Discard, io.Discard)
+	require.ErrorIs(t, err, context.Canceled)
 }

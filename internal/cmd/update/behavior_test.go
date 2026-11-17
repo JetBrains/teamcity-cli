@@ -26,6 +26,7 @@ func TestUpdateBehavior(t *testing.T) {
 		{"noninteractive", nil, false, "confirmation required"},
 		{"yes", []string{"--yes"}, true, ""},
 		{"failed", []string{"--yes"}, true, "update failed"},
+		{"deferred", []string{"--yes"}, true, ""},
 		{"conflicting", []string{"--check", "--yes"}, false, "none of the others"},
 		{"current", nil, false, ""},
 		{"unsupported", nil, false, ""},
@@ -48,12 +49,15 @@ func TestUpdateBehavior(t *testing.T) {
 				return updater.InstallHomebrew
 			}
 			called := false
-			upgrade = func(context.Context, updater.InstallMethod, string, io.Writer, io.Writer) error {
+			upgrade = func(context.Context, updater.InstallMethod, string, io.Writer, io.Writer) (updater.UpgradeResult, error) {
 				called = true
 				if scenario.name == "failed" {
-					return errors.New("manager failed")
+					return updater.UpgradeResult{}, errors.New("manager failed")
 				}
-				return nil
+				if scenario.name == "deferred" {
+					return updater.UpgradeResult{Deferred: true, LogPath: "update.log"}, nil
+				}
+				return updater.UpgradeResult{}, nil
 			}
 			var stdout, stderr bytes.Buffer
 			factory := cmdutil.NewFactory()
@@ -74,6 +78,11 @@ func TestUpdateBehavior(t *testing.T) {
 			if scenario.name == "json" {
 				assert.Contains(t, stdout.String(), `"update_available": true`)
 				assert.NotContains(t, stdout.String(), "Checking for updates")
+			}
+			if scenario.name == "deferred" {
+				assert.Contains(t, stdout.String(), "after this command exits")
+				assert.Contains(t, stdout.String(), "update.log")
+				assert.NotContains(t, stdout.String(), "Update completed")
 			}
 		})
 	}
