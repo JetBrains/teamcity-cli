@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -39,7 +38,7 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 	}
 	p.Info("%s", output.Green(output.Sym().Check))
 
-	accessToken := restrictToken(p, newClient(exchanged.Value), exchanged, name, time.Now().Add(restrictedTokenLifetime))
+	accessToken := restrictToken(p, newClient(exchanged.Value), exchanged, name)
 	client := newClient(accessToken)
 	user, err := client.GetCurrentUser()
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -136,14 +135,14 @@ func TestCreateRestrictedToken(t *testing.T) {
 		assert.Equal(t, "/app/rest/users/current/tokens", r.URL.Path)
 		body, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
-		assert.JSONEq(t, `{"name":"cli","expirationTime":"20270101T000000+0000","permissionRestrictions":{"permissionRestriction":[
+		assert.JSONEq(t, `{"name":"cli","permissionRestrictions":{"permissionRestriction":[
 			{"isGlobalScope":true,"permission":{"id":"RUN_BUILD"}},
 			{"isGlobalScope":true,"permission":{"id":"VIEW_PROJECT"}}]}}`, string(body))
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(Token{Name: "cli", Value: "restricted"})
 	})
 
-	token, err := client.CreateRestrictedToken("cli", []string{"RUN_BUILD", "VIEW_PROJECT"}, time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC))
+	token, err := client.CreateRestrictedToken("cli", []string{"RUN_BUILD", "VIEW_PROJECT"})
 	require.NoError(t, err)
 	assert.Equal(t, "restricted", token.Value)
 }

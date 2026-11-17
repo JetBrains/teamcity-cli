@@ -1,14 +1,9 @@
 package auth
 
 import (
-	"time"
-
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/output"
 )
-
-// restrictedTokenLifetime is how long the token from an onboarding exchange lives; `teamcity auth login` gets a new one.
-const restrictedTokenLifetime = 90 * 24 * time.Hour
 
 // onboardingTokenPermissions are the global permissions of the token from an onboarding exchange (TW-105780).
 // They are the permissions a TeamCity Cloud free account can have (its teamcity.security.globallyAllowedPermissions),
@@ -34,11 +29,11 @@ var onboardingTokenPermissions = []string{
 }
 
 // restrictToken trades exchanged, the unrestricted token from the one-time token exchange, for a token named name
-// that has only onboardingTokenPermissions and expires at expires, then deletes exchanged.
+// that has only onboardingTokenPermissions, then deletes exchanged.
 // It returns the value of the token to use; exchanged.Value when the restricted token can't be created,
 // for example on a server where the user lacks a listed permission, so onboarding still works.
-func restrictToken(p *output.Printer, client *api.Client, exchanged *api.Token, name string, expires time.Time) string {
-	restricted, err := client.CreateRestrictedToken(name, onboardingTokenPermissions, expires)
+func restrictToken(p *output.Printer, client *api.Client, exchanged *api.Token, name string) string {
+	restricted, err := client.CreateRestrictedToken(name, onboardingTokenPermissions)
 	if err != nil {
 		p.Debug("Couldn't create a restricted token, keeping %s: %v", exchanged.Name, err)
 		return exchanged.Value
