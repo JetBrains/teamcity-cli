@@ -26,11 +26,20 @@ func exchangeServer(t *testing.T, exchangeStatus int) (string, *onboardingRecord
 				http.Error(w, http.StatusText(exchangeStatus), exchangeStatus)
 				return
 			}
-			writeJSON(w, api.Token{Name: "teamcity-cli", Value: "exchanged-token"})
+			var req api.Token
+			decodeJSON(t, r, &req)
+			if req.PermissionRestrictions != nil { // the restricted token, created with the exchanged one (TW-105780)
+				writeJSON(w, api.Token{Name: req.Name, Value: "restricted-token"})
+				return
+			}
+			writeJSON(w, api.Token{Name: req.Name, Value: "exchanged-token"})
+		},
+		"DELETE /app/rest/users/current/tokens/{name}": func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
 		},
 		"GET /app/rest/users/current": func(w http.ResponseWriter, r *http.Request) {
 			switch r.Header.Get("Authorization") {
-			case "Bearer saved-token", "Bearer exchanged-token":
+			case "Bearer saved-token", "Bearer exchanged-token", "Bearer restricted-token":
 				writeJSON(w, api.User{ID: 1, Username: "admin"})
 			default:
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -54,7 +63,7 @@ func TestAccessTokenExchanges(t *testing.T) {
 
 	got, err := accessToken(f, serverURL, "onboarding-token")
 	require.NoError(t, err)
-	assert.Equal(t, "exchanged-token", got)
+	assert.Equal(t, "restricted-token", got, "the restricted token is used, not the exchanged one")
 	assert.Equal(t, []string{"login-completed"}, rec.endpoints())
 	assert.Empty(t, rec.body(t, "login-completed"))
 }

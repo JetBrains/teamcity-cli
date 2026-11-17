@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/JetBrains/teamcity-cli/api"
 	"github.com/JetBrains/teamcity-cli/internal/cmdutil"
@@ -30,20 +31,22 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 	}
 
 	p.Progress("Exchanging onboarding token... ")
-	exchanged, err := newClient(token).ExchangeOneTimeToken("teamcity-cli-" + rand.Text())
+	name := "teamcity-cli-" + rand.Text()
+	exchanged, err := newClient(token).ExchangeOneTimeToken(name + "-exchange")
 	if err != nil {
 		p.Info("%s", output.Red(output.Sym().Cross))
 		return "", exchangeError(err, serverURL)
 	}
 	p.Info("%s", output.Green(output.Sym().Check))
 
-	client := newClient(exchanged.Value)
+	accessToken := restrictToken(p, newClient(exchanged.Value), exchanged, name, time.Now().Add(restrictedTokenLifetime))
+	client := newClient(accessToken)
 	user, err := client.GetCurrentUser()
 	if err != nil {
 		return "", fmt.Errorf("failed to verify access token: %w", err)
 	}
 
-	insecureFallback, err := config.SetServerWithKeyring(serverURL, exchanged.Value, user.Username, "", false)
+	insecureFallback, err := config.SetServerWithKeyring(serverURL, accessToken, user.Username, "", false)
 	if err != nil {
 		return "", fmt.Errorf("failed to save configuration: %w", err)
 	}
@@ -55,7 +58,7 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 	} else {
 		p.Success("Token stored in system keyring")
 	}
-	return exchanged.Value, nil
+	return accessToken, nil
 }
 
 // ErrExchangeRejected marks a 401 from the exchange endpoint (token used or expired), so callers may fall back to a saved login.
