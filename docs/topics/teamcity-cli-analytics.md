@@ -39,7 +39,7 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 - Whether the agent you picked would run TeamCity CLI commands in its sandbox, and how that step ended: `not_sandboxed`, `allowed`, `declined`, or `allow_failed`.
 - Whether the onboarded repository is your own or a sample (`own` or `demo`), which agent it launched, and how the hand-over to the agent ended, for example `success`, `handover_declined`, or `agent_interrupted`.
 
-`teamcity onboard` also reports to the TeamCity server you onboard to that you logged in, the ID of each pipeline the agent creates with `teamcity pipeline create`, and the ID of each run it starts with `teamcity run start`. The pipeline and run reports also say whether the repository is your own or a sample (`own` or `demo`). These reports go to your TeamCity server, not into the CLI's usage statistics. The server records them only if explicit consent to collect these usage statistics was given on the server. The CLI skips them when you opt out as described below.
+`teamcity onboard` also triggers server-side usage statistics collection for certain onboarding steps, like login, pipeline creation and queueing a build. The server records these statistics according to the consent given on the server side. The CLI does not trigger this collection when you opt out as described below.
 
 ## What we don't collect
 
