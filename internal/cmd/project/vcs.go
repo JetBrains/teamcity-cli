@@ -2,9 +2,11 @@ package project
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/JetBrains/teamcity-cli/api"
@@ -282,7 +284,11 @@ func newVcsCreateCmd(f *cmdutil.Factory) *cobra.Command {
 
 In interactive mode, guides you through URL, name, and authentication setup.
 Tests the connection before creating unless --no-test is specified.
-Stored --token-id credentials must be tested in the TeamCity UI.`,
+Stored --token-id credentials must be tested in the TeamCity UI.
+
+With a GitHub App --connection-id, the root gets an installation token for the
+repository, scoped to the project, so it acts as the app rather than as you.
+Authorize the connection once first: teamcity project connection authorize <id> -p <project>.`,
 		Example: `  # Interactive wizard
   teamcity project vcs create
 
@@ -296,7 +302,10 @@ Stored --token-id credentials must be tested in the TeamCity UI.`,
   teamcity project vcs create --url https://github.com/org/repo.git --auth anonymous
 
   # Skip connection test
-  teamcity project vcs create --url https://github.com/org/repo.git --auth anonymous --no-test`,
+  teamcity project vcs create --url https://github.com/org/repo.git --auth anonymous --no-test
+
+  # GitHub App installation token, scoped to the project
+  teamcity project vcs create -p MyProject --url https://github.com/org/repo --connection-id PROJECT_EXT_1`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runVcsCreate(f, opts)
@@ -554,17 +563,36 @@ func resolveAuth(f *cmdutil.Factory, client api.ClientInterface, projectID, auth
 			if err := cmdutil.Select(f.Printer, "Connection", options, &opts.connectionID); err != nil {
 				return nil, testReq, err
 			}
-		} else {
-			ptype, err := lookupConnectionProviderType(client, projectID, opts.connectionID)
+		}
+		ptype, err := lookupConnectionProviderType(client, projectID, opts.connectionID)
+		if err != nil {
+			return nil, testReq, err
+		}
+		if !vcsCapableProviders[ptype] {
+			return nil, testReq, api.Validation(
+				fmt.Sprintf("connection %s (%s) cannot back a VCS root", opts.connectionID, ptype),
+				"Use a GitHub/GitLab/Bitbucket/Azure DevOps/Space connection",
+			)
+		}
+		// The server would back a GitHub App root with the user's own token; an installation token acts as the app.
+		if ptype == "GitHubApp" {
+			tokenID, err := client.IssueGitHubAppInstallationToken(projectID, opts.connectionID, opts.repoURL, path.Base(strings.TrimSuffix(opts.repoURL, ".git")))
+			if errors.Is(err, api.ErrNoGitHubAppUserToken) {
+				return nil, testReq, api.Validation(
+					"you have not authorized connection "+opts.connectionID,
+					fmt.Sprintf("Run 'teamcity project connection authorize %s -p %s', then retry", opts.connectionID, projectID),
+				)
+			}
 			if err != nil {
 				return nil, testReq, err
 			}
-			if !vcsCapableProviders[ptype] {
-				return nil, testReq, api.Validation(
-					fmt.Sprintf("connection %s (%s) cannot back a VCS root", opts.connectionID, ptype),
-					"Use a GitHub/GitLab/Bitbucket/Azure DevOps/Space connection",
-				)
-			}
+			opts.tokenID = tokenID
+			props = append(props,
+				api.Property{Name: "authMethod", Value: "ACCESS_TOKEN"},
+				api.Property{Name: "tokenId", Value: tokenID},
+				api.Property{Name: "username", Value: cmp.Or(opts.username, "oauth2")},
+			)
+			break
 		}
 		testReq.ConnectionID = opts.connectionID
 

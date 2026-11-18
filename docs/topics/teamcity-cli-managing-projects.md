@@ -349,6 +349,15 @@ teamcity project vcs create --url https://github.com/org/repo.git --auth anonymo
 
 To reference an existing stored VCS token, use `project vcs create --auth token --token-id <full-token-id>` (instead of `--connection-id`). The token must already be permitted in the target project. Use `--username` if the provider requires a value other than `oauth2`; test the resulting root in the TeamCity UI.
 
+With a GitHub App connection, `--connection-id` issues an installation token for the repository, scoped to `--project`, and the root uses it. Checkout and commit statuses then act as the app, not as you. The app must be installed on the repository, and you must have authorized the connection once:
+
+```Shell
+teamcity project connection authorize PROJECT_EXT_1 -p MyProject
+teamcity project vcs create -p MyProject --url https://github.com/org/repo --connection-id PROJECT_EXT_1
+```
+
+The token is issued through `POST /app/oauth/githubapp/installationToken`. If a proxy in front of the server requires browser sign-in for that path, the command stops with an error; ask the server administrator to let token-authenticated requests through.
+
 ### Testing a VCS root connection
 
 Test an existing VCS root with its saved settings and credentials using the
