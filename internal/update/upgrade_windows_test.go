@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 func TestMain(m *testing.M) {
@@ -135,6 +136,38 @@ func TestWinGetUpgradeHandoff(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWinGetUpgradeParentExitTimeout(t *testing.T) {
+	systemDir, err := windows.GetSystemDirectory()
+	require.NoError(t, err)
+	powershell := filepath.Join(systemDir, "WindowsPowerShell", "v1.0", "powershell.exe")
+	eventName := fmt.Sprintf(`Local\TeamCityUpdate-test-%d`, os.Getpid())
+	eventNameUTF16, err := windows.UTF16PtrFromString(eventName)
+	require.NoError(t, err)
+	ready, err := windows.CreateEvent(nil, 1, 0, eventNameUTF16)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = windows.CloseHandle(ready) })
+
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "update.log")
+	managerResult := filepath.Join(dir, "manager.txt")
+	managerCommand := "Set-Content -LiteralPath '" + strings.ReplaceAll(managerResult, "'", "''") + "' -Value started"
+	script := winGetUpgradeScript(os.Getpid(), eventName, powershell, []string{"-NoProfile", "-Command", managerCommand}, logPath)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, powershell, "-NoLogo", "-NoProfile", "-Command", script)
+	started := time.Now()
+	output, err := command.CombinedOutput()
+	require.NoError(t, err, "%s", output)
+	assert.GreaterOrEqual(t, time.Since(started), 15*time.Second)
+	message := "Error: TeamCity CLI did not exit within 15 seconds. Update canceled."
+	assert.Contains(t, string(output), message)
+	log, err := os.ReadFile(logPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(log), message)
+	assert.NotContains(t, string(output), "Update completed.")
+	assert.NoFileExists(t, managerResult)
 }
 
 func TestWinGetUpgradeCanceled(t *testing.T) {

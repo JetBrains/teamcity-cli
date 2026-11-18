@@ -138,7 +138,7 @@ For a queued run, `teamcity run view <id>` reports agent and cloud-image compati
 | **config**   | `list`, `get`, `set`                                                                                                                                                                                                                                                                                            |
 | **alias**    | `set`, `list`, `delete`                                                                                                                                                                                                                                                                                         |
 | **skill**    | `list`, `install`, `remove`, `update`, `guide`                                                                                                                                                                                                                                                                  |
-| **update**   | Check for and install CLI updates (`--check`/`--json` for status only, `--yes` to skip confirmation; Windows WinGet updates continue in a separate window) |
+| **update**   | Check for and install CLI updates (`--check`/`--json` for status only, `--yes` to skip confirmation; Windows WinGet updates continue in a separate window with a 15-second limit for CLI exit) |
 
 Run `teamcity <command> --help` for usage, or see the [command reference](https://www.jetbrains.com/help/teamcity/teamcity-cli-commands.html).
 

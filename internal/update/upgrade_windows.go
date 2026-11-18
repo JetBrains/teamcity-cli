@@ -128,8 +128,11 @@ try {
     $ready.Set() | Out-Null
     $ready.Dispose()
     Write-Host 'Waiting for TeamCity CLI to exit...'
-    $parent.WaitForExit()
+    $exited = $parent.WaitForExit(15000)
     $parent.Dispose()
+    if (-not $exited) {
+        throw 'TeamCity CLI did not exit within 15 seconds. Update canceled.'
+    }
     & %s
     if ($LASTEXITCODE -ne 0) {
         throw ('WinGet failed with exit code 0x{0:X8}.' -f ($LASTEXITCODE -band 0xffffffffL))

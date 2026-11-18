@@ -42,6 +42,7 @@ package manager. Unmanaged macOS/Linux binaries are updated in place after
 checksum and version verification. Other methods show manual instructions.
 
 On Windows, WinGet updates continue in a separate window after the CLI exits.
+The updater cancels the update if the CLI has not exited within 15 seconds.
 The command reports the update log path. Exit code 0 confirms the handoff;
 check the update window or log for the installation result.
 
