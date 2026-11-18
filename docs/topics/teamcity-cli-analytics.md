@@ -8,9 +8,9 @@
 
 </tip>
 
-TeamCity CLI sends anonymous usage statistics to JetBrains to show which commands people use and where they fail. Every value is a fixed enum or a numeric count. The CLI never transmits free-form strings, identifiers, or anything you typed.
+TeamCity CLI sends anonymous usage statistics to JetBrains to show which commands people use and where they fail. Every value is a fixed enum or a numeric count. The CLI usage statistics collection never transmits free-form strings, identifiers, or anything you typed.
 
-## What we collect
+## What is collected in CLI usage statistics
 
 **Once per CLI invocation** (a "session" event):
 
@@ -39,9 +39,7 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 - Whether the agent you picked would run TeamCity CLI commands in its sandbox, and how that step ended: `not_sandboxed`, `allowed`, `declined`, or `allow_failed`.
 - Whether the onboarded repository is your own or a sample (`own` or `demo`), which agent it launched, and how the hand-over to the agent ended, for example `success`, `handover_declined`, or `agent_interrupted`.
 
-`teamcity onboard` also reports to the TeamCity server you onboard to that you logged in, the ID of each pipeline the agent creates with `teamcity pipeline create`, and the ID of each run it starts with `teamcity run start`. The pipeline and run reports also say whether the repository is your own or a sample (`own` or `demo`). These reports go to your TeamCity server, not into the CLI's usage statistics. The server records them only if explicit consent to collect these usage statistics was given on the server. The CLI skips them when you opt out as described below.
-
-## What we don't collect
+## What is not collected in CLI usage statistics
 
 - Tokens, passwords, SSH keys, or anything stored in the keyring or `config.yml`.
 - Your TeamCity server URL, hostname, or IP address. The URL is used only as a local cache key in `~/.config/tc/.analytics/server-info.json` so the CLI can remember which server version it last saw; the URL itself never leaves your machine.
@@ -49,7 +47,17 @@ TeamCity CLI sends anonymous usage statistics to JetBrains to show which command
 - Project, job, build, agent, pipeline, VCS-root, pool, or connection names or IDs.
 - Usernames, emails, branch names, file paths, or commit SHAs.
 
-**Nothing we collect can be used to identify you, your organization, your servers, or your repositories.** Every value goes through a published enum or numeric validator before it leaves your machine, so strings cannot be sent by accident.
+**Nothing in the CLI usage statistics can be used to identify you, your organization, your servers, or your repositories.** Every value goes through a published enum or numeric validator before it leaves your machine, so strings cannot be sent by accident.
+
+## Server-side statistics collection
+
+While `teamcity onboard` runs, it triggers server-side usage statistics collection of the following data:
+
+- That you logged in.
+- The ID of each pipeline the agent creates with `teamcity pipeline create`, and whether the repository is your own or a sample (`own` or `demo`).
+- The ID of each run the agent starts with `teamcity run start`, and the repository type (`own` or `demo`).
+
+The server records these statistics in accordance with the usage statistics collection consent given on the server side. The CLI does not trigger this collection when you opt out as described below.
 
 ## How to opt out
 
