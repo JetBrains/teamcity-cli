@@ -41,6 +41,11 @@ Homebrew, Scoop, Winget, Chocolatey, and npm installs update through their
 package manager. Unmanaged macOS/Linux binaries are updated in place after
 checksum and version verification. Other methods show manual instructions.
 
+On Windows, WinGet updates continue in a separate window after the CLI exits.
+The updater cancels the update if the CLI has not exited within 15 seconds.
+The command reports the update log path. Exit code 0 confirms the handoff;
+check the update window or log for the installation result.
+
 Use --yes to install without prompting. Non-interactive invocations require
 --yes to install. --check and --json only report status and never install.`,
 		Args: cobra.NoArgs,
@@ -114,8 +119,13 @@ func runUpdate(f *cmdutil.Factory, opts *updateOptions) error {
 		}
 	}
 	output.StopSpinner()
-	if err := upgrade(f.Context(), method, release.Version, f.IOStreams.Out, f.IOStreams.ErrOut); err != nil {
+	result, err := upgrade(f.Context(), method, release.Version, f.IOStreams.Out, f.IOStreams.ErrOut)
+	if err != nil {
 		return fmt.Errorf("update failed: %w", err)
+	}
+	if result.Deferred {
+		p.Info("The update will continue in a separate window after this command exits. Log: %s", result.LogPath)
+		return nil
 	}
 	p.Success("Update completed. Run 'teamcity --version' to check the installed version.")
 
