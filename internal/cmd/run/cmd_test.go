@@ -929,6 +929,9 @@ func TestRunStartPerRootRevisionsPayload(t *testing.T) {
 	ts.Handle("GET /app/rest/buildTypes/id:"+testJob+"/vcs-root-entries", func(w http.ResponseWriter, r *http.Request) {
 		cmdtest.JSON(w, api.VcsRootEntries{Count: 2, VcsRootEntry: []api.VcsRootEntry{{VcsRoot: &api.VcsRoot{ID: "A"}}, {VcsRoot: &api.VcsRoot{ID: "B"}}}})
 	})
+	ts.Handle("GET /app/rest/buildTypes/id:"+testJob+"/vcs-root-instances", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"vcs-root-instance":[{"vcs-root-id":"B","repositoryState":{"branch":[{"name":"refs/heads/main","version":"ccc","default":true}]}}]}`))
+	})
 	var captured api.TriggerBuildRequest
 	ts.Handle("POST /app/rest/buildQueue", func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&captured))
@@ -939,5 +942,5 @@ func TestRunStartPerRootRevisionsPayload(t *testing.T) {
 	require.Len(t, captured.Revisions.Revision, 2)
 	assert.Equal(t, "logical", captured.BranchName)
 	assert.Equal(t, api.Revision{Version: "abc", VcsBranchName: "refs/heads/feature", VcsRootInstance: &api.VcsRootInstanceRef{VcsRootID: "A"}}, captured.Revisions.Revision[0])
-	assert.Equal(t, api.Revision{Version: "def", VcsRootInstance: &api.VcsRootInstanceRef{VcsRootID: "B"}}, captured.Revisions.Revision[1])
+	assert.Equal(t, api.Revision{Version: "def", VcsBranchName: "refs/heads/main", VcsRootInstance: &api.VcsRootInstanceRef{VcsRootID: "B"}}, captured.Revisions.Revision[1])
 }
