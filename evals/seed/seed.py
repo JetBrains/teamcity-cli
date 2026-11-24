@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import secrets
 import subprocess
@@ -103,7 +104,8 @@ def props(**kv: str) -> dict:
 
 
 def wait_for(what: str, probe, timeout: float = 300, interval: float = 1.0):
-    deadline = time.time() + timeout
+    # TC_EVAL_SEED_PATIENCE stretches every wait, for seeding another architecture under emulation
+    deadline = time.time() + timeout * float(os.environ.get("TC_EVAL_SEED_PATIENCE", "1"))
     while time.time() < deadline:
         try:
             if (value := probe()):

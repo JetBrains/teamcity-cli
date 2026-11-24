@@ -18,7 +18,10 @@ network="tc-eval"
 host_url="http://127.0.0.1:${TC_EVAL_PORT:-18111}"
 
 want="$(python3 -c 'import json; print(json.load(open("manifest.json"))["fingerprint"])')"
-remote="${TC_EVAL_SNAPSHOT_REPO:-}:$want-$(docker version -f '{{.Server.Arch}}')"  # snapshots are per architecture
+# Snapshots are per architecture: a run pulls the host's, a push publishes whatever the local snapshot is.
+arch="$(docker image inspect -f '{{.Architecture}}' "$image" 2> /dev/null || true)"
+[ "${1:-}" = push ] || arch="$(docker version -f '{{.Server.Arch}}')"
+remote="${TC_EVAL_SNAPSHOT_REPO:-}:$want-$arch"
 
 fingerprint() { docker image inspect -f '{{index .Config.Labels "tc.eval.fingerprint"}}' "$image" 2> /dev/null || true; }
 
