@@ -190,8 +190,10 @@ Computed per cell from the experiment's own artifacts, with no cross-build basel
 - `GATE_MODE=warn` (default) reports the verdict but exits 0; `enforce` fails the build. Needs
   at least `GATE_MIN_TASKS` (3) paired tasks, so partial local runs just report.
 
-Also reported: per-task `pass^2` (both attempts fully correct), the process-check pass rate,
-judge means and mean tokens, turns, tool calls, duration and cost per arm (all advisory).
+Reported next to the lift: the paired change in tokens, turns, tool calls, duration and cost per
+run with the skill, each with a bootstrap 95% CI over the paired tasks. When both arms answer
+correctly, this is where the skill shows. Also reported, all advisory: per-task `pass^2` (both
+attempts fully correct), the process-check pass rate and judge means.
 
 ## Tasks
 

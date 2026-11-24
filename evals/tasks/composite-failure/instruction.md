@@ -1,3 +1,5 @@
+Our CI runs on TeamCity. The `teamcity` CLI is installed and already logged in to the server.
+
 `Shop_Release_Verify` is a composite job with snapshot dependencies. Look at every failed run it has had. For each one, find the job or jobs in its dependency chain that are the root cause (they failed on their own, not because one of their own dependencies failed) and the tests that failed in those root-cause runs.
 
 Write your answer to `answer.json` in the current directory, in exactly this shape:

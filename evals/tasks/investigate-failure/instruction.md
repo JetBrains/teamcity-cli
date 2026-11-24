@@ -1,3 +1,5 @@
+Our CI runs on TeamCity. The `teamcity` CLI is installed and already logged in to the server.
+
 The job `Shop_Backend_UnitTests` is failing on the `main` branch. Investigate what went wrong: which tests fail in its latest run on main, in which run on main did they start failing, and which commit introduced the failure?
 
 Write your answer to `answer.json` in the current directory, in exactly this shape:

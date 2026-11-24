@@ -1,3 +1,5 @@
+Our CI runs on TeamCity. The `teamcity` CLI is installed and already logged in to the server.
+
 I need to do the following with the teamcity CLI:
 
 1. List the last 50 finished builds of the Backend project (ID `Shop_Backend`, all branches) in JSON format and count how many of them failed

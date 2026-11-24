@@ -34,9 +34,9 @@ td.n {{ text-align: right; font-variant-numeric: tabular-nums; }}
 """
 
 CELL = """<h2>{title}</h2>
-<p>{runs} runs, {invalid} excluded as invalid. Paired skill lift on the outcome score <b>{lift}</b> (95% CI {ci}). Gate: {gate}.</p>
+<p>{runs} runs, {invalid} excluded as invalid. Paired skill lift on the outcome score <b>{lift}</b> (95% CI {ci}).{cost} Gate: {gate}.</p>
 <table><tr><th>Task</th><th>Lift</th><th>Missed without skill</th><th>Missed with skill</th></tr>{task_rows}</table>
-<table><tr><th>Efficiency per run</th><th>Without skill</th><th>With skill</th></tr>{eff_rows}</table>
+<table><tr><th>Efficiency per run</th><th>Without skill</th><th>With skill</th><th>Paired change</th><th>95% CI</th></tr>{eff_rows}</table>
 """
 
 
@@ -96,17 +96,31 @@ def cell_section(cell_dir: Path, summary: dict) -> str:
         f"<td>{fails(t, 'CONTROL')}</td><td>{fails(t, 'CURRENT')}</td></tr>"
         for t, v in sorted(summary.get("per_task_lift", {}).items(), key=lambda kv: -kv[1])
     )
+    changes = summary.get("efficiency_change", {})
+
+    def change_cells(key: str) -> str:
+        c = changes.get(key)
+        if not c:
+            return '<td class="n muted">–</td><td class="n muted">–</td>'
+        # fewer tokens, turns, seconds and dollars is the improvement
+        return (f'<td class="n {"up" if c["change"] < 0 else "down" if c["change"] > 0 else ""}">{pct(c["change"])}</td>'
+                f'<td class="n">{pct(c["ci_low"])} to {pct(c["ci_high"])}</td>')
+
     eff_rows = "".join(
-        f'<tr><td>{html.escape(k)}</td><td class="n">{arms.get("CONTROL", 0):,.1f}</td><td class="n">{arms.get("CURRENT", 0):,.1f}</td></tr>'
+        f'<tr><td>{html.escape(k)}</td><td class="n">{arms.get("CONTROL", 0):,.4g}</td>'
+        f'<td class="n">{arms.get("CURRENT", 0):,.4g}</td>{change_cells(k)}</tr>'
         for k, arms in summary.get("efficiency", {}).items()
     )
+    headline = next(((label, changes[k]) for k, label in (("cost_usd", "Cost"), ("total_tokens", "Tokens")) if k in changes), None)
+    cost = (f" {headline[0]} per run with the skill <b>{pct(headline[1]['change'])}</b> "
+            f"(95% CI {pct(headline[1]['ci_low'])} to {pct(headline[1]['ci_high'])})." if headline else "")
     title = " on ".join(filter(None, (summary.get("agent"), summary.get("model")))) or "Per task"
     invalid_file = cell_dir / "invalid_trials.json"
     return CELL.format(
         invalid=len(json.loads(invalid_file.read_text())) if invalid_file.is_file() else 0,
         title=html.escape(title), runs=summary.get("runs", 0), lift=pct(summary.get("lift", 0)),
         ci=f"{pct(summary.get('ci_low', 0))} to {pct(summary.get('ci_high', 0))}",
-        gate=gate_text(summary), task_rows=task_rows, eff_rows=eff_rows,
+        gate=gate_text(summary), task_rows=task_rows, eff_rows=eff_rows, cost=cost,
     )
 
 

@@ -1,3 +1,5 @@
+Our CI runs on TeamCity. The `teamcity` CLI is installed and already logged in to the server.
+
 Which run in the Acme Shop project (ID `Shop`, subprojects included) has been waiting in the build queue the longest, and why hasn't it started?
 
 Write your answer to `answer.json` in the current directory, in exactly this shape:

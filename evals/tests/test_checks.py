@@ -700,3 +700,13 @@ def test_harbor_import_carries_harness_model_and_usage(tmp_path):
     assert data["skill_available"] and data["skill_invoked"]
     assert data["events"]["total_tokens"] == 1000 and data["events"]["duration_sec"] == 30.0
     assert data["events"]["cost_usd"] == 0.02
+
+
+def test_efficiency_change_is_paired_and_ignores_single_arm_tasks():
+    def run(task, arm, cost):
+        return {"task": task, "treatment": arm, "events": {"cost_usd": cost}}
+    runs = [run("a", "CONTROL", 0.10), run("a", "CURRENT", 0.05), run("b", "CONTROL", 0.30), run("b", "CURRENT", 0.15),
+            run("guard", "CURRENT", 9.0)]  # a guardrail task must not skew the comparison
+    change = compare.efficiency_change(runs, ["a", "b"])["cost_usd"]
+    assert change["change"] == -0.5 and change["ci_low"] == change["ci_high"] == -0.5 and change["tasks"] == 2
+    assert compare.efficiency_change(runs, ["guard"]) == {}

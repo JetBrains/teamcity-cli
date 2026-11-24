@@ -146,23 +146,37 @@ def paired_lifts(by_task: dict) -> dict[str, float]:
     }
 
 
-def bootstrap_lift_ci(by_task: dict, paired: list[str]) -> tuple[float, float]:
-    """Hierarchical bootstrap: resample tasks, then reps within each arm."""
+def mean_difference(pairs: list[tuple[float, float]]) -> float:
+    """Mean over tasks of CURRENT − CONTROL."""
+    return mean(u - c for c, u in pairs)
+
+
+def relative_change(pairs: list[tuple[float, float]]) -> float:
+    """CURRENT / CONTROL − 1 over the tasks' summed means, so a cheap task cannot dominate."""
+    control = sum(c for c, _ in pairs)
+    return sum(u for _, u in pairs) / control - 1 if control else 0.0
+
+
+def bootstrap_ci(by_task: dict, paired: list[str], stat=mean_difference) -> tuple[float, float]:
+    """Hierarchical bootstrap of `stat` over (CONTROL mean, CURRENT mean) pairs: resample tasks, then reps."""
     rng = random.Random(BOOTSTRAP_SEED)
-    means = []
+    stats = []
     for _ in range(BOOTSTRAP_ITERS):
-        lifts = []
+        pairs = []
         for t in (paired[rng.randrange(len(paired))] for _ in paired):
             ctrl, curr = by_task[t]["CONTROL"], by_task[t]["CURRENT"]
-            c = [ctrl[rng.randrange(len(ctrl))] for _ in ctrl]
-            u = [curr[rng.randrange(len(curr))] for _ in curr]
-            lifts.append(mean(u) - mean(c))
-        means.append(mean(lifts))
-    means.sort()
+            pairs.append((mean(ctrl[rng.randrange(len(ctrl))] for _ in ctrl),
+                          mean(curr[rng.randrange(len(curr))] for _ in curr)))
+        stats.append(stat(pairs))
+    stats.sort()
     return (
-        means[int(0.025 * BOOTSTRAP_ITERS)],
-        means[min(int(0.975 * BOOTSTRAP_ITERS), BOOTSTRAP_ITERS - 1)],
+        stats[int(0.025 * BOOTSTRAP_ITERS)],
+        stats[min(int(0.975 * BOOTSTRAP_ITERS), BOOTSTRAP_ITERS - 1)],
     )
+
+
+def bootstrap_lift_ci(by_task: dict, paired: list[str]) -> tuple[float, float]:
+    return bootstrap_ci(by_task, paired)
 
 
 def pass_k(all_passed: list[bool], k: int = PASS_K) -> float | None:
@@ -199,6 +213,23 @@ def efficiency_summary(runs: list[dict]) -> dict[str, dict[str, float]]:
         for key, _, nd in EFFICIENCY_METRICS
         if (arms := vals.get(key))
     }
+
+
+def efficiency_change(runs: list[dict], paired: list[str]) -> dict[str, dict[str, float]]:
+    """metric → paired relative change with the skill and its 95% CI, over tasks both arms measured."""
+    out = {}
+    for key, _, _ in EFFICIENCY_METRICS:
+        by_task: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+        for r in runs:
+            if isinstance(v := r["events"].get(key), (int, float)):
+                by_task[r["task"]][r["treatment"]].append(v)
+        tasks = [t for t in paired if by_task[t].get("CONTROL") and by_task[t].get("CURRENT")]
+        if not tasks or not sum(mean(by_task[t]["CONTROL"]) for t in tasks):
+            continue
+        change = relative_change([(mean(by_task[t]["CONTROL"]), mean(by_task[t]["CURRENT"])) for t in tasks])
+        low, high = bootstrap_ci(by_task, tasks, relative_change)
+        out[key] = {"change": round(change, 4), "ci_low": round(low, 4), "ci_high": round(high, 4), "tasks": len(tasks)}
+    return out
 
 
 def skill_invocation(runs: list[dict]) -> dict[str, float]:
@@ -301,7 +332,8 @@ def analyze(exp_dir: Path) -> dict | None:
 
     efficiency = efficiency_summary(runs)
     if efficiency:
-        print("\n  Efficiency (advisory, per run):")
+        changes = efficiency_change(runs, list(lifts))
+        print("\n  Efficiency per run (paired change with the skill, 95% CI):")
         labels = {key: label for key, label, _ in EFFICIENCY_METRICS}
         for key, _, _ in EFFICIENCY_METRICS:
             arms = efficiency.get(key)
@@ -309,11 +341,11 @@ def analyze(exp_dir: Path) -> dict | None:
                 continue
             arm_s = "  ".join(f"{a}={v:,}" for a, v in sorted(arms.items()))
             delta = ""
-            if {"CONTROL", "CURRENT"} <= arms.keys() and arms["CONTROL"]:
-                pct = arms["CURRENT"] / arms["CONTROL"] - 1
-                delta = f"  ({pct:+.0%} vs CONTROL)"
+            if c := changes.get(key):
+                delta = f"  {c['change']:+.0%} [{c['ci_low']:+.0%}, {c['ci_high']:+.0%}]"
             print(f"    {labels[key]:<24s} {arm_s}{delta}")
         summary["efficiency"] = efficiency
+        summary["efficiency_change"] = changes
 
     breaches = []
     floor = float(os.environ.get("GATE_LIFT_FLOOR", "-0.05"))

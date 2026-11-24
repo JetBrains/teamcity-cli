@@ -1,3 +1,5 @@
+Our CI runs on TeamCity. The `teamcity` CLI is installed and already logged in to the server.
+
 I'm new to this TeamCity server. Can you give me an overview?
 
 1. What top-level projects are there (directly under the root project)?

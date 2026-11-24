@@ -1,3 +1,5 @@
+Our CI runs on TeamCity. The `teamcity` CLI is installed and already logged in to the server.
+
 Show me the last 5 finished runs of `Shop_Backend_Build` on the `main` branch and check if any of them failed. If so, find the commit that broke the build.
 
 Write your answer to `answer.json` in the current directory, in exactly this shape:

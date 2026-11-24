@@ -1,3 +1,5 @@
+Our CI runs on TeamCity. The `teamcity` CLI is installed and already logged in to the server.
+
 What's going on with this build configuration? Look at its last 10 finished runs across all branches.
 
 http://teamcity:8111/buildConfiguration/Shop_Backend_UnitTests

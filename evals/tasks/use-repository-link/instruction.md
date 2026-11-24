@@ -1,3 +1,5 @@
+Our CI runs on TeamCity. The `teamcity` CLI is installed and already logged in to the server.
+
 Which build finished last for this repository?
 
 Write your answer to `answer.json` in the current directory, in exactly this shape:
