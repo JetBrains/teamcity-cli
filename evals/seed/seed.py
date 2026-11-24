@@ -145,7 +145,13 @@ def start_agents(tc: TC) -> dict[str, int]:
         ok = {a["name"]: a["id"] for a in agents if a["authorized"] and a["connected"] and a["uptodate"]}
         return ok if set(ok) == set(AGENTS) else None
 
-    return wait_for("agents to connect and upgrade", ready, timeout=900, interval=5)
+    try:
+        return wait_for("agents to connect and upgrade", ready, timeout=900, interval=5)
+    except TimeoutError:  # say why before failing: this is the step that depends on the host most
+        print(tc.get("/app/rest/agents?locator=authorized:any&fields=agent(name,authorized,connected,uptodate)"), file=sys.stderr)
+        for name in AGENTS:
+            print(f"--- {name}\n" + sh("sh", "-c", f"docker logs --tail 25 {name} 2>&1", check=False), file=sys.stderr)
+        raise
 
 
 # --- fixture: users, projects, pools, jobs ---------------------------------------------------
@@ -454,4 +460,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BaseException:  # leave nothing running on the host after a failed seed
+        if "--keep" not in sys.argv:
+            sh("docker", "rm", "-f", "-v", SERVER, *AGENTS, check=False)
+        raise
