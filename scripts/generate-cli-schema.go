@@ -37,10 +37,7 @@ func walk(c *cobra.Command, parentPath string, out map[string][]string) {
 	for _, name := range names {
 		path := strings.TrimSpace(parentPath + " " + name)
 		out[path] = flagsOf(c)
-		if name != c.Name() {
-			continue // don't recurse under alias paths; children use the canonical parent
-		}
-		for _, child := range c.Commands() {
+		for _, child := range c.Commands() { // under alias paths too: `teamcity build list` is `run list`
 			walk(child, path, out)
 		}
 	}
