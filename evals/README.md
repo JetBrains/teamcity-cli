@@ -228,6 +228,7 @@ attempts fully correct), the process-check pass rate and judge means.
 | `OPENAI_API_KEY`     | No       | Enables the Codex cell                                       |
 | `BRANCH_NAME`        | No       | Names the experiment directory (default: a timestamp)        |
 | `TC_EVAL_PORT`       | No       | Host port of the seeded server (default `18111`)             |
+| `TC_EVAL_SNAPSHOT_REPO` | No    | Private registry repository to pull the server snapshot from (and `seed/server.sh push` to) |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | No | Langfuse traces + scores |
 | `LANGFUSE_TRACING_ENVIRONMENT` | No | Langfuse environment (default `eval`; CI sets `ci`)  |
 | `GATE_MODE`          | No       | `warn` (default) or `enforce`                                |
