@@ -34,6 +34,12 @@ func TestRunBuildRevisions(t *testing.T) {
 		{name: "default branch name is sent as is", opts: RunBuildOptions{Revisions: []RevisionSpec{{VcsRootID: "A", Version: "abc"}}}, heads: true,
 			state: `{"vcs-root-instance":[{"vcs-root-id":"A","repositoryState":{"branch":[{"name":"default","version":"h1","default":true}]}}]}`,
 			want:  []Revision{{Version: "abc", VcsBranchName: "default", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}}}},
+		{name: "empty state falls back to Git branch property", opts: RunBuildOptions{Revision: "abc"}, heads: true,
+			state: `{"vcs-root-instance":[{"vcs-root-id":"A","vcsName":"jetbrains.git","properties":{"property":[{"name":"branch","value":"main"}]},"repositoryState":{"branch":[{"name":"","default":true}]}},{"vcs-root-id":"B","vcsName":"perforce","properties":{"property":[{"name":"branch","value":"main"}]},"repositoryState":{"branch":[{"name":"","default":true}]}}]}`,
+			want: []Revision{
+				{Version: "abc", VcsBranchName: "refs/heads/main", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
+				{Version: "abc", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
+			}},
 		{name: "root without default branch keeps no branch", opts: RunBuildOptions{Revision: "abc"}, heads: true,
 			state: `{"vcs-root-instance":[{"vcs-root-id":"A","repositoryState":{"branch":[{"name":"","version":"42","default":true}]}}]}`,
 			want: []Revision{
@@ -70,8 +76,8 @@ func TestRunBuildRevisions(t *testing.T) {
 					json.NewEncoder(w).Encode(VcsRootEntries{Count: 2, VcsRootEntry: []VcsRootEntry{{VcsRoot: &VcsRoot{ID: "A"}}, {VcsRoot: &VcsRoot{ID: "B"}}}})
 				case "/app/rest/buildTypes/id:Job/vcs-root-instances":
 					headRequests++
-					assert.Equal(t, "vcs-root-instance(vcs-root-id,repositoryState(branch(name,version,default)))", r.URL.Query().Get("fields"))
-					w.Write([]byte(cmp.Or(tt.state, `{"vcs-root-instance":[{"vcs-root-id":"A","repositoryState":{"branch":[{"name":"refs/heads/main","version":"aaa","default":true}]}},{"vcs-root-id":"B","repositoryState":{"branch":[{"name":"refs/heads/master","version":"ccc","default":true},{"name":"refs/tags/v1","version":"bbb"},{"name":"refs/pull/12/merge","version":"pr"}]}}]}`)))
+					assert.Equal(t, "vcs-root-instance(vcs-root-id,vcsName,properties(property(name,value)),repositoryState(branch(name,version,default)))", r.URL.Query().Get("fields"))
+					w.Write([]byte(cmp.Or(tt.state, `{"vcs-root-instance":[{"vcs-root-id":"A","vcsName":"jetbrains.git","properties":{"property":[{"name":"branch","value":"refs/heads/other"}]},"repositoryState":{"branch":[{"name":"refs/heads/main","version":"aaa","default":true}]}},{"vcs-root-id":"B","repositoryState":{"branch":[{"name":"refs/heads/master","version":"ccc","default":true},{"name":"refs/tags/v1","version":"bbb"},{"name":"refs/pull/12/merge","version":"pr"}]}}]}`)))
 				case "/app/rest/buildQueue":
 					require.Equal(t, "POST", r.Method)
 					posts++

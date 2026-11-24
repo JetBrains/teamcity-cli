@@ -58,7 +58,7 @@ func (c *Client) resolveBuildRevisions(job string, opts RunBuildOptions) ([]Revi
 	}
 	revisions := make([]Revision, 0, len(specs))
 	for _, spec := range specs {
-		// Without a VCS branch the server checks out "<unspecified>"; the root's default ref is sent as is, so names like Mercurial's "default" stay intact.
+		// Without a VCS branch the server checks out "<unspecified>"; the root's default ref is sent as resolved, so names like Mercurial's "default" stay intact.
 		revisions = append(revisions, Revision{
 			Version: spec.Version, VcsBranchName: cmp.Or(revisionBranch(spec.Branch), defaults[spec.VcsRootID]),
 			VcsRootInstance: &VcsRootInstanceRef{VcsRootID: spec.VcsRootID},
@@ -76,13 +76,15 @@ func (c *Client) resolveRepositoryState(job string, specs []RevisionSpec) (map[s
 	}
 	var state struct {
 		Instances []struct {
-			Root            string `json:"vcs-root-id"`
+			Root            string        `json:"vcs-root-id"`
+			VcsName         string        `json:"vcsName"`
+			Properties      *PropertyList `json:"properties"`
 			RepositoryState struct {
 				Branches []branchHead `json:"branch"`
 			} `json:"repositoryState"`
 		} `json:"vcs-root-instance"`
 	}
-	path := "/app/rest/buildTypes/id:" + url.PathEscape(job) + "/vcs-root-instances?fields=vcs-root-instance(vcs-root-id,repositoryState(branch(name,version,default)))"
+	path := "/app/rest/buildTypes/id:" + url.PathEscape(job) + "/vcs-root-instances?fields=vcs-root-instance(vcs-root-id,vcsName,properties(property(name,value)),repositoryState(branch(name,version,default)))"
 	if err := c.get(c.ctx(), path, &state); err != nil {
 		return nil, fmt.Errorf("failed to get VCS repository state: %w", err)
 	}
@@ -90,6 +92,11 @@ func (c *Client) resolveRepositoryState(job string, specs []RevisionSpec) (map[s
 	for _, inst := range state.Instances {
 		if j := slices.IndexFunc(inst.RepositoryState.Branches, func(branch branchHead) bool { return branch.Default }); j >= 0 {
 			defaults[inst.Root] = inst.RepositoryState.Branches[j].Name
+		}
+		if defaults[inst.Root] == "" && inst.VcsName == "jetbrains.git" && inst.Properties != nil {
+			if j := slices.IndexFunc(inst.Properties.Property, func(p Property) bool { return p.Name == "branch" }); j >= 0 {
+				defaults[inst.Root] = revisionBranch(inst.Properties.Property[j].Value)
+			}
 		}
 	}
 	for i, spec := range specs {
