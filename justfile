@@ -175,6 +175,7 @@ eval *args:
 
 # Harness unit tests only — no server, no API calls
 eval-unit *args:
+    go run scripts/generate-cli-schema.go > evals/cli_schema.json
     cd evals && uv run pytest tests/test_checks.py -v {{args}}
 
 # Gate/report an experiment: paired lift ± CI (pass two results dirs to diff)

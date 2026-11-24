@@ -19,6 +19,7 @@ docker build -q -f evals/harbor/Dockerfile -t teamcity-cli-eval:latest . > /dev/
 
 cd evals
 uv sync -q
+uv run pytest tests -q  # harness unit tests: fail fast before any agent runs
 exp="results/$experiment"
 rm -rf "$exp"
 # The module cache is read-only; Harbor needs to copy the skill's session files back out.
