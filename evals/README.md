@@ -208,11 +208,16 @@ verifier grades the ATIF trajectory with the same checks; the reward is the chec
 The pytest harness above stays the gate for now.
 
 ```bash
-just eval-harbor-image            # CLI (linux) + checks + verifier → teamcity-cli-eval:latest
-harbor run -y -p evals/tasks/trigger-history -a claude-code -m anthropic/claude-sonnet-5-5 \
-  --skill <path to teamcity-skills>/skills/teamcity-cli   # omit --skill for the CONTROL arm
-harbor view jobs
+just eval-harbor                                   # all tasks, both arms, Sonnet 5.5, 2 attempts
+just eval-harbor anthropic/claude-sonnet-5-5 1 -i flaky-tests -i trigger-history
+harbor view evals/results/<experiment>/jobs        # browse trajectories
 ```
+
+`eval-harbor` builds the image, runs a CONTROL and a CURRENT (`--skill`) job on local Docker,
+converts the trials with `scripts/harbor_import.py`, gates them with `compare.py`, and writes
+`report.html` (`scripts/report.py`) for a TeamCity report tab. The verifier shares the agent's
+container because a separate verifier does not receive the trajectory; `harbor lint` flags this
+as `shared-verifier`.
 
 `TEAMCITY_URL` and `TEAMCITY_TOKEN` are read from your environment (`[environment.env]`).
 

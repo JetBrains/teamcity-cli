@@ -180,6 +180,22 @@ eval-harbor-image:
     go run scripts/generate-cli-schema.go > evals/cli_schema.json
     docker build -f evals/harbor/Dockerfile -t teamcity-cli-eval:latest .
 
+# Run evals/tasks/ in Harbor (local Docker), both arms, then gate and write report.html
+eval-harbor model="anthropic/claude-sonnet-5-5" attempts="2" *args: eval-harbor-image
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd evals
+    exp="results/harbor-$(date +%Y%m%d-%H%M%S)"
+    # The module cache is read-only; Harbor needs to copy the skill's session files back out.
+    skill="$(mktemp -d)/teamcity-cli"
+    cp -R "$(uv run python -c "import conftest; print(conftest.SKILL_DIR)")" "$skill" && chmod -R u+w "$skill"
+    export HARBOR_TELEMETRY=off
+    harbor run -y -e docker -p tasks -a claude-code -m {{model}} -k {{attempts}} -o "$exp/jobs" --job-name CONTROL -x negative-unrelated {{args}}
+    harbor run -y -e docker -p tasks -a claude-code -m {{model}} -k {{attempts}} -o "$exp/jobs" --job-name CURRENT --skill "$skill" {{args}}
+    uv run python scripts/harbor_import.py "$exp/jobs" "$exp"
+    uv run python scripts/compare.py "$exp"
+    uv run python scripts/report.py "$exp"
+
 # Harness unit tests only — no server, no API calls
 eval-unit *args:
     cd evals && uv run pytest tests/test_checks.py -v {{args}}

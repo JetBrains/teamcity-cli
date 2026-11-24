@@ -564,3 +564,20 @@ def test_harbor_tasks_are_well_formed():
         for required in ("instruction.md", "task.toml", "environment/Dockerfile", "tests/test.sh", "tests/checks.toml"):
             assert (d / required).is_file(), f"{name}: missing {required}"
         assert tomllib.loads((d / "task.toml").read_text())["task"]["name"] == f"teamcity-cli/{name}"
+
+
+def test_harbor_import_writes_compare_artifacts(tmp_path):
+    sys.path.insert(0, str(EVALS_ROOT / "scripts"))
+    import harbor_import
+    trial = tmp_path / "jobs" / "CURRENT" / "find-builds__abc"
+    (trial / "verifier").mkdir(parents=True)
+    (trial / "agent").mkdir()
+    (trial / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
+    (trial / "verifier" / "checks.json").write_text(json.dumps(
+        {"task": "", "pass_rate": 0.5, "results": [{"check": "uses_json", "passed": False, "message": ""}]}))
+    (trial / "agent" / "trajectory.json").write_text(json.dumps({"steps": [
+        {"source": "agent", "message": "", "tool_calls": [
+            {"function_name": "Bash", "arguments": {"command": "teamcity run list"}}]}]}))
+    assert harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res") == 1
+    runs = compare.load_runs(tmp_path / "res")
+    assert [(r["task"], r["treatment"]) for r in runs] == [("find-builds", "CURRENT")]
