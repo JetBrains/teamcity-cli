@@ -128,6 +128,7 @@ func (c *Client) UpdatePipelineYAML(id string, yamlContent string) error {
 			pipeline[key] = v
 		}
 	}
+	dropUnreadSecrets(pipeline["integrations"])
 
 	// Support both versions with a single body:
 	// pre-2026.2 reads the top-level fields, 2026.2+ reads the nested "pipeline" object.
@@ -143,6 +144,17 @@ func (c *Client) UpdatePipelineYAML(id string, yamlContent string) error {
 	path := "/app/pipeline/" + id
 	var result json.RawMessage
 	return c.post(c.ctx(), path, bytes.NewReader(body), &result)
+}
+
+// dropUnreadSecrets removes connection parameters the server returned as null: it never returns
+// secrets, and posting the null back would erase the stored value.
+func dropUnreadSecrets(integrations any) {
+	list, _ := integrations.([]any)
+	for _, item := range list {
+		integration, _ := item.(map[string]any)
+		params, _ := integration["parameters"].(map[string]any)
+		maps.DeleteFunc(params, func(_ string, v any) bool { return v == nil })
+	}
 }
 
 // GetBuildPipelineRun fetches pipeline run metadata for a build.

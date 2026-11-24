@@ -30,6 +30,9 @@ func TestUpdatePipelineYAML(t *testing.T) {
 				"yaml":     "old",
 				"vcsRoot":  map[string]any{"id": "MyRepo"},
 				"triggers": []any{map[string]any{"type": "vcs"}},
+				"integrations": []any{map[string]any{"id": "Docker_0", "parameters": map[string]any{
+					"userName": "ci", "secure:userPass": nil, // the server never returns secrets
+				}}},
 			})
 		case http.MethodPost:
 			raw, err := io.ReadAll(r.Body)
@@ -56,6 +59,11 @@ func TestUpdatePipelineYAML(t *testing.T) {
 	assert.Equal(t, newYAML, nested["yaml"])
 	assert.Equal(t, map[string]any{"externalVcsRootId": "MyRepo"}, nested["vcsRoot"])
 	assert.Contains(t, nested, "triggers")
+
+	// A null secret posted back would erase the stored one, so it must not be sent at all.
+	for _, shape := range []map[string]any{body, nested} {
+		assert.Equal(t, []any{map[string]any{"id": "Docker_0", "parameters": map[string]any{"userName": "ci"}}}, shape["integrations"])
+	}
 }
 
 func TestGetPipelineSchemaComplete(t *testing.T) {
