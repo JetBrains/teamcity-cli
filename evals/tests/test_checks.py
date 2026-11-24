@@ -581,3 +581,33 @@ def test_harbor_import_writes_compare_artifacts(tmp_path):
     assert harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res") == 1
     runs = compare.load_runs(tmp_path / "res")
     assert [(r["task"], r["treatment"]) for r in runs] == [("find-builds", "CURRENT")]
+
+
+def test_parser_review_regressions():
+    def argvs(cmd):
+        return runner_for([cmd]).teamcity_argvs()
+    assert argvs("teamcity run list \\\n  --status failure \\\n  --json") == [["teamcity", "run", "list", "--status", "failure", "--json"]]
+    assert argvs("# Inspect recent runs\nteamcity run list --json") == [["teamcity", "run", "list", "--json"]]
+    assert argvs("teamcity run log $(cat /tmp/run-id) --failed") == [["teamcity", "run", "log", "$SUB", "--failed"]]
+    assert argvs("printf '%s\\n' '$(teamcity run list --json)' > example.txt") == []
+    assert argvs("echo 'a # b'; teamcity queue list") == [["teamcity", "queue", "list"]]
+
+
+def test_fan_out_review_regressions():
+    assert not passes(checks.covered_multiple_jobs, ["teamcity job step view JBR_A RUNNER_1"])
+    assert passes(checks.covered_multiple_jobs, ["teamcity job step view JBR_A RUNNER_1", "teamcity job step view JBR_B RUNNER_1"])
+    single = "teamcity api '/app/rest/testOccurrences?locator=build:(id:123456),status:FAILURE'"
+    assert not passes(checks.collected_tests_across_runs, [single])
+    assert passes(checks.collected_tests_across_runs, [single, single.replace("123456", "123457")])
+    assert passes(checks.collected_tests_across_runs, ["for b in $ids; do teamcity api \"/app/rest/testOccurrences?locator=build:(id:$b)\"; done"])
+
+
+def test_harbor_import_scores_errored_trials_as_failed(tmp_path):
+    sys.path.insert(0, str(EVALS_ROOT / "scripts"))
+    import harbor_import
+    trial = tmp_path / "jobs" / "CONTROL" / "find-builds__err"
+    trial.mkdir(parents=True)
+    (trial / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
+    assert harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res") == 1
+    runs = compare.load_runs(tmp_path / "res")
+    assert runs[0]["rate"] == 0.0

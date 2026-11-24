@@ -26,10 +26,77 @@ _HEREDOC = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1([^\n]*)\n.*?\n[ \t]*\2[ \t]*(?
 _SHELL_PREFIX = frozenset({"do", "then", "else", "elif", "if", "while", "until", "time", "!", "{"})
 
 
+def _closing(cmd: str, start: int, opener: str, closer: str) -> int:
+    """Index of the `closer` matching an `opener` just before `start`, honoring quotes and nesting."""
+    depth, quote, i = 1, "", start
+    while i < len(cmd):
+        c = cmd[i]
+        if quote:
+            if c == "\\" and quote == '"':
+                i += 1
+            elif c == quote:
+                quote = ""
+        elif c == "\\":
+            i += 1
+        elif c in "'\"":
+            quote = c
+        elif opener and cmd.startswith(opener, i):
+            depth += 1
+            i += len(opener) - 1
+        elif c == closer:
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return len(cmd)
+
+
+def _flatten(cmd: str) -> tuple[str, list[str]]:
+    """Rewrite one shell line for the lexer: drop continuations and comments, turn unquoted newlines
+    into `;`, and replace each substitution the shell would evaluate ($(…), `…`, <(…), >(…)) with a
+    `$SUB` placeholder, returning the substituted commands separately."""
+    out, inner, quote, i = [], [], "", 0
+    while i < len(cmd):
+        c = cmd[i]
+        if quote == "'":
+            out.append(c)
+            quote = "" if c == "'" else quote
+        elif c == "\\" and cmd[i + 1:i + 2] == "\n":
+            i += 1  # line continuation
+        elif c == "\\":
+            out.append(cmd[i:i + 2])
+            i += 1
+        elif c == '"':
+            out.append(c)
+            quote = "" if quote == '"' else '"'
+        elif c == "'" and not quote:
+            out.append(c)
+            quote = "'"
+        elif cmd.startswith("$(", i) or (not quote and cmd[i:i + 2] in ("<(", ">(")):
+            end = _closing(cmd, i + 2, "(", ")")
+            inner.append(cmd[i + 2:end])
+            out.append("$SUB")
+            i = end
+        elif c == "`":
+            end = _closing(cmd, i + 1, "", "`")
+            inner.append(cmd[i + 1:end])
+            out.append("$SUB")
+            i = end
+        elif not quote and c == "#" and (not out or out[-1][-1:] in " \t\n;|&("):
+            while i + 1 < len(cmd) and cmd[i + 1] != "\n":
+                i += 1  # comment to end of line
+        elif not quote and c == "\n":
+            out.append(" ; ")
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out), inner
+
+
 def _shell_segments(cmd: str) -> list[list[str]]:
     """Quote-aware split of a shell line into simple commands, redirections dropped."""
-    cmd = _HEREDOC.sub(r"\3", cmd)
-    cmd = _FD_PREFIX.sub(" ", cmd).replace("\n", " ; ").replace("`", " ; ")
+    cmd, inner = _flatten(_HEREDOC.sub(r"\3", cmd))
+    cmd = _FD_PREFIX.sub(" ", cmd)
     lexer = shlex.shlex(cmd, posix=True, punctuation_chars=True)
     lexer.whitespace_split = True
     try:
@@ -40,16 +107,16 @@ def _shell_segments(cmd: str) -> list[list[str]]:
     for tok in tokens:
         if skip:
             skip = False
-        elif _SEPARATOR.match(tok) or tok in ("<(", ">("):
+        elif _SEPARATOR.match(tok):
             segments.append(current)
             current = []
         elif tok[:1] in ("<", ">") or tok.startswith("&>"):
             skip = True  # the lexer splits the operator from its target
         else:
             current.append(tok)
-            if "$(" in tok:  # substitution inside double quotes stays one token
-                segments.extend(_shell_segments(tok.split("$(", 1)[1]))
     segments.append(current)
+    for sub in inner:
+        segments.extend(_shell_segments(sub))
     return segments
 
 

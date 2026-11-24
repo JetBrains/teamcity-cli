@@ -687,11 +687,14 @@ def _api_paths(runner: EvalRunner) -> list[str]:
     return [" ".join(args) for args in _invocations(runner, "api")]
 
 
-def _fanned_out(runner: EvalRunner, *path: str, ident: re.Pattern | None = None) -> bool:
-    """True if `teamcity <path>` ran on 2+ distinct targets or on a loop variable."""
+def _fanned_out(runner: EvalRunner, *path: str, ident: re.Pattern | None = None, first_only: bool = False) -> bool:
+    """True if `teamcity <path>` ran on 2+ distinct targets or on a loop variable.
+
+    `first_only` counts only the first positional, for commands like `job step view <job> <step>`.
+    """
     targets: set[str] = set()
     for args in _invocations(runner, *path, scripts=True):
-        for tok in args:
+        for tok in args[:1] if first_only else args:
             if tok.strip("\"'").startswith("$"):
                 return True
             if ident is None or ident.fullmatch(tok):
@@ -723,7 +726,7 @@ def scoped_to_trigger_job(runner: EvalRunner) -> None:
 def collected_tests_across_runs(runner: EvalRunner) -> None:
     if _fanned_out(runner, "run", "tests", ident=_RUN_ID):
         runner.passed("Collected tests from several runs")
-    elif any("testOccurrences" in p for p in _api_paths(runner)):
+    elif _test_occurrences_across_runs(runner):
         runner.passed("Queried test occurrences across runs via api")
     elif runner.has_subcommand("run", "tests") and runner.has_flag("--test"):
         runner.passed("Followed test history across runs")
@@ -731,6 +734,20 @@ def collected_tests_across_runs(runner: EvalRunner) -> None:
         runner.failed("Looked at tests of a single run only")
     else:
         runner.failed("Did not collect test results")
+
+
+_SINGLE_BUILD = re.compile(r"build:\(id:([^),]+)\)")
+
+
+def _test_occurrences_across_runs(runner: EvalRunner) -> bool:
+    """testOccurrences queries that span runs: a multi-build locator, a loop variable, or 2+ build ids."""
+    ids: set[str] = set()
+    for path in (p for p in _api_paths(runner) if "testOccurrences" in p):
+        pinned = _SINGLE_BUILD.findall(path)
+        if not pinned or any(i.startswith("$") for i in pinned):
+            return True
+        ids.update(pinned)
+    return len(ids) >= 2
 
 
 _COUNT_PHRASE = re.compile(r"\b\d+\s*(?:/|of|out of)\s*\d+\b|\b\d+\s*(?:runs?|times|×|x)\b", re.I)
@@ -816,7 +833,8 @@ def inspected_job_steps(runner: EvalRunner) -> None:
 
 
 def covered_multiple_jobs(runner: EvalRunner) -> None:
-    if (_fanned_out(runner, "job", "step", "list") or _fanned_out(runner, "job", "step", "view")
+    if (_fanned_out(runner, "job", "step", "list", first_only=True)
+            or _fanned_out(runner, "job", "step", "view", first_only=True)
             or runner.has_subcommand("project", "settings", "export") or _bulk_step_query(runner)):
         runner.passed("Covered steps of several jobs")
     else:
