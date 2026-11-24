@@ -174,6 +174,12 @@ eval *args:
         uv run pytest tests/ -v {{args}}
     fi
 
+# Build the base image that Harbor runs of evals/tasks/ start FROM
+eval-harbor-image:
+    GOOS=linux go build -o bin/teamcity-linux ./tc
+    go run scripts/generate-cli-schema.go > evals/cli_schema.json
+    docker build -f evals/harbor/Dockerfile -t teamcity-cli-eval:latest .
+
 # Harness unit tests only — no server, no API calls
 eval-unit *args:
     cd evals && uv run pytest tests/test_checks.py -v {{args}}

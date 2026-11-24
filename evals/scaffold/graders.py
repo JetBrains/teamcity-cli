@@ -4,7 +4,7 @@ Judge scores never gate: they are reported separately from deterministic checks.
 Grading FAILS CLOSED — if no judge is available or its output can't be parsed,
 the dimension is recorded as ungraded and excluded, never defaulted to a pass.
 
-Auth priority: ANTHROPIC_API_KEY → CLAUDE_CODE_OAUTH_TOKEN → Claude Code CLI (OAuth).
+Auth priority: ANTHROPIC_API_KEY → ANTHROPIC_AUTH_TOKEN (gateway) → CLAUDE_CODE_OAUTH_TOKEN → Claude Code CLI (OAuth).
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 
-GRADER_MODEL = "claude-sonnet-4-5-20250929"
+GRADER_MODEL = "claude-sonnet-5-5"
 
 _CLAUDE_BIN = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or "claude"
 
@@ -31,7 +31,7 @@ class GradeResult:
 def _make_anthropic_client():
     """Create an Anthropic client using available credentials, or None.
 
-    Priority: ANTHROPIC_API_KEY → CLAUDE_CODE_OAUTH_TOKEN → None.
+    Priority: ANTHROPIC_API_KEY → ANTHROPIC_AUTH_TOKEN → CLAUDE_CODE_OAUTH_TOKEN → None.
     """
     try:
         import anthropic
@@ -41,6 +41,9 @@ def _make_anthropic_client():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if api_key:
         return anthropic.Anthropic(api_key=api_key)
+
+    if os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        return anthropic.Anthropic()  # reads ANTHROPIC_AUTH_TOKEN and ANTHROPIC_BASE_URL
 
     oauth_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
     if oauth_token:
@@ -56,12 +59,17 @@ def _call_anthropic_sdk(prompt: str) -> str | None:
         return None
 
     try:
-        response = client.messages.create(
+        # Sonnet 5.5 thinks by default: leave room for it, and read the text block, not content[0].
+        response = client.beta.messages.create(
             model=GRADER_MODEL,
-            max_tokens=500,
+            max_tokens=16000,
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.content[0].text
+        if response.stop_reason == "refusal":
+            return None
+        return next((b.text for b in response.content if b.type == "text"), None)
     except Exception:
         return None
 

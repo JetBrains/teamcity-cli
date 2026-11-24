@@ -1,0 +1,14 @@
+checks = [
+  "ran_teamcity_commands",
+  "no_auth_failure",
+  "uses_limit_not_count",
+  "uses_status_filter",
+  "uses_project_filter",
+  "uses_failed_for_log",
+  "no_sort_flag",
+  "acknowledges_limitation",
+  "uses_json_flag",
+  "uses_run_not_build",
+  "valid_commands",
+  "no_hallucinations",
+]

@@ -34,13 +34,14 @@ import math
 import os
 import random
 import sys
+import tomllib
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean
 
 EVALS_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_ROOT = EVALS_ROOT / "results"
-TASKS_FILE = EVALS_ROOT / "tasks.json"
+TASKS_DIR = EVALS_ROOT / "tasks"
 
 BOOTSTRAP_ITERS = 10_000
 BOOTSTRAP_SEED = 1337
@@ -100,14 +101,12 @@ def load_runs(exp_dir: Path) -> list[dict]:
 
 def paired_task_names() -> set[str]:
     """Tasks whose declared treatments include both arms (guardrails excluded)."""
-    try:
-        tasks = json.loads(TASKS_FILE.read_text())
-    except OSError:
-        return set()
-    return {
-        t["id"] for t in tasks
-        if {"CONTROL", "CURRENT"} <= set(t.get("treatments", ["CONTROL", "CURRENT"]))
-    }
+    names = set()
+    for toml_path in TASKS_DIR.glob("*/task.toml"):
+        meta = tomllib.loads(toml_path.read_text()).get("metadata", {})
+        if {"CONTROL", "CURRENT"} <= set(meta.get("treatments", ["CONTROL", "CURRENT"])):
+            names.add(toml_path.parent.name)
+    return names
 
 
 # ---------------------------------------------------------------------------

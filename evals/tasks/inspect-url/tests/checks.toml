@@ -1,0 +1,12 @@
+checks = [
+  "ran_teamcity_commands",
+  "no_auth_failure",
+  "extracts_config_id",
+  "lists_config_builds",
+  "provides_answer",
+  "added_repository_link",
+  "did_not_modify_teamcity_toml",
+  "executes_commands",
+  "valid_commands",
+  "no_hallucinations",
+]

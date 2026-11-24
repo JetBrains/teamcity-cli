@@ -1,0 +1,12 @@
+checks = [
+  "ran_teamcity_commands",
+  "no_auth_failure",
+  "found_project_pools",
+  "inspected_agents",
+  "reports_pool_capacity",
+  "did_not_modify_teamcity_toml",
+  "multi_step",
+  "no_thrashing",
+  "valid_commands",
+  "no_hallucinations",
+]

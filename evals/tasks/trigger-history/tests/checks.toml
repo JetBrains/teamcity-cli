@@ -1,0 +1,12 @@
+checks = [
+  "ran_teamcity_commands",
+  "no_auth_failure",
+  "scoped_to_trigger_job",
+  "read_trigger_info",
+  "summarizes_trigger_sources",
+  "did_not_modify_teamcity_toml",
+  "multi_step",
+  "no_thrashing",
+  "valid_commands",
+  "no_hallucinations",
+]

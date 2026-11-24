@@ -1,7 +1,7 @@
 """CHECK_REGISTRY — all validation functions in one place.
 
 Each check takes an EvalRunner and calls runner.passed() or runner.failed().
-Checks are referenced by ID in tasks.json.
+Checks are referenced by ID in each task's tests/checks.toml.
 
 Command validity is verified against `cli_schema.json`, generated from the
 binary's real cobra tree (`go run scripts/generate-cli-schema.go`), so the
@@ -639,6 +639,215 @@ def produces_python(runner: EvalRunner) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Fan-out tasks: questions that span many runs, jobs or agents. Mined from real
+# sessions, where agents mostly answered them with loops over the CLI or `api`.
+# ---------------------------------------------------------------------------
+
+# Live buildserver jobs picked from data (Nov 2026): the first has tests that fail in
+# some but not all of its last 20 runs; the second mixes trigger sources.
+FLAKY_JOB = "ijplatform_master_ReleaseEventScheduleIntegrationTests"
+TRIGGER_JOB = "ijplatform_master_Idea_CompileInc"
+
+_RUN_ID = re.compile(r"#?\d{4,}")
+
+
+# Flags whose next token is their value, not a positional argument.
+_VALUE_FLAGS = frozenset({"-n", "--limit", "-j", "--job", "--test", "-b", "--branch", "-p", "--project",
+                          "--pool", "--status", "--since", "--until", "-u", "--user", "-t", "--tag",
+                          "-i", "--interval", "--timeout", "-s", "--server", "-X", "--method"})
+
+
+def _positionals(argv: list[str]) -> list[str]:
+    out, skip = [], False
+    for tok in argv[1:]:
+        if skip:
+            skip = False
+        elif tok.startswith(("<", ">", "2>")):
+            break
+        elif tok.startswith("-"):
+            skip = tok in _VALUE_FLAGS
+        else:
+            out.append(tok)
+    return out
+
+
+def _invocations(runner: EvalRunner, *path: str, scripts: bool = False) -> list[list[str]]:
+    """Positional arguments after `teamcity <path>`, optionally including generated scripts."""
+    out = []
+    argvs = runner.teamcity_argvs() + (runner.script_argvs() if scripts else [])
+    for argv in argvs:
+        tokens = _positionals(argv)
+        if tokens[:len(path)] == list(path):
+            out.append(tokens[len(path):])
+    return out
+
+
+def _api_paths(runner: EvalRunner) -> list[str]:
+    """Path arguments of `teamcity api` invocations."""
+    return [" ".join(args) for args in _invocations(runner, "api")]
+
+
+def _fanned_out(runner: EvalRunner, *path: str, ident: re.Pattern | None = None) -> bool:
+    """True if `teamcity <path>` ran on 2+ distinct targets or on a loop variable."""
+    targets: set[str] = set()
+    for args in _invocations(runner, *path, scripts=True):
+        for tok in args:
+            if tok.strip("\"'").startswith("$"):
+                return True
+            if ident is None or ident.fullmatch(tok):
+                targets.add(tok.lstrip("#"))
+    return len(targets) >= 2
+
+
+def _mentions_in_commands(runner: EvalRunner, value: str) -> bool:
+    return any(value in tok for argv in runner.teamcity_argvs() for tok in argv)
+
+
+def _scoped_to(runner: EvalRunner, job: str) -> None:
+    if _mentions_in_commands(runner, job):
+        runner.passed("Scoped commands to the requested job")
+    else:
+        runner.failed(f"No command targeted {job}")
+
+
+def scoped_to_flaky_job(runner: EvalRunner) -> None:
+    _scoped_to(runner, FLAKY_JOB)
+
+
+def scoped_to_trigger_job(runner: EvalRunner) -> None:
+    _scoped_to(runner, TRIGGER_JOB)
+
+
+# flaky-tests
+
+def collected_tests_across_runs(runner: EvalRunner) -> None:
+    if _fanned_out(runner, "run", "tests", ident=_RUN_ID):
+        runner.passed("Collected tests from several runs")
+    elif any("testOccurrences" in p for p in _api_paths(runner)):
+        runner.passed("Queried test occurrences across runs via api")
+    elif runner.has_subcommand("run", "tests") and runner.has_flag("--test"):
+        runner.passed("Followed test history across runs")
+    elif runner.has_subcommand("run", "tests"):
+        runner.failed("Looked at tests of a single run only")
+    else:
+        runner.failed("Did not collect test results")
+
+
+_COUNT_PHRASE = re.compile(r"\b\d+\s*(?:/|of|out of)\s*\d+\b|\b\d+\s*(?:runs?|times|×|x)\b", re.I)
+
+
+def reports_failure_counts(runner: EvalRunner) -> None:
+    if _COUNT_PHRASE.search(runner.text):
+        runner.passed("Reported per-test failure counts")
+    else:
+        runner.failed("No per-test failure counts in the answer")
+
+
+# why-queued
+
+def inspected_queue(runner: EvalRunner) -> None:
+    if runner.has_subcommand("queue", "list") or any("buildQueue" in p for p in _api_paths(runner)):
+        runner.passed("Inspected the queue")
+    else:
+        runner.failed("Did not look at the queue")
+
+
+def inspected_queued_run(runner: EvalRunner) -> None:
+    if any(_RUN_ID.fullmatch(t) for args in _invocations(runner, "run", "view") for t in args):
+        runner.passed("Viewed a queued run (shows wait reason and compatible agents)")
+    elif any("buildQueue/id:" in p or "compatibleAgents" in p for p in _api_paths(runner)):
+        runner.passed("Queried the queued run via api")
+    else:
+        runner.failed("Never drilled into a specific queued run")
+
+
+def explains_wait_reason(runner: EvalRunner) -> None:
+    if runner.has_text("wait") and (runner.has_text("agent") or runner.has_text("compatib")):
+        runner.passed("Explained why the run waits")
+    else:
+        runner.failed("No wait reason or agent compatibility in the answer")
+
+
+# pool-capacity
+
+def found_project_pools(runner: EvalRunner) -> None:
+    if runner.has_subcommand("pool", "list") or runner.has_subcommand("pool", "view"):
+        runner.passed("Looked up agent pools")
+    elif any("agentPools" in p for p in _api_paths(runner)):
+        runner.passed("Looked up agent pools via api")
+    else:
+        runner.failed("Did not look up agent pools")
+
+
+def inspected_agents(runner: EvalRunner) -> None:
+    if runner.has_subcommand("agent", "list") or runner.has_subcommand("agent", "view"):
+        runner.passed("Inspected agents")
+    elif any("/agents" in p for p in _api_paths(runner)):
+        runner.passed("Inspected agents via api")
+    else:
+        runner.failed("Did not inspect agents")
+
+
+def reports_pool_capacity(runner: EvalRunner) -> None:
+    has_load = runner.has_text("busy") or runner.has_text("idle") or runner.has_text("running")
+    has_os = any(runner.has_text(os_name) for os_name in ("linux", "windows", "mac"))
+    if runner.has_text("pool") and has_load and has_os:
+        runner.passed("Reported load and OS per pool")
+    else:
+        runner.failed("Answer lacks per-pool load or OS")
+
+
+# settings-search
+
+def _bulk_step_query(runner: EvalRunner) -> bool:
+    """One api call over the buildTypes collection that selects steps."""
+    return any("buildTypes" in p and "step" in p and "buildTypes/id:" not in p for p in _api_paths(runner))
+
+
+def inspected_job_steps(runner: EvalRunner) -> None:
+    if runner.has_subcommand("job", "step", "list") or runner.has_subcommand("job", "step", "view"):
+        runner.passed("Inspected job steps")
+    elif runner.has_subcommand("project", "settings", "export"):
+        runner.passed("Exported project settings")
+    elif any("buildTypes" in p and "step" in p for p in _api_paths(runner)):
+        runner.passed("Read steps via api")
+    else:
+        runner.failed("Never looked at build steps")
+
+
+def covered_multiple_jobs(runner: EvalRunner) -> None:
+    if (_fanned_out(runner, "job", "step", "list") or _fanned_out(runner, "job", "step", "view")
+            or runner.has_subcommand("project", "settings", "export") or _bulk_step_query(runner)):
+        runner.passed("Covered steps of several jobs")
+    else:
+        runner.failed("Checked at most one job's steps")
+
+
+# trigger-history
+
+def read_trigger_info(runner: EvalRunner) -> None:
+    if runner.has_subcommand("run", "list") and runner.has_flag("--json"):
+        runner.passed("Listed runs as JSON (includes triggered.*)")
+    elif runner.has_subcommand("run", "view"):
+        runner.passed("Viewed runs individually")
+    elif any("triggered" in p for p in _api_paths(runner)):
+        runner.passed("Read trigger info via api")
+    else:
+        runner.failed("Never fetched trigger information")
+
+
+_TRIGGER_SOURCE = re.compile(r"vcs|schedul|dependen|manual|user", re.I)
+
+
+def summarizes_trigger_sources(runner: EvalRunner) -> None:
+    lines = runner.text.splitlines()
+    if any(_TRIGGER_SOURCE.search(ln) and re.search(r"\b\d+\b", ln) for ln in lines):
+        runner.passed("Summarized trigger sources")
+    else:
+        runner.failed("No trigger-source summary in the answer")
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -705,6 +914,21 @@ CHECK_REGISTRY: dict[str, callable] = {
     "no_sort_flag": no_sort_flag,
     "acknowledges_limitation": acknowledges_limitation,
     "uses_json_flag": uses_json_flag,
+    # fan-out
+    "scoped_to_flaky_job": scoped_to_flaky_job,
+    "scoped_to_trigger_job": scoped_to_trigger_job,
+    "collected_tests_across_runs": collected_tests_across_runs,
+    "reports_failure_counts": reports_failure_counts,
+    "inspected_queue": inspected_queue,
+    "inspected_queued_run": inspected_queued_run,
+    "explains_wait_reason": explains_wait_reason,
+    "found_project_pools": found_project_pools,
+    "inspected_agents": inspected_agents,
+    "reports_pool_capacity": reports_pool_capacity,
+    "inspected_job_steps": inspected_job_steps,
+    "covered_multiple_jobs": covered_multiple_jobs,
+    "read_trigger_info": read_trigger_info,
+    "summarizes_trigger_sources": summarizes_trigger_sources,
     # negative-unrelated
     "no_teamcity_commands": no_teamcity_commands,
     "no_skill_invocation": no_skill_invocation,

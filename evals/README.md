@@ -35,13 +35,18 @@ just eval-diff results/A results/B   # informational A/B diff
 
 ```
 evals/
-├── tasks.json           # Task prompts + per-task check lists + treatments
+├── tasks/<id>/          # One Harbor-format task per directory:
+│   ├── instruction.md   #   the prompt
+│   ├── task.toml        #   Harbor settings; harness options under [metadata]
+│   ├── environment/     #   Dockerfile FROM teamcity-cli-eval + seeded workspace/ files
+│   └── tests/           #   checks.toml (check IDs) + test.sh (Harbor verifier)
+├── harbor/              # Base image, entrypoint and ATIF verifier for Harbor runs
 ├── checks.py            # CHECK_REGISTRY — deterministic check functions
 ├── cli_schema.json      # GENERATED command/flag allowlist (gitignored)
 ├── conftest.py          # Treatments, parametrization, provenance, schema gen
 ├── scaffold/
 │   ├── claude.py        # Runs Claude Code with an isolated HOME per run
-│   ├── events.py        # stream-json → commands/tools/tokens/skills
+│   ├── events.py        # stream-json and ATIF → commands/tools/tokens/skills
 │   ├── runner.py        # EvalRunner: tokenized command matching, results
 │   ├── graders.py       # LLM judge (advisory, fails closed)
 │   ├── sentry_log.py    # Sentry traces (never used for gating)
@@ -55,7 +60,9 @@ evals/
 ## How a run is scored
 
 1. **Deterministic checks** (gate-relevant). Executed commands are tokenized —
-   never substring-matched — and validated against `cli_schema.json`, which is
+   never substring-matched — with a quote-aware shell split, so invocations
+   inside loops, `$(…)`, `timeout`/`env` wrappers and quoted `&fields=` URLs
+   count, while heredoc bodies don't. They are validated against `cli_schema.json`, which is
    regenerated from the binary's cobra command tree on every session
    (`go run scripts/generate-cli-schema.go`). An invented flag is a failure;
    a real flag can never be misflagged, because the allowlist cannot rot.
@@ -125,7 +132,17 @@ omitted rather than counted as zero.
 | `cross-project`            | Multi-project CI health summary                     |
 | `explore-infrastructure`   | Navigate projects, pools, hierarchy                 |
 | `hallucination-resistance` | Resist inventing flags that don't exist             |
+| `flaky-tests`              | Fan-out: failed tests aggregated across 20 runs     |
+| `why-queued`               | Fan-out: oldest queued run, wait reason, agents     |
+| `pool-capacity`            | Fan-out: a project's pools, agent load and OS       |
+| `settings-search`          | Fan-out: build steps across every job in a project  |
+| `trigger-history`          | Trigger sources; one run listing should suffice     |
 | `negative-unrelated`       | Guardrail: skill must NOT fire on unrelated work    |
+
+The fan-out tasks come from real Claude Code sessions: questions whose answer
+spans many runs, jobs or agents, where agents mostly wrote loops over the CLI
+or `teamcity api`. They measure whether the CLI and skill make that work
+correct and cheap, and give a baseline for code-mode style surfaces.
 
 ## Environment Variables
 
@@ -140,7 +157,8 @@ omitted rather than counted as zero.
 | `LANGFUSE_PUBLIC_KEY`| No       | Ingest-only — enables Langfuse traces + scores           |
 | `LANGFUSE_SECRET_KEY`| No       | Langfuse secret key (paired with the public key)         |
 | `LANGFUSE_HOST`      | No       | Langfuse base URL (e.g. a self-hosted instance)          |
-| `BENCH_CC_MODEL`     | No       | Claude model (default: `claude-sonnet-4-5-20250929`)     |
+| `BENCH_CC_MODEL`     | No       | Claude model (default: `claude-sonnet-5-5`)              |
+| `BENCH_AUTH`         | No       | `config` puts the token in the CLI config, not env (keyring-like) |
 | `BENCH_TIMEOUT`      | No       | Task timeout in seconds (default: 300)                   |
 | `BENCH_LOCAL`        | No       | Set to `1` to skip Docker and run Claude locally         |
 | `GATE_MODE`          | No       | `warn` (default) or `enforce`                            |
@@ -182,11 +200,29 @@ Sentry and Langfuse both emit when configured; each is a no-op when its keys are
 unset. Like Sentry, Langfuse is observability only — gating always runs on the
 local `results/` artifacts.
 
+## Running tasks in Harbor
+
+The tasks use [Harbor](https://github.com/harbor-framework/harbor)'s format, so the same
+directories also run there (any Harbor agent and model, results in `harbor view`). The
+verifier grades the ATIF trajectory with the same checks; the reward is the check pass rate.
+The pytest harness above stays the gate for now.
+
+```bash
+just eval-harbor-image            # CLI (linux) + checks + verifier → teamcity-cli-eval:latest
+harbor run -y -p evals/tasks/trigger-history -a claude-code -m anthropic/claude-sonnet-5-5 \
+  --skill <path to teamcity-skills>/skills/teamcity-cli   # omit --skill for the CONTROL arm
+harbor view jobs
+```
+
+`TEAMCITY_URL` and `TEAMCITY_TOKEN` are read from your environment (`[environment.env]`).
+
 ## Adding a task
 
-1. Add an entry to `tasks.json`: `id`, `prompt`, `checks` (IDs from
-   `CHECK_REGISTRY`), optional `llm_grade`, optional `treatments` (omit for
-   both arms; `["CURRENT"]` makes it a guardrail).
+1. Copy a directory under `tasks/` and edit `instruction.md` (the prompt),
+   `tests/checks.toml` (check IDs from `CHECK_REGISTRY`) and `task.toml`
+   (`[task] name`; `[metadata]` `llm_grade`, `treatments` — omit for both arms,
+   `["CURRENT"]` makes it a guardrail). Files the agent's working directory
+   needs go in `environment/workspace/`; `${VAR}` references are expanded.
 2. New check functions go in `checks.py` and the registry. Use
    `runner.has_subcommand(...)`/`runner.has_flag(...)` — don't substring-match
    command lines.

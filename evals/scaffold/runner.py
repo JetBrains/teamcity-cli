@@ -18,7 +18,56 @@ from scaffold.events import ClaudeEvents
 
 _ENV_ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 _FLAG = re.compile(r"^-{1,2}[A-Za-z]")
-_SEGMENT_SPLIT = re.compile(r"[|;&]+")
+_SEPARATOR = re.compile(r"^[|;&()]+$")
+_FD_PREFIX = re.compile(r"(?<![\w/])\d+(?=[<>])")  # the 2 in 2>/dev/null
+# A heredoc's body is data written to a file or interpreter, not commands run by this shell.
+_HEREDOC = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1([^\n]*)\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.S)
+# Shell keywords that can precede a command inside loops, conditionals and subshells.
+_SHELL_PREFIX = frozenset({"do", "then", "else", "elif", "if", "while", "until", "time", "!", "{"})
+
+
+def _shell_segments(cmd: str) -> list[list[str]]:
+    """Quote-aware split of a shell line into simple commands, redirections dropped."""
+    cmd = _HEREDOC.sub(r"\3", cmd)
+    cmd = _FD_PREFIX.sub(" ", cmd).replace("\n", " ; ").replace("`", " ; ")
+    lexer = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    try:
+        tokens = list(lexer)
+    except ValueError:
+        tokens = cmd.split()
+    segments, current, skip = [], [], False
+    for tok in tokens:
+        if skip:
+            skip = False
+        elif _SEPARATOR.match(tok) or tok in ("<(", ">("):
+            segments.append(current)
+            current = []
+        elif tok[:1] in ("<", ">") or tok.startswith("&>"):
+            skip = True  # the lexer splits the operator from its target
+        else:
+            current.append(tok)
+            if "$(" in tok:  # substitution inside double quotes stays one token
+                segments.extend(_shell_segments(tok.split("$(", 1)[1]))
+    segments.append(current)
+    return segments
+
+
+def _strip_wrappers(tokens: list[str]) -> list[str]:
+    """Drop env assignments, shell keywords and `timeout N` / `env [-u X]` wrappers."""
+    while tokens:
+        head = tokens[0]
+        if _ENV_ASSIGN.match(head) or head in _SHELL_PREFIX:
+            tokens = tokens[1:]
+        elif head == "timeout" and len(tokens) > 1:
+            tokens = tokens[2:]
+        elif head == "env":
+            tokens = tokens[1:]
+            while tokens and tokens[0] == "-u" and len(tokens) > 1:
+                tokens = tokens[2:]
+        else:
+            break
+    return tokens
 
 
 @dataclass
@@ -68,20 +117,32 @@ class EvalRunner:
     def teamcity_argvs(self) -> list[list[str]]:
         """Tokenized `teamcity ...` invocations from executed commands.
 
-        Splits compound shell commands on |, ;, & and matches the binary by
-        basename, so pipes and `bin/teamcity` are handled.
+        Splits compound shell commands on operators outside quotes, newlines
+        and command substitutions, and matches the binary by basename, so pipes,
+        loops, `$(teamcity …)`, `&fields=` in quoted URLs and `bin/teamcity`
+        are all handled.
         """
         argvs: list[list[str]] = []
         for cmd in self.commands:
-            for segment in _SEGMENT_SPLIT.split(cmd):
-                try:
-                    tokens = shlex.split(segment, posix=True)
-                except ValueError:
-                    tokens = segment.split()
-                while tokens and _ENV_ASSIGN.match(tokens[0]):
-                    tokens.pop(0)
+            for tokens in map(_strip_wrappers, _shell_segments(cmd)):
                 if tokens and PurePosixPath(tokens[0]).name == "teamcity":
                     argvs.append(tokens)
+        return argvs
+
+    def script_argvs(self) -> list[list[str]]:
+        """`teamcity` invocations inside scripts the agent wrote: heredoc bodies and Write contents.
+
+        Fan-out often lives in a generated script, so the loop never shows up as
+        an executed command line. Not used for flag validity: a script may never run.
+        """
+        bodies = [m.group(0) for cmd in self.commands for m in _HEREDOC.finditer(cmd)]
+        bodies += [tc.get("input", {}).get("content") or "" for tc in self.tool_calls if tc.get("name") == "Write"]
+        argvs: list[list[str]] = []
+        for body in bodies:
+            for line in body.splitlines()[1:] if body.startswith("<<") else body.splitlines():
+                for tokens in map(_strip_wrappers, _shell_segments(line)):
+                    if tokens and PurePosixPath(tokens[0]).name == "teamcity":
+                        argvs.append(tokens)
         return argvs
 
     @staticmethod

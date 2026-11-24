@@ -1,12 +1,18 @@
-"""Task loader — reads tasks.json."""
+"""Task loader — reads Harbor-format task directories under evals/tasks/.
+
+Each task is `tasks/<id>/` with `instruction.md` (the prompt), `task.toml`
+(Harbor settings; harness options under [metadata]), `tests/checks.toml`
+(check IDs from CHECK_REGISTRY, shared with the Harbor verifier) and optional
+`environment/workspace/` files seeded into the agent's working directory.
+"""
 
 from __future__ import annotations
 
-import json
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-TASKS_FILE = Path(__file__).resolve().parent.parent / "tasks.json"
+TASKS_DIR = Path(__file__).resolve().parent.parent / "tasks"
 
 
 @dataclass
@@ -19,24 +25,33 @@ class TaskConfig:
     setup_files: dict[str, str] = field(default_factory=dict)
 
 
-def _load_all() -> list[dict]:
-    with open(TASKS_FILE) as f:
-        return json.load(f)
+def _task_dirs() -> list[Path]:
+    return sorted(p for p in TASKS_DIR.iterdir() if (p / "task.toml").is_file())
 
 
 def load_task(task_name: str) -> TaskConfig:
-    for t in _load_all():
-        if t["id"] == task_name:
-            return TaskConfig(
-                name=t["id"],
-                instruction=t["prompt"],
-                checks=t.get("checks", []),
-                llm_grade=t.get("llm_grade", False),
-                default_treatments=t.get("treatments", ["CONTROL", "CURRENT"]),
-                setup_files=t.get("setup_files", {}),
-            )
-    raise KeyError(f"Task '{task_name}' not found in {TASKS_FILE}")
+    d = TASKS_DIR / task_name
+    if not (d / "task.toml").is_file():
+        raise KeyError(f"Task '{task_name}' not found in {TASKS_DIR}")
+    meta = tomllib.loads((d / "task.toml").read_text()).get("metadata", {})
+    workspace = d / "environment" / "workspace"
+    return TaskConfig(
+        name=task_name,
+        instruction=(d / "instruction.md").read_text().strip(),
+        checks=tomllib.loads((d / "tests" / "checks.toml").read_text())["checks"],
+        llm_grade=meta.get("llm_grade", False),
+        default_treatments=meta.get("treatments", ["CONTROL", "CURRENT"]),
+        setup_files={
+            str(p.relative_to(workspace)): p.read_text()
+            for p in sorted(workspace.rglob("*")) if p.is_file()
+        } if workspace.is_dir() else {},
+    )
 
 
 def list_tasks() -> list[str]:
-    return [t["id"] for t in _load_all()]
+    return [p.name for p in _task_dirs()]
+
+
+def task_set_files() -> list[Path]:
+    """Every file that defines the task set, for the provenance hash."""
+    return sorted(f for d in _task_dirs() for f in d.rglob("*") if f.is_file())

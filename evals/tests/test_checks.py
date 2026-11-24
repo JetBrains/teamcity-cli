@@ -53,6 +53,50 @@ def test_argv_parsing_handles_pipes_and_env_prefix():
     assert r.has_flag("--json")
 
 
+def test_argv_parsing_sees_loops_and_substitutions():
+    r = runner_for([
+        "for id in 1 2; do teamcity run tests $id --failed; done",
+        'B=$(teamcity api "/app/rest/builds?locator=count:1&fields=build(id)" | jq .)',
+        "if teamcity auth status\nthen teamcity queue list\nfi",
+        "echo `teamcity pool list --json`",
+        "timeout 90 teamcity agent list -n 5",
+        "env -u TEAMCITY_TOKEN teamcity project list",
+        "diff <(teamcity pipeline pull P) local.yml",
+        'echo "== $p: $(teamcity job list -p $p | wc -l)"',
+    ])
+    assert r.has_subcommand("agent", "list")
+    assert r.has_subcommand("project", "list")
+    assert r.has_subcommand("pipeline", "pull")
+    assert r.has_subcommand("job", "list")
+    assert r.has_subcommand("run", "tests")
+    assert r.has_subcommand("api")
+    assert r.has_subcommand("auth", "status")
+    assert r.has_subcommand("queue", "list")
+    assert r.has_subcommand("pool", "list")
+    assert r.has_flag("--failed")
+
+
+def test_argv_parsing_keeps_quoted_operators_and_drops_redirections():
+    r = runner_for([
+        'teamcity api "/app/rest/builds?locator=count:1&fields=build(id)" 2>/dev/null | jq .',
+        "teamcity run log 123456 > out.txt",
+        "teamcity run tests 654321 &>/dev/null",
+        "teamcity run list --json '' | head",
+    ])
+    assert r.teamcity_argvs() == [
+        ["teamcity", "api", "/app/rest/builds?locator=count:1&fields=build(id)"],
+        ["teamcity", "run", "log", "123456"],
+        ["teamcity", "run", "tests", "654321"],
+        ["teamcity", "run", "list", "--json", ""],
+    ]
+
+
+def test_heredoc_body_is_not_executed():
+    r = runner_for(["cat > /tmp/w.sh <<'EOF' | head -1\nteamcity run start X --watch\nEOF\nteamcity queue list"])
+    assert r.has_subcommand("queue", "list")
+    assert not r.has_subcommand("run", "start")
+
+
 def test_non_teamcity_commands_are_not_invocations():
     r = runner_for(["grep teamcity notes.txt", "echo 'teamcity build'"])
     assert r.teamcity_argvs() == []
@@ -264,6 +308,100 @@ def test_located_project_before_link():
 
 
 # ---------------------------------------------------------------------------
+# Fan-out tasks
+# ---------------------------------------------------------------------------
+
+def test_scoped_to_task_jobs():
+    assert run_check(checks.scoped_to_flaky_job, runner_for([f"teamcity run list --job {checks.FLAKY_JOB} -n 20"]))
+    assert run_check(checks.scoped_to_trigger_job, runner_for([f"teamcity run list -j {checks.TRIGGER_JOB}"]))
+    assert not run_check(checks.scoped_to_flaky_job, runner_for(["teamcity run list -n 10"]))
+    assert not run_check(checks.scoped_to_trigger_job, runner_for([f"teamcity run list -j {checks.FLAKY_JOB}"]))
+
+
+def test_collected_tests_across_runs():
+    good = [
+        ["teamcity run tests 123456 --failed", "teamcity run tests 123457 --failed"],
+        ["for id in $(teamcity run list -j X -n 20 --json=id | jq -r '.[].id'); do teamcity run tests $id --failed; done"],
+        ['teamcity api "/app/rest/testOccurrences?locator=build:(buildType:X,count:20),status:FAILURE"'],
+        ["teamcity run tests --job X --test com.acme.FooTest"],
+    ]
+    for cmds in good:
+        assert run_check(checks.collected_tests_across_runs, runner_for(cmds)), cmds
+    # one run, even when its --limit value looks like a second id
+    assert not run_check(checks.collected_tests_across_runs, runner_for(["teamcity run tests 123456 --limit 5000"]))
+    assert not run_check(checks.collected_tests_across_runs, runner_for(["teamcity run list -j X"]))
+
+
+def test_reports_failure_counts():
+    assert run_check(checks.reports_failure_counts, runner_for(text="FooTest.bar failed in 7/20 runs"))
+    assert run_check(checks.reports_failure_counts, runner_for(text="- BarTest: 3 runs"))
+    assert not run_check(checks.reports_failure_counts, runner_for(text="Several tests look flaky."))
+
+
+def passes(check, commands=None, text=""):
+    return run_check(check, runner_for(commands, text))
+
+
+def test_why_queued_checks():
+    cmds = ["teamcity queue list --json", "teamcity run view 998877"]
+    text = "It is waiting because there are no compatible agents: 0 agents match."
+    assert passes(checks.inspected_queue, cmds)
+    assert passes(checks.inspected_queued_run, cmds)
+    assert passes(checks.explains_wait_reason, text=text)
+    api = ['teamcity api "/app/rest/buildQueue/id:998877?fields=waitReason,compatibleAgents(count)"']
+    assert passes(checks.inspected_queue, api)
+    assert passes(checks.inspected_queued_run, api)
+    assert not passes(checks.inspected_queued_run, ["teamcity queue list"])
+    assert not passes(checks.explains_wait_reason, text="The queue is long.")
+    assert not passes(checks.inspected_queue, ["teamcity run list"])
+
+
+def test_pool_capacity_checks():
+    cmds = ["teamcity pool list", "teamcity agent list --pool 3 --json"]
+    assert passes(checks.found_project_pools, cmds)
+    assert passes(checks.inspected_agents, cmds)
+    assert passes(checks.reports_pool_capacity, text="Pool Linux: 12 connected, 9 busy, all Linux.")
+    api = ['teamcity api "/app/rest/agentPools?fields=agentPool(id,name)"',
+           'teamcity api "/app/rest/agents?locator=pool:(id:3)"']
+    assert passes(checks.found_project_pools, api)
+    assert passes(checks.inspected_agents, api)
+    assert not passes(checks.found_project_pools, ["teamcity project view JBR"])
+    assert not passes(checks.inspected_agents, ["teamcity project view JBR"])
+    assert not passes(checks.reports_pool_capacity, text="JBR has some pools.")
+
+
+def test_settings_search_checks():
+    per_job = ["teamcity job step list JBR_A", "teamcity job step list JBR_B"]
+    assert passes(checks.inspected_job_steps, per_job)
+    assert passes(checks.covered_multiple_jobs, per_job)
+    loop = ["for j in $(teamcity job list -p JBR --json=id | jq -r '.[].id'); do teamcity job step list $j --json; done"]
+    assert passes(checks.covered_multiple_jobs, loop)
+    bulk = ["teamcity api '/app/rest/buildTypes?locator=affectedProject:(id:JBR)&fields=buildType(id,steps(step(properties)))'"]
+    assert passes(checks.inspected_job_steps, bulk)
+    assert passes(checks.covered_multiple_jobs, bulk)
+    one = ["teamcity api '/app/rest/buildTypes/id:JBR_A?fields=steps(step)'"]
+    assert passes(checks.inspected_job_steps, one)
+    assert not passes(checks.covered_multiple_jobs, one)
+    assert not passes(checks.inspected_job_steps, ["teamcity job list -p JBR"])
+
+
+def test_trigger_history_checks():
+    assert passes(checks.read_trigger_info, [f"teamcity run list --job {checks.TRIGGER_JOB} -n 30 --json"])
+    assert not passes(checks.read_trigger_info, ["teamcity run list --job X -n 10"])
+    table = "| Source | Runs |\n| VCS change | 7 |\n| schedule | 3 |"
+    assert passes(checks.summarizes_trigger_sources, text=table)
+    # a source word and a number on different lines is not a summary
+    assert not passes(checks.summarizes_trigger_sources, text="Most were started by a user.\nI looked at 10 runs.")
+
+
+def test_tasks_reference_registered_checks():
+    from scaffold.tasks import list_tasks, load_task
+    for name in list_tasks():
+        missing = [c for c in load_task(name).checks if c not in checks.CHECK_REGISTRY]
+        assert not missing, f"{name}: {missing}"
+
+
+# ---------------------------------------------------------------------------
 # Gate statistics
 # ---------------------------------------------------------------------------
 
@@ -357,3 +495,72 @@ def test_guardrail_breach_blocks(tmp_path, monkeypatch):
     assert compare.gate(summary) == 1
     monkeypatch.setenv("GATE_MODE", "warn")
     assert compare.gate(summary) == 0
+
+
+def test_events_sum_metrics_across_result_messages():
+    from scaffold.events import extract_events
+    raw = "\n".join(json.dumps(o) for o in [
+        {"type": "result", "num_turns": 21, "duration_ms": 246000, "usage": {"input_tokens": 900, "output_tokens": 300}},
+        {"type": "system", "subtype": "init"},
+        {"type": "result", "num_turns": 1, "duration_ms": 5000, "usage": {"input_tokens": 10, "output_tokens": 20}},
+    ])
+    e = extract_events(raw)
+    assert (e.num_turns, e.duration_ms, e.input_tokens, e.output_tokens) == (22, 251000, 910, 320)
+
+
+def test_fan_out_inside_generated_script_counts():
+    heredoc = ("cat > /tmp/a.sh <<'EOF'\nfor id in $ids; do\n  teamcity run tests $id --failed --json\ndone\nEOF\n"
+               "bash /tmp/a.sh")
+    assert passes(checks.collected_tests_across_runs, [heredoc])
+    r = runner_for(["bash ./a.sh"])
+    r.events.tool_calls.append({"name": "Write", "input": {"file_path": "a.sh",
+                                "content": "for j in $jobs; do teamcity job step list $j; done"}})
+    assert run_check(checks.covered_multiple_jobs, r)
+    nested = "cat > /tmp/c.sh <<'EOF'\nfor b in $ids; do\n  echo \"$(teamcity run tests \"$b\" --failed)\"\ndone\nEOF"
+    assert passes(checks.collected_tests_across_runs, [nested])
+    # a script mentioning one run is still a single run
+    single = "cat > /tmp/b.sh <<'EOF'\nteamcity run tests 123456 --failed\nEOF\nbash /tmp/b.sh"
+    assert not passes(checks.collected_tests_across_runs, [single])
+
+
+def test_config_auth_keeps_token_out_of_env(tmp_path, monkeypatch):
+    from scaffold import claude
+    monkeypatch.setenv("TEAMCITY_URL", "https://tc.example")
+    monkeypatch.setenv("TEAMCITY_TOKEN", "secret-token")
+    monkeypatch.setenv("BENCH_AUTH", "config")
+    from types import SimpleNamespace
+    claude._setup_workspace(tmp_path, SimpleNamespace(name="CONTROL", skill_dir=None))
+    env = claude._build_isolated_env(tmp_path)
+    assert "TEAMCITY_TOKEN" not in env and "TEAMCITY_URL" not in env
+    cfg = (tmp_path / ".config" / "tc" / "config.yml").read_text()
+    assert "default_server: https://tc.example" in cfg and "token: secret-token" in cfg
+    monkeypatch.delenv("BENCH_AUTH")
+    assert claude._build_isolated_env(tmp_path)["TEAMCITY_TOKEN"] == "secret-token"
+
+
+def test_atif_trajectory_feeds_the_same_checks():
+    from scaffold.events import extract_events_atif
+    trajectory = {"steps": [
+        {"step_id": 1, "source": "user", "message": "find failed builds"},
+        {"step_id": 2, "source": "agent", "message": "Listing runs.", "tool_calls": [
+            {"tool_call_id": "a", "function_name": "Bash", "arguments": {"command": "teamcity run list --status failure --json"}}]},
+        {"step_id": 3, "source": "agent", "message": "", "tool_calls": [
+            {"tool_call_id": "b", "function_name": "exec_command", "arguments": {"cmd": ["bash", "-lc", "teamcity run log 123456 --failed"]}}]},
+        {"step_id": 4, "source": "agent", "message": [{"type": "text", "text": "Run 123456 failed in step Compile."}]},
+    ], "final_metrics": {"total_prompt_tokens": 900, "total_completion_tokens": 100}}
+    e = extract_events_atif(trajectory)
+    assert e.commands_run == ["teamcity run list --status failure --json", "teamcity run log 123456 --failed"]
+    assert e.num_turns == 3 and e.input_tokens == 900
+    r = EvalRunner(e)
+    assert r.has_subcommand("run", "log") and r.has_flag("--failed")
+    assert "Compile" in r.text
+
+
+def test_harbor_tasks_are_well_formed():
+    import tomllib
+    from scaffold.tasks import TASKS_DIR, list_tasks
+    for name in list_tasks():
+        d = TASKS_DIR / name
+        for required in ("instruction.md", "task.toml", "environment/Dockerfile", "tests/test.sh", "tests/checks.toml"):
+            assert (d / required).is_file(), f"{name}: missing {required}"
+        assert tomllib.loads((d / "task.toml").read_text())["task"]["name"] == f"teamcity-cli/{name}"
