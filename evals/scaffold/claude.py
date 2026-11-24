@@ -146,7 +146,7 @@ def run_claude(
     """Run Claude Code CLI locally in a temp directory with isolated config."""
     model = model or os.environ.get("BENCH_CC_MODEL", DEFAULT_MODEL)
 
-    with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="tc-eval-", ignore_cleanup_errors=True) as tmp:  # a CLI child of a timed-out run may still be writing
         work_dir = Path(tmp)
         _setup_workspace(work_dir, treatment, setup_files)
         env = _build_isolated_env(work_dir)
@@ -197,7 +197,7 @@ def run_claude_docker(
     """Run Claude Code CLI inside a Docker container (fully isolated)."""
     model = model or os.environ.get("BENCH_CC_MODEL", DEFAULT_MODEL)
 
-    with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="tc-eval-", ignore_cleanup_errors=True) as tmp:  # a CLI child of a timed-out run may still be writing
         work_dir = Path(tmp)
         _setup_workspace(work_dir, treatment, setup_files)
 
