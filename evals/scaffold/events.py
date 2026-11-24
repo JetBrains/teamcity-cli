@@ -51,16 +51,13 @@ def _process_tool_call(events: AgentEvents, name: str, inp: dict) -> None:
         cmd = inp.get("command", "")
         if cmd:
             events.commands_run.append(cmd)
+            _note_skills(events, cmd)  # harnesses without a read tool cat the skill
 
     elif name == "Read":
         path = inp.get("file_path", "")
         if path:
             events.files_read.append(path)
-            # Detect skill loading from file reads
-            if ".claude/skills/" in path:
-                skill_name = _extract_skill_name(path)
-                if skill_name and skill_name not in events.skills_invoked:
-                    events.skills_invoked.append(skill_name)
+            _note_skills(events, path)
 
     elif name == "Write":
         path = inp.get("file_path", "")
@@ -84,15 +81,15 @@ def _process_tool_call(events: AgentEvents, name: str, inp: dict) -> None:
         pass  # content search, informational
 
 
-def _extract_skill_name(path: str) -> str:
-    """Extract skill name from a .claude/skills/<name>/... path."""
-    marker = ".claude/skills/"
-    idx = path.find(marker)
-    if idx < 0:
-        return ""
-    rest = path[idx + len(marker):]
-    parts = rest.split("/")
-    return parts[0] if parts else ""
+# A file inside an installed skill: ~/.claude/skills/<name>/..., ~/.agents/skills/<name>/..., and so on.
+_SKILL_FILE = re.compile(r"/skills/([\w.-]+)/[\w.-]")
+
+
+def _note_skills(events: AgentEvents, text: str) -> None:
+    """Record as invoked every skill that `text` (a path or a shell command) names a file of."""
+    for name in _SKILL_FILE.findall(text):
+        if name not in events.skills_invoked:
+            events.skills_invoked.append(name)
 
 
 def extract_teamcity_commands(text: str) -> list[str]:
@@ -108,7 +105,9 @@ def extract_teamcity_commands(text: str) -> list[str]:
 
 
 # Shell tools across harnesses (Claude Code, Codex, Gemini CLI, opencode, pi, Junie, ...).
-_SHELL_TOOLS = {"bash", "shell", "exec_command", "run_shell_command", "execute_command", "terminal", "run_command"}
+_SHELL_TOOLS = {"bash", "shell", "shell_command", "exec_command", "run_shell_command", "execute_command", "terminal", "run_command"}
+# File-read tools across harnesses; the path is `file_path` (Claude Code) or `path` (pi).
+_READ_TOOLS = {"read", "read_file", "view"}
 
 
 def _shell_command(arguments: dict) -> str:
@@ -140,6 +139,8 @@ def extract_events_atif(trajectory: dict) -> AgentEvents:
             events.tool_calls.append({"id": call.get("tool_call_id", ""), "name": name, "input": args})
             if name.lower() in _SHELL_TOOLS:
                 _process_tool_call(events, "Bash", {"command": _shell_command(args)})
+            elif name.lower() in _READ_TOOLS:
+                _process_tool_call(events, "Read", {"file_path": args.get("file_path") or args.get("path") or ""})
             else:
                 _process_tool_call(events, name, args)
     final = trajectory.get("final_metrics") or {}

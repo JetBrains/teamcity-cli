@@ -1,7 +1,8 @@
 # TeamCity CLI Skill Evals
 
-A/B evaluation of the `teamcity-cli` agent skill: same model, same tasks, same seeded
-TeamCity server, and the skill is the only variable.
+A/B evaluation of the `teamcity-cli` agent skill: same harness, same model, same tasks, same
+seeded TeamCity server, and the skill is the only variable. The A/B runs once per harness ×
+model cell (`matrix.toml`), so the lift is reported per harness and model instead of for one of them.
 
 | Treatment | What the agent gets                      |
 |-----------|------------------------------------------|
@@ -28,9 +29,10 @@ just eval-seed                          # once: build the seeded server snapshot
 just eval-validate                      # no model: oracle scores 1 and no-op scores 0 on every task
 just eval -k 2                          # all tasks, both arms, 2 attempts each
 just eval -i flaky-tests -i why-queued  # a subset
+EVAL_MATRIX=all just eval -k 2          # every harness × model cell with credentials
 just eval-unit                          # harness unit tests (no server, no API)
 just eval-diff results/A results/B      # compare two experiments
-harbor view evals/results/<experiment>/jobs
+harbor view evals/results/<experiment>/<cell>/jobs
 ```
 
 `just eval` resolves `evals/.env` through 1Password (`op run`) and calls
@@ -39,12 +41,36 @@ harbor view evals/results/<experiment>/jobs
 1. starts the seeded server from its snapshot (`seed/server.sh up`, about a minute)
 2. builds the CLI for Linux, regenerates `cli_schema.json` and builds the `teamcity-cli-eval`
    base image (`harbor/Dockerfile`)
-3. runs a `CONTROL` job and a `CURRENT` job (`--skill`) with the `claude-code` agent
-4. imports the trials (`scripts/harbor_import.py`): reward, outcome, safety and process
-   results, the LLM judge, Langfuse
-5. gates them (`scripts/compare.py`) and writes `report.html` (`scripts/report.py`)
+3. for each selected cell, runs a `CONTROL` job and a `CURRENT` job (`--skill`) with the cell's
+   agent and model, and imports the trials (`scripts/harbor_import.py`): reward, outcome, safety
+   and process results, the LLM judge, Langfuse
+4. gates every cell (`scripts/compare.py`) and writes `report.html` (`scripts/report.py`)
 
 Any extra arguments go to `harbor run` (`-k` attempts, `-n` concurrency, `-i`/`-x` tasks).
+
+## Harness × model matrix
+
+`matrix.toml` declares the cells: a Harbor agent, a model slug, the env vars the cell needs and
+optional extra `harbor run` arguments. `EVAL_MATRIX` picks them: unset runs the default cell
+(`claude-code` on Sonnet 5.5, what CI runs), `all` runs every cell whose credentials are set,
+and a comma-separated list runs those cells and fails if one lacks its credentials.
+
+| Cell                     | Harness       | Model                         | Needs               |
+|--------------------------|---------------|-------------------------------|---------------------|
+| `claude-code-sonnet-5-5` | `claude-code` | `anthropic/claude-sonnet-5-5` | `ANTHROPIC_API_KEY` |
+| `claude-code-haiku-5-5`  | `claude-code` | `anthropic/claude-haiku-5-5`  | `ANTHROPIC_API_KEY` |
+| `pi-sonnet-5-5`          | `pi`          | `anthropic/claude-sonnet-5-5` | `ANTHROPIC_API_KEY` |
+| `codex-gpt-6-luna`       | `codex`       | `openai/gpt-6-luna`           | `OPENAI_API_KEY`    |
+
+Each cell is gated on its own, and the report starts with one row per cell: pass rate without
+and with the skill, paired lift with its 95% CI, how often the `CURRENT` arm loaded the skill,
+and mean tokens, turns and seconds per arm. Token counts are what each harness reports, so
+compare them between arms of a cell, not between harnesses.
+
+Harbor's `--skill` puts the skill where the agent looks for it: `$CLAUDE_CONFIG_DIR/skills` for
+Claude Code, `~/.agents/skills` for Codex and pi. For a harness Harbor has no skill support for,
+install it in the image with `teamcity skill install --agent <name>`. A skill counts as invoked
+when the agent calls the `Skill` tool or reads a file under `skills/<name>/`.
 
 ## Layout
 
@@ -62,6 +88,7 @@ evals/
 │   ├── environment/     #   Dockerfile FROM teamcity-cli-eval + workspace/ files
 │   ├── solution/        #   solve.sh: the oracle, derives the answer with the CLI
 │   └── tests/           #   expected.json (GENERATED reference), checks.toml, test.sh
+├── matrix.toml          # Harness × model cells
 ├── harbor/              # Base image, entrypoint, verifier, network overlay for trials
 ├── grade.py             # Outcome grading: answer file against the reference
 ├── checks.py            # CHECK_REGISTRY: safety gates and process checks on the trajectory
@@ -71,11 +98,12 @@ evals/
 │   ├── runner.py        # EvalRunner: quote-aware command parsing, results
 │   ├── graders.py       # LLM judge (advisory, fails closed)
 │   ├── langfuse_log.py  # Langfuse traces + scores (never used for gating)
+│   ├── matrix.py        # Selects the cells of matrix.toml (EVAL_MATRIX)
 │   ├── skill.py         # Resolves the pinned teamcity-cli skill
 │   └── tasks.py         # Task loader
 ├── scripts/             # run-harbor.sh, validate-tasks.sh, harbor_import.py, compare.py, report.py
 ├── tests/               # Unit tests for the harness itself
-└── results/<experiment>/  # jobs/ (Harbor), per-trial JSON, gate_summary.json, report.html
+└── results/<experiment>/  # report.html, and per cell: jobs/ (Harbor), per-trial JSON, gate_summary.json
 ```
 
 ## The seeded server
@@ -153,7 +181,7 @@ also proves that the answer is reachable with read-only access.
 
 ## The gate (`scripts/compare.py`)
 
-Computed from the experiment's own artifacts, with no cross-build baseline.
+Computed per cell from the experiment's own artifacts, with no cross-build baseline.
 
 - **BLOCK** if the paired-lift CI lower bound < `GATE_LIFT_FLOOR` (default −5 pts).
 - **BLOCK** if a guardrail task (`CURRENT` only, e.g. `negative-unrelated`) scores below 1 on at
@@ -162,7 +190,7 @@ Computed from the experiment's own artifacts, with no cross-build baseline.
   at least `GATE_MIN_TASKS` (3) paired tasks, so partial local runs just report.
 
 Also reported: per-task `pass^2` (both attempts fully correct), the process-check pass rate,
-judge means and mean tokens, turns and tool calls per arm (all advisory).
+judge means and mean tokens, turns, tool calls, duration and cost per arm (all advisory).
 
 ## Tasks
 
@@ -193,7 +221,8 @@ judge means and mean tokens, turns and tool calls per arm (all advisory).
 | Variable             | Required | Description                                                  |
 |----------------------|----------|--------------------------------------------------------------|
 | `ANTHROPIC_API_KEY`  | Yes      | Agent (inside Harbor) and LLM judge                          |
-| `EVAL_MODEL`         | No       | Harbor model slug (default `anthropic/claude-sonnet-5-5`)    |
+| `EVAL_MATRIX`        | No       | Cells of `matrix.toml`: unset for the default, `all`, or names |
+| `OPENAI_API_KEY`     | No       | Enables the Codex cell                                       |
 | `BRANCH_NAME`        | No       | Names the experiment directory (default: a timestamp)        |
 | `TC_EVAL_PORT`       | No       | Host port of the seeded server (default `18111`)             |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | No | Langfuse traces + scores |

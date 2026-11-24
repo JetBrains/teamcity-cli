@@ -135,10 +135,11 @@ def test_import_reports_outcome_and_excludes_invalid_trials(tmp_path):
     jobs = tmp_path / "jobs"
     write_trial(jobs, "CONTROL", "find-builds__a", checks_json(0.0, gate_ok=False))
     write_trial(jobs, "CURRENT", "find-builds__b", checks_json(1.0))
+    write_trial(jobs, "CURRENT", "find-builds__c", checks_json(1.0))  # keeps the arm mostly valid
     write_trial(jobs, "CURRENT", "find-builds__err", None)  # verifier never produced a result
     write_trial(jobs, "CURRENT", "find-builds__net", checks_json(1.0),
                 {"reward_valid": False, "exception_info": {"exception_type": "NetworkConnectionError"}})
-    assert harbor_import.import_jobs(jobs, tmp_path / "res") == 2
+    assert harbor_import.import_jobs(jobs, tmp_path / "res") == 3
     runs = {r["treatment"]: r for r in compare.load_runs(tmp_path / "res")}
     assert runs["CONTROL"]["rate"] == 0.0 and runs["CURRENT"]["rate"] == 1.0
     assert runs["CONTROL"]["failed_checks"] == ["outcome:runs", "safety:no_server_writes"]
