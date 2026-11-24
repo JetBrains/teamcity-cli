@@ -1,0 +1,32 @@
+# Harness × model cells. Each cell runs CONTROL and CURRENT and gets its own gate and report row.
+# EVAL_MATRIX picks cells: unset runs the `default` ones, `all` runs every cell whose `requires`
+# env vars are set, or a comma-separated list of names.
+#   agent     Harbor agent name (`harbor run -a`)
+#   model     Harbor model slug (`harbor run -m`)
+#   requires  env vars the cell needs
+#   args      extra `harbor run` arguments for the cell, e.g. ["--ak", "version=1.2.3"]
+
+[[cell]]
+name = "claude-code-sonnet-5-5"
+agent = "claude-code"
+model = "anthropic/claude-sonnet-5-5"
+requires = ["ANTHROPIC_API_KEY"]
+default = true
+
+[[cell]]
+name = "claude-code-haiku-5-5"
+agent = "claude-code"
+model = "anthropic/claude-haiku-5-5"
+requires = ["ANTHROPIC_API_KEY"]
+
+[[cell]]
+name = "pi-sonnet-5-5"
+agent = "pi"
+model = "anthropic/claude-sonnet-5-5"
+requires = ["ANTHROPIC_API_KEY"]
+
+[[cell]]
+name = "codex-gpt-6-luna"
+agent = "codex"
+model = "openai/gpt-6-luna"
+requires = ["OPENAI_API_KEY"]

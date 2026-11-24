@@ -11,6 +11,8 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from compare import cell_dirs
+
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Skill eval: {exp}</title>
 <style>
@@ -23,12 +25,18 @@ td.n {{ text-align: right; font-variant-numeric: tabular-nums; }}
 .up {{ color: var(--up); }} .down {{ color: var(--down); }} .muted {{ color: var(--muted); }}
 </style></head><body>
 <h1>Skill eval: {exp}</h1>
-<p>{runs} runs. Paired skill lift <b>{lift}</b> (95% CI {ci}). Gate: {gate}.</p>
-<h2>Per task</h2>
-<table><tr><th>Task</th><th>Lift</th><th>Failed checks without skill</th><th>Failed checks with skill</th></tr>{task_rows}</table>
-<h2>Efficiency per run</h2>
-<table><tr><th>Metric</th><th>Without skill</th><th>With skill</th></tr>{eff_rows}</table>
+<h2>Harness × model</h2>
+<p class="muted">Pass rate of the deterministic checks over paired tasks. Tokens, turns and seconds are means per run, without / with skill.</p>
+<table><tr><th>Harness</th><th>Model</th><th>Without skill</th><th>With skill</th><th>Paired lift</th><th>95% CI</th>
+<th>Skill invoked</th><th>Tokens</th><th>Turns</th><th>Seconds</th><th>Gate</th></tr>{matrix_rows}</table>
+{cells}
 </body></html>
+"""
+
+CELL = """<h2>{title}</h2>
+<p>{runs} runs. Paired skill lift <b>{lift}</b> (95% CI {ci}). Gate: {gate}.</p>
+<table><tr><th>Task</th><th>Lift</th><th>Failed checks without skill</th><th>Failed checks with skill</th></tr>{task_rows}</table>
+<table><tr><th>Efficiency per run</th><th>Without skill</th><th>With skill</th></tr>{eff_rows}</table>
 """
 
 
@@ -36,10 +44,39 @@ def pct(x: float) -> str:
     return f"{x:+.0%}"
 
 
-def main(exp_dir: Path) -> None:
-    summary = json.loads((exp_dir / "gate_summary.json").read_text())
+def lift_cell(v: float) -> str:
+    return f'<td class="n {"up" if v > 0 else "down" if v < 0 else ""}">{pct(v)}</td>'
+
+
+def gate_text(summary: dict) -> str:
+    breaches = summary.get("breaches") or []
+    return html.escape("; ".join(breaches)) if breaches else "ok"
+
+
+def matrix_row(summary: dict) -> str:
+    """One harness × model row of the matrix table."""
+    def pair(key: str, fmt: str) -> str:
+        arms = summary.get("efficiency", {}).get(key, {})
+        return " / ".join(format(arms[a], fmt) if a in arms else "–" for a in ("CONTROL", "CURRENT"))
+
+    used = summary.get("skill_invoked", {}).get("CURRENT")
+    has_lift = "lift" in summary
+    return (
+        f"<tr><td>{html.escape(summary.get('agent') or '–')}</td>"
+        f"<td>{html.escape(summary.get('model') or summary.get('experiment', ''))}</td>"
+        + (f'<td class="n">{summary["control"]:.0%}</td><td class="n">{summary["current"]:.0%}</td>'
+           f'{lift_cell(summary["lift"])}<td class="n">{pct(summary["ci_low"])} to {pct(summary["ci_high"])}</td>'
+           if has_lift else '<td class="n muted" colspan="4">no paired tasks</td>')
+        + f'<td class="n">{"–" if used is None else format(used, ".0%")}</td>'
+        f'<td class="n">{pair("total_tokens", ",.0f")}</td><td class="n">{pair("num_turns", ".1f")}</td>'
+        f'<td class="n">{pair("duration_sec", ".0f")}</td><td>{gate_text(summary)}</td></tr>'
+    )
+
+
+def cell_section(cell_dir: Path, summary: dict) -> str:
+    """The per-task and efficiency tables of one cell."""
     failed: dict[tuple[str, str], Counter] = defaultdict(Counter)
-    for f in exp_dir.glob("*.json"):
+    for f in cell_dir.glob("*.json"):
         data = json.loads(f.read_text())
         for r in data.get("results") or []:
             if not r.get("passed"):
@@ -50,7 +87,7 @@ def main(exp_dir: Path) -> None:
         return ", ".join(f"{html.escape(k)} ×{v}" for k, v in c.most_common()) if c else '<span class="muted">none</span>'
 
     task_rows = "".join(
-        f'<tr><td>{html.escape(t)}</td><td class="n {"up" if v > 0 else "down" if v < 0 else ""}">{pct(v)}</td>'
+        f"<tr><td>{html.escape(t)}</td>{lift_cell(v)}"
         f"<td>{fails(t, 'CONTROL')}</td><td>{fails(t, 'CURRENT')}</td></tr>"
         for t, v in sorted(summary.get("per_task_lift", {}).items(), key=lambda kv: -kv[1])
     )
@@ -58,12 +95,22 @@ def main(exp_dir: Path) -> None:
         f'<tr><td>{html.escape(k)}</td><td class="n">{arms.get("CONTROL", 0):,.1f}</td><td class="n">{arms.get("CURRENT", 0):,.1f}</td></tr>'
         for k, arms in summary.get("efficiency", {}).items()
     )
-    breaches = summary.get("breaches") or []
+    title = " on ".join(filter(None, (summary.get("agent"), summary.get("model")))) or "Per task"
+    return CELL.format(
+        title=html.escape(title), runs=summary.get("runs", 0), lift=pct(summary.get("lift", 0)),
+        ci=f"{pct(summary.get('ci_low', 0))} to {pct(summary.get('ci_high', 0))}",
+        gate=gate_text(summary), task_rows=task_rows, eff_rows=eff_rows,
+    )
+
+
+def main(exp_dir: Path) -> None:
+    cells = [(d, json.loads((d / "gate_summary.json").read_text()))
+             for d in cell_dirs(exp_dir) if (d / "gate_summary.json").is_file()]
     out = exp_dir / "report.html"
     out.write_text(PAGE.format(
-        exp=html.escape(summary.get("experiment", exp_dir.name)), runs=summary.get("runs", 0),
-        lift=pct(summary.get("lift", 0)), ci=f"{pct(summary.get('ci_low', 0))} to {pct(summary.get('ci_high', 0))}",
-        gate=html.escape("; ".join(breaches)) if breaches else "ok", task_rows=task_rows, eff_rows=eff_rows,
+        exp=html.escape(exp_dir.name),
+        matrix_rows="".join(matrix_row(s) for _, s in cells),
+        cells="".join(cell_section(d, s) for d, s in cells),
     ))
     print(f"Wrote {out}")
 

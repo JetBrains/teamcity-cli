@@ -13,6 +13,9 @@ drift cancels out and no cross-build baseline is needed:
   BLOCK when a guardrail task (single-arm, e.g. negative-unrelated) fails on
         half or more of its reps                        (skill misfires)
 
+An experiment holds one directory per harness × model cell (see matrix.toml). Each cell is
+analyzed and gated on its own, and a matrix table compares the cells.
+
 Usage:
     uv run python scripts/compare.py                       # results/$BRANCH_NAME (or newest)
     uv run python scripts/compare.py results/main          # explicit experiment
@@ -95,6 +98,9 @@ def load_runs(exp_dir: Path) -> list[dict]:
             "failed_checks": [r["check"] for r in checks if not r.get("passed")],
             "llm_grades": data.get("llm_grades") or [],
             "events": data.get("events") or {},
+            "agent": data.get("agent"),
+            "model": data.get("model"),
+            "skill_invoked": data.get("skill_invoked"),
         })
     return runs
 
@@ -163,6 +169,8 @@ EFFICIENCY_METRICS = (
     ("total_tokens", "Total tokens", 0),
     ("num_turns", "Turns", 1),
     ("tool_calls_count", "Tool calls", 1),
+    ("duration_sec", "Duration (s)", 1),
+    ("cost_usd", "Cost (USD)", 4),
 )
 
 
@@ -181,6 +189,15 @@ def efficiency_summary(runs: list[dict]) -> dict[str, dict[str, float]]:
     }
 
 
+def skill_invocation(runs: list[dict]) -> dict[str, float]:
+    """arm → share of runs that loaded the skill, over runs that recorded it."""
+    flags: dict[str, list[bool]] = defaultdict(list)
+    for r in runs:
+        if r.get("skill_invoked") is not None:
+            flags[r["treatment"]].append(bool(r["skill_invoked"]))
+    return {arm: round(mean(v), 3) for arm, v in flags.items()}
+
+
 def judge_summary(runs: list[dict]) -> dict[str, dict[str, float]]:
     """dimension → arm → mean judge score (advisory)."""
     scores: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
@@ -196,6 +213,12 @@ def judge_summary(runs: list[dict]) -> dict[str, dict[str, float]]:
 # ---------------------------------------------------------------------------
 # Report + gate
 # ---------------------------------------------------------------------------
+
+def cell_dirs(exp_dir: Path) -> list[Path]:
+    """The experiment's harness × model cell directories; a flat experiment is its own single cell."""
+    cells = sorted(d for d in exp_dir.iterdir() if d.is_dir() and (d / "jobs").is_dir())
+    return cells or [exp_dir]
+
 
 def analyze(exp_dir: Path) -> dict | None:
     runs = load_runs(exp_dir)
@@ -233,10 +256,14 @@ def analyze(exp_dir: Path) -> dict | None:
               f"{fmt(pk_c):>5s}/{fmt(pk_u)}")
 
     summary: dict = {"experiment": exp_dir.name, "runs": len(runs),
+                     "agent": runs[0]["agent"], "model": runs[0]["model"],
+                     "skill_invoked": skill_invocation(runs),
                      "per_task_lift": {t: round(l, 3) for t, l in lifts.items()}}
 
     if lifts:
         lift_mean = mean(lifts.values())
+        for arm in ("CONTROL", "CURRENT"):  # pass rate per arm over the paired tasks
+            summary[arm.lower()] = round(mean(mean(by_task[t][arm]) for t in lifts), 4)
         ci_low, ci_high = bootstrap_lift_ci(by_task, list(lifts))
         print(f"\n  Paired skill lift: {lift_mean:+.1%}  "
               f"(95% CI [{ci_low:+.1%}, {ci_high:+.1%}], {len(lifts)} tasks)")
@@ -290,6 +317,30 @@ def analyze(exp_dir: Path) -> dict | None:
     return summary
 
 
+def print_matrix(summaries: list[dict]) -> None:
+    """One row per harness × model cell: pass rate per arm, paired lift, skill use and cost."""
+    def pair(s: dict, key: str, fmt: str) -> str:
+        arms = s.get("efficiency", {}).get(key, {})
+        return "/".join(format(arms[a], fmt) if a in arms else "-" for a in ("CONTROL", "CURRENT"))
+
+    print("\n  Matrix (paired columns are without/with skill)\n")
+    header = (f"  {'Harness':<12s} {'Model':<28s} {'Without':>7s} {'With':>5s} {'Lift':>5s} {'95% CI':>14s} "
+              f"{'Skill used':>10s} {'Tokens':>17s} {'Turns':>9s} {'Seconds':>8s} {'Gate':>5s}")
+    print(header)
+    print(f"  {'-' * (len(header) - 2)}")
+    for s in summaries:
+        has_lift = "lift" in s
+        ci = f"[{s['ci_low']:+.0%}, {s['ci_high']:+.0%}]" if has_lift else "-"
+        used = s.get("skill_invoked", {}).get("CURRENT")
+        print(f"  {s.get('agent') or '-':<12s} {s.get('model') or s['experiment']:<28s} "
+              f"{format(s['control'], '.0%') if has_lift else '-':>7s} "
+              f"{format(s['current'], '.0%') if has_lift else '-':>5s} "
+              f"{format(s['lift'], '+.0%') if has_lift else '-':>5s} {ci:>14s} "
+              f"{'-' if used is None else format(used, '.0%'):>10s} {pair(s, 'total_tokens', ',.0f'):>17s} "
+              f"{pair(s, 'num_turns', '.1f'):>9s} {pair(s, 'duration_sec', '.0f'):>8s} "
+              f"{'BLOCK' if s['breaches'] else 'ok':>5s}")
+
+
 def gate(summary: dict) -> int:
     mode = os.environ.get("GATE_MODE", "warn").lower()
     if not summary["breaches"]:
@@ -334,10 +385,16 @@ def main() -> int:
     if not exp_dir:
         print("  No experiment directory found — pass one, e.g. scripts/compare.py results/main")
         return 2
-    summary = analyze(exp_dir)
-    if summary is None:
+    status, summaries = 0, []
+    for cell in cell_dirs(exp_dir):  # the gate applies to every cell
+        if summary := analyze(cell):
+            summaries.append(summary)
+            status = max(status, gate(summary))
+    if not summaries:
         return 2
-    return gate(summary)
+    if summaries[0].get("agent"):
+        print_matrix(summaries)
+    return status
 
 
 if __name__ == "__main__":

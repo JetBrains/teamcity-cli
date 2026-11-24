@@ -605,3 +605,130 @@ def test_harbor_import_fails_errored_trials_and_aborts_on_mass_errors(tmp_path):
     with pytest.raises(SystemExit):
         harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res")
     assert all(r["rate"] == 0.0 for r in compare.load_runs(tmp_path / "res"))
+
+
+
+# ---------------------------------------------------------------------------
+# Harness × model matrix
+# ---------------------------------------------------------------------------
+
+def test_matrix_selects_default_all_and_named_cells(capsys):
+    from scaffold.matrix import selected_cells
+    anthropic = {"ANTHROPIC_API_KEY": "k"}
+    assert [c["name"] for c in selected_cells("", anthropic)] == ["claude-code-sonnet-5-5"]
+    every = [c["name"] for c in selected_cells("all", anthropic)]
+    assert "pi-sonnet-5-5" in every and "codex-gpt-6-luna" not in every  # no OPENAI_API_KEY: skipped
+    assert "codex-gpt-6-luna" in capsys.readouterr().err
+    assert [c["agent"] for c in selected_cells("codex-gpt-6-luna", {"OPENAI_API_KEY": "k"})] == ["codex"]
+    with pytest.raises(SystemExit):
+        selected_cells("codex-gpt-6-luna", anthropic)  # asked for by name without its key
+    with pytest.raises(SystemExit):
+        selected_cells("no-such-cell", anthropic)
+
+
+def _write_cell(exp: Path, cell: str, agent: str, rates: dict[str, float], invoked: bool) -> None:
+    (exp / cell / "jobs").mkdir(parents=True)
+    for task in ("find-builds", "flaky-tests", "trigger-history"):
+        for arm, rate in rates.items():
+            (exp / cell / f"{task}_{arm}_x.json").write_text(json.dumps({
+                "task_id": task, "treatment": arm, "agent": agent, "model": "m",
+                "skill_invoked": invoked and arm == "CURRENT",
+                "results": [{"check": "a", "passed": rate >= 0.5, "message": ""},
+                            {"check": "b", "passed": rate >= 1.0, "message": ""}],
+                "events": {"total_tokens": 100, "num_turns": 3, "duration_sec": 12.5}}))
+
+
+def test_matrix_gates_and_reports_each_cell(tmp_path, monkeypatch, capsys):
+    import report
+    _write_cell(tmp_path, "good", "claude-code", {"CONTROL": 0.5, "CURRENT": 1.0}, invoked=True)
+    _write_cell(tmp_path, "bad", "pi", {"CONTROL": 1.0, "CURRENT": 0.5}, invoked=False)
+    assert [d.name for d in compare.cell_dirs(tmp_path)] == ["bad", "good"]
+    monkeypatch.setenv("GATE_MODE", "enforce")
+    monkeypatch.setattr(sys, "argv", ["compare.py", str(tmp_path)])
+    assert compare.main() == 1  # one regressing cell blocks, the other cell still reports
+    out = capsys.readouterr().out
+    assert "claude-code" in out and "+50%" in out and "-50%" in out
+    good = json.loads((tmp_path / "good" / "gate_summary.json").read_text())
+    assert (good["agent"], good["control"], good["current"], good["lift"]) == ("claude-code", 0.5, 1.0, 0.5)
+    assert good["skill_invoked"] == {"CONTROL": 0.0, "CURRENT": 1.0} and not good["breaches"]
+    assert json.loads((tmp_path / "bad" / "gate_summary.json").read_text())["breaches"]
+    report.main(tmp_path)
+    page = (tmp_path / "report.html").read_text()
+    assert page.count("<h2>") == 3 and "pi on m" in page and "12 / 12" in page
+
+
+def test_flat_experiment_is_a_single_cell(tmp_path):
+    (tmp_path / "find-builds_CURRENT_x.json").write_text("{}")
+    assert compare.cell_dirs(tmp_path) == [tmp_path]
+
+
+def _atif(*calls: tuple[str, dict]) -> dict:
+    return {"steps": [{"source": "agent", "message": "", "tool_calls": [
+        {"tool_call_id": str(i), "function_name": name, "arguments": args} for i, (name, args) in enumerate(calls)]}]}
+
+
+def test_atif_skill_load_signal_per_harness():
+    from scaffold.events import extract_events_atif
+    # Claude Code: the Skill tool, then a reference file from $CLAUDE_CONFIG_DIR/skills.
+    claude = extract_events_atif(_atif(
+        ("Skill", {"skill": "teamcity-cli"}),
+        ("Read", {"file_path": "/logs/agent/sessions/skills/teamcity-cli/references/commands.md"})))
+    assert claude.skills_invoked == ["teamcity-cli"]
+    # pi: lowercase tools, `path` argument, skill under ~/.agents/skills.
+    pi = extract_events_atif(_atif(
+        ("read", {"path": "/root/.agents/skills/teamcity-cli/SKILL.md"}),
+        ("bash", {"command": "teamcity run list --json"})))
+    assert pi.skills_invoked == ["teamcity-cli"] and pi.commands_run == ["teamcity run list --json"]
+    assert pi.files_read == ["/root/.agents/skills/teamcity-cli/SKILL.md"]
+    # Codex: no read tool, the skill is read through the shell.
+    codex = extract_events_atif(_atif(
+        ("exec_command", {"cmd": ["bash", "-lc", "sed -n '1,200p' ~/.agents/skills/teamcity-cli/SKILL.md"]}),
+        ("shell_command", {"command": "teamcity run list"})))
+    assert codex.skills_invoked == ["teamcity-cli"] and codex.commands_run[-1] == "teamcity run list"
+
+
+def test_atif_skill_load_signal_ignores_lookalikes():
+    from scaffold.events import extract_events_atif
+    e = extract_events_atif(_atif(
+        ("bash", {"command": "ls ~/.agents/skills/ ~/.agents/skills/teamcity-cli/; teamcity skill list"}),
+        ("read", {"path": "/app/docs/skills.md"}),
+        ("bash", {"command": "teamcity skill install --agent pi"})))
+    assert e.skills_invoked == []
+    assert not run_check(checks.no_skill_invocation, EvalRunner(extract_events_atif(_atif(
+        ("read", {"path": "/root/.agents/skills/teamcity-cli/SKILL.md"})))))
+
+
+def test_harbor_import_aborts_when_one_arm_errored(tmp_path):
+    import harbor_import
+    for arm, valid in (("CONTROL", False), ("CURRENT", True)):
+        trial = tmp_path / "jobs" / arm / "find-builds__x"
+        (trial / "verifier").mkdir(parents=True)
+        (trial / "config.json").write_text(json.dumps({"task": {"path": "tasks/find-builds"}}))
+        (trial / "verifier" / "checks.json").write_text(json.dumps(
+            {"pass_rate": 1.0, "results": [{"check": "uses_json", "passed": True, "message": ""}]}))
+        (trial / "result.json").write_text(json.dumps(
+            {"reward_valid": valid, "exception_info": None if valid else {"exception_type": "AgentSetupTimeoutError"}}))
+    with pytest.raises(SystemExit, match="CONTROL 1/1"):  # half of all trials, but a whole arm
+        harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res")
+
+
+def test_harbor_import_carries_harness_model_and_usage(tmp_path):
+    import harbor_import
+    trial = tmp_path / "jobs" / "CURRENT" / "find-builds__abc"
+    (trial / "verifier").mkdir(parents=True)
+    (trial / "agent").mkdir()
+    (trial / "config.json").write_text(json.dumps({"task": {"path": "tasks/find-builds"}, "agent": {
+        "name": "pi", "model_name": "anthropic/claude-sonnet-5-5", "skills": ["/tmp/teamcity-cli"]}}))
+    (trial / "result.json").write_text(json.dumps({
+        "agent_result": {"n_input_tokens": 900, "n_output_tokens": 100, "cost_usd": 0.02},
+        "agent_execution": {"started_at": "2026-11-24T10:00:00Z", "finished_at": "2026-11-24T10:00:30Z"}}))
+    (trial / "verifier" / "checks.json").write_text(json.dumps(
+        {"pass_rate": 1.0, "results": [{"check": "uses_json", "passed": True, "message": ""}]}))
+    (trial / "agent" / "trajectory.json").write_text(json.dumps(_atif(
+        ("read", {"path": "/root/.agents/skills/teamcity-cli/SKILL.md"}))))  # no final_metrics
+    harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res")
+    data = json.loads(next((tmp_path / "res").glob("*.json")).read_text())
+    assert (data["agent"], data["model"]) == ("pi", "anthropic/claude-sonnet-5-5")
+    assert data["skill_available"] and data["skill_invoked"]
+    assert data["events"]["total_tokens"] == 1000 and data["events"]["duration_sec"] == 30.0
+    assert data["events"]["cost_usd"] == 0.02

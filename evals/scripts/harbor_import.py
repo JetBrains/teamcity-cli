@@ -1,10 +1,11 @@
 """Convert Harbor jobs into result artifacts that compare.py and report.py read.
 
-Usage: harbor_import.py <jobs-dir> <results-dir>
+Usage: harbor_import.py <jobs-dir> <results-dir> [experiment]
 
-Each job directory under <jobs-dir> is one treatment and is named after it
-(CONTROL, CURRENT). The task comes from each trial's config.json, per-check results from its
-verifier output (checks.json), and efficiency metrics from its ATIF trajectory.
+<jobs-dir> holds one harness × model cell. Each job directory under it is one treatment and is
+named after it (CONTROL, CURRENT). The task, agent and model come from each trial's config.json
+and result.json, per-check results from its verifier output (checks.json), and efficiency
+metrics from its ATIF trajectory.
 
 Like the pytest runner, it also grades llm_grade tasks with the LLM judge when model
 credentials are set, and sends every trial to Langfuse when LANGFUSE_* keys are set.
@@ -46,10 +47,12 @@ def _grades(task, text: str) -> tuple[list[dict], list[str]]:
     return graded, [d for d, g in grades.items() if g is None]
 
 
-def import_jobs(jobs_dir: Path, results_dir: Path) -> int:
+def import_jobs(jobs_dir: Path, results_dir: Path, experiment: str = "") -> int:
     results_dir.mkdir(parents=True, exist_ok=True)
-    count = errored = 0
+    count = 0
+    broken = []  # arms where most trials errored: a paired lift against one would be meaningless
     for job in sorted(p for p in jobs_dir.iterdir() if p.is_dir()):
+        seen, errored = count, 0
         for trial in sorted(p for p in job.iterdir() if (p / "config.json").is_file()):
             config = json.loads((trial / "config.json").read_text())
             task = load_task(Path(config["task"]["path"]).name)
@@ -67,29 +70,40 @@ def import_jobs(jobs_dir: Path, results_dir: Path) -> int:
             trajectory_file = trial / "agent" / "trajectory.json"
             events = extract_events_atif(json.loads(trajectory_file.read_text()) if trajectory_file.is_file() else {})
             agent = config.get("agent") or {}
+            usage = result.get("agent_result") or {}
+            # Harnesses whose trajectory carries no totals still report them to Harbor.
+            events.input_tokens = events.input_tokens or usage.get("n_input_tokens") or 0
+            events.output_tokens = events.output_tokens or usage.get("n_output_tokens") or 0
+            duration = _seconds(result.get("agent_execution"))
+            skill_invoked = any("teamcity" in s.lower() for s in events.skills_invoked)
             graded, ungraded = _grades(task, events.full_text)
-            checks.update(task=task.name, task_id=task.name, treatment=job.name, events=events.summary(),
+            checks.update(task=task.name, task_id=task.name, treatment=job.name,
+                          agent=agent.get("name"), model=agent.get("model_name"),
+                          skill_available=bool(agent.get("skills")), skill_invoked=skill_invoked,
+                          events=events.summary() | {"duration_sec": round(duration, 1), "cost_usd": usage.get("cost_usd")},
                           llm_grades=graded, ungraded_dimensions=ungraded)
             (results_dir / f"{task.name}_{job.name}_{trial.name}.json").write_text(json.dumps(checks, indent=2))
 
             langfuse_log.log_run(
                 task_name=task.name, treatment_name=job.name, instruction=task.instruction,
-                experiment_id=results_dir.name, response_text=events.full_text,
-                pass_rate=checks.get("pass_rate", 0.0), duration_sec=_seconds(result.get("agent_execution")),
+                experiment_id=experiment or results_dir.name, response_text=events.full_text,
+                pass_rate=checks.get("pass_rate", 0.0), duration_sec=duration,
                 num_turns=events.num_turns, input_tokens=events.input_tokens, output_tokens=events.output_tokens,
-                skill_invoked=any("teamcity" in s.lower() for s in events.skills_invoked),
+                skill_invoked=skill_invoked,
                 skill_available=bool(agent.get("skills")), check_results=checks.get("results", []),
                 tool_calls=events.tool_calls, tool_results=events.tool_results, llm_grades=graded,
                 ungraded_dimensions=ungraded, run_id=trial.name,
                 provenance={"model": agent.get("model_name"), "agent": agent.get("name"), "runner": "harbor"},
             )
             count += 1
+        if errored * 2 > count - seen:
+            broken.append(f"{job.name} {errored}/{count - seen}")
     langfuse_log.flush()
-    if count and errored * 2 > count:
-        raise SystemExit(f"{errored}/{count} trials errored: an infrastructure failure, not a measurement")
+    if broken:
+        raise SystemExit(f"{jobs_dir}: trials errored ({', '.join(broken)}): an infrastructure failure, not a measurement")
     return count
 
 
 if __name__ == "__main__":
-    n = import_jobs(Path(sys.argv[1]), Path(sys.argv[2]))
+    n = import_jobs(Path(sys.argv[1]), Path(sys.argv[2]), *sys.argv[3:4])
     print(f"Imported {n} trial(s) into {sys.argv[2]}")

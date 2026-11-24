@@ -107,7 +107,7 @@ def log_run(
         import langfuse as _lf
 
         prov = provenance or {}
-        model = prov.get("model") or os.environ.get("EVAL_MODEL", "")
+        model, agent = prov.get("model") or "", prov.get("agent") or ""
         total_tokens = input_tokens + output_tokens
         bucket = _bucket(pass_rate)
         instruction_t = _truncate(instruction, 4000)
@@ -124,6 +124,8 @@ def log_run(
         ]
         if model:
             tags.append(f"model:{model}")
+        if agent:
+            tags.append(f"agent:{agent}")
 
         # Short string dimensions live at the trace level (propagate_attributes
         # requires str values); the rich payload rides on the root observation.
@@ -133,6 +135,7 @@ def log_run(
             "experiment_id": experiment_id,
             "pass_bucket": bucket,
             "model": model,
+            "agent": agent,
             "skill_available": str(skill_available).lower(),
             "skill_invoked": str(skill_invoked).lower(),
         }
