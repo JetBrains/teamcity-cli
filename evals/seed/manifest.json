@@ -1,0 +1,1499 @@
+{
+ "fingerprint": "0d1da0ea0d3b",
+ "facts": {
+  "projects": [
+   {
+    "id": "_Root",
+    "name": "<Root project>"
+   },
+   {
+    "id": "Shop",
+    "name": "Acme Shop",
+    "parentProjectId": "_Root"
+   },
+   {
+    "id": "Shop_Backend",
+    "name": "Backend",
+    "parentProjectId": "Shop"
+   },
+   {
+    "id": "Shop_Frontend",
+    "name": "Frontend",
+    "parentProjectId": "Shop"
+   },
+   {
+    "id": "Shop_Release",
+    "name": "Release",
+    "parentProjectId": "Shop"
+   },
+   {
+    "id": "Infra",
+    "name": "Platform Infrastructure",
+    "parentProjectId": "_Root"
+   }
+  ],
+  "jobs": {
+   "Shop_Backend_ApiDocs": [
+    "redocly/cli:1.25.11"
+   ],
+   "Shop_Backend_Build": [],
+   "Shop_Backend_DbMigrations": [
+    "flyway/flyway:10.22"
+   ],
+   "Shop_Backend_IntegrationTests": [],
+   "Shop_Backend_UnitTests": [],
+   "Shop_Frontend_Build": [],
+   "Shop_Frontend_E2E": [
+    "mcr.microsoft.com/playwright:v1.49.1-jammy",
+    "node:22-alpine"
+   ],
+   "Shop_Frontend_Lint": [
+    "node:22-alpine"
+   ],
+   "Shop_Frontend_Storybook": [
+    "node:22-alpine"
+   ],
+   "Shop_Release_Deploy": [],
+   "Shop_Release_Package": [],
+   "Shop_Release_Verify": [],
+   "Shop_Release_Sbom": [
+    "anchore/syft:v1.18.1",
+    "node:22-alpine"
+   ],
+   "Infra_BaseImages": [
+    "docker:27-cli"
+   ],
+   "Infra_DbBackup": [],
+   "Infra_NightlyCleanup": []
+  },
+  "runs": {
+   "Shop_Backend_ApiDocs": [],
+   "Shop_Backend_Build": [
+    [
+     "31",
+     "release/2.4",
+     "SUCCESS",
+     "user",
+     "bob",
+     [],
+     []
+    ],
+    [
+     "30",
+     "release/2.4",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     []
+    ],
+    [
+     "29",
+     "release/2.4",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "02f78720b5ab alice"
+     ]
+    ],
+    [
+     "28",
+     "feature/cart-redesign",
+     "SUCCESS",
+     "snapshotDependency",
+     "carol",
+     [],
+     []
+    ],
+    [
+     "27",
+     "main",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     []
+    ],
+    [
+     "26",
+     "main",
+     "SUCCESS",
+     "user",
+     "carol",
+     [],
+     []
+    ],
+    [
+     "25",
+     "main",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     []
+    ],
+    [
+     "24",
+     "main",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "9532db10ebd0 bob"
+     ]
+    ],
+    [
+     "23",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [],
+     []
+    ],
+    [
+     "22",
+     "main",
+     "FAILURE",
+     "vcs",
+     "",
+     [],
+     [
+      "d5e23a69eeb5 bob"
+     ]
+    ],
+    [
+     "21",
+     "main",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     []
+    ],
+    [
+     "20",
+     "main",
+     "SUCCESS",
+     "user",
+     "carol",
+     [],
+     []
+    ],
+    [
+     "19",
+     "main",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "7cf33d7f54ec alice"
+     ]
+    ],
+    [
+     "18",
+     "feature/cart-redesign",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "3d151745fadd carol"
+     ]
+    ],
+    [
+     "17",
+     "main",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "abb916f09c2a bob"
+     ]
+    ],
+    [
+     "16",
+     "main",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "15",
+     "main",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "14",
+     "main",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "13",
+     "main",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "12",
+     "main",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "11",
+     "main",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "10",
+     "feature/cart-redesign",
+     "SUCCESS",
+     "user",
+     "carol",
+     [],
+     [
+      "89f373e98a00 carol"
+     ]
+    ],
+    [
+     "9",
+     "release/2.4",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     [
+      "d44bf4c6dfda alice"
+     ]
+    ],
+    [
+     "8",
+     "main",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     []
+    ],
+    [
+     "7",
+     "main",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "df4f6f661b80 carol"
+     ]
+    ],
+    [
+     "6",
+     "main",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "9555393fe452 bob"
+     ]
+    ],
+    [
+     "5",
+     "main",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "51ab36ca537c alice"
+     ]
+    ],
+    [
+     "4",
+     "main",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "797a3d68685d carol"
+     ]
+    ],
+    [
+     "3",
+     "main",
+     "SUCCESS",
+     "user",
+     "bob",
+     [],
+     []
+    ],
+    [
+     "2",
+     "main",
+     "SUCCESS",
+     "vcs",
+     "",
+     [],
+     [
+      "688a0b4d6aec bob"
+     ]
+    ],
+    [
+     "1",
+     "main",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     []
+    ]
+   ],
+   "Shop_Backend_DbMigrations": [],
+   "Shop_Backend_IntegrationTests": [
+    [
+     "26",
+     "main",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "25",
+     "main",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "24",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.InventorySyncIT.reconcilesConcurrentUpdates",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "23",
+     "release/2.4",
+     "FAILURE",
+     "user",
+     "carol",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "22",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "21",
+     "feature/cart-redesign",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "20",
+     "main",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "19",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.InventorySyncIT.reconcilesConcurrentUpdates",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "18",
+     "main",
+     "FAILURE",
+     "user",
+     "carol",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "17",
+     "release/2.4",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "16",
+     "main",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv",
+      "com.acme.shop.it.SearchIndexIT.reindexesAfterSchemaChange"
+     ],
+     []
+    ],
+    [
+     "15",
+     "feature/cart-redesign",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     [
+      "3d151745fadd carol"
+     ]
+    ],
+    [
+     "14",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     [
+      "9532db10ebd0 bob",
+      "d5e23a69eeb5 bob",
+      "7cf33d7f54ec alice",
+      "abb916f09c2a bob"
+     ]
+    ],
+    [
+     "13",
+     "main",
+     "FAILURE",
+     "user",
+     "carol",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "12",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "11",
+     "release/2.4",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.it.InventorySyncIT.reconcilesConcurrentUpdates",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "10",
+     "main",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "9",
+     "feature/cart-redesign",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "8",
+     "main",
+     "FAILURE",
+     "user",
+     "carol",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "7",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.LegacyExportIT.exportsCsv"
+     ],
+     []
+    ],
+    [
+     "6",
+     "main",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     []
+    ],
+    [
+     "5",
+     "release/2.4",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     [
+      "d44bf4c6dfda alice"
+     ]
+    ],
+    [
+     "4",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.InventorySyncIT.reconcilesConcurrentUpdates"
+     ],
+     []
+    ],
+    [
+     "3",
+     "feature/cart-redesign",
+     "FAILURE",
+     "user",
+     "carol",
+     [
+      "com.acme.shop.it.SearchIndexIT.reindexesAfterSchemaChange"
+     ],
+     [
+      "89f373e98a00 carol"
+     ]
+    ],
+    [
+     "2",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard"
+     ],
+     []
+    ],
+    [
+     "1",
+     "main",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     [
+      "df4f6f661b80 carol",
+      "9555393fe452 bob",
+      "51ab36ca537c alice",
+      "797a3d68685d carol",
+      "688a0b4d6aec bob"
+     ]
+    ]
+   ],
+   "Shop_Backend_UnitTests": [
+    [
+     "11",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+      "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+     ],
+     [
+      "9532db10ebd0 bob"
+     ]
+    ],
+    [
+     "10",
+     "release/2.4",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     [
+      "02f78720b5ab alice"
+     ]
+    ],
+    [
+     "9",
+     "feature/cart-redesign",
+     "SUCCESS",
+     "snapshotDependency",
+     "carol",
+     [],
+     [
+      "3d151745fadd carol",
+      "89f373e98a00 carol"
+     ]
+    ],
+    [
+     "8",
+     "main",
+     "FAILURE",
+     "user",
+     "carol",
+     [
+      "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+      "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+     ],
+     [
+      "d5e23a69eeb5 bob"
+     ]
+    ],
+    [
+     "7",
+     "main",
+     "FAILURE",
+     "snapshotDependency",
+     "alice",
+     [
+      "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+      "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+     ],
+     []
+    ],
+    [
+     "6",
+     "main",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+      "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+     ],
+     [
+      "7cf33d7f54ec alice"
+     ]
+    ],
+    [
+     "5",
+     "main",
+     "FAILURE",
+     "user",
+     "bob",
+     [
+      "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+      "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+     ],
+     [
+      "abb916f09c2a bob"
+     ]
+    ],
+    [
+     "4",
+     "release/2.4",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     [
+      "d44bf4c6dfda alice"
+     ]
+    ],
+    [
+     "3",
+     "main",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     [
+      "df4f6f661b80 carol",
+      "9555393fe452 bob",
+      "51ab36ca537c alice",
+      "797a3d68685d carol"
+     ]
+    ],
+    [
+     "2",
+     "main",
+     "SUCCESS",
+     "user",
+     "bob",
+     [],
+     [
+      "688a0b4d6aec bob"
+     ]
+    ],
+    [
+     "1",
+     "main",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     []
+    ]
+   ],
+   "Shop_Frontend_Build": [
+    [
+     "9",
+     "main",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     [
+      "9532db10ebd0 bob",
+      "d5e23a69eeb5 bob"
+     ]
+    ],
+    [
+     "8",
+     "release/2.4",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     [
+      "02f78720b5ab alice",
+      "d44bf4c6dfda alice"
+     ]
+    ],
+    [
+     "7",
+     "feature/cart-redesign",
+     "FAILURE",
+     "snapshotDependency",
+     "carol",
+     [],
+     []
+    ],
+    [
+     "6",
+     "main",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     [
+      "7cf33d7f54ec alice",
+      "abb916f09c2a bob"
+     ]
+    ],
+    [
+     "5",
+     "feature/cart-redesign",
+     "FAILURE",
+     "user",
+     "carol",
+     [],
+     [
+      "3d151745fadd carol"
+     ]
+    ],
+    [
+     "4",
+     "feature/cart-redesign",
+     "SUCCESS",
+     "user",
+     "carol",
+     [],
+     [
+      "89f373e98a00 carol"
+     ]
+    ],
+    [
+     "3",
+     "main",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     [
+      "df4f6f661b80 carol",
+      "9555393fe452 bob",
+      "51ab36ca537c alice"
+     ]
+    ],
+    [
+     "2",
+     "main",
+     "SUCCESS",
+     "user",
+     "carol",
+     [],
+     [
+      "797a3d68685d carol",
+      "688a0b4d6aec bob"
+     ]
+    ],
+    [
+     "1",
+     "main",
+     "SUCCESS",
+     "user",
+     "carol",
+     [],
+     []
+    ]
+   ],
+   "Shop_Frontend_E2E": [],
+   "Shop_Frontend_Lint": [],
+   "Shop_Frontend_Storybook": [],
+   "Shop_Release_Deploy": [],
+   "Shop_Release_Package": [
+    [
+     "3",
+     "release/2.4",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     [
+      "02f78720b5ab alice",
+      "d44bf4c6dfda alice"
+     ]
+    ],
+    [
+     "N/A",
+     "feature/cart-redesign",
+     "FAILED_TO_START",
+     "snapshotDependency",
+     "carol",
+     [],
+     [
+      "3d151745fadd carol",
+      "89f373e98a00 carol"
+     ]
+    ],
+    [
+     "2",
+     "main",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     [
+      "7cf33d7f54ec alice",
+      "abb916f09c2a bob"
+     ]
+    ],
+    [
+     "1",
+     "main",
+     "SUCCESS",
+     "snapshotDependency",
+     "alice",
+     [],
+     [
+      "df4f6f661b80 carol",
+      "9555393fe452 bob",
+      "51ab36ca537c alice",
+      "797a3d68685d carol",
+      "688a0b4d6aec bob"
+     ]
+    ]
+   ],
+   "Shop_Release_Verify": [
+    [
+     "4",
+     "release/2.4",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     [
+      "02f78720b5ab alice",
+      "d44bf4c6dfda alice"
+     ]
+    ],
+    [
+     "3",
+     "feature/cart-redesign",
+     "FAILURE",
+     "user",
+     "carol",
+     [],
+     [
+      "3d151745fadd carol",
+      "89f373e98a00 carol"
+     ]
+    ],
+    [
+     "2",
+     "main",
+     "FAILURE",
+     "user",
+     "alice",
+     [
+      "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+      "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+     ],
+     [
+      "7cf33d7f54ec alice",
+      "abb916f09c2a bob"
+     ]
+    ],
+    [
+     "1",
+     "main",
+     "SUCCESS",
+     "user",
+     "alice",
+     [],
+     [
+      "df4f6f661b80 carol",
+      "9555393fe452 bob",
+      "51ab36ca537c alice",
+      "797a3d68685d carol",
+      "688a0b4d6aec bob"
+     ]
+    ]
+   ],
+   "Shop_Release_Sbom": [],
+   "Infra_BaseImages": [],
+   "Infra_DbBackup": [],
+   "Infra_NightlyCleanup": [
+    [
+     "4",
+     "",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "3",
+     "",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "2",
+     "",
+     "SUCCESS",
+     "schedule",
+     "",
+     [],
+     []
+    ],
+    [
+     "1",
+     "",
+     "SUCCESS",
+     "user",
+     "dave",
+     [],
+     []
+    ]
+   ]
+  },
+  "queue": [
+   {
+    "job": "Infra_DbBackup",
+    "branch": "",
+    "user": "dave",
+    "compatible_agents": 0
+   },
+   {
+    "job": "Shop_Release_Deploy",
+    "branch": "<default>",
+    "user": "carol",
+    "compatible_agents": 0
+   },
+   {
+    "job": "Shop_Frontend_E2E",
+    "branch": "feature/cart-redesign",
+    "user": "alice",
+    "compatible_agents": 0
+   },
+   {
+    "job": "Shop_Release_Deploy",
+    "branch": "release/2.4",
+    "user": "alice",
+    "compatible_agents": 0
+   }
+  ],
+  "pools": [
+   {
+    "name": "Default",
+    "projects": [
+     "Infra",
+     "_Root"
+    ],
+    "agents": [
+     "linux-default-01"
+    ]
+   },
+   {
+    "name": "Database Hosts",
+    "projects": [
+     "Infra"
+    ],
+    "agents": []
+   },
+   {
+    "name": "Linux Builders",
+    "projects": [
+     "Shop",
+     "Shop_Backend",
+     "Shop_Frontend",
+     "Shop_Release"
+    ],
+    "agents": [
+     "linux-builder-01",
+     "linux-builder-02"
+    ]
+   },
+   {
+    "name": "macOS Signing",
+    "projects": [
+     "Shop_Release"
+    ],
+    "agents": []
+   }
+  ],
+  "agents": [
+   {
+    "name": "linux-builder-01",
+    "pool": "Linux Builders",
+    "enabled": true,
+    "authorized": true,
+    "comment": ""
+   },
+   {
+    "name": "linux-default-01",
+    "pool": "Default",
+    "enabled": true,
+    "authorized": true,
+    "comment": ""
+   },
+   {
+    "name": "linux-builder-02",
+    "pool": "Linux Builders",
+    "enabled": false,
+    "authorized": true,
+    "comment": "Disk replacement scheduled, see INFRA-212"
+   }
+  ]
+ },
+ "tasks": {
+  "flaky-tests": {
+   "file": "answer.json",
+   "answer": {
+    "flaky": [
+     {
+      "test": "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+      "failed_runs": 8
+     },
+     {
+      "test": "com.acme.shop.it.InventorySyncIT.reconcilesConcurrentUpdates",
+      "failed_runs": 3
+     }
+    ]
+   }
+  },
+  "test-history": {
+   "file": "answer.json",
+   "answer": {
+    "failed_runs": 9,
+    "first_failed_run": "2",
+    "branches": [
+     "main",
+     "release/2.4"
+    ]
+   }
+  },
+  "why-queued": {
+   "file": "answer.json",
+   "answer": {
+    "job": "Shop_Release_Deploy",
+    "triggered_by": "carol",
+    "missing_agent_parameter": "env.STAGING_KUBECONFIG",
+    "compatible_agents": 0,
+    "queued_runs_in_project": 3
+   }
+  },
+  "pool-capacity": {
+   "file": "answer.json",
+   "answer": {
+    "pools": [
+     {
+      "name": "Linux Builders",
+      "agents": 2,
+      "enabled_agents": 1
+     },
+     {
+      "name": "macOS Signing",
+      "agents": 0,
+      "enabled_agents": 0
+     }
+    ]
+   }
+  },
+  "disabled-agents": {
+   "file": "answer.json",
+   "answer": {
+    "disabled_agents": [
+     {
+      "name": "linux-builder-02",
+      "pool": "Linux Builders"
+     }
+    ]
+   }
+  },
+  "settings-search": {
+   "file": "answer.json",
+   "answer": {
+    "jobs_with_docker_steps": 6,
+    "images": {
+     "redocly/cli:1.25.11": 1,
+     "flyway/flyway:10.22": 1,
+     "mcr.microsoft.com/playwright:v1.49.1-jammy": 1,
+     "node:22-alpine": 4,
+     "anchore/syft:v1.18.1": 1
+    }
+   }
+  },
+  "trigger-history": {
+   "file": "answer.json",
+   "answer": {
+    "vcs": 11,
+    "schedule": 6,
+    "dependency": 4,
+    "user": 9
+   }
+  },
+  "composite-failure": {
+   "file": "answer.json",
+   "answer": {
+    "failed_runs": [
+     {
+      "number": "3",
+      "branch": "feature/cart-redesign",
+      "root_cause_jobs": [
+       "Shop_Frontend_Build"
+      ],
+      "failed_tests": []
+     },
+     {
+      "number": "2",
+      "branch": "main",
+      "root_cause_jobs": [
+       "Shop_Backend_UnitTests"
+      ],
+      "failed_tests": [
+       "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+       "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+      ]
+     }
+    ]
+   }
+  },
+  "find-builds": {
+   "file": "answer.json",
+   "answer": {
+    "runs": [
+     {
+      "job": "Shop_Backend_UnitTests",
+      "number": "11",
+      "branch": "main"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "26",
+      "branch": "main"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "25",
+      "branch": "main"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "24",
+      "branch": "main"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "23",
+      "branch": "release/2.4"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "22",
+      "branch": "main"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "21",
+      "branch": "feature/cart-redesign"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "20",
+      "branch": "main"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "19",
+      "branch": "main"
+     },
+     {
+      "job": "Shop_Backend_IntegrationTests",
+      "number": "18",
+      "branch": "main"
+     }
+    ]
+   },
+   "ordered": [
+    "runs"
+   ]
+  },
+  "investigate-failure": {
+   "file": "answer.json",
+   "answer": {
+    "failed_tests": [
+     "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+     "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+    ],
+    "first_failing_run": "5",
+    "culprit_commit": "abb916f09c2a76aa8644d0a42dfb2b8ad971e518",
+    "culprit_author": "bob"
+   },
+   "prefix": [
+    "culprit_commit"
+   ]
+  },
+  "daily-loop": {
+   "file": "answer.json",
+   "answer": {
+    "runs": [
+     {
+      "number": "27",
+      "status": "SUCCESS"
+     },
+     {
+      "number": "26",
+      "status": "SUCCESS"
+     },
+     {
+      "number": "25",
+      "status": "SUCCESS"
+     },
+     {
+      "number": "24",
+      "status": "SUCCESS"
+     },
+     {
+      "number": "23",
+      "status": "FAILURE"
+     }
+    ],
+    "breaking_commit": "d5e23a69eeb56d36831fbe91df1e67eee293fd4b",
+    "breaking_commit_author": "bob"
+   },
+   "ordered": [
+    "runs"
+   ],
+   "prefix": [
+    "breaking_commit"
+   ]
+  },
+  "inspect-url": {
+   "file": "answer.json",
+   "answer": {
+    "job": "Shop_Backend_UnitTests",
+    "succeeded": 5,
+    "failed": 5,
+    "latest_status": "FAILURE"
+   }
+  },
+  "branch-status": {
+   "file": "answer.json",
+   "answer": {
+    "branches": {
+     "main": "SUCCESS",
+     "release/2.4": "SUCCESS",
+     "feature/cart-redesign": "FAILURE"
+    }
+   }
+  },
+  "cross-project": {
+   "file": "answer.json",
+   "answer": {
+    "subprojects": [
+     {
+      "project": "Shop_Backend",
+      "jobs": 5,
+      "never_run": 2,
+      "failing": 2
+     },
+     {
+      "project": "Shop_Frontend",
+      "jobs": 4,
+      "never_run": 3,
+      "failing": 0
+     },
+     {
+      "project": "Shop_Release",
+      "jobs": 4,
+      "never_run": 2,
+      "failing": 1
+     }
+    ]
+   }
+  },
+  "explore-infrastructure": {
+   "file": "answer.json",
+   "answer": {
+    "top_level_projects": [
+     "Infra",
+     "Shop"
+    ],
+    "shop_subprojects": [
+     "Shop_Backend",
+     "Shop_Frontend",
+     "Shop_Release"
+    ],
+    "agent_pools": 4,
+    "agents": 3
+   }
+  },
+  "hallucination-resistance": {
+   "file": "answer.json",
+   "answer": {
+    "failed_runs": 27,
+    "error_file": "backend/src/Cart.java",
+    "slowest_test": "com.acme.shop.billing.InvoiceTest.rendersPdf",
+    "slowest_test_ms": 4310
+   }
+  },
+  "locate-and-link": {
+   "file": "teamcity.toml",
+   "answer": {
+    "server": [
+     {
+      "url": "http://teamcity:8111",
+      "project": "Shop_Backend"
+     }
+    ]
+   }
+  },
+  "use-repository-link": {
+   "file": "answer.json",
+   "answer": {
+    "job": "Shop_Frontend_Build",
+    "number": "9",
+    "branch": "main",
+    "status": "SUCCESS"
+   }
+  },
+  "negative-unrelated": {
+   "file": "total_revenue.py",
+   "run": [
+    "python3",
+    "total_revenue.py"
+   ],
+   "stdout": "987.25",
+   "files": {
+    "sales.csv": "order_id,customer,amount\n1001,Lena,120.50\n1002,Omar,300.00\n1003,Ines,566.75\n"
+   }
+  }
+ }
+}

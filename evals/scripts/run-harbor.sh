@@ -3,13 +3,16 @@
 # with it, then import the trials (checks, LLM judge, Langfuse), gate them and write report.html.
 #
 # Usage: evals/scripts/run-harbor.sh [harbor run args]   e.g. -k 2 -n 4, or -i flaky-tests
-# Env:   TEAMCITY_URL, TEAMCITY_TOKEN (eval server), ANTHROPIC_API_KEY (agent and judge),
+# Env:   ANTHROPIC_API_KEY (agent and judge),
 #        EVAL_MODEL (default anthropic/claude-sonnet-5-5), BRANCH_NAME (names the experiment),
 #        LANGFUSE_* (optional), GATE_MODE (warn|enforce).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-: "${TEAMCITY_URL:?}" "${TEAMCITY_TOKEN:?}"
+# The seeded server (snapshot from `just eval-seed`); stopped on exit unless it was already running.
+[ -n "$(docker ps -q -f 'name=^tc-eval-server$')" ] || trap "'$PWD/evals/seed/server.sh' down" EXIT
+eval "$("$PWD/evals/seed/server.sh" up)"
+network="$PWD/evals/harbor/compose.network.yaml"  # joins the trial containers to the server's network
 model="${EVAL_MODEL:-anthropic/claude-sonnet-5-5}"
 experiment="$(printf '%s' "${BRANCH_NAME:-harbor-$(date +%Y%m%d-%H%M%S)}" | tr '/:()' '_-__')"
 
@@ -30,9 +33,9 @@ export HARBOR_TELEMETRY=off
 # A local API proxy on loopback is unreachable from the trial containers; point them at the host.
 run_harbor() {
   if [ -n "${ANTHROPIC_BASE_URL:-}" ]; then
-    ANTHROPIC_BASE_URL="$(printf '%s' "$ANTHROPIC_BASE_URL" | sed -E 's#//(127\.0\.0\.1|localhost)([:/])#//host.docker.internal\2#')" harbor "$@"
+    ANTHROPIC_BASE_URL="$(printf '%s' "$ANTHROPIC_BASE_URL" | sed -E 's#//(127\.0\.0\.1|localhost)([:/])#//host.docker.internal\2#')" harbor "$@" --extra-docker-compose "$network"
   else
-    harbor "$@"
+    harbor "$@" --extra-docker-compose "$network"
   fi
 }
 run_harbor run -y -e docker -p tasks -a claude-code -m "$model" -o "$exp/jobs" --job-name CONTROL -x negative-unrelated "$@"

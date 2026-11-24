@@ -1,0 +1,7 @@
+# Joins every trial container to the network of the seeded TeamCity server (evals/seed/server.sh).
+services:
+  main:
+    networks: [default, tc-eval]
+networks:
+  tc-eval:
+    external: true
