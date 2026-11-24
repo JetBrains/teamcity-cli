@@ -31,6 +31,9 @@ SERVER_IMAGE = f"jetbrains/teamcity-server:{VERSION}"
 AGENT_IMAGE = f"jetbrains/teamcity-agent:{VERSION}"
 SNAPSHOT = "teamcity-cli-eval-server:seeded"
 NETWORK = "tc-eval"
+# The seed agents get a network with no route out. On a cloud build agent they would otherwise read
+# the host's instance metadata and register with the host's own TeamCity server.
+AGENT_NETWORK = "tc-eval-agents"
 SERVER = "tc-eval-seed"
 HOST_URL = "http://127.0.0.1:18111"
 ROOT_URL = "http://teamcity:8111"  # the server's address on the tc-eval network
@@ -122,6 +125,9 @@ def start_server() -> TC:
        "-e", "TEAMCITY_SERVER_MEM_OPTS=-Xmx1500m -XX:ReservedCodeCacheSize=400m",
        "-e", f"TEAMCITY_SERVER_OPTS={SERVER_OPTS}", "-e", "TEAMCITY_STOP_WAIT_TIME=120",
        "--entrypoint", "sh", SERVER_IMAGE, "-c", f"mkdir -p {DATA} && exec /run-services.sh")
+    sh("docker", "network", "rm", AGENT_NETWORK, check=False)
+    sh("docker", "network", "create", "--internal", AGENT_NETWORK)
+    sh("docker", "network", "connect", "--alias", "teamcity", AGENT_NETWORK, SERVER)
     token = wait_for("superuser token", lambda: re.findall(
         r"Super user authentication token: (\d+)", sh("docker", "logs", SERVER, check=False)))[-1]
     tc = TC("", token)
@@ -134,7 +140,7 @@ def start_server() -> TC:
 
 def start_agents(tc: TC) -> dict[str, int]:
     for name in AGENTS:
-        sh("docker", "run", "-d", "--name", name, "--network", NETWORK, "-e", f"SERVER_URL={ROOT_URL}",
+        sh("docker", "run", "-d", "--name", name, "--network", AGENT_NETWORK, "-e", f"SERVER_URL={ROOT_URL}",
            "-e", f"AGENT_NAME={name}", AGENT_IMAGE)
 
     def ready():
@@ -146,7 +152,7 @@ def start_agents(tc: TC) -> dict[str, int]:
         return ok if set(ok) == set(AGENTS) else None
 
     try:
-        return wait_for("agents to connect and upgrade", ready, timeout=900, interval=5)
+        return wait_for("agents to connect and upgrade", ready, timeout=420, interval=5)
     except TimeoutError:  # say why before failing: this is the step that depends on the host most
         print(tc.get("/app/rest/agents?locator=authorized:any&fields=agent(name,authorized,connected,uptodate)"), file=sys.stderr)
         for name in AGENTS:
@@ -432,6 +438,8 @@ def finish(tc: TC, users: dict[str, TC], agent_ids: dict[str, int], keep: bool) 
     if keep:
         print(f"Seed server left running at {HOST_URL}; viewer token in {SERVER}:/opt/teamcity/eval-token")
     sh("docker", "rm", "-f", "-v", *AGENTS)
+    sh("docker", "network", "disconnect", AGENT_NETWORK, SERVER, check=False)
+    sh("docker", "network", "rm", AGENT_NETWORK, check=False)
     wait_for("agents to disconnect", lambda: not tc.get("/app/rest/agents?locator=connected:true")["count"], timeout=120)
     fingerprint = write_ground_truth(tc)
     if keep:
@@ -465,4 +473,5 @@ if __name__ == "__main__":
     except BaseException:  # leave nothing running on the host after a failed seed
         if "--keep" not in sys.argv:
             sh("docker", "rm", "-f", "-v", SERVER, *AGENTS, check=False)
+            sh("docker", "network", "rm", AGENT_NETWORK, check=False)
         raise
