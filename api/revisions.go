@@ -93,10 +93,17 @@ func (c *Client) resolveRepositoryState(job string, specs []RevisionSpec) (map[s
 		if j := slices.IndexFunc(inst.RepositoryState.Branches, func(branch branchHead) bool { return branch.Default }); j >= 0 {
 			defaults[inst.Root] = inst.RepositoryState.Branches[j].Name
 		}
-		if defaults[inst.Root] == "" && inst.VcsName == "jetbrains.git" && inst.Properties != nil {
+		if defaults[inst.Root] != "" || inst.VcsName != "jetbrains.git" {
+			continue
+		}
+		if inst.Properties != nil {
 			if j := slices.IndexFunc(inst.Properties.Property, func(p Property) bool { return p.Name == "branch" }); j >= 0 {
 				defaults[inst.Root] = revisionBranch(inst.Properties.Property[j].Value)
 			}
+		}
+		// Git checks out "<unspecified>" without a branch, so fail before queueing a run that cannot check out; other VCS work without one.
+		if defaults[inst.Root] == "" && slices.ContainsFunc(specs, func(s RevisionSpec) bool { return s.VcsRootID == inst.Root && s.Branch == "" }) {
+			return nil, Validation("cannot determine the default branch of Git VCS root "+inst.Root, "Pass --branch, or --revision "+inst.Root+"=SHA@BRANCH")
 		}
 	}
 	for i, spec := range specs {

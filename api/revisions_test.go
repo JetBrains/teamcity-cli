@@ -40,8 +40,11 @@ func TestRunBuildRevisions(t *testing.T) {
 				{Version: "abc", VcsBranchName: "refs/heads/main", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
 				{Version: "abc", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
 			}},
-		{name: "root without default branch keeps no branch", opts: RunBuildOptions{Revision: "abc"}, heads: true,
-			state: `{"vcs-root-instance":[{"vcs-root-id":"A","repositoryState":{"branch":[{"name":"","version":"42","default":true}]}}]}`,
+		{name: "Git root without default branch fails before queueing", opts: RunBuildOptions{Revisions: []RevisionSpec{{VcsRootID: "A", Version: "abc"}}}, heads: true,
+			state:   `{"vcs-root-instance":[{"vcs-root-id":"A","vcsName":"jetbrains.git","repositoryState":{"branch":[{"name":"","default":true}]}}]}`,
+			wantErr: "cannot determine the default branch of Git VCS root A"},
+		{name: "non-Git root without default branch keeps no branch", opts: RunBuildOptions{Revision: "abc"}, heads: true,
+			state: `{"vcs-root-instance":[{"vcs-root-id":"A","vcsName":"svn","repositoryState":{"branch":[{"name":"","version":"42","default":true}]}}]}`,
 			want: []Revision{
 				{Version: "abc", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
 				{Version: "abc", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
