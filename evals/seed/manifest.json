@@ -1,5 +1,5 @@
 {
- "fingerprint": "0d1da0ea0d3b",
+ "fingerprint": "2173007c347b",
  "facts": {
   "projects": [
    {
@@ -1157,18 +1157,18 @@
     "comment": ""
    },
    {
-    "name": "linux-default-01",
-    "pool": "Default",
-    "enabled": true,
-    "authorized": true,
-    "comment": ""
-   },
-   {
     "name": "linux-builder-02",
     "pool": "Linux Builders",
     "enabled": false,
     "authorized": true,
     "comment": "Disk replacement scheduled, see INFRA-212"
+   },
+   {
+    "name": "linux-default-01",
+    "pool": "Default",
+    "enabled": true,
+    "authorized": true,
+    "comment": ""
    }
   ]
  },

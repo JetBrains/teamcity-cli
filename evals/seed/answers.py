@@ -75,7 +75,8 @@ def facts(s: Server) -> dict:
         "pools": [{"name": p["name"], "projects": sorted(x["id"] for x in p["projects"].get("project", [])),
                    "agents": sorted(a["name"] for a in p["agents"].get("agent", []))} for p in pools],
         "agents": [{"name": a["name"], "pool": a["pool"]["name"], "enabled": a["enabled"], "authorized": a["authorized"],
-                    "comment": a.get("enabledInfo", {}).get("comment", {}).get("text", "")} for a in agents],
+                    "comment": a.get("enabledInfo", {}).get("comment", {}).get("text", "")}
+                   for a in sorted(agents, key=lambda a: a["name"])],  # the server lists them in registration order
     }
 
 
