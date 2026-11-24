@@ -1,15 +1,10 @@
 #!/bin/sh
-# Log the CLI in from the task's [environment.env] the way most users are: token in the CLI
-# config, not in TEAMCITY_* env vars. Then expand ${TEAMCITY_URL} in seeded workspace files.
+# Expand ${TEAMCITY_URL} in workspace files to the server the CLI config (baked into the image) names.
 python3 - <<'PY'
-import os, pathlib
-url, token = os.environ.get("TC_EVAL_URL", ""), os.environ.get("TC_EVAL_TOKEN", "")
-if url and token:
-    cfg = pathlib.Path.home() / ".config" / "tc" / "config.yml"
-    cfg.parent.mkdir(parents=True, exist_ok=True)
-    cfg.write_text(f"analytics_notice_shown: true\ndefault_server: {url}\nservers:\n    {url}:\n        token: {token}\n")
-    cfg.chmod(0o600)
-os.environ["TEAMCITY_URL"] = url
+import os, pathlib, re
+cfg = pathlib.Path.home() / ".config" / "tc" / "config.yml"
+found = re.search(r"^default_server: (\S+)", cfg.read_text() if cfg.is_file() else "", re.M)
+os.environ["TEAMCITY_URL"] = found.group(1) if found else ""
 for p in pathlib.Path("/app").rglob("*"):
     if p.is_file() and "${" in (text := p.read_text(errors="ignore")):
         p.write_text(os.path.expandvars(text))

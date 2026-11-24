@@ -17,7 +17,3 @@ timeout_sec = 120.0
 [environment]
 build_timeout_sec = 600.0
 network_mode = "public"
-
-[environment.env]
-TC_EVAL_URL = "${TEAMCITY_URL}"
-TC_EVAL_TOKEN = "${TEAMCITY_TOKEN}"

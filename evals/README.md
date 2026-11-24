@@ -167,8 +167,9 @@ The LLM judge (`llm_grade` tasks) and the efficiency numbers (tokens, turns, too
 advisory and are reported next to the lift.
 
 The CLI in each trial is logged in through its config file, not `TEAMCITY_*` env vars, the way
-most agent sessions authenticate (keyring). The task passes the server as `TC_EVAL_URL` and
-`TC_EVAL_TOKEN`; `harbor/entrypoint.sh` writes them into the CLI config and expands
+most agent sessions authenticate (keyring). The config is baked into the eval image at build
+time and nothing about the server is in the trial's environment, so an agent cannot pick up the
+token with `env` and answer over REST without the CLI. `harbor/entrypoint.sh` expands
 `${TEAMCITY_URL}` in workspace files. The verifier shares the agent's container because a
 separate verifier does not receive the trajectory; `harbor lint` flags this as `shared-verifier`.
 

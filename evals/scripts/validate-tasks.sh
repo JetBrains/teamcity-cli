@@ -10,7 +10,8 @@ cd "$(dirname "$0")/../.."
 eval "$("$PWD/evals/seed/server.sh" up)"
 GOOS=linux go build -o bin/teamcity-linux ./tc
 go run scripts/generate-cli-schema.go > evals/cli_schema.json
-docker build -q -f evals/harbor/Dockerfile -t teamcity-cli-eval:latest . > /dev/null
+docker build -q -f evals/harbor/Dockerfile --build-arg TC_EVAL_URL="$TEAMCITY_URL" --build-arg TC_EVAL_TOKEN="$TEAMCITY_TOKEN" \
+  -t teamcity-cli-eval:latest . > /dev/null
 
 cd evals
 out="results/validate"

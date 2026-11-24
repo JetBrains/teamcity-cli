@@ -18,7 +18,8 @@ experiment="$(printf '%s' "${BRANCH_NAME:-harbor-$(date +%Y%m%d-%H%M%S)}" | tr '
 
 GOOS=linux go build -o bin/teamcity-linux ./tc
 go run scripts/generate-cli-schema.go > evals/cli_schema.json
-docker build -q -f evals/harbor/Dockerfile -t teamcity-cli-eval:latest . > /dev/null
+docker build -q -f evals/harbor/Dockerfile --build-arg TC_EVAL_URL="$TEAMCITY_URL" --build-arg TC_EVAL_TOKEN="$TEAMCITY_TOKEN" \
+  -t teamcity-cli-eval:latest . > /dev/null
 
 cd evals
 uv sync -q
