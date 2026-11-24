@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Callable
 
-from scaffold.events import ClaudeEvents
+from scaffold.events import AgentEvents
 
 _ENV_ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 _FLAG = re.compile(r"^-{1,2}[A-Za-z]")
@@ -147,7 +147,7 @@ class CheckResult:
 class EvalRunner:
     """Runs validation checks against Claude's output."""
 
-    def __init__(self, events: ClaudeEvents, task_name: str = ""):
+    def __init__(self, events: AgentEvents, task_name: str = ""):
         self.events = events
         self.task_name = task_name
         self._results: list[CheckResult] = []

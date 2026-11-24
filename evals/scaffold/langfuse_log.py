@@ -4,7 +4,7 @@ One trace per eval run (name = task). A generation child carries token usage so
 trace-level token metrics populate; one tool span per Claude tool call feeds the
 "tool calls by tool" breakdown. Quality signals become first-class Langfuse
 scores (pass_rate, passed, pass_bucket, judge:<dim>), so dashboards aggregate
-them directly — no span-timing reconstruction like the Sentry path needs.
+them directly.
 Langfuse is observability only — gating still runs on local artifacts via
 scripts/compare.py.
 
@@ -38,7 +38,7 @@ def init_if_configured() -> Any:
     _client = Langfuse(
         host=os.environ.get("LANGFUSE_HOST") or os.environ.get("LANGFUSE_BASE_URL") or None,
         environment=os.environ.get("LANGFUSE_TRACING_ENVIRONMENT")
-        or os.environ.get("SENTRY_ENVIRONMENT", "eval"),
+        or "eval",
         release=os.environ.get("LANGFUSE_RELEASE") or os.environ.get("BRANCH_NAME") or None,
     )
     return _client
@@ -107,7 +107,7 @@ def log_run(
         import langfuse as _lf
 
         prov = provenance or {}
-        model = prov.get("model") or os.environ.get("BENCH_CC_MODEL", "")
+        model = prov.get("model") or os.environ.get("EVAL_MODEL", "")
         total_tokens = input_tokens + output_tokens
         bucket = _bucket(pass_rate)
         instruction_t = _truncate(instruction, 4000)
@@ -188,7 +188,7 @@ def log_run(
                     ).end()
 
                 # Quality signals as native scores — the reason Langfuse fits
-                # evals better than Sentry: these aggregate without measurement hacks.
+                # evals: these aggregate across runs.
                 score = client.score_current_trace
                 score(name="pass_rate", value=float(pass_rate), data_type="NUMERIC")
                 score(name="passed", value=1 if pass_rate >= 0.5 else 0, data_type="BOOLEAN")

@@ -59,14 +59,15 @@ def _call_anthropic_sdk(prompt: str) -> str | None:
         return None
 
     try:
+        import anthropic
+
         # Sonnet 5.5 thinks by default: leave room for it, and read the text block, not content[0].
-        response = client.beta.messages.create(
-            model=GRADER_MODEL,
-            max_tokens=16000,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-            messages=[{"role": "user", "content": prompt}],
-        )
+        request = {"model": GRADER_MODEL, "max_tokens": 16000, "messages": [{"role": "user", "content": prompt}]}
+        try:
+            response = client.beta.messages.create(
+                **request, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
+        except anthropic.BadRequestError:  # some gateways don't proxy fallbacks
+            response = client.messages.create(**request)
         if response.stop_reason == "refusal":
             return None
         return next((b.text for b in response.content if b.type == "text"), None)
