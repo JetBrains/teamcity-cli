@@ -1,0 +1,60 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "runs": [
+   {
+    "job": "Shop_Backend_UnitTests",
+    "number": "11",
+    "branch": "main"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "26",
+    "branch": "main"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "25",
+    "branch": "main"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "24",
+    "branch": "main"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "23",
+    "branch": "release/2.4"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "22",
+    "branch": "main"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "21",
+    "branch": "feature/cart-redesign"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "20",
+    "branch": "main"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "19",
+    "branch": "main"
+   },
+   {
+    "job": "Shop_Backend_IntegrationTests",
+    "number": "18",
+    "branch": "main"
+   }
+  ]
+ },
+ "ordered": [
+  "runs"
+ ]
+}

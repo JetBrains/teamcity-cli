@@ -1,0 +1,13 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "jobs_with_docker_steps": 6,
+  "images": {
+   "redocly/cli:1.25.11": 1,
+   "flyway/flyway:10.22": 1,
+   "mcr.microsoft.com/playwright:v1.49.1-jammy": 1,
+   "node:22-alpine": 4,
+   "anchore/syft:v1.18.1": 1
+  }
+ }
+}

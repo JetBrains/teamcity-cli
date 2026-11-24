@@ -1,0 +1,9 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "job": "Shop_Backend_UnitTests",
+  "succeeded": 5,
+  "failed": 5,
+  "latest_status": "FAILURE"
+ }
+}

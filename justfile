@@ -176,7 +176,15 @@ eval *args:
 # Harness unit tests only — no server, no API calls
 eval-unit *args:
     go run scripts/generate-cli-schema.go > evals/cli_schema.json
-    cd evals && uv run pytest tests/test_checks.py -v {{args}}
+    cd evals && uv run pytest tests -v {{args}}
+
+# Build the seeded TeamCity server snapshot the evals query (about 25 min; rewrites the reference answers)
+eval-seed *args:
+    python3 evals/seed/seed.py {{args}}
+
+# Check every task without a model: the oracle solution scores 1, the no-op agent 0
+eval-validate *args:
+    evals/scripts/validate-tasks.sh {{args}}
 
 # Gate/report an experiment: paired lift ± CI (pass two results dirs to diff)
 eval-diff *args:

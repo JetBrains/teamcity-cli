@@ -1,0 +1,11 @@
+{
+ "file": "teamcity.toml",
+ "answer": {
+  "server": [
+   {
+    "url": "http://teamcity:8111",
+    "project": "Shop_Backend"
+   }
+  ]
+ }
+}

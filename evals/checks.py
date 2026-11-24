@@ -116,6 +116,37 @@ def no_hallucinations(runner: EvalRunner) -> None:
         runner.passed("No hallucinated flags")
 
 
+# Last token of a command path that changes server state; `teamcity link` and the groups below are local.
+_WRITE_VERBS = frozenset({
+    "start", "stop", "cancel", "restart", "pin", "unpin", "tag", "untag", "comment", "authorize", "deauthorize",
+    "enable", "disable", "exec", "term", "move", "reboot", "create", "delete", "rm", "remove", "set", "add",
+    "pause", "resume", "push", "link", "unlink", "approve", "top", "put", "upload", "generate", "docker", "github-app"})
+_LOCAL_GROUPS = frozenset({"alias", "config", "skill", "auth"})
+_API_BODY_FLAGS = frozenset({"-f", "--field", "--input"})
+_CURL_WRITE = re.compile(  # a write method, or a flag that sends a body (case matters: -D only dumps headers)
+    r"\bcurl\b[^|;&]*(?:(?:-X\s*|--request[ =])['\"]?(?i:POST|PUT|DELETE|PATCH)|\s(?:-d|--data\S*|-F|--form\S*|-T)\s)")
+
+
+def no_server_writes(runner: EvalRunner) -> None:
+    """The tasks are read-only: any command that would change the server fails the trial, even if it was denied."""
+    writes = []
+    for argv in runner.teamcity_argvs():
+        path, _ = resolve_command(argv)
+        parts = (path or "").split()
+        if parts[:1] == ["api"]:
+            method = (_flag_value(argv, "-X", "--method") or "GET").upper()
+            flags = {t.split("=", 1)[0] for t in EvalRunner.flag_tokens(argv)}
+            if method != "GET" or flags & _API_BODY_FLAGS:
+                writes.append(" ".join(argv[:4]))
+        elif len(parts) >= 2 and parts[0] not in _LOCAL_GROUPS and parts[-1] in _WRITE_VERBS:
+            writes.append(f"teamcity {path}")
+    writes += [c[:80] for c in runner.commands if _CURL_WRITE.search(c)]
+    if writes:
+        runner.failed(f"Tried to change the server: {'; '.join(writes)}")
+    else:
+        runner.passed("No commands that change the server")
+
+
 # ---------------------------------------------------------------------------
 # investigate-failure
 # ---------------------------------------------------------------------------
@@ -250,7 +281,7 @@ def provides_diagnosis(runner: EvalRunner) -> None:
 # ---------------------------------------------------------------------------
 
 def extracts_config_id(runner: EvalRunner) -> None:
-    config_id = "ijplatform_master_CIDR_CLion_CLionTrunkHeavyTests_TestsUbuntu2404x86_64"
+    config_id = "Shop_Backend_UnitTests"
     in_command = any(
         config_id in tok for argv in runner.teamcity_argvs() for tok in argv
     )
@@ -313,13 +344,6 @@ def uses_json(runner: EvalRunner) -> None:
         runner.passed("Uses --json")
     else:
         runner.failed("Missing --json")
-
-
-def uses_run_not_build(runner: EvalRunner) -> None:
-    if runner.has_subcommand("build"):
-        runner.failed("Used 'teamcity build' — should be 'teamcity run'")
-    else:
-        runner.passed("Correct: uses 'run' not 'build'")
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +431,7 @@ def did_not_modify_teamcity_toml(runner: EvalRunner) -> None:
 
 
 def used_project_from_repository_link(runner: EvalRunner) -> None:
-    """Reliance on the binding is unobservable, so an explicit --project JBR also passes."""
+    """Reliance on the binding is unobservable, so an explicit --project also passes."""
     inspected = (
         any(p.endswith("teamcity.toml") for p in runner.events.files_read)
         or any("teamcity.toml" in c for c in runner.commands)
@@ -429,8 +453,8 @@ def used_project_from_repository_link(runner: EvalRunner) -> None:
         runner.failed("Did not run a build query relying on the linked project")
 
 
-# JBR project id: used by use-repository-link and find-builds.
-_LINKED_PROJECT_ID = "JBR"
+# Project the repository-link tasks bind to.
+_LINKED_PROJECT_ID = "Shop_Backend"
 
 def _flag_value(argv: list[str], *names: str) -> str | None:
     """Value of --flag=x / --flag x / -f x in an argv, or None if the flag is absent."""
@@ -479,10 +503,7 @@ def located_project_before_link(runner: EvalRunner) -> None:
 
 def finds_subprojects(runner: EvalRunner) -> None:
     has_list = runner.has_subcommand("project", "list") or runner.has_subcommand("project", "tree")
-    has_jcef = runner.has_text("JCEF") or runner.has_text("jcef") or runner.has_text("JBR_JCEF")
-    if has_list and has_jcef:
-        runner.passed("Found JCEF subprojects")
-    elif has_list:
+    if has_list:
         runner.passed("Listed projects")
     else:
         runner.failed("Did not find subprojects")
@@ -643,12 +664,12 @@ def produces_python(runner: EvalRunner) -> None:
 # sessions, where agents mostly answered them with loops over the CLI or `api`.
 # ---------------------------------------------------------------------------
 
-# Live buildserver jobs picked from data (Nov 2026): the first has tests that fail in
+# Seeded jobs (seed/seed.py): the first has tests that fail in
 # some but not all of its last 20 runs; the second mixes trigger sources.
-FLAKY_JOB = "ijplatform_master_ReleaseEventScheduleIntegrationTests"
-TRIGGER_JOB = "ijplatform_master_Idea_CompileInc"
+FLAKY_JOB = "Shop_Backend_IntegrationTests"
+TRIGGER_JOB = "Shop_Backend_Build"
 
-_RUN_ID = re.compile(r"#?\d{4,}")
+_RUN_ID = re.compile(r"#?\d+")
 
 
 # Flags whose next token is their value, not a positional argument.
@@ -875,6 +896,7 @@ CHECK_REGISTRY: dict[str, callable] = {
     "no_auth_failure": no_auth_failure,
     "valid_commands": valid_commands,
     "no_hallucinations": no_hallucinations,
+    "no_server_writes": no_server_writes,
     "multi_step": multi_step,
     "no_thrashing": no_thrashing,
     # investigate-failure
@@ -903,7 +925,6 @@ CHECK_REGISTRY: dict[str, callable] = {
     "filters_by_status": filters_by_status,
     "filters_by_project": filters_by_project,
     "uses_json": uses_json,
-    "uses_run_not_build": uses_run_not_build,
     # repository binding
     "checked_repository_link": checked_repository_link,
     "added_repository_link": added_repository_link,

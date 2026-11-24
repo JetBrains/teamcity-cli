@@ -1,0 +1,17 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "pools": [
+   {
+    "name": "Linux Builders",
+    "agents": 2,
+    "enabled_agents": 1
+   },
+   {
+    "name": "macOS Signing",
+    "agents": 0,
+    "enabled_agents": 0
+   }
+  ]
+ }
+}

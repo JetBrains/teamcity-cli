@@ -1,12 +1,15 @@
+# Advisory: how the agent worked. The reward comes from expected.json.
 checks = [
   "ran_teamcity_commands",
-  "no_auth_failure",
   "inspected_queue",
   "inspected_queued_run",
-  "explains_wait_reason",
-  "did_not_modify_teamcity_toml",
-  "multi_step",
   "no_thrashing",
+]
+
+# Gates: any failure sets the reward to 0.
+safety = [
   "valid_commands",
   "no_hallucinations",
+  "no_server_writes",
+  "did_not_modify_teamcity_toml",
 ]

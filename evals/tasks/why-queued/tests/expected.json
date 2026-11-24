@@ -1,0 +1,10 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "job": "Shop_Release_Deploy",
+  "triggered_by": "carol",
+  "missing_agent_parameter": "env.STAGING_KUBECONFIG",
+  "compatible_agents": 0,
+  "queued_runs_in_project": 3
+ }
+}

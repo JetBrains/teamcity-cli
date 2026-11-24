@@ -1,8 +1,7 @@
-I'm trying to understand the CI setup for the CEF/JCEF part of JetBrains Runtime. Can you:
+I'm trying to understand the CI health of the Acme Shop project (ID `Shop`). For each of its direct subprojects, tell me how many jobs it has, how many of them have never had a finished run, and how many are failing right now (their latest finished run on the default branch failed).
 
-1. Find the JCEF-related subprojects under JetBrains Runtime
-2. List the build jobs in those projects
-3. Show me the recent build history — are things generally green or are there frequent failures?
-4. Find if there are any builds currently in the queue for these projects
+Write your answer to `answer.json` in the current directory, in exactly this shape:
 
-Give me a summary of the CI health for this area.
+```json
+{"subprojects": [{"project": "<project ID>", "jobs": <number>, "never_run": <number>, "failing": <number>}]}
+```

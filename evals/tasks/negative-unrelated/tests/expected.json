@@ -1,0 +1,11 @@
+{
+ "file": "total_revenue.py",
+ "run": [
+  "python3",
+  "total_revenue.py"
+ ],
+ "stdout": "987.25",
+ "files": {
+  "sales.csv": "order_id,customer,amount\n1001,Lena,120.50\n1002,Omar,300.00\n1003,Ines,566.75\n"
+ }
+}

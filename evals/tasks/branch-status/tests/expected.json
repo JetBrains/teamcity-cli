@@ -1,0 +1,10 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "branches": {
+   "main": "SUCCESS",
+   "release/2.4": "SUCCESS",
+   "feature/cart-redesign": "FAILURE"
+  }
+ }
+}

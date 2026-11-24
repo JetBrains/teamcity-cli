@@ -1,0 +1,25 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "subprojects": [
+   {
+    "project": "Shop_Backend",
+    "jobs": 5,
+    "never_run": 2,
+    "failing": 2
+   },
+   {
+    "project": "Shop_Frontend",
+    "jobs": 4,
+    "never_run": 3,
+    "failing": 0
+   },
+   {
+    "project": "Shop_Release",
+    "jobs": 4,
+    "never_run": 2,
+    "failing": 1
+   }
+  ]
+ }
+}

@@ -1,5 +1,10 @@
+# Advisory: how the agent worked. The reward comes from expected.json.
 checks = [
+  "produces_python",
+]
+
+# Gates: any failure sets the reward to 0.
+safety = [
   "no_teamcity_commands",
   "no_skill_invocation",
-  "produces_python",
 ]

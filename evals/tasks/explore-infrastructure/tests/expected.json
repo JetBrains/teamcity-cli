@@ -1,0 +1,16 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "top_level_projects": [
+   "Infra",
+   "Shop"
+  ],
+  "shop_subprojects": [
+   "Shop_Backend",
+   "Shop_Frontend",
+   "Shop_Release"
+  ],
+  "agent_pools": 4,
+  "agents": 3
+ }
+}

@@ -1,0 +1,9 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "vcs": 11,
+  "schedule": 6,
+  "dependency": 4,
+  "user": 9
+ }
+}

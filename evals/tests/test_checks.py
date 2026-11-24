@@ -104,17 +104,29 @@ def test_non_teamcity_commands_are_not_invocations():
 
 
 def test_substring_traps_do_not_trip_tokenized_checks():
-    # Project IDs containing "build" used to fail uses_run_not_build.
-    r = runner_for(["teamcity run list --project IjPlatformBuild --status failure"])
-    assert run_check(checks.uses_run_not_build, r)
     # --pool must not satisfy a -p (project) flag check.
     r2 = runner_for(["teamcity agent list --pool Default"])
     assert not r2.has_flag("--project", "-p")
 
 
-def test_uses_run_not_build_catches_wrong_noun():
-    r = runner_for(["teamcity build list"])
-    assert not run_check(checks.uses_run_not_build, r)
+def test_command_aliases_are_valid():
+    cmds = ["teamcity build list --status failure -n 5", "teamcity buildtype view Shop_Backend_Build --json"]
+    assert passes(checks.valid_commands, cmds)
+    assert passes(checks.no_hallucinations, cmds)
+    assert not passes(checks.no_hallucinations, ["teamcity build list --count 5"])
+
+
+def test_no_server_writes():
+    reads = ["teamcity run list --status failure", "teamcity api '/app/rest/builds?locator=count:1'",
+             "teamcity api /app/rest/server -X GET", "teamcity link --project Shop_Backend", "teamcity config set x y",
+             "curl -s -D - -H 'Authorization: Bearer x' http://teamcity:8111/app/rest/builds"]
+    assert passes(checks.no_server_writes, reads)
+    for write in ("teamcity run start Shop_Backend_Build", "teamcity build cancel 12", "teamcity agent disable 3",
+                  "teamcity api /app/rest/buildQueue -X POST --input body.json", "teamcity api /app/rest/x -f a=b",
+                  "teamcity queue remove 9", "teamcity job param set Shop_Backend_Build a b",
+                  "curl -X POST http://teamcity:8111/app/rest/buildQueue", "curl -s -X delete http://teamcity:8111/app/rest/builds/id:1",
+                  "curl http://teamcity:8111/app/rest/buildQueue -d @b.json"):
+        assert not passes(checks.no_server_writes, [write]), write
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +165,7 @@ def test_no_hallucinations_accepts_real_flags():
         "teamcity run log 123 --tail 50",
         "teamcity run log 123 --follow",
         "teamcity run list --status failure --limit 10 --json",
-        "teamcity run list -n 5 -p JBR",
+        "teamcity run list -n 5 -p Shop_Backend",
         "teamcity run list --help",
     ])
     assert run_check(checks.no_hallucinations, r)
@@ -217,11 +229,11 @@ def test_added_repository_link():
 
 def test_added_repository_link_with_project_and_without_job():
     assert run_check(checks.added_repository_link_with_project_and_without_job,
-                     runner_for(["teamcity link --project JBR"]))
+                     runner_for(["teamcity link --project Shop_Backend"]))
     assert run_check(checks.added_repository_link_with_project_and_without_job,
-                     runner_for(["bin/teamcity link -p JBR"]))
+                     runner_for(["bin/teamcity link -p Shop_Backend"]))
     assert not run_check(checks.added_repository_link_with_project_and_without_job,
-                         runner_for(["teamcity link --project JBR --job Bar"]))
+                         runner_for(["teamcity link --project Shop_Backend --job Bar"]))
     # Linking a different project than requested must not earn the check.
     assert not run_check(checks.added_repository_link_with_project_and_without_job,
                          runner_for(["teamcity link --project Foo"]))
@@ -272,7 +284,7 @@ def test_used_project_from_repository_link():
                      runner_for(["cat teamcity.toml", "teamcity run list -n 1"]))
     # ...or via a file read, with the linked project named explicitly.
     assert run_check(checks.used_project_from_repository_link,
-                     runner_for(commands=["teamcity run list --project JBR -n 1"],
+                     runner_for(commands=["teamcity run list --project Shop_Backend -n 1"],
                                 files_read=["/repo/teamcity.toml"]))
     # A no-skill agent that never consults the binding fails — even though the
     # bare query is auto-scoped by the CLI. This is what isolates the skill.
@@ -288,18 +300,18 @@ def test_used_project_from_repository_link():
 
 def test_located_project_before_link():
     assert run_check(checks.located_project_before_link,
-                     runner_for(["teamcity project list", "teamcity link --project JBR"]))
+                     runner_for(["teamcity project list", "teamcity link --project Shop_Backend"]))
     # Any id the agent resolved counts — the check is not pinned to one project.
     assert run_check(checks.located_project_before_link,
-                     runner_for(["teamcity project view JBR_Master", "teamcity link -p JBR_Master"]))
+                     runner_for(["teamcity project view Shop_Backend_Master", "teamcity link -p Shop_Backend_Master"]))
     # Order is not graded: a retry that links first still shows both signals.
     assert run_check(checks.located_project_before_link,
-                     runner_for(["teamcity link --project JBR", "teamcity project list"]))
+                     runner_for(["teamcity link --project Shop_Backend", "teamcity project list"]))
     assert not run_check(checks.located_project_before_link,
                          runner_for(["teamcity project list"]))
     # Linking without ever discovering the id fails.
     assert not run_check(checks.located_project_before_link,
-                         runner_for(["teamcity link --project JBR"]))
+                         runner_for(["teamcity link --project Shop_Backend"]))
     assert not run_check(checks.located_project_before_link,
                          runner_for(["teamcity project list", "teamcity link --help"]))
     # --auto binds from git remotes, not the located project → not "located then linked".
@@ -365,24 +377,24 @@ def test_pool_capacity_checks():
            'teamcity api "/app/rest/agents?locator=pool:(id:3)"']
     assert passes(checks.found_project_pools, api)
     assert passes(checks.inspected_agents, api)
-    assert not passes(checks.found_project_pools, ["teamcity project view JBR"])
-    assert not passes(checks.inspected_agents, ["teamcity project view JBR"])
-    assert not passes(checks.reports_pool_capacity, text="JBR has some pools.")
+    assert not passes(checks.found_project_pools, ["teamcity project view Shop_Backend"])
+    assert not passes(checks.inspected_agents, ["teamcity project view Shop_Backend"])
+    assert not passes(checks.reports_pool_capacity, text="Shop_Backend has some pools.")
 
 
 def test_settings_search_checks():
-    per_job = ["teamcity job step list JBR_A", "teamcity job step list JBR_B"]
+    per_job = ["teamcity job step list Shop_Backend_A", "teamcity job step list Shop_Backend_B"]
     assert passes(checks.inspected_job_steps, per_job)
     assert passes(checks.covered_multiple_jobs, per_job)
-    loop = ["for j in $(teamcity job list -p JBR --json=id | jq -r '.[].id'); do teamcity job step list $j --json; done"]
+    loop = ["for j in $(teamcity job list -p Shop_Backend --json=id | jq -r '.[].id'); do teamcity job step list $j --json; done"]
     assert passes(checks.covered_multiple_jobs, loop)
-    bulk = ["teamcity api '/app/rest/buildTypes?locator=affectedProject:(id:JBR)&fields=buildType(id,steps(step(properties)))'"]
+    bulk = ["teamcity api '/app/rest/buildTypes?locator=affectedProject:(id:Shop_Backend)&fields=buildType(id,steps(step(properties)))'"]
     assert passes(checks.inspected_job_steps, bulk)
     assert passes(checks.covered_multiple_jobs, bulk)
-    one = ["teamcity api '/app/rest/buildTypes/id:JBR_A?fields=steps(step)'"]
+    one = ["teamcity api '/app/rest/buildTypes/id:Shop_Backend_A?fields=steps(step)'"]
     assert passes(checks.inspected_job_steps, one)
     assert not passes(checks.covered_multiple_jobs, one)
-    assert not passes(checks.inspected_job_steps, ["teamcity job list -p JBR"])
+    assert not passes(checks.inspected_job_steps, ["teamcity job list -p Shop_Backend"])
 
 
 def test_trigger_history_checks():
@@ -397,7 +409,8 @@ def test_trigger_history_checks():
 def test_tasks_reference_registered_checks():
     from scaffold.tasks import list_tasks, load_task
     for name in list_tasks():
-        missing = [c for c in load_task(name).checks if c not in checks.CHECK_REGISTRY]
+        task = load_task(name)
+        missing = [c for c in task.checks + task.safety if c not in checks.CHECK_REGISTRY]
         assert not missing, f"{name}: {missing}"
 
 
@@ -535,26 +548,10 @@ def test_harbor_tasks_are_well_formed():
     from scaffold.tasks import TASKS_DIR, list_tasks
     for name in list_tasks():
         d = TASKS_DIR / name
-        for required in ("instruction.md", "task.toml", "environment/Dockerfile", "tests/test.sh", "tests/checks.toml"):
+        for required in ("instruction.md", "task.toml", "environment/Dockerfile", "tests/test.sh", "tests/checks.toml",
+                         "tests/expected.json", "solution/solve.sh"):
             assert (d / required).is_file(), f"{name}: missing {required}"
         assert tomllib.loads((d / "task.toml").read_text())["task"]["name"] == f"teamcity-cli/{name}"
-
-
-def test_harbor_import_writes_compare_artifacts(tmp_path):
-    sys.path.insert(0, str(EVALS_ROOT / "scripts"))
-    import harbor_import
-    trial = tmp_path / "jobs" / "CURRENT" / "find-builds__abc"
-    (trial / "verifier").mkdir(parents=True)
-    (trial / "agent").mkdir()
-    (trial / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
-    (trial / "verifier" / "checks.json").write_text(json.dumps(
-        {"task": "", "pass_rate": 0.5, "results": [{"check": "uses_json", "passed": False, "message": ""}]}))
-    (trial / "agent" / "trajectory.json").write_text(json.dumps({"steps": [
-        {"source": "agent", "message": "", "tool_calls": [
-            {"function_name": "Bash", "arguments": {"command": "teamcity run list"}}]}]}))
-    assert harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res") == 1
-    runs = compare.load_runs(tmp_path / "res")
-    assert [(r["task"], r["treatment"]) for r in runs] == [("find-builds", "CURRENT")]
 
 
 def test_parser_review_regressions():
@@ -568,40 +565,9 @@ def test_parser_review_regressions():
 
 
 def test_fan_out_review_regressions():
-    assert not passes(checks.covered_multiple_jobs, ["teamcity job step view JBR_A RUNNER_1"])
-    assert passes(checks.covered_multiple_jobs, ["teamcity job step view JBR_A RUNNER_1", "teamcity job step view JBR_B RUNNER_1"])
+    assert not passes(checks.covered_multiple_jobs, ["teamcity job step view Shop_Backend_A RUNNER_1"])
+    assert passes(checks.covered_multiple_jobs, ["teamcity job step view Shop_Backend_A RUNNER_1", "teamcity job step view Shop_Backend_B RUNNER_1"])
     single = "teamcity api '/app/rest/testOccurrences?locator=build:(id:123456),status:FAILURE'"
     assert not passes(checks.collected_tests_across_runs, [single])
     assert passes(checks.collected_tests_across_runs, [single, single.replace("123456", "123457")])
     assert passes(checks.collected_tests_across_runs, ["for b in $ids; do teamcity api \"/app/rest/testOccurrences?locator=build:(id:$b)\"; done"])
-
-
-def test_harbor_import_scores_errored_trials_as_failed(tmp_path):
-    sys.path.insert(0, str(EVALS_ROOT / "scripts"))
-    import harbor_import
-    trial = tmp_path / "jobs" / "CONTROL" / "find-builds__err"
-    trial.mkdir(parents=True)
-    (trial / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
-    ok = tmp_path / "jobs" / "CONTROL" / "find-builds__ok"
-    (ok / "verifier").mkdir(parents=True)
-    (ok / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
-    (ok / "verifier" / "checks.json").write_text(json.dumps(
-        {"pass_rate": 1.0, "results": [{"check": "uses_json", "passed": True, "message": ""}]}))
-    assert harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res") == 2
-    rates = sorted(r["rate"] for r in compare.load_runs(tmp_path / "res"))
-    assert rates == [0.0, 1.0]
-
-
-def test_harbor_import_fails_errored_trials_and_aborts_on_mass_errors(tmp_path):
-    sys.path.insert(0, str(EVALS_ROOT / "scripts"))
-    import harbor_import
-    for i in range(2):
-        trial = tmp_path / "jobs" / "CURRENT" / f"find-builds__{i}"
-        (trial / "verifier").mkdir(parents=True)
-        (trial / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
-        (trial / "verifier" / "checks.json").write_text(json.dumps({"pass_rate": 0.5, "results": []}))
-        (trial / "result.json").write_text(json.dumps(
-            {"reward_valid": False, "exception_info": {"exception_type": "NetworkConnectionError"}}))
-    with pytest.raises(SystemExit):
-        harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res")
-    assert all(r["rate"] == 0.0 for r in compare.load_runs(tmp_path / "res"))

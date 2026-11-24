@@ -2,9 +2,10 @@
 """Statistical gate and report for skill eval runs.
 
 Reads the run artifacts one eval session wrote to `results/<experiment>/` and
-computes the only number that matters: the paired skill lift
-(CURRENT − CONTROL per task, deterministic checks only) with a bootstrap 95% CI,
-plus pass^k reliability and an advisory judge summary.
+computes the only number that matters: the paired skill lift on the outcome score
+(CURRENT − CONTROL per task; the score is the share of the reference answer the agent
+got right, zero if a safety gate tripped) with a bootstrap 95% CI, plus pass^k
+reliability and advisory process-check, judge and efficiency summaries.
 
 The gate is self-contained — both arms run in the same session, so live-server
 drift cancels out and no cross-build baseline is needed:
@@ -67,8 +68,18 @@ def load_runs(exp_dir: Path) -> list[dict]:
             data = json.loads(f.read_text())
         except json.JSONDecodeError:
             continue
-        results = data.get("results")
+        results = data.get("results") if isinstance(data, dict) else None
         if not isinstance(results, list):
+            continue
+        if "reward" in data:  # outcome-graded trial: the reward is the score, process checks are advisory
+            runs.append({
+                "task": data["task_id"], "treatment": data["treatment"],
+                "rate": data["reward"], "all_passed": data["reward"] == 1,
+                "failed_checks": [f"{kind}:{r['check']}" for kind in ("outcome", "safety")
+                                  for r in data[kind]["results"] if not r["passed"]],
+                "process_rate": data.get("pass_rate"),
+                "llm_grades": data.get("llm_grades") or [], "events": data.get("events") or {},
+            })
             continue
 
         task = data.get("task_id")
@@ -250,6 +261,15 @@ def analyze(exp_dir: Path) -> dict | None:
             arm_s = "  ".join(f"{a}={v}" for a, v in sorted(arms.items()))
             print(f"    {dim:<24s} {arm_s}")
         summary["judge"] = judges
+
+    process: dict[str, list[float]] = defaultdict(list)
+    for r in runs:
+        if r.get("process_rate") is not None:
+            process[r["treatment"]].append(r["process_rate"])
+    if process:
+        summary["process"] = {arm: round(mean(v), 3) for arm, v in sorted(process.items())}
+        print("\n  Process checks (advisory, pass rate):  "
+              + "  ".join(f"{a}={v:.0%}" for a, v in summary["process"].items()))
 
     efficiency = efficiency_summary(runs)
     if efficiency:

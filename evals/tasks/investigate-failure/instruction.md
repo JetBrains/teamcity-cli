@@ -1,7 +1,10 @@
-Find a recent failed build on this TeamCity server and investigate what went wrong.
+The job `Shop_Backend_UnitTests` is failing on the `main` branch. Investigate what went wrong: which tests fail in its latest run on main, in which run on main did they start failing, and which commit introduced the failure?
 
-Tell me:
-1. Which build failed and in which job
-2. What the build log says about the failure
-3. Which tests failed (if any)
-4. What changes triggered the build
+Write your answer to `answer.json` in the current directory, in exactly this shape:
+
+```json
+{"failed_tests": ["<full test name>"], "first_failing_run": "<run number>",
+ "culprit_commit": "<commit hash>", "culprit_author": "<VCS username>"}
+```
+
+Run numbers are a job's build numbers (`#12` is `12`), not run IDs.

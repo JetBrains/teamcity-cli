@@ -23,9 +23,9 @@ td.n {{ text-align: right; font-variant-numeric: tabular-nums; }}
 .up {{ color: var(--up); }} .down {{ color: var(--down); }} .muted {{ color: var(--muted); }}
 </style></head><body>
 <h1>Skill eval: {exp}</h1>
-<p>{runs} runs. Paired skill lift <b>{lift}</b> (95% CI {ci}). Gate: {gate}.</p>
+<p>{runs} runs, {invalid} excluded as invalid. Paired skill lift on the outcome score <b>{lift}</b> (95% CI {ci}). Gate: {gate}.</p>
 <h2>Per task</h2>
-<table><tr><th>Task</th><th>Lift</th><th>Failed checks without skill</th><th>Failed checks with skill</th></tr>{task_rows}</table>
+<table><tr><th>Task</th><th>Lift</th><th>Missed without skill</th><th>Missed with skill</th></tr>{task_rows}</table>
 <h2>Efficiency per run</h2>
 <table><tr><th>Metric</th><th>Without skill</th><th>With skill</th></tr>{eff_rows}</table>
 </body></html>
@@ -41,7 +41,12 @@ def main(exp_dir: Path) -> None:
     failed: dict[tuple[str, str], Counter] = defaultdict(Counter)
     for f in exp_dir.glob("*.json"):
         data = json.loads(f.read_text())
-        for r in data.get("results") or []:
+        if not isinstance(data, dict):
+            continue
+        rows = data.get("results") or []
+        if "reward" in data:  # outcome-graded: show missed answer fields and tripped safety gates
+            rows = [dict(r, check=f"{kind}:{r['check']}") for kind in ("outcome", "safety") for r in data[kind]["results"]]
+        for r in rows:
             if not r.get("passed"):
                 failed[(data.get("task_id"), data.get("treatment"))][r["check"]] += 1
 
@@ -59,8 +64,10 @@ def main(exp_dir: Path) -> None:
         for k, arms in summary.get("efficiency", {}).items()
     )
     breaches = summary.get("breaches") or []
+    invalid_file = exp_dir / "invalid_trials.json"
     out = exp_dir / "report.html"
     out.write_text(PAGE.format(
+        invalid=len(json.loads(invalid_file.read_text())) if invalid_file.is_file() else 0,
         exp=html.escape(summary.get("experiment", exp_dir.name)), runs=summary.get("runs", 0),
         lift=pct(summary.get("lift", 0)), ci=f"{pct(summary.get('ci_low', 0))} to {pct(summary.get('ci_high', 0))}",
         gate=html.escape("; ".join(breaches)) if breaches else "ok", task_rows=task_rows, eff_rows=eff_rows,

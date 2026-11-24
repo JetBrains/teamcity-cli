@@ -1,0 +1,15 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "failed_tests": [
+   "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+   "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+  ],
+  "first_failing_run": "5",
+  "culprit_commit": "abb916f09c2a76aa8644d0a42dfb2b8ad971e518",
+  "culprit_author": "bob"
+ },
+ "prefix": [
+  "culprit_commit"
+ ]
+}

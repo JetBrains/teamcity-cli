@@ -1,0 +1,26 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "failed_runs": [
+   {
+    "number": "3",
+    "branch": "feature/cart-redesign",
+    "root_cause_jobs": [
+     "Shop_Frontend_Build"
+    ],
+    "failed_tests": []
+   },
+   {
+    "number": "2",
+    "branch": "main",
+    "root_cause_jobs": [
+     "Shop_Backend_UnitTests"
+    ],
+    "failed_tests": [
+     "com.acme.shop.billing.InvoiceTest.totalsMatchLineItems",
+     "com.acme.shop.pricing.PricingTest.roundsHalfUp"
+    ]
+   }
+  ]
+ }
+}

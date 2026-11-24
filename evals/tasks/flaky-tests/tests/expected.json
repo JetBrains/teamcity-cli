@@ -1,0 +1,15 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "flaky": [
+   {
+    "test": "com.acme.shop.it.CheckoutFlowIT.completesOrderWithSavedCard",
+    "failed_runs": 8
+   },
+   {
+    "test": "com.acme.shop.it.InventorySyncIT.reconcilesConcurrentUpdates",
+    "failed_runs": 3
+   }
+  ]
+ }
+}

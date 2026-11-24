@@ -1,0 +1,35 @@
+{
+ "file": "answer.json",
+ "answer": {
+  "runs": [
+   {
+    "number": "27",
+    "status": "SUCCESS"
+   },
+   {
+    "number": "26",
+    "status": "SUCCESS"
+   },
+   {
+    "number": "25",
+    "status": "SUCCESS"
+   },
+   {
+    "number": "24",
+    "status": "SUCCESS"
+   },
+   {
+    "number": "23",
+    "status": "FAILURE"
+   }
+  ],
+  "breaking_commit": "d5e23a69eeb56d36831fbe91df1e67eee293fd4b",
+  "breaking_commit_author": "bob"
+ },
+ "ordered": [
+  "runs"
+ ],
+ "prefix": [
+  "breaking_commit"
+ ]
+}
