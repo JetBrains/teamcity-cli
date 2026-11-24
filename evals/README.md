@@ -1,128 +1,106 @@
 # TeamCity CLI Skill Evals
 
 A/B evaluation of the `teamcity-cli` agent skill: same model, same tasks, same
-live server — the skill is the only variable.
+live server, and the skill is the only variable.
 
-| Treatment | What Claude Code gets                   |
+| Treatment | What the agent gets                      |
 |-----------|------------------------------------------|
-| `CONTROL` | the `teamcity` CLI, no skill — baseline  |
-| `CURRENT` | the CLI **+** the `teamcity-cli` skill   |
+| `CONTROL` | the `teamcity` CLI, no skill (baseline)  |
+| `CURRENT` | the CLI plus the `teamcity-cli` skill    |
 
-The skill is not in this repository: it comes from the
-`github.com/JetBrains/teamcity-skills` module that `go.mod` pins, and the
-harness resolves it from the module cache. A dependency bump therefore changes
+Runs execute in [Harbor](https://github.com/harbor-framework/harbor) on local Docker. The
+skill is not in this repository: it comes from the `github.com/JetBrains/teamcity-skills`
+module that `go.mod` pins (`scaffold/skill.py` resolves it), so a dependency bump changes
 what `CURRENT` measures.
 
-The headline metric is the **paired skill lift**: per-task
-`CURRENT − CONTROL` deterministic pass rate, averaged across tasks, with a
-bootstrap 95% CI. Because both arms run in the same session against the same
-server, live-data drift cancels out of the difference.
+The headline metric is the **paired skill lift**: per-task `CURRENT − CONTROL` deterministic
+pass rate, averaged across tasks, with a bootstrap 95% CI. Both arms run back to back against
+the same server, so live-data drift mostly cancels out of the difference.
 
 ## Quick start
 
-```bash
-just eval-setup                  # install dependencies
-cp evals/.env.example evals/.env # configure (1Password refs or literals)
+Needs Docker, Go, [uv](https://docs.astral.sh/uv/) and `uv tool install harbor`.
 
-just eval --runs=2 -n 8          # full suite, both treatments
-just eval --task=investigate-failure --treatment=CURRENT
-just eval-unit                   # harness unit tests only (no server, no API)
-just eval-diff                   # gate/report the current branch's results
-just eval-diff results/A results/B   # informational A/B diff
+```bash
+just eval -k 2                          # all tasks, both arms, 2 attempts each
+just eval -i flaky-tests -i why-queued  # a subset
+just eval-unit                          # harness unit tests (no server, no API)
+just eval-diff results/A results/B      # compare two experiments
+harbor view evals/results/<experiment>/jobs
 ```
 
-## Architecture
+`just eval` resolves `evals/.env` through 1Password (`op run`) and calls
+`scripts/run-harbor.sh`, which:
+
+1. builds the CLI for Linux, regenerates `cli_schema.json` and builds the `teamcity-cli-eval`
+   base image (`harbor/Dockerfile`)
+2. runs a `CONTROL` job and a `CURRENT` job (`--skill`) with the `claude-code` agent
+3. imports the trials (`scripts/harbor_import.py`): per-check results, the LLM judge, Langfuse
+4. gates them (`scripts/compare.py`) and writes `report.html` (`scripts/report.py`)
+
+Any extra arguments go to `harbor run` (`-k` attempts, `-n` concurrency, `-i`/`-x` tasks).
+
+## Layout
 
 ```
 evals/
-├── tasks/<id>/          # One Harbor-format task per directory:
+├── tasks/<id>/          # One Harbor task per directory:
 │   ├── instruction.md   #   the prompt
 │   ├── task.toml        #   Harbor settings; harness options under [metadata]
 │   ├── environment/     #   Dockerfile FROM teamcity-cli-eval + seeded workspace/ files
-│   └── tests/           #   checks.toml (check IDs) + test.sh (Harbor verifier)
-├── harbor/              # Base image, entrypoint and ATIF verifier for Harbor runs
-├── checks.py            # CHECK_REGISTRY — deterministic check functions
+│   └── tests/           #   checks.toml (check IDs) + test.sh (verifier)
+├── harbor/              # Base image, entrypoint, verifier (ATIF trajectory → checks → reward)
+├── checks.py            # CHECK_REGISTRY: deterministic check functions
 ├── cli_schema.json      # GENERATED command/flag allowlist (gitignored)
-├── conftest.py          # Treatments, parametrization, provenance, schema gen
 ├── scaffold/
-│   ├── claude.py        # Runs Claude Code with an isolated HOME per run
-│   ├── events.py        # stream-json and ATIF → commands/tools/tokens/skills
-│   ├── runner.py        # EvalRunner: tokenized command matching, results
+│   ├── events.py        # ATIF → commands, tool calls, tokens, skills
+│   ├── runner.py        # EvalRunner: quote-aware command parsing, results
 │   ├── graders.py       # LLM judge (advisory, fails closed)
-│   ├── sentry_log.py    # Sentry traces (never used for gating)
-│   └── langfuse_log.py  # Langfuse traces + scores (never used for gating)
-├── scripts/compare.py   # Statistical gate: paired lift ± CI, pass^k
-├── tests/test_tasks.py  # The eval runner (pytest parametrizes task×treatment)
+│   ├── langfuse_log.py  # Langfuse traces + scores (never used for gating)
+│   ├── skill.py         # Resolves the pinned teamcity-cli skill
+│   └── tasks.py         # Task loader
+├── scripts/             # run-harbor.sh, harbor_import.py, compare.py, report.py
 ├── tests/test_checks.py # Unit tests for the harness itself
-└── results/<experiment>/  # Per-run JSON artifacts + gate_summary.json
+└── results/<experiment>/  # jobs/ (Harbor), per-trial JSON, gate_summary.json, report.html
 ```
 
 ## How a run is scored
 
-1. **Deterministic checks** (gate-relevant). Executed commands are tokenized —
-   never substring-matched — with a quote-aware shell split, so invocations
-   inside loops, `$(…)`, `timeout`/`env` wrappers and quoted `&fields=` URLs
-   count, while heredoc bodies don't. They are validated against `cli_schema.json`, which is
-   regenerated from the binary's cobra command tree on every session
-   (`go run scripts/generate-cli-schema.go`). An invented flag is a failure;
-   a real flag can never be misflagged, because the allowlist cannot rot.
-2. **LLM judge** (advisory). Sonnet grades subjective dimensions with anchored
-   rubrics. Judge scores are reported separately and **never** blend into the
-   deterministic pass rate. If the judge is unavailable the dimension is
-   recorded as *ungraded* — it fails closed, not open.
-3. **Metadata**, not scores: whether the skill was available (treatment) vs
-   actually invoked (observed), full provenance (git SHA, CLI/claude/skill
-   versions, model, task-set hash).
+1. **Deterministic checks** (gate-relevant). The verifier reads the agent's ATIF trajectory
+   and tokenizes every shell command it ran, never substring-matching: quotes, loops,
+   `$(…)`, line continuations, comments, `timeout`/`env` wrappers and heredocs are handled,
+   and commands inside scripts the agent wrote count for fan-out checks. Flags are validated
+   against `cli_schema.json`, regenerated from the binary's cobra tree on every run, so an
+   invented flag fails and a real one can't be misflagged. The Harbor reward is the check
+   pass rate.
+2. **LLM judge** (advisory). For `llm_grade` tasks, Sonnet grades subjective dimensions with
+   anchored rubrics after the run. Judge scores are reported separately and never blend into
+   the pass rate; an unavailable judge leaves the dimension ungraded.
+3. **Metadata**: whether the skill was available and actually invoked, model, agent, tokens,
+   turns, duration.
 
-**Pytest pass/fail means harness health only.** A CONTROL run scoring zero
-checks is a *measurement* — the baseline being weak is the point, not a test
-failure. Only harness breakage (claude crashed, unparseable output) fails
-pytest.
+The CLI in each trial is logged in through its config file, not `TEAMCITY_*` env vars, the way
+most agent sessions authenticate (keyring). The task passes the server as `TC_EVAL_URL` and
+`TC_EVAL_TOKEN`; `harbor/entrypoint.sh` writes them into the CLI config and expands
+`${TEAMCITY_URL}` in seeded workspace files. The verifier shares the agent's container because a
+separate verifier does not receive the trajectory; `harbor lint` flags this as `shared-verifier`.
 
 ## The gate (`scripts/compare.py`)
 
-Self-contained: computed from the session's own artifacts, no cross-build
-baseline, identical on `main` and branches.
+Computed from the experiment's own artifacts, with no cross-build baseline.
 
-- **BLOCK** if the paired-lift CI lower bound < `GATE_LIFT_FLOOR` (default
-  −5 pts) — the skill stopped helping.
-- **BLOCK** if a guardrail task (single-treatment, e.g. `negative-unrelated`)
-  fails on ≥ half its reps — the skill misfires on unrelated work.
-- `GATE_MODE=warn` (default) reports the verdict but exits 0; flip to
-  `enforce` once thresholds have soaked. Needs ≥ `GATE_MIN_TASKS` (3) paired
-  tasks, so partial local runs just report.
+- **BLOCK** if the paired-lift CI lower bound < `GATE_LIFT_FLOOR` (default −5 pts).
+- **BLOCK** if a guardrail task (`CURRENT` only, e.g. `negative-unrelated`) fails on at least
+  half its attempts.
+- `GATE_MODE=warn` (default) reports the verdict but exits 0; `enforce` fails the build. Needs
+  at least `GATE_MIN_TASKS` (3) paired tasks, so partial local runs just report.
 
-Also reported: per-task `pass^2` (probability both reps pass — reliability,
-not just average), judge means per arm, and `gate_summary.json` for trend
-tooling.
-
-## Efficiency (advisory)
-
-Alongside the judge, the report prints mean **total tokens**, **turns**, and
-**tool calls** per arm, with `CURRENT` as a percentage of `CONTROL`:
-
-```
-  Efficiency (advisory, per run):
-    Total tokens             CONTROL=46,150  CURRENT=31,150  (-33% vs CONTROL)
-```
-
-Like the judge, this **never gates** — a skill that documents more can
-legitimately cost more, and cheap-but-wrong is not the goal.
-
-It exists because pass rate is blind to a whole class of change. A skill edit
-that only alters *how much context an agent must load* — splitting one large
-reference into per-task docs, say — cannot move a pass rate that is already at
-the ceiling, so the deterministic checks report "no change" while real work was
-done. Tokens and turns make that visible. Read it as a trend across runs, not
-as a target: per-run token counts vary with how many times the agent retried a
-live call.
-
-Runs from before this was added have no `events` block; those metrics are simply
-omitted rather than counted as zero.
+Also reported: per-task `pass^2`, judge means per arm, and mean tokens, turns and tool calls
+per arm (advisory: a skill that documents more can cost more).
 
 ## Tasks
 
-| Task                       | What It Tests                                       |
+| Task                       | What it tests                                       |
 |----------------------------|-----------------------------------------------------|
 | `investigate-failure`      | Full failure workflow: find → log → tests → changes |
 | `daily-loop`               | Branch triage: list, drill into failures, changes   |
@@ -139,97 +117,47 @@ omitted rather than counted as zero.
 | `trigger-history`          | Trigger sources; one run listing should suffice     |
 | `negative-unrelated`       | Guardrail: skill must NOT fire on unrelated work    |
 
-The fan-out tasks come from real Claude Code sessions: questions whose answer
-spans many runs, jobs or agents, where agents mostly wrote loops over the CLI
-or `teamcity api`. They measure whether the CLI and skill make that work
-correct and cheap, and give a baseline for code-mode style surfaces.
+The fan-out tasks come from real agent sessions: questions whose answer spans many runs, jobs
+or agents, where agents mostly wrote loops over the CLI or `teamcity api`.
 
-## Environment Variables
+## Environment variables
 
-| Variable             | Required | Description                                              |
-|----------------------|----------|----------------------------------------------------------|
-| `ANTHROPIC_API_KEY`  | Yes      | Claude API key (agent + judge)                           |
-| `ANTHROPIC_BASE_URL` | No       | Custom Anthropic API base URL to be used by Claude Code  |
-| `TEAMCITY_URL`       | Yes      | TeamCity server URL                                      |
-| `TEAMCITY_TOKEN`     | Yes      | TeamCity API token                                       |
-| `SENTRY_DSN`         | No       | Ingest-only — sends observability traces to Sentry       |
-| `SENTRY_ENVIRONMENT` | No       | Sentry environment tag (default: `eval`)                 |
-| `LANGFUSE_PUBLIC_KEY`| No       | Ingest-only — enables Langfuse traces + scores           |
-| `LANGFUSE_SECRET_KEY`| No       | Langfuse secret key (paired with the public key)         |
-| `LANGFUSE_HOST`      | No       | Langfuse base URL (e.g. a self-hosted instance)          |
-| `BENCH_CC_MODEL`     | No       | Claude model (default: `claude-sonnet-5-5`)              |
-| `BENCH_AUTH`         | No       | `config` puts the token in the CLI config, not env (keyring-like) |
-| `BENCH_TIMEOUT`      | No       | Task timeout in seconds (default: 300)                   |
-| `BENCH_LOCAL`        | No       | Set to `1` to skip Docker and run Claude locally         |
-| `GATE_MODE`          | No       | `warn` (default) or `enforce`                            |
-| `GATE_LIFT_FLOOR`    | No       | Lift CI lower-bound threshold (default `-0.05`)          |
+| Variable             | Required | Description                                                  |
+|----------------------|----------|--------------------------------------------------------------|
+| `ANTHROPIC_API_KEY`  | Yes      | Agent (inside Harbor) and LLM judge                          |
+| `TEAMCITY_URL`       | Yes      | Eval server URL                                              |
+| `TEAMCITY_TOKEN`     | Yes      | Eval server token                                            |
+| `EVAL_MODEL`         | No       | Harbor model slug (default `anthropic/claude-sonnet-5-5`)    |
+| `BRANCH_NAME`        | No       | Names the experiment directory (default: a timestamp)        |
+| `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | No | Langfuse traces + scores |
+| `LANGFUSE_TRACING_ENVIRONMENT` | No | Langfuse environment (default `eval`; CI sets `ci`)  |
+| `GATE_MODE`          | No       | `warn` (default) or `enforce`                                |
+| `GATE_LIFT_FLOOR`    | No       | Lift CI lower-bound threshold (default `-0.05`)              |
 
 ## CI pipeline
 
-`TeamCity_TeamCityCLI_SkillEval` on teamcity-nightly; the pipeline YAML
-lives server-side (`teamcity pipeline pull` to inspect, edit → `teamcity
-pipeline validate` → `teamcity pipeline push` to change). Per run: build
-the CLI from the commit under test →
-change-gate (skips with an explicit `SKIPPED` build status unless `evals/`,
-the schema generator, or `go.mod`/`go.sum` — which pin the skill — changed) → pinned
-`@anthropic-ai/claude-code` install → schema generation → `pytest tests/
---runs=2 -n 8` → gate. Pytest and the gate exit codes both propagate — nothing
-is `|| true`'d away.
-
-Known gaps (deliberate, next phases): no nightly schedule (pipelines YAML has
-no trigger support — add via UI), live server instead of record/replay
-cassettes, judge uncalibrated against human labels.
-
-## Sentry
-
-When `SENTRY_DSN` is set, each run is pushed as a `gen_ai.invoke_agent`
-transaction (one `gen_ai.execute_tool` child span per tool call) tagged with
-`experiment_id`/`task`/`treatment`/`skill_available`/`skill_invoked` plus full
-provenance. Sentry is dashboards and drill-down only — gating always runs on
-the local `results/` artifacts, which are the authoritative record.
+`TeamCity_TeamCityCLI_SkillEval` on teamcity-nightly; the pipeline YAML lives server-side
+(`teamcity pipeline pull`, edit, `teamcity pipeline validate`, `teamcity pipeline push`). Per
+run: build the CLI, skip with a `SKIPPED` status unless `evals/`, the schema generator or
+`go.mod`/`go.sum` changed, validate the bundled skills, then `evals/scripts/run-harbor.sh -k 2`.
+Results, `jobs/` and `report.html` are published as artifacts.
 
 ## Langfuse
 
-When `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` are set, each run is pushed as a
-trace (name = task, `user_id` = treatment, `session_id` = experiment) with the
-agent root, a generation child carrying token usage, and one `tool` span per
-tool call. Quality signals are first-class **scores** — `pass_rate`, `passed`,
-`pass_bucket`, `skill_invoked`, `duration_sec`, `num_turns`, `total_tokens`, and
-`judge:<dim>` — so dashboards aggregate them natively without span-timing hacks.
-Sentry and Langfuse both emit when configured; each is a no-op when its keys are
-unset. Like Sentry, Langfuse is observability only — gating always runs on the
-local `results/` artifacts.
-
-## Running tasks in Harbor
-
-The tasks use [Harbor](https://github.com/harbor-framework/harbor)'s format, so the same
-directories also run there (any Harbor agent and model, results in `harbor view`). The
-verifier grades the ATIF trajectory with the same checks; the reward is the check pass rate.
-The pytest harness above stays the gate for now.
-
-```bash
-just eval-harbor                                   # all tasks, both arms, Sonnet 5.5, 2 attempts
-just eval-harbor anthropic/claude-sonnet-5-5 1 -i flaky-tests -i trigger-history
-harbor view evals/results/<experiment>/jobs        # browse trajectories
-```
-
-`eval-harbor` builds the image, runs a CONTROL and a CURRENT (`--skill`) job on local Docker,
-converts the trials with `scripts/harbor_import.py`, gates them with `compare.py`, and writes
-`report.html` (`scripts/report.py`) for a TeamCity report tab. The verifier shares the agent's
-container because a separate verifier does not receive the trajectory; `harbor lint` flags this
-as `shared-verifier`.
-
-`TEAMCITY_URL` and `TEAMCITY_TOKEN` are read from your environment (`[environment.env]`).
+When the Langfuse keys are set, each trial is pushed as a trace (name = task, `user_id` =
+treatment, `session_id` = experiment) with one `tool` span per tool call and scores for
+`pass_rate`, `passed`, `pass_bucket`, `skill_invoked`, `duration_sec`, `num_turns`,
+`total_tokens` and `judge:<dim>`. Langfuse is observability only; gating runs on the local
+`results/` artifacts.
 
 ## Adding a task
 
-1. Copy a directory under `tasks/` and edit `instruction.md` (the prompt),
-   `tests/checks.toml` (check IDs from `CHECK_REGISTRY`) and `task.toml`
-   (`[task] name`; `[metadata]` `llm_grade`, `treatments` — omit for both arms,
-   `["CURRENT"]` makes it a guardrail). Files the agent's working directory
-   needs go in `environment/workspace/`; `${VAR}` references are expanded.
+1. Copy a directory under `tasks/` and edit `instruction.md`, `tests/checks.toml` (check IDs
+   from `CHECK_REGISTRY`) and `task.toml` (`[task] name`; `[metadata]` `llm_grade`,
+   `treatments`: omit for both arms, `["CURRENT"]` makes it a guardrail). Files the agent's
+   working directory needs go in `environment/workspace/`.
 2. New check functions go in `checks.py` and the registry. Use
-   `runner.has_subcommand(...)`/`runner.has_flag(...)` — don't substring-match
-   command lines.
-3. Add adversarial coverage in `tests/test_checks.py`: the check must fail on
-   known-bad fixtures, not just pass on good ones.
+   `runner.has_subcommand(...)`/`runner.has_flag(...)` rather than substring matching.
+3. Add adversarial coverage in `tests/test_checks.py`: the check must fail on known-bad
+   fixtures, not just pass on good ones.
+4. Run `harbor lint evals/tasks/<id>/` and the no-op agent (`harbor run -p evals/tasks/<id> -a nop`).

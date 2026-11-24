@@ -163,38 +163,15 @@ install-choco:
     echo "Installed choco $(choco --version) to $BIN_DIR/choco"
     echo "Make sure $BIN_DIR is in your PATH"
 
-# Run skill evals (pass any pytest args: --task=X, --runs=3, -n 4, etc.)
+# Run the evals in Harbor on local Docker, both arms (pass harbor run args: -k 2, -n 4, -i flaky-tests)
 eval *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd evals
     if command -v op &>/dev/null && [ -z "${CI:-}" ]; then
-        op run --env-file=.env -- uv run pytest tests/ -v {{args}}
+        op run --env-file=evals/.env -- evals/scripts/run-harbor.sh {{args}}
     else
-        uv run pytest tests/ -v {{args}}
+        evals/scripts/run-harbor.sh {{args}}
     fi
-
-# Build the base image that Harbor runs of evals/tasks/ start FROM
-eval-harbor-image:
-    GOOS=linux go build -o bin/teamcity-linux ./tc
-    go run scripts/generate-cli-schema.go > evals/cli_schema.json
-    docker build -f evals/harbor/Dockerfile -t teamcity-cli-eval:latest .
-
-# Run evals/tasks/ in Harbor (local Docker), both arms, then gate and write report.html
-eval-harbor model="anthropic/claude-sonnet-5-5" attempts="2" *args: eval-harbor-image
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd evals
-    exp="results/harbor-$(date +%Y%m%d-%H%M%S)"
-    # The module cache is read-only; Harbor needs to copy the skill's session files back out.
-    skill="$(mktemp -d)/teamcity-cli"
-    cp -R "$(uv run python -c "import conftest; print(conftest.SKILL_DIR)")" "$skill" && chmod -R u+w "$skill"
-    export HARBOR_TELEMETRY=off
-    harbor run -y -e docker -p tasks -a claude-code -m {{model}} -k {{attempts}} -o "$exp/jobs" --job-name CONTROL -x negative-unrelated {{args}}
-    harbor run -y -e docker -p tasks -a claude-code -m {{model}} -k {{attempts}} -o "$exp/jobs" --job-name CURRENT --skill "$skill" {{args}}
-    uv run python scripts/harbor_import.py "$exp/jobs" "$exp"
-    uv run python scripts/compare.py "$exp"
-    uv run python scripts/report.py "$exp"
 
 # Harness unit tests only — no server, no API calls
 eval-unit *args:

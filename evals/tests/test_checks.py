@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 import checks
-from scaffold.events import ClaudeEvents
+from scaffold.events import AgentEvents
 from scaffold.runner import EvalRunner
 
 EVALS_ROOT = Path(__file__).resolve().parent.parent
@@ -23,7 +23,7 @@ import compare  # noqa: E402
 
 
 def runner_for(commands: list[str] | None = None, text: str = "", **events_kw) -> EvalRunner:
-    events = ClaudeEvents(commands_run=commands or [], **events_kw)
+    events = AgentEvents(commands_run=commands or [], **events_kw)
     if text:
         events.assistant_messages.append(text)
     return EvalRunner(events, task_name="unit")
@@ -497,17 +497,6 @@ def test_guardrail_breach_blocks(tmp_path, monkeypatch):
     assert compare.gate(summary) == 0
 
 
-def test_events_sum_metrics_across_result_messages():
-    from scaffold.events import extract_events
-    raw = "\n".join(json.dumps(o) for o in [
-        {"type": "result", "num_turns": 21, "duration_ms": 246000, "usage": {"input_tokens": 900, "output_tokens": 300}},
-        {"type": "system", "subtype": "init"},
-        {"type": "result", "num_turns": 1, "duration_ms": 5000, "usage": {"input_tokens": 10, "output_tokens": 20}},
-    ])
-    e = extract_events(raw)
-    assert (e.num_turns, e.duration_ms, e.input_tokens, e.output_tokens) == (22, 251000, 910, 320)
-
-
 def test_fan_out_inside_generated_script_counts():
     heredoc = ("cat > /tmp/a.sh <<'EOF'\nfor id in $ids; do\n  teamcity run tests $id --failed --json\ndone\nEOF\n"
                "bash /tmp/a.sh")
@@ -521,21 +510,6 @@ def test_fan_out_inside_generated_script_counts():
     # a script mentioning one run is still a single run
     single = "cat > /tmp/b.sh <<'EOF'\nteamcity run tests 123456 --failed\nEOF\nbash /tmp/b.sh"
     assert not passes(checks.collected_tests_across_runs, [single])
-
-
-def test_config_auth_keeps_token_out_of_env(tmp_path, monkeypatch):
-    from scaffold import claude
-    monkeypatch.setenv("TEAMCITY_URL", "https://tc.example")
-    monkeypatch.setenv("TEAMCITY_TOKEN", "secret-token")
-    monkeypatch.setenv("BENCH_AUTH", "config")
-    from types import SimpleNamespace
-    claude._setup_workspace(tmp_path, SimpleNamespace(name="CONTROL", skill_dir=None))
-    env = claude._build_isolated_env(tmp_path)
-    assert "TEAMCITY_TOKEN" not in env and "TEAMCITY_URL" not in env
-    cfg = (tmp_path / ".config" / "tc" / "config.yml").read_text()
-    assert "default_server: https://tc.example" in cfg and "token: secret-token" in cfg
-    monkeypatch.delenv("BENCH_AUTH")
-    assert claude._build_isolated_env(tmp_path)["TEAMCITY_TOKEN"] == "secret-token"
 
 
 def test_atif_trajectory_feeds_the_same_checks():
@@ -608,6 +582,26 @@ def test_harbor_import_scores_errored_trials_as_failed(tmp_path):
     trial = tmp_path / "jobs" / "CONTROL" / "find-builds__err"
     trial.mkdir(parents=True)
     (trial / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
-    assert harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res") == 1
-    runs = compare.load_runs(tmp_path / "res")
-    assert runs[0]["rate"] == 0.0
+    ok = tmp_path / "jobs" / "CONTROL" / "find-builds__ok"
+    (ok / "verifier").mkdir(parents=True)
+    (ok / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
+    (ok / "verifier" / "checks.json").write_text(json.dumps(
+        {"pass_rate": 1.0, "results": [{"check": "uses_json", "passed": True, "message": ""}]}))
+    assert harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res") == 2
+    rates = sorted(r["rate"] for r in compare.load_runs(tmp_path / "res"))
+    assert rates == [0.0, 1.0]
+
+
+def test_harbor_import_fails_errored_trials_and_aborts_on_mass_errors(tmp_path):
+    sys.path.insert(0, str(EVALS_ROOT / "scripts"))
+    import harbor_import
+    for i in range(2):
+        trial = tmp_path / "jobs" / "CURRENT" / f"find-builds__{i}"
+        (trial / "verifier").mkdir(parents=True)
+        (trial / "config.json").write_text(json.dumps({"task": {"path": "evals/tasks/find-builds"}}))
+        (trial / "verifier" / "checks.json").write_text(json.dumps({"pass_rate": 0.5, "results": []}))
+        (trial / "result.json").write_text(json.dumps(
+            {"reward_valid": False, "exception_info": {"exception_type": "NetworkConnectionError"}}))
+    with pytest.raises(SystemExit):
+        harbor_import.import_jobs(tmp_path / "jobs", tmp_path / "res")
+    assert all(r["rate"] == 0.0 for r in compare.load_runs(tmp_path / "res"))
