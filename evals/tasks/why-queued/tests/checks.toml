@@ -1,0 +1,12 @@
+checks = [
+  "ran_teamcity_commands",
+  "no_auth_failure",
+  "inspected_queue",
+  "inspected_queued_run",
+  "explains_wait_reason",
+  "did_not_modify_teamcity_toml",
+  "multi_step",
+  "no_thrashing",
+  "valid_commands",
+  "no_hallucinations",
+]

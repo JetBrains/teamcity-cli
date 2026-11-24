@@ -1,0 +1,12 @@
+checks = [
+  "ran_teamcity_commands",
+  "no_auth_failure",
+  "scoped_to_flaky_job",
+  "collected_tests_across_runs",
+  "reports_failure_counts",
+  "did_not_modify_teamcity_toml",
+  "multi_step",
+  "no_thrashing",
+  "valid_commands",
+  "no_hallucinations",
+]

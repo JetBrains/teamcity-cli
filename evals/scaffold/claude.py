@@ -16,7 +16,7 @@ _CLAUDE_BIN = CLAUDE_BIN
 
 # Model under evaluation when BENCH_CC_MODEL is unset. Pinned so the measured
 # agent never drifts with the Claude Code default.
-DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
+DEFAULT_MODEL = "claude-sonnet-5-5"
 
 from typing import Protocol
 
@@ -36,10 +36,37 @@ class ClaudeResult:
 _PROPAGATE_KEYS = (
     "ANTHROPIC_API_KEY",
     "ANTHROPIC_BASE_URL",
+    "ANTHROPIC_AUTH_TOKEN",
     "CLAUDE_CODE_OAUTH_TOKEN",
     "TEAMCITY_URL",
     "TEAMCITY_TOKEN",
 )
+
+
+def _partial_output(e: subprocess.TimeoutExpired) -> str:
+    """Stream-json captured before a timeout, so the checks still see what the agent did."""
+    out = e.stdout or ""
+    return out.decode(errors="replace") if isinstance(out, bytes) else out
+
+
+def _auth_in_config() -> bool:
+    """BENCH_AUTH=config stores the token in the CLI config, as keyring users have it, not in env."""
+    return os.environ.get("BENCH_AUTH") == "config"
+
+
+def _write_cli_config(work_dir: Path) -> None:
+    """Seed the workspace's teamcity config so the CLI authenticates without TEAMCITY_* env vars."""
+    url, token = os.environ.get("TEAMCITY_URL", ""), os.environ.get("TEAMCITY_TOKEN", "")
+    if not (url and token):
+        raise ValueError("BENCH_AUTH=config needs TEAMCITY_URL and TEAMCITY_TOKEN to seed the CLI config")
+    cfg = work_dir / ".config" / "tc" / "config.yml"
+    cfg.parent.mkdir(parents=True, exist_ok=True)
+    cfg.write_text(f"analytics_notice_shown: true\ndefault_server: {url}\nservers:\n    {url}:\n        token: {token}\n")
+    cfg.chmod(0o600)
+
+
+def _propagated(key: str) -> bool:
+    return not (_auth_in_config() and key in ("TEAMCITY_URL", "TEAMCITY_TOKEN"))
 
 
 def _setup_workspace(
@@ -62,6 +89,9 @@ def _setup_workspace(
     if treatment.skill_dir and treatment.skill_dir.exists():
         dest = work_dir / ".claude" / "skills" / "teamcity-cli"
         shutil.copytree(treatment.skill_dir, dest)
+
+    if _auth_in_config():
+        _write_cli_config(work_dir)
 
     root = work_dir.resolve()
     for rel_path, content in (setup_files or {}).items():
@@ -96,7 +126,7 @@ def _build_isolated_env(work_dir: Path) -> dict[str, str]:
     # Propagate required API keys and tracing vars
     for key in _PROPAGATE_KEYS:
         val = os.environ.get(key)
-        if val:
+        if val and _propagated(key):
             env[key] = val
 
     # Suppress color for cleaner parsing
@@ -116,7 +146,7 @@ def run_claude(
     """Run Claude Code CLI locally in a temp directory with isolated config."""
     model = model or os.environ.get("BENCH_CC_MODEL", DEFAULT_MODEL)
 
-    with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="tc-eval-", ignore_cleanup_errors=True) as tmp:  # a CLI child of a timed-out run may still be writing
         work_dir = Path(tmp)
         _setup_workspace(work_dir, treatment, setup_files)
         env = _build_isolated_env(work_dir)
@@ -146,11 +176,11 @@ def run_claude(
                 raw_output=result.stdout,
                 duration_sec=elapsed,
             )
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as e:
             elapsed = time.monotonic() - start
             return ClaudeResult(
                 exit_code=124,
-                raw_output=f"Timeout after {timeout}s",
+                raw_output=_partial_output(e) or f"Timeout after {timeout}s",
                 duration_sec=elapsed,
             )
 
@@ -167,15 +197,17 @@ def run_claude_docker(
     """Run Claude Code CLI inside a Docker container (fully isolated)."""
     model = model or os.environ.get("BENCH_CC_MODEL", DEFAULT_MODEL)
 
-    with tempfile.TemporaryDirectory(prefix="tc-eval-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="tc-eval-", ignore_cleanup_errors=True) as tmp:  # a CLI child of a timed-out run may still be writing
         work_dir = Path(tmp)
         _setup_workspace(work_dir, treatment, setup_files)
 
         env_flags: list[str] = []
         for key in _PROPAGATE_KEYS:
             val = os.environ.get(key)
-            if val:
+            if val and _propagated(key):
                 env_flags += ["-e", f"{key}={val}"]
+        if _auth_in_config():
+            env_flags += ["-e", "XDG_CONFIG_HOME=/workspace/.config"]
         env_flags += ["-e", "NO_COLOR=1"]
 
         cmd = [
@@ -205,11 +237,11 @@ def run_claude_docker(
                 raw_output=result.stdout,
                 duration_sec=elapsed,
             )
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as e:
             elapsed = time.monotonic() - start
             return ClaudeResult(
                 exit_code=124,
-                raw_output=f"Timeout after {timeout}s",
+                raw_output=_partial_output(e) or f"Timeout after {timeout}s",
                 duration_sec=elapsed,
             )
 

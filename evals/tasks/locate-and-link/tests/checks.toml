@@ -1,0 +1,10 @@
+checks = [
+  "ran_teamcity_commands",
+  "no_auth_failure",
+  "located_project_before_link",
+  "added_repository_link",
+  "mentioned_teamcity_toml",
+  "did_not_modify_teamcity_toml",
+  "valid_commands",
+  "no_hallucinations",
+]

@@ -1,0 +1,23 @@
+schema_version = "1.4"
+
+[task]
+name = "teamcity-cli/why-queued"
+version = "1.0.0"
+
+[metadata]
+category = "teamcity-cli"
+llm_grade = true
+
+[agent]
+timeout_sec = 600.0
+
+[verifier]
+timeout_sec = 120.0
+
+[environment]
+build_timeout_sec = 600.0
+network_mode = "public"
+
+[environment.env]
+TEAMCITY_URL = "${TEAMCITY_URL}"
+TEAMCITY_TOKEN = "${TEAMCITY_TOKEN}"

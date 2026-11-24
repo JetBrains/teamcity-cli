@@ -14,7 +14,7 @@ import pytest
 
 from scaffold import langfuse_log, sentry_log
 from scaffold.claude import CLAUDE_BIN, DEFAULT_MODEL
-from scaffold.tasks import TASKS_FILE, TaskConfig, list_tasks, load_task
+from scaffold.tasks import TaskConfig, list_tasks, load_task, task_set_files
 
 EVALS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = EVALS_DIR.parent
@@ -236,7 +236,7 @@ def provenance() -> dict:
         "claude_version": _cmd_output([CLAUDE_BIN, "--version"]),
         "model": os.environ.get("BENCH_CC_MODEL") or DEFAULT_MODEL,
         "skill_version": _skill_version(),
-        "task_set": hashlib.sha256(TASKS_FILE.read_bytes()).hexdigest()[:12],
+        "task_set": hashlib.sha256(b"".join(f.read_bytes() for f in task_set_files())).hexdigest()[:12],
     }
 
 

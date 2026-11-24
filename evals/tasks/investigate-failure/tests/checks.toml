@@ -1,0 +1,14 @@
+checks = [
+  "ran_teamcity_commands",
+  "no_auth_failure",
+  "found_failed_build",
+  "viewed_log",
+  "viewed_tests",
+  "viewed_changes",
+  "produced_diagnosis",
+  "checked_repository_link",
+  "did_not_add_repository_link",
+  "did_not_modify_teamcity_toml",
+  "valid_commands",
+  "no_hallucinations",
+]

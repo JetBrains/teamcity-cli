@@ -1,0 +1,1 @@
+Look at the last 20 finished runs of `ijplatform_master_ReleaseEventScheduleIntegrationTests` across all branches. Which tests failed in more than one of those runs but not in all of them? List each test with the number of runs it failed in, most frequent first.

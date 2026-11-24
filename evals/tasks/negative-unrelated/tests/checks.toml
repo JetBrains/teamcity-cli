@@ -1,0 +1,5 @@
+checks = [
+  "no_teamcity_commands",
+  "no_skill_invocation",
+  "produces_python",
+]

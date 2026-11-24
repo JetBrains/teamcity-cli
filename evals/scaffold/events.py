@@ -51,6 +51,8 @@ def extract_events(raw_output: str) -> ClaudeEvents:
     events = ClaudeEvents()
     seen_tool_ids: set[str] = set()
     tool_id_to_index: dict[str, int] = {}
+    result_totals = [0, 0, 0, 0]  # turns, duration_ms, input_tokens, output_tokens
+    saw_result = False
 
     for line in raw_output.strip().splitlines():
         line = line.strip()
@@ -64,12 +66,15 @@ def extract_events(raw_output: str) -> ClaudeEvents:
         msg_type = obj.get("type", "")
 
         # --- Result message: duration, turns, tokens ---
+        # A session can emit several (a background task wakes it for another
+        # turn), and each reports only its own segment, so they add up.
         if msg_type == "result":
-            events.duration_ms = obj.get("duration_ms", 0)
-            events.num_turns = obj.get("num_turns", events.num_turns)
             usage = obj.get("usage", {})
-            events.input_tokens = usage.get("input_tokens", 0)
-            events.output_tokens = usage.get("output_tokens", 0)
+            result_totals[0] += obj.get("num_turns", 0)
+            result_totals[1] += obj.get("duration_ms", 0)
+            result_totals[2] += usage.get("input_tokens", 0)
+            result_totals[3] += usage.get("output_tokens", 0)
+            saw_result = True
             continue
 
         # --- Assistant message: text + tool_use blocks ---
@@ -116,6 +121,9 @@ def extract_events(raw_output: str) -> ClaudeEvents:
                         tool_use_id = block.get("tool_use_id", "")
                         if tool_use_id:
                             events.tool_results[tool_use_id] = block
+
+    if saw_result:
+        events.num_turns, events.duration_ms, events.input_tokens, events.output_tokens = result_totals
 
     # Extract teamcity commands from all text
     full = events.full_text
@@ -184,3 +192,45 @@ def extract_teamcity_commands(text: str) -> list[str]:
         if cmd and cmd not in commands:
             commands.append(cmd)
     return commands
+
+
+# Shell tools across harnesses (Claude Code, Codex, Gemini CLI, opencode, pi, Junie, ...).
+_SHELL_TOOLS = {"bash", "shell", "exec_command", "run_shell_command", "execute_command", "terminal", "run_command"}
+
+
+def _shell_command(arguments: dict) -> str:
+    cmd = arguments.get("command") or arguments.get("cmd") or ""
+    if isinstance(cmd, list):  # Codex passes argv, often ["bash", "-lc", "<script>"]
+        cmd = cmd[-1] if len(cmd) >= 3 and cmd[1] in ("-c", "-lc") else " ".join(map(str, cmd))
+    return str(cmd)
+
+
+def _text(message) -> str:
+    if isinstance(message, str):
+        return message
+    if isinstance(message, list):  # ContentPart array
+        return "\n".join(p.get("text", "") for p in message if isinstance(p, dict) and p.get("type") == "text")
+    return ""
+
+
+def extract_events_atif(trajectory: dict) -> ClaudeEvents:
+    """Parse a Harbor ATIF trajectory into ClaudeEvents, so the same checks grade every harness."""
+    events = ClaudeEvents()
+    for step in trajectory.get("steps", []):
+        if step.get("source") != "agent":
+            continue
+        events.num_turns += 1
+        if text := _text(step.get("message")):
+            events.assistant_messages.append(text)
+        for call in step.get("tool_calls") or []:
+            name, args = call.get("function_name", ""), call.get("arguments") or {}
+            events.tool_calls.append({"id": call.get("tool_call_id", ""), "name": name, "input": args})
+            if name.lower() in _SHELL_TOOLS:
+                _process_tool_call(events, "Bash", {"command": _shell_command(args)})
+            else:
+                _process_tool_call(events, name, args)
+    final = trajectory.get("final_metrics") or {}
+    events.input_tokens = final.get("total_prompt_tokens") or 0
+    events.output_tokens = final.get("total_completion_tokens") or 0
+    events.commands_mentioned = extract_teamcity_commands(events.full_text)
+    return events

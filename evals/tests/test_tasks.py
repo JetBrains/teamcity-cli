@@ -66,7 +66,8 @@ def test_task(
 
     # --- LLM grading: advisory, reported separately, fails closed ---
     llm_grades = {}
-    if task_config.llm_grade and os.environ.get("ANTHROPIC_API_KEY") and runner.text:
+    judge_creds = any(os.environ.get(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"))
+    if task_config.llm_grade and judge_creds and runner.text:
         llm_grades = grade_all(task_config.instruction, runner.text)
     graded = [
         {"dimension": dim, "score": g.score, "reasoning": g.reasoning}
