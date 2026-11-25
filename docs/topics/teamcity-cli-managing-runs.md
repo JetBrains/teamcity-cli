@@ -362,6 +362,8 @@ teamcity run start MyProject_Build --branch main --revision abc123def
 teamcity run start MyProject_Build --branch @this --revision @head
 ```
 
+Without `--branch`, a pinned commit is checked out from each VCS root's default branch.
+
 For jobs with multiple VCS roots, repeat `--revision ROOT=SHA[@BRANCH]` to pin
 individual roots. Unspecified roots use TeamCity's normal revision selection.
 `ROOT=@BRANCH` uses the latest revision TeamCity has already fetched for that root;
@@ -512,7 +514,7 @@ Branch to build. Use `@this` to resolve the current git branch.
 </td>
 <td>
 
-Pin build to a specific Git commit SHA. Use `@head` to resolve the current HEAD; short SHAs are expanded from the local repo.
+Pin build to a specific Git commit SHA. Use `@head` to resolve the current HEAD; short SHAs are expanded from the local repo. Without `--branch` or `@BRANCH`, each VCS root uses its default branch.
 
 </td>
 </tr>

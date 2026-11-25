@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -17,14 +18,37 @@ func TestRunBuildRevisions(t *testing.T) {
 		want    []Revision
 		wantErr string
 		heads   bool
+		state   string // overrides the default repository state response
 	}{
 		{name: "legacy pins every root", opts: RunBuildOptions{Revision: "abc", Branch: "feature"}, want: []Revision{
 			{Version: "abc", VcsBranchName: "refs/heads/feature", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
 			{Version: "abc", VcsBranchName: "refs/heads/feature", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
 		}},
-		{name: "pin only one root without inheriting logical branch", opts: RunBuildOptions{Branch: "unrelated", Revisions: []RevisionSpec{{VcsRootID: "A", Version: "abc"}}}, want: []Revision{
-			{Version: "abc", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
+		{name: "bare revision without branch uses each root's default branch", opts: RunBuildOptions{Revision: "abc"}, heads: true, want: []Revision{
+			{Version: "abc", VcsBranchName: "refs/heads/main", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
+			{Version: "abc", VcsBranchName: "refs/heads/master", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
 		}},
+		{name: "pin only one root without inheriting logical branch", opts: RunBuildOptions{Branch: "unrelated", Revisions: []RevisionSpec{{VcsRootID: "A", Version: "abc"}}}, heads: true, want: []Revision{
+			{Version: "abc", VcsBranchName: "refs/heads/main", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
+		}},
+		{name: "default branch name is sent as is", opts: RunBuildOptions{Revisions: []RevisionSpec{{VcsRootID: "A", Version: "abc"}}}, heads: true,
+			state: `{"vcs-root-instance":[{"vcs-root-id":"A","repositoryState":{"branch":[{"name":"default","version":"h1","default":true}]}}]}`,
+			want:  []Revision{{Version: "abc", VcsBranchName: "default", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}}}},
+		{name: "empty state falls back to Git branch property", opts: RunBuildOptions{Revision: "abc"}, heads: true,
+			state: `{"vcs-root-instance":[{"vcs-root-id":"A","vcsName":"jetbrains.git","properties":{"property":[{"name":"branch","value":"main"}]},"repositoryState":{"branch":[{"name":"","default":true}]}},{"vcs-root-id":"B","vcsName":"perforce","properties":{"property":[{"name":"branch","value":"main"}]},"repositoryState":{"branch":[{"name":"","default":true}]}}]}`,
+			want: []Revision{
+				{Version: "abc", VcsBranchName: "refs/heads/main", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
+				{Version: "abc", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
+			}},
+		{name: "Git root without default branch fails before queueing", opts: RunBuildOptions{Revisions: []RevisionSpec{{VcsRootID: "A", Version: "abc"}}}, heads: true,
+			state:   `{"vcs-root-instance":[{"vcs-root-id":"A","vcsName":"jetbrains.git","repositoryState":{"branch":[{"name":"","default":true}]}}]}`,
+			wantErr: "cannot determine the default branch of Git VCS root A"},
+		{name: "non-Git root without default branch keeps no branch", opts: RunBuildOptions{Revision: "abc"}, heads: true,
+			state: `{"vcs-root-instance":[{"vcs-root-id":"A","vcsName":"svn","repositoryState":{"branch":[{"name":"","version":"42","default":true}]}}]}`,
+			want: []Revision{
+				{Version: "abc", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
+				{Version: "abc", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
+			}},
 		{name: "explicit branch and tag", opts: RunBuildOptions{Revisions: []RevisionSpec{{VcsRootID: "A", Version: "abc", Branch: "feature"}, {VcsRootID: "B", Version: "def", Branch: "refs/tags/v1"}}}, want: []Revision{
 			{Version: "abc", VcsBranchName: "refs/heads/feature", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
 			{Version: "def", VcsBranchName: "refs/tags/v1", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
@@ -34,7 +58,7 @@ func TestRunBuildRevisions(t *testing.T) {
 			{Version: "bbb", VcsBranchName: "refs/tags/v1", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
 		}},
 		{name: "mixed explicit and head", opts: RunBuildOptions{Revisions: []RevisionSpec{{VcsRootID: "A", Version: "older"}, {VcsRootID: "B", Branch: "refs/pull/12/merge"}}}, heads: true, want: []Revision{
-			{Version: "older", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
+			{Version: "older", VcsBranchName: "refs/heads/main", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "A"}},
 			{Version: "pr", VcsBranchName: "refs/pull/12/merge", VcsRootInstance: &VcsRootInstanceRef{VcsRootID: "B"}},
 		}},
 		{name: "unknown root", opts: RunBuildOptions{Revisions: []RevisionSpec{{VcsRootID: "typo", Version: "abc"}}}, wantErr: "is not attached to Job"},
@@ -55,8 +79,8 @@ func TestRunBuildRevisions(t *testing.T) {
 					json.NewEncoder(w).Encode(VcsRootEntries{Count: 2, VcsRootEntry: []VcsRootEntry{{VcsRoot: &VcsRoot{ID: "A"}}, {VcsRoot: &VcsRoot{ID: "B"}}}})
 				case "/app/rest/buildTypes/id:Job/vcs-root-instances":
 					headRequests++
-					assert.Equal(t, "vcs-root-instance(vcs-root-id,repositoryState(branch(name,version)))", r.URL.Query().Get("fields"))
-					w.Write([]byte(`{"vcs-root-instance":[{"vcs-root-id":"A","repositoryState":{"branch":[{"name":"refs/heads/main","version":"aaa"}]}},{"vcs-root-id":"B","repositoryState":{"branch":[{"name":"refs/tags/v1","version":"bbb"},{"name":"refs/pull/12/merge","version":"pr"}]}}]}`))
+					assert.Equal(t, "vcs-root-instance(vcs-root-id,vcsName,properties(property(name,value)),repositoryState(branch(name,version,default)))", r.URL.Query().Get("fields"))
+					w.Write([]byte(cmp.Or(tt.state, `{"vcs-root-instance":[{"vcs-root-id":"A","vcsName":"jetbrains.git","properties":{"property":[{"name":"branch","value":"refs/heads/other"}]},"repositoryState":{"branch":[{"name":"refs/heads/main","version":"aaa","default":true}]}},{"vcs-root-id":"B","repositoryState":{"branch":[{"name":"refs/heads/master","version":"ccc","default":true},{"name":"refs/tags/v1","version":"bbb"},{"name":"refs/pull/12/merge","version":"pr"}]}}]}`)))
 				case "/app/rest/buildQueue":
 					require.Equal(t, "POST", r.Method)
 					posts++
