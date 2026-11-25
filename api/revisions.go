@@ -84,6 +84,7 @@ func (c *Client) resolveRepositoryState(job string, specs []RevisionSpec) (map[s
 			} `json:"repositoryState"`
 		} `json:"vcs-root-instance"`
 	}
+	// Not paginated: the server returns all of the job's instances at once and never sets nextHref.
 	path := "/app/rest/buildTypes/id:" + url.PathEscape(job) + "/vcs-root-instances?fields=vcs-root-instance(vcs-root-id,vcsName,properties(property(name,value)),repositoryState(branch(name,version,default)))"
 	if err := c.get(c.ctx(), path, &state); err != nil {
 		return nil, fmt.Errorf("failed to get VCS repository state: %w", err)
