@@ -1,0 +1,35 @@
+# Exercise the real CLI against a local self-signed server, without remote credentials.
+env XDG_CONFIG_HOME=$WORK/config
+env TEAMCITY_URL=
+env TEAMCITY_TOKEN=
+env TEAMCITY_GUEST=
+env TEAMCITY_NO_UPDATE=1
+start_tlsserver
+
+# The flag is inherited by login commands.
+exec teamcity auth login --help
+stdout '--insecure .*Skip TLS certificate verification'
+
+# Verification is enabled by default.
+! exec teamcity auth login --server $TLS_URL --guest --json --no-input
+stderr 'TLS certificate error'
+
+# Explicit opt-in permits guest login; warnings never pollute JSON stdout.
+exec teamcity auth login --server $TLS_URL --guest --insecure --json --no-input
+stdout '"event":"login"'
+stderr 'TLS certificate verification is disabled'
+! stdout 'TLS certificate verification'
+
+exec teamcity auth status --insecure --json
+stdout '"status": "guest"'
+stderr 'TLS certificate verification is disabled'
+! stdout 'TLS certificate verification'
+
+exec teamcity project list --insecure --json --no-input
+stdout 'TLS Test'
+
+# The opt-in is not persisted with the saved login.
+! exec teamcity project list --json --no-input
+stderr 'certificate'
+! exec teamcity project list --insecure=false --json --no-input
+stderr 'certificate'

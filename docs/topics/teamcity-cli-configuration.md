@@ -472,6 +472,23 @@ For repository-scoped configuration, set these in [direnv](https://direnv.net/) 
 
 ## Global flags
 
+For a TeamCity server with an untrusted internal or self-signed certificate, use
+`--insecure` on each command:
+
+```bash
+teamcity auth login --server https://teamcity.example.com --insecure
+teamcity auth status --insecure
+teamcity project list --insecure
+```
+
+This opt-in skips certificate chain and hostname verification for the TeamCity
+server, including login probes, token validation, PKCE exchanges, API calls,
+downloads from the server, and agent terminal connections. It applies only to
+the current command and is not saved with your login. Cross-origin redirects,
+update checks, and analytics retain normal certificate verification. The browser
+has its own certificate checks; `--insecure` cannot bypass its warning page.
+Prefer installing your internal CA certificate when possible.
+
 These flags are available on every command:
 
 <table>
@@ -556,6 +573,18 @@ Show detailed output, including debug information. Mutually exclusive with `--qu
 <td>
 
 Disable interactive prompts. The CLI uses sensible defaults when a prompt would otherwise appear.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`--insecure`
+
+</td>
+<td>
+
+Skip TLS certificate verification for the TeamCity server for this command only (unsafe).
 
 </td>
 </tr>

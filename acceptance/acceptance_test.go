@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -230,6 +231,7 @@ func customCommands() map[string]func(ts *testscript.TestScript, neg bool, args 
 		"extract":          cmdExtract,
 		"wait_for_agent":   cmdWaitForAgent,
 		"start_hangserver": cmdStartHangServer,
+		"start_tlsserver":  cmdStartTLSServer,
 	}
 }
 
@@ -297,6 +299,30 @@ func cmdStartHangServer(ts *testscript.TestScript, neg bool, args []string) {
 	}))
 	ts.Defer(srv.Close)
 	ts.Setenv("HANG_URL", srv.URL)
+}
+
+// cmdStartTLSServer exposes a self-signed TeamCity-shaped server as $TLS_URL.
+func cmdStartTLSServer(ts *testscript.TestScript, neg bool, args []string) {
+	if neg || len(args) != 0 {
+		ts.Fatalf("usage: start_tlsserver")
+	}
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/app/rest/server/version":
+			w.WriteHeader(http.StatusUnauthorized)
+		case "/guestAuth/app/rest/server":
+			_, _ = io.WriteString(w, `{"versionMajor":2026,"versionMinor":2,"buildNumber":"123"}`)
+		case "/guestAuth/app/rest/projects":
+			_, _ = io.WriteString(w, `{"count":1,"project":[{"id":"TLS","name":"TLS Test"}]}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	srv.Config.ErrorLog = log.New(io.Discard, "", 0)
+	srv.StartTLS()
+	ts.Defer(srv.Close)
+	ts.Setenv("TLS_URL", srv.URL)
 }
 
 // cmdSleep pauses execution for the given duration.

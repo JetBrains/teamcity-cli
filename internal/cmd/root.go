@@ -83,12 +83,16 @@ Report issues:  https://jb.gg/tc/issues`,
 	cmd.PersistentFlags().BoolVarP(&f.Verbose, "verbose", "V", false, "Show detailed output including debug info")
 	cmd.PersistentFlags().BoolVar(&f.Verbose, "debug", false, "Alias for --verbose")
 	cmd.PersistentFlags().BoolVar(&f.NoInput, "no-input", false, "Disable interactive prompts")
+	cmd.PersistentFlags().BoolVar(&f.Insecure, "insecure", false, "Skip TLS certificate verification for the TeamCity server (unsafe)")
 
 	cmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
 	cmd.MarkFlagsMutuallyExclusive("quiet", "debug")
 
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		f.InitOutput()
+		if f.Insecure {
+			f.Printer.Warn("TLS certificate verification is disabled for the TeamCity server")
+		}
 		if jsonOutputEnabled(cmd) {
 			f.JSONOutput = true
 		}

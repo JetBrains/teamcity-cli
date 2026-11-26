@@ -136,7 +136,7 @@ func collectServerStatus(f *cmdutil.Factory, serverURL string, sc config.ServerC
 
 func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "guest", IsDefault: isDefault}
-	client := api.NewGuestClient(serverURL, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := api.NewGuestClient(serverURL, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()), api.WithInsecureTLS(f.Insecure)).WithContext(f.Context())
 	if err := client.Probe(f.Context()); err != nil {
 		s.Status = "error"
 		s.Error = friendlyError(err, serverURL)
@@ -158,7 +158,7 @@ func collectGuestStatus(f *cmdutil.Factory, serverURL string, isDefault bool) au
 
 func collectTokenStatus(f *cmdutil.Factory, serverURL, token, tokenSource string, isDefault bool) authStatus {
 	s := authStatus{Server: serverURL, AuthMethod: "token", TokenSource: tokenSource, IsDefault: isDefault}
-	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	client := api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()), api.WithInsecureTLS(f.Insecure)).WithContext(f.Context())
 	if err := client.Probe(f.Context()); err != nil {
 		s.Status = "error"
 		s.Error = friendlyError(err, serverURL)
@@ -205,6 +205,7 @@ func collectBuildStatus(f *cmdutil.Factory, buildAuth *config.BuildAuth) authSta
 	client := api.NewClientWithBasicAuth(buildAuth.ServerURL, buildAuth.Username, buildAuth.Password,
 		api.WithDebugFunc(f.Printer.Debug),
 		api.WithVersion(version.String()),
+		api.WithInsecureTLS(f.Insecure),
 	).WithContext(f.Context())
 	if err := client.Probe(f.Context()); err != nil {
 		s.Status = "error"

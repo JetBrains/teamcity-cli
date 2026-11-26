@@ -1,6 +1,8 @@
 package terminal
 
 import (
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,6 +11,42 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestInsecureTLSForSessionAndWebSocket(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/httpAuth/plugins/teamcity-agent-terminal/agentTerminal.html":
+			_, _ = io.WriteString(w, `{"token":"session-token"}`)
+		case "/app/agentTerminal/terminal/session-token":
+			conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+			if err == nil {
+				_ = conn.Close()
+			}
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	server.Config.ErrorLog = log.New(io.Discard, "", 0)
+	server.StartTLS()
+	t.Cleanup(server.Close)
+	noop := func(string, ...any) {}
+	verified := NewClient(server.URL, "user", "token", noop)
+	_, err := verified.OpenSession(7)
+	require.ErrorContains(t, err, "certificate")
+	_, err = verified.Connect(&Session{Token: "session-token"}, 80, 24)
+	require.ErrorContains(t, err, "certificate")
+
+	client := NewClient(server.URL, "user", "token", noop).WithInsecureTLS(true)
+	session, err := client.OpenSession(7)
+	require.NoError(t, err)
+	conn, err := client.Connect(session, 80, 24)
+	require.NoError(t, err)
+	require.NoError(t, conn.conn.Close())
+	client.httpClient.CloseIdleConnections()
+	_, err = NewClient(server.URL, "user", "token", noop).OpenSession(7)
+	require.ErrorContains(t, err, "certificate")
+}
 
 func TestConnectPreservesServerPath(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

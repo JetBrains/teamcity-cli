@@ -3,6 +3,7 @@ package terminal
 import (
 	"cmp"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -49,6 +50,7 @@ type Client struct {
 	username     string
 	token        string
 	httpClient   *http.Client
+	dialer       *websocket.Dialer
 	debugf       func(string, ...any)
 	extraHeaders map[string]string
 }
@@ -61,12 +63,24 @@ func NewClient(baseURL, username, token string, debugf func(string, ...any)) *Cl
 		token:        token,
 		debugf:       debugf,
 		extraHeaders: api.EnvHeaders(),
+		dialer:       websocket.DefaultDialer,
 		httpClient: &http.Client{
 			Jar:           jar,
 			Timeout:       30 * time.Second,
 			CheckRedirect: httpclient.RedirectPolicy(false),
 		},
 	}
+}
+
+// WithInsecureTLS skips certificate verification for HTTP sessions and WebSocket connections.
+func (c *Client) WithInsecureTLS(skip bool) *Client {
+	if skip {
+		c.httpClient.Transport = httpclient.InsecureTransport(c.baseURL, http.DefaultTransport)
+		dialer := *websocket.DefaultDialer
+		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // Explicit opt-in for an untrusted TeamCity server.
+		c.dialer = &dialer
+	}
+	return c
 }
 
 func (c *Client) OpenSession(agentID int) (*Session, error) {
@@ -156,7 +170,7 @@ func (c *Client) Connect(session *Session, cols, rows int) (*Conn, error) {
 
 	c.debugf("WebSocket URL: %s://%s%s<redacted>?cols=%d&rows=%d", scheme, u.Host, terminalPath, cols, rows)
 
-	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
+	conn, resp, err := c.dialer.Dial(wsURL, header)
 	if err != nil {
 		if resp != nil {
 			body, _ := io.ReadAll(resp.Body)
