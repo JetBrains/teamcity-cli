@@ -148,7 +148,7 @@ func connectToAgent(f *cmdutil.Factory, ctx context.Context, nameOrID string, sh
 		username = user.Username
 	}
 
-	termClient := terminal.NewClient(serverURL, username, token, f.Printer.Debug)
+	termClient := terminal.NewClient(serverURL, username, token, f.Printer.Debug).WithInsecureTLS(f.Insecure)
 	session, err := termClient.OpenSession(agent.ID)
 	if err != nil {
 		return nil, err

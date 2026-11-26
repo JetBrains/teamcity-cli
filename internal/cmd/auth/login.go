@@ -119,7 +119,7 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 		_, _ = fmt.Fprintln(p.Out)
 	}
 
-	serverURL, err := resolveServerURL(ctx, p, opts.serverURL, interactive)
+	serverURL, err := resolveServerURL(ctx, p, opts.serverURL, interactive, api.WithInsecureTLS(f.Insecure))
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func runAuthLogin(f *cmdutil.Factory, opts *loginOpts) (err error) {
 }
 
 // resolveServerURL prompts and probes in a loop until a reachable TeamCity server is found or the user cancels.
-func resolveServerURL(ctx context.Context, p *output.Printer, initial string, interactive bool) (string, error) {
+func resolveServerURL(ctx context.Context, p *output.Printer, initial string, interactive bool, clientOpts ...api.ClientOption) (string, error) {
 	serverURL := initial
 	detected := ""
 	savedDefault := ""
@@ -180,7 +180,8 @@ func resolveServerURL(ctx context.Context, p *output.Printer, initial string, in
 		serverURL = config.NormalizeURL(serverURL)
 
 		p.Progress("Checking %s... ", output.Cyan(serverURL))
-		probeClient := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
+		probeOpts := append([]api.ClientOption{api.WithVersion(version.String())}, clientOpts...)
+		probeClient := api.NewGuestClient(serverURL, probeOpts...).WithContext(ctx)
 		if err := probeClient.Probe(ctx); err != nil {
 			p.Info("%s", output.Red(output.Sym().Cross))
 			if errors.Is(err, context.Canceled) {
@@ -206,6 +207,7 @@ func finishGuestLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 	client := api.NewGuestClient(serverURL,
 		api.WithDebugFunc(p.Debug),
 		api.WithVersion(version.String()),
+		api.WithInsecureTLS(f.Insecure),
 	).WithContext(ctx)
 	server, err := client.GetServer()
 	if err != nil {
@@ -245,16 +247,16 @@ func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 				_ = jsonOut.PrintJSONLine(loginEvent{Event: "authorize", URL: authURL, BrowserOpened: &opened})
 			}
 		}
-		resp, err := webLogin(ctx, p, serverURL, announce)
+		resp, err := webLogin(ctx, p, serverURL, announce, api.WithInsecureTLS(f.Insecure))
 		if err != nil {
 			return err
 		}
 		token, tokenValidUntil = resp.AccessToken, resp.ValidUntil
 	case pkceTried:
-		token, tokenValidUntil = attemptPkceLogin(ctx, p, serverURL)
+		token, tokenValidUntil = attemptPkceLogin(ctx, p, serverURL, api.WithInsecureTLS(f.Insecure))
 	}
 
-	token, user, err := resolveToken(ctx, p, serverURL, token, pkceTried, interactive)
+	token, user, err := resolveToken(ctx, p, serverURL, token, pkceTried, interactive, api.WithInsecureTLS(f.Insecure))
 	if err != nil {
 		return err
 	}
@@ -267,6 +269,7 @@ func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 	cacheServerInfo(serverURL, api.NewClient(serverURL, token,
 		api.WithDebugFunc(p.Debug),
 		api.WithVersion(version.String()),
+		api.WithInsecureTLS(f.Insecure),
 	).WithContext(ctx))
 
 	if jsonOut != nil {
@@ -302,7 +305,7 @@ func finishTokenLogin(ctx context.Context, f *cmdutil.Factory, serverURL string,
 }
 
 // resolveToken prompts for a token and validates it, looping on invalid tokens when interactive.
-func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial string, pkceTried, interactive bool) (string, *api.User, error) {
+func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial string, pkceTried, interactive bool, clientOpts ...api.ClientOption) (string, *api.User, error) {
 	token := initial
 	instructionsShown := false
 	for {
@@ -322,10 +325,8 @@ func resolveToken(ctx context.Context, p *output.Printer, serverURL, initial str
 		}
 
 		p.Progress("Validating... ")
-		client := api.NewClient(serverURL, token,
-			api.WithDebugFunc(p.Debug),
-			api.WithVersion(version.String()),
-		).WithContext(ctx)
+		opts := append([]api.ClientOption{api.WithDebugFunc(p.Debug), api.WithVersion(version.String())}, clientOpts...)
+		client := api.NewClient(serverURL, token, opts...).WithContext(ctx)
 		user, err := client.GetCurrentUser()
 		if err != nil {
 			p.Info("%s", output.Red(output.Sym().Cross))

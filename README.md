@@ -88,6 +88,14 @@ teamcity auth login
 
 Scripts and desktop apps can sign in through the browser without a terminal: `teamcity auth login --server <url> --web --json` never prompts and prints the authorization URL as a JSON line.
 
+For servers using an untrusted internal or self-signed certificate, pass the global
+`--insecure` flag on each command, for example
+`teamcity auth login --server https://teamcity.example.com --insecure` and
+`teamcity project list --insecure`. This disables certificate and hostname
+verification for the TeamCity server for that invocation only. Redirects to other
+origins still require trusted certificates. Prefer trusting your internal CA when
+possible. The flag does not change browser certificate checks.
+
 Then:
 
 ```bash

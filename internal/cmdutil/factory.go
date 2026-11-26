@@ -26,10 +26,11 @@ type IOStreams struct {
 // and use its methods/fields to get clients, check flags, etc.
 type Factory struct {
 	// Global flags — set once by root command, read by subcommands.
-	NoColor bool
-	Quiet   bool
-	Verbose bool
-	NoInput bool
+	NoColor  bool
+	Quiet    bool
+	Verbose  bool
+	NoInput  bool
+	Insecure bool
 
 	// JSONOutput is set by commands that accept --json to signal that errors
 	// should be emitted as structured JSON instead of human-readable text.

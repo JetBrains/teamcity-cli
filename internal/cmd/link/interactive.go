@@ -228,7 +228,7 @@ func pickerClient(f *cmdutil.Factory, serverURL string) (api.ClientInterface, er
 	if token == "" {
 		return nil, fmt.Errorf("no saved credentials for %s - run 'teamcity auth login -s %s'", serverURL, serverURL)
 	}
-	return api.NewClient(serverURL, token, api.WithVersion(version.String())).WithContext(f.Context()), nil
+	return api.NewClient(serverURL, token, api.WithVersion(version.String()), api.WithInsecureTLS(f.Insecure)).WithContext(f.Context()), nil
 }
 
 // discoverAcrossServers runs discovery in parallel and returns results in the same order as urls.

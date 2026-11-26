@@ -17,7 +17,7 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 	roOpt := api.WithReadOnly(config.IsReadOnly())
 	verOpt := api.WithVersion(version.String())
 
-	opts := []api.ClientOption{debugOpt, roOpt, verOpt}
+	opts := []api.ClientOption{debugOpt, roOpt, verOpt, api.WithInsecureTLS(f.Insecure)}
 
 	if config.IsGuestAuth() {
 		if serverURL == "" {
@@ -47,7 +47,7 @@ func (f *Factory) defaultGetClient() (api.ClientInterface, error) {
 		return api.NewClientWithBasicAuth(serverURL, buildAuth.Username, buildAuth.Password, opts...).WithContext(f.Context()), nil
 	}
 
-	return nil, NotAuthenticatedError(f.Context(), serverURL, keyringErr)
+	return nil, NotAuthenticatedError(f.Context(), serverURL, keyringErr, api.WithInsecureTLS(f.Insecure))
 }
 
 // resolveAuthSource maps a token-source string plus config state onto an api.AuthSource.
@@ -65,17 +65,18 @@ func resolveAuthSource(tokenSource string) api.AuthSource {
 }
 
 // ProbeGuestAccess checks whether the server at serverURL supports guest access; honors ctx for cancellation.
-func ProbeGuestAccess(ctx context.Context, serverURL string) bool {
+func ProbeGuestAccess(ctx context.Context, serverURL string, opts ...api.ClientOption) bool {
 	if serverURL == "" {
 		return false
 	}
-	guest := api.NewGuestClient(serverURL, api.WithVersion(version.String())).WithContext(ctx)
+	opts = append([]api.ClientOption{api.WithVersion(version.String())}, opts...)
+	guest := api.NewGuestClient(serverURL, opts...).WithContext(ctx)
 	_, err := guest.GetServer()
 	return err == nil
 }
 
 // NotAuthenticatedError returns a not-authenticated error with a hint that covers all authentication methods.
-func NotAuthenticatedError(ctx context.Context, serverURL string, keyringErr error) *api.ValidationError {
+func NotAuthenticatedError(ctx context.Context, serverURL string, keyringErr error, opts ...api.ClientOption) *api.ValidationError {
 	msg := "Not authenticated"
 	if keyringErr != nil {
 		msg = fmt.Sprintf("Not authenticated (could not access system keyring: %v)", keyringErr)
@@ -86,7 +87,7 @@ func NotAuthenticatedError(ctx context.Context, serverURL string, keyringErr err
 	if tip := CredentialsTip(serverURL, ok && sc.User != "" && sc.Token == ""); tip != "" {
 		suggestion = tip // a sandbox or a keyring login: a token override isn't the fix
 	}
-	if ProbeGuestAccess(ctx, serverURL) {
+	if ProbeGuestAccess(ctx, serverURL, opts...) {
 		suggestion += ", or set TEAMCITY_GUEST=1 for guest access"
 	}
 

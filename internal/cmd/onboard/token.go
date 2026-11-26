@@ -62,5 +62,5 @@ func loginWorks(f *cmdutil.Factory, serverURL, token string) bool {
 
 // newClient returns a client for serverURL authenticated with token, bound to f's context.
 func newClient(f *cmdutil.Factory, serverURL, token string) *api.Client {
-	return api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String())).WithContext(f.Context())
+	return api.NewClient(serverURL, token, api.WithDebugFunc(f.Printer.Debug), api.WithVersion(version.String()), api.WithInsecureTLS(f.Insecure)).WithContext(f.Context())
 }

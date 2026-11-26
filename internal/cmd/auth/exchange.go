@@ -26,6 +26,7 @@ func ExchangeToken(f *cmdutil.Factory, serverURL, token string) (string, error) 
 		return api.NewClient(serverURL, tok,
 			api.WithDebugFunc(p.Debug),
 			api.WithVersion(version.String()),
+			api.WithInsecureTLS(f.Insecure),
 		).WithContext(ctx)
 	}
 

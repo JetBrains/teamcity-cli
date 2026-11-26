@@ -10,7 +10,18 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/JetBrains/teamcity-cli/internal/httpclient"
 )
+
+// WithInsecureTLS skips certificate verification for this server only, including login and API requests.
+func WithInsecureTLS(skip bool) ClientOption {
+	return func(c *Client) {
+		if skip {
+			c.HTTPClient.Transport = httpclient.InsecureTransport(c.BaseURL, c.HTTPClient.Transport)
+		}
+	}
+}
 
 // defaultTransport returns a transport with PEM fallback when the platform TLS verifier is blocked; no ResponseHeaderTimeout, so slow scans aren't cut off.
 var defaultTransport = sync.OnceValue(func() http.RoundTripper {

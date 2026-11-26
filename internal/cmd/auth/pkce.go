@@ -21,8 +21,9 @@ import (
 const authCodeLifetime = 5 * time.Minute
 
 // attemptPkceLogin probes for PKCE support, lets the user pick which scopes to grant, then runs the browser flow.
-func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) (token, validUntil string) {
-	client := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
+func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string, opts ...api.ClientOption) (token, validUntil string) {
+	opts = append([]api.ClientOption{api.WithVersion(version.String())}, opts...)
+	client := api.NewGuestClient(serverURL, opts...).WithContext(ctx)
 	if !pkceEnabled(ctx, client) {
 		return "", ""
 	}
@@ -41,8 +42,9 @@ func attemptPkceLogin(ctx context.Context, p *output.Printer, serverURL string) 
 }
 
 // webLogin runs the browser flow with the default scopes and no prompts or fallback, so callers without a terminal can drive it.
-func webLogin(ctx context.Context, p *output.Printer, serverURL string, announce func(authURL string, opened bool)) (*api.TokenResponse, error) {
-	client := api.NewGuestClient(serverURL, api.WithVersion(version.String()))
+func webLogin(ctx context.Context, p *output.Printer, serverURL string, announce func(authURL string, opened bool), opts ...api.ClientOption) (*api.TokenResponse, error) {
+	opts = append([]api.ClientOption{api.WithVersion(version.String())}, opts...)
+	client := api.NewGuestClient(serverURL, opts...).WithContext(ctx)
 	if !pkceEnabled(ctx, client) {
 		return nil, api.Validation(
 			"browser sign-in is not available on "+serverURL,
